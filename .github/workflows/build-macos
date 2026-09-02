@@ -1,0 +1,51 @@
+name: Build macOS VST3
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Universal macOS build
+        run: |
+          cmake -S . -B build -G Xcode \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build VST3
+        run: |
+          cmake --build build \
+            --config Release \
+            --target VDX7_VST3
+
+      - name: Locate VST3
+        run: |
+          find build -name "VDX7.vst3" -print
+
+      - name: Ad-hoc sign VST3
+        run: |
+          VST3_PATH="$(find build -name "VDX7.vst3" -type d | head -n 1)"
+          echo "VST3_PATH=$VST3_PATH"
+          codesign --force --deep --sign - "$VST3_PATH"
+
+      - name: Package VST3
+        run: |
+          VST3_PATH="$(find build -name "VDX7.vst3" -type d | head -n 1)"
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$VST3_PATH" \
+            VDX7-macOS-universal-VST3.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VDX7-macOS-universal-VST3
+          path: VDX7-macOS-universal-VST3.zip
