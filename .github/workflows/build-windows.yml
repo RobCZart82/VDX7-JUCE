@@ -1,0 +1,53 @@
+name: Build Windows VST3
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-windows:
+    runs-on: windows-2025
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Windows x64 build
+        shell: cmd
+        run: >
+          cmake -S . -B build
+          -G "Visual Studio 17 2022"
+          -A x64
+          -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build VST3
+        shell: cmd
+        run: >
+          cmake --build build
+          --config Release
+          --target VDX7_VST3
+
+      - name: Locate VST3
+        shell: powershell
+        run: |
+          Get-ChildItem -Path build -Recurse -Filter "VDX7.vst3"
+
+      - name: Package VST3
+        shell: powershell
+        run: |
+          $vst3 = Get-ChildItem -Path build -Recurse -Directory -Filter "VDX7.vst3" | Select-Object -First 1
+          if (-not $vst3) {
+            throw "VDX7.vst3 was not found"
+          }
+
+          Compress-Archive `
+            -Path $vst3.FullName `
+            -DestinationPath VDX7-Windows-x64-VST3.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VDX7-Windows-x64-VST3
+          path: VDX7-Windows-x64-VST3.zip
