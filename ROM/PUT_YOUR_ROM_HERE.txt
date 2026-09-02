@@ -1,0 +1,15 @@
+Do not commit/distribute Yamaha firmware with this source project.
+
+For local testing you may place your own ROM here temporarily, but the plugin itself auto-searches:
+
+macOS:
+~/Library/Application Support/VDX7-JUCE/ROM/
+~/Library/Application Support/discoDSP/Retromulator/ROM/
+
+Windows:
+%USERPROFILE%\Documents\VDX7-JUCE\ROM\
+%USERPROFILE%\Documents\discoDSP\Retromulator\ROM\
+
+Accepted:
+- 16384-byte DX7 firmware (e.g. DX7-V1-8.OBJ)
+- 49152-byte combined dx7.bin (16 KB firmware + 32 KB factory voice data)

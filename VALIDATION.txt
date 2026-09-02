@@ -1,0 +1,24 @@
+VDX7-JUCE prototype validation summary
+======================================
+Date: 2026-09-02
+
+Performed in the current Linux build sandbox:
+
+[PASS] VDX7Engine.cpp C++20 syntax check using an API-compatible dx7 core stub.
+[PASS] CMake project configure smoke test using local mock JUCE/Retromulator sources.
+[PASS] macOS ARM64 and Universal shell build scripts pass shell syntax checking.
+[PASS] SysEx validation accepts Yamaha device/channel byte 0..15 and verifies checksum.
+[PASS] macOS ROM path corrected to ~/Library/Application Support/...
+[PASS] No Yamaha firmware/ROM data bundled in this source archive.
+
+Not possible in this sandbox:
+
+[NOT RUN] Native Xcode/macOS SDK compile.
+[NOT RUN] Actual VST3 bundle load in REAPER/macOS.
+[NOT RUN] Audio comparison against hardware/VDX7 Linux/Retromulator.
+
+Reason: this execution environment is Linux-only and has no Xcode/macOS SDK; its
+container network also cannot resolve GitHub for the CMake FetchContent step.
+
+The included GitHub Actions workflow and local macOS scripts are intended to perform
+the native macOS build in an environment where Xcode and network access are available.
