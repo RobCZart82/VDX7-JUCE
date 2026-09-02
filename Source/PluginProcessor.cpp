@@ -109,7 +109,7 @@ const juce::String VDX7AudioProcessor::getProgramName(int index)
 
 void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
-    juce::ValueTree state(juce::Identifier(kStateType));
+    juce::ValueTree state { juce::Identifier(kStateType) };
 
     {
         std::scoped_lock lock(engineMutex_);
