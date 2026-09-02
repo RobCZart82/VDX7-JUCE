@@ -1,0 +1,13 @@
+build/
+build-*/
+_cmake-*/
+.DS_Store
+*.xcuserstate
+.vscode/
+.idea/
+
+# Never accidentally commit proprietary Yamaha firmware/ROM data.
+ROM/*
+!ROM/PUT_YOUR_ROM_HERE.txt
+*.OBJ
+*.obj
