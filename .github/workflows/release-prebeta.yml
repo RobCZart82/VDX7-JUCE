@@ -1,0 +1,186 @@
+name: Release Pre-Beta
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Git tag for the release
+        required: true
+        default: v0.1.0-prebeta1
+      display_version:
+        description: Version text used in asset filenames
+        required: true
+        default: v0.1.0-PreBeta1
+      release_title:
+        description: GitHub Release title
+        required: true
+        default: VDX7-JUCE v0.1.0 Pre-Beta 1
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    name: Build macOS Universal VST3
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Universal macOS build
+        run: |
+          cmake -S . -B build -G Xcode \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build VST3
+        run: |
+          cmake --build build --config Release --target VDX7_VST3
+
+      - name: Locate and sign VST3
+        run: |
+          VST3_PATH="$(find build -name "VDX7.vst3" -type d | head -n 1)"
+          if [ -z "$VST3_PATH" ]; then
+            echo "VDX7.vst3 not found"
+            exit 1
+          fi
+          echo "VST3_PATH=$VST3_PATH" >> "$GITHUB_ENV"
+          codesign --force --deep --sign - "$VST3_PATH"
+
+      - name: Build macOS release archive
+        env:
+          DISPLAY_VERSION: ${{ inputs.display_version }}
+        run: |
+          PKG="VDX7-JUCE-${DISPLAY_VERSION}-macOS-universal"
+          mkdir -p "$PKG"
+          cp -R "$VST3_PATH" "$PKG/VDX7.vst3"
+          cp release/README_HU_EN.txt "$PKG/README_HU_EN.txt"
+          cp LICENSE.txt "$PKG/LICENSE.txt"
+          cp THIRD_PARTY.md "$PKG/THIRD_PARTY.txt"
+          ditto -c -k --sequesterRsrc --keepParent "$PKG" "${PKG}.zip"
+
+      - name: Upload macOS release asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release-asset
+          path: VDX7-JUCE-${{ inputs.display_version }}-macOS-universal.zip
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Windows x64 VST3
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Windows x64 build
+        shell: cmd
+        run: >
+          cmake -S . -B build
+          -G "Visual Studio 17 2022"
+          -A x64
+          -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build VST3
+        shell: cmd
+        run: >
+          cmake --build build
+          --config Release
+          --target VDX7_VST3
+
+      - name: Build Windows release archive
+        shell: powershell
+        env:
+          DISPLAY_VERSION: ${{ inputs.display_version }}
+        run: |
+          $vst3 = Get-ChildItem -Path build -Recurse -Directory -Filter "VDX7.vst3" | Select-Object -First 1
+          if (-not $vst3) {
+            throw "VDX7.vst3 was not found"
+          }
+
+          $pkg = "VDX7-JUCE-$env:DISPLAY_VERSION-Windows-x64"
+          New-Item -ItemType Directory -Path $pkg -Force | Out-Null
+          Copy-Item -Path $vst3.FullName -Destination "$pkg\VDX7.vst3" -Recurse
+          Copy-Item -Path "release\README_HU_EN.txt" -Destination "$pkg\README_HU_EN.txt"
+          Copy-Item -Path "LICENSE.txt" -Destination "$pkg\LICENSE.txt"
+          Copy-Item -Path "THIRD_PARTY.md" -Destination "$pkg\THIRD_PARTY.txt"
+          Compress-Archive -Path $pkg -DestinationPath "$pkg.zip" -Force
+
+      - name: Upload Windows release asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-asset
+          path: VDX7-JUCE-${{ inputs.display_version }}-Windows-x64.zip
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Pre-Release
+    needs:
+      - build-macos
+      - build-windows
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create release notes
+        run: |
+          cat > RELEASE_NOTES.md <<'EOF'
+          ## VDX7-JUCE v0.1.0 Pre-Beta 1
+
+          First public Pre-Beta build of the standalone JUCE wrapper for the VDX7-derived Yamaha DX7 Mk I emulation core.
+
+          ### Downloads
+          - macOS Universal VST3 — arm64 + x86_64
+          - Windows x64 VST3
+
+          ### Validated
+          - Plugin loading in Cockos REAPER
+          - DX7 ROM auto-detection and manual ROM loading
+          - 8 factory banks when factory voice data is available
+          - MIDI Note On/Off and polyphony
+          - Program/preset switching
+          - CC64 Sustain / Hold Pedal
+          - REAPER project state save/reopen preset restoration
+          - Offline rendering
+          - macOS Apple Silicon / Mac mini M1
+          - Windows x64
+
+          ### Firmware
+          Yamaha DX7 firmware/ROM data is not included.
+          Users must provide their own legally obtained Yamaha DX7 Mk I firmware.
+
+          See README_HU_EN.txt inside each archive for installation, ROM paths,
+          macOS Gatekeeper/quarantine instructions and Windows OneDrive Documents behavior.
+
+          ### Pre-Beta warning
+          This is an early test release. Please report reproducible problems through GitHub Issues:
+          https://github.com/RobCZart82/VDX7-JUCE/issues
+          EOF
+
+      - name: Create or update GitHub Pre-Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          RELEASE_TITLE: ${{ inputs.release_title }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release-assets/*.zip --clobber
+            gh release edit "$TAG" --title "$RELEASE_TITLE" --notes-file RELEASE_NOTES.md --prerelease
+          else
+            gh release create "$TAG" release-assets/*.zip \
+              --target main \
+              --title "$RELEASE_TITLE" \
+              --notes-file RELEASE_NOTES.md \
+              --prerelease
+          fi
