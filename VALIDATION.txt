@@ -1,24 +1,98 @@
-VDX7-JUCE prototype validation summary
-======================================
-Date: 2026-09-02
+VDX7-JUCE v0.6.6 validation summary
+==================================
+Date: 2026-09-05
 
-Performed in the current Linux build sandbox:
+[PASS] macOS ARM64 VST3, AU and Standalone compile with JUCE 9.0.1.
+[PASS] All three bundles pass ad-hoc signing and strict code-sign verification.
+[PASS] VST3 version metadata reports 0.6.6.
+[PASS] Horizontal OSC MODE switch updates the existing binary parameter in both
+       directions, follows parameter updates and all six operator selections.
+[PASS] Native snapshots inspected at 960x740 and 1440x1110: combined frequency
+       readout visible under OSC MODE; grids fill the complete envelope frames;
+       preset arrows sit closer to the display and group is shifted left.
+[INFO] Rotary hover artwork blend limited to 8%, pressed 16%; host feel still
+       requires manual acceptance. DSP/frequency calculation remains unchanged.
+[INFO] Only firmware-caption font/bounds and top-right control-row Y positions
+       changed, plus version/docs/tests. No processor or parameter edits.
+[PASS] Default size 1200x925 and resized editors 960x740, 1440x1110,
+       1600x1233. All visible controls remain within editor bounds.
+[INFO] Reference canvas grows by 30 pixels; existing content coordinates stay
+       unchanged except requested header alignment. Background chrome extends
+       behind/below footer, operator panel grows 12 pixels and keyboard felt
+       overlays keys without adding an input-intercepting component.
+[PASS] Reference-size native snapshot inspected: lower chassis visible,
+       red felt strip, header alignment and clearance beneath operator values.
+[PASS] Exactly two vertical sync switches with range 0..1 and interval 1;
+       existing oscillator/LFO sync parameters update switches, and switch
+       changes update the existing parameters in both positions.
+[PASS] Native GUI renders at 960x720, 1440x1080 and 1600x1200.
+       Minimum and reference sizes visually inspected for LCD/tab separation,
+       header captions, raised graph backgrounds, narrower wheels, dark keyboard
+       background, opaque black keys and relocated status message.
+[INFO] Graph repaint regions enlarged alongside graph bounds to prevent stale
+       pixels when envelope values change. No processor/state-format edits.
+[PASS] Exactly two transparent LCD selectors remain inside the display at
+       960x720, 1440x1080 and 1600x1200. Duplicate static values removed.
+[INFO] LCD-only styling and scaled text margins; selection callbacks,
+       replacement warnings, processor and parameter IDs unchanged.
+[PASS] Wheel pixel tests: repeatable value-driven rendering, static bezel,
+       and changing rib pixels in a region excluding the position marker.
+[PASS] Nine-position wheel and three-state fader-cap sheet rendered and inspected;
+       actual minimum-size editor inspected. Cyan marker visible at end stops.
+[INFO] Only graphics changed: cylinder/rib projection for Pitch/Mod and a native
+       dark bevelled OUTPUT master cap. No parameter/processor or drag-behavior
+       changes. Envelope fader assets remain unchanged.
+[PASS] Algorithm model: all 32 graphs match the fetched dx7Lib OPS ROM's
+       modulation edges, output carriers and feedback endpoints.
+[PASS] Manual-reference cases: carrier sets for algorithms 5, 16, 32 and
+       multi-operator feedback paths OP4->OP6 (4) and OP5->OP6 (6).
+[PASS] All six node bounds/hit tests and parameter-to-diagram updates for
+       every algorithm at 960x720, 1440x1080 and 1600x1200 editor sizes.
+[PASS] Node selections update the OP editor/selected node and leave RAM unchanged.
+[PASS] Actual JUCE editor snapshots and a 32-diagram contact sheet generated.
+       Minimum editor and complete diagram sheet visually inspected.
+[PASS] Existing 148 parameters, legacy indices, 145-field state round trip,
+       headless program sync, RAM-only restore and stopped-transport edits.
+[PASS] Existing rename, operator copy/paste isolation, single/bank SysEx file
+       export/import, invalid-import preservation and failed-export dirty state.
+[PASS] Offline audio remains finite and non-silent at 44.1/48/96 kHz,
+       each with 64/128/256-sample buffers.
+[PASS] ROM-free voice/SysEx data unit tests and algorithm-model tests pass.
+[PASS] No Yamaha firmware, factory bank or hardware artwork added.
 
-[PASS] VDX7Engine.cpp C++20 syntax check using an API-compatible dx7 core stub.
-[PASS] CMake project configure smoke test using local mock JUCE/Retromulator sources.
-[PASS] macOS ARM64 and Universal shell build scripts pass shell syntax checking.
-[PASS] SysEx validation accepts Yamaha device/channel byte 0..15 and verifies checksum.
-[PASS] macOS ROM path corrected to ~/Library/Application Support/...
-[PASS] No Yamaha firmware/ROM data bundled in this source archive.
+Pre-Beta 2 public-package validation:
+[PASS] Fresh offline build using bundled JUCE and dx7Lib corresponding sources.
+[PASS] Apple Silicon Mach-O deployment target verified as macOS 11.0.
+[PASS] Processor regression tests and both CTest suites pass in the offline build.
+[PASS] Direct ad-hoc code signature verifies; no Developer-ID notarisation.
+[PASS] Binary and corresponding-source ZIP integrity tests pass.
 
-Not possible in this sandbox:
+Host acceptance:
+[NOT RUN] v0.6.6 REAPER hover feel, OSC MODE mouse/automation and visual acceptance.
+[NOT RUN] v0.6.5 REAPER visual acceptance; installed version left untouched.
+[NOT RUN] v0.6.4 REAPER window sizing and visual acceptance. No installed
+          plugin overwritten; no DSP or parameter/state changes.
+[NOT RUN] v0.6.3 REAPER mouse interaction/automation of switches, pressed keys,
+          resize and visual acceptance. Existing installation untouched.
+[NOT RUN] v0.6.2 REAPER bank/program mouse selection, replacement-warning
+          cancellation and project reopening. Existing installation untouched.
+The user confirmed the preceding v0.6.0 and older functionality in REAPER.
+[NOT RUN] v0.6.1 REAPER drag/automation smoothness, physical MIDI wheels,
+          pitch return-to-centre and visual hover/pressed appearance.
+[NOT RUN] v0.6.0 real REAPER mouse clicks on nodes and tab-to-node selection.
+[NOT RUN] v0.6.0 program-change/automation visual updates inside REAPER.
+[NOT RUN] v0.6.0 F0 versus F7 feedback appearance in the host.
+[NOT RUN] AU-host, standalone audio device, Intel/Universal and Windows tests.
 
-[NOT RUN] Native Xcode/macOS SDK compile.
-[NOT RUN] Actual VST3 bundle load in REAPER/macOS.
-[NOT RUN] Audio comparison against hardware/VDX7 Linux/Retromulator.
-
-Reason: this execution environment is Linux-only and has no Xcode/macOS SDK; its
-container network also cannot resolve GitHub for the CMake FetchContent step.
-
-The included GitHub Actions workflow and local macOS scripts are intended to perform
-the native macOS build in an environment where Xcode and network access are available.
+Behavior:
+- Algorithm number remains controlled by existing ALGO parameter.
+- Clicking an operator selects its editor only; it does not mute or edit sound.
+- Carrier nodes join OUT; modulation arrows point toward the target operator.
+- Cyan node is selected; carrier fill is dark teal; feedback loop is cyan when
+  nonzero, subdued at zero. F0-F7 reports feedback, not signal activity.
+- Native scalable JUCE drawing; independent chains are arranged in columns.
+- No audio-thread graph calculation or new host parameter introduced.
+- Performance/Settings are still future work; envelope/resampler limitations
+  remain as documented in README.
+- CMake's signing helper prints the existing local Xcode licence warning.
+  Direct ad-hoc signing is used; builds are not Developer-ID notarised.

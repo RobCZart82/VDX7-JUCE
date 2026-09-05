@@ -1,236 +1,138 @@
-# VDX7-JUCE prototype – macOS VST3/AU wrapper
+# VDX7-JUCE v0.6.6 Pre-Beta 2
 
-**Állapot:** első fordítható prototípus / fejlesztői build.  
-**Cél:** a VDX7 Yamaha DX7 Mk I hardveremulációs mag használata önálló, egyszerű JUCE VST3/AU hangszerként.
+[English documentation](README.md)
 
-Ez a projekt nem Dexed-alapú FM újraimplementáció. A hangmotor a VDX7-ből származó, Retromulatorban karbantartott `dx7Lib` portot használja: HD6303R CPU + DX7 EGS/OPS emuláció, az eredeti Yamaha firmware-rel.
+![VDX7-JUCE v0.6.6 kezelőfelület-előnézet](docs/VDX7-v0.6.6.png)
 
-## Mit tud az első prototípus?
+A VDX7-JUCE hatoperátoros FM hangszer, a VDX7 DX7 Mk I hardveremulációs magjára, annak hordozható Retromulator dx7Lib adaptációjára és JUCE-ra építve. Nem Dexed-alapú újraimplementáció.
 
-- VST3 instrument macOS-re, plusz AU és Standalone build.
-- Apple Silicon (`arm64`) és Universal (`arm64 + x86_64`) build script.
-- Windows VST3 build script is mellékelve későbbi teszthez.
-- Yamaha DX7 Mk I firmware betöltés külső fájlból.
-- Elfogad:
-  - **16 384 byte-os** firmware-only fájlt (`DX7-V1-8.OBJ` vagy `dx7.bin`), és opcionálisan mellette `dx7_factory_voices_32KB.bin` fájlt;
-  - **49 152 byte-os** kombinált `dx7.bin`-t: 16 KB firmware + 32 KB factory voice adat.
-- Automatikus ROM-keresés macOS-en és Windowson.
-- MIDI Note On/Off, velocity, Program Change, Mod Wheel, Breath, Foot, Data Entry, Sustain, Portamento, Aftertouch, Pitch Bend.
-- 8 factory bank × 32 program, ha a 32 KB factory voice adat rendelkezésre áll.
-- Standard Yamaha DX7 **4104 byte-os, 32-voice `.syx` bank** betöltés.
-- REAPER projekt-state mentés: RAM + bank/program + ROM útvonal.
-- A DX7 core natív kb. **49.096 kHz** sebességen fut; a wrapper a host sample rate-re konvertálja.
-- Minimalista, szándékosan egyszerű GUI: ROM, SYX, bank, program, patch-név.
+**Tesztelésre szánt előzetes kiadás, nem kész hangszer.** A kezelőfelület már jelentősen kidolgozott, de több funkció és ellenőrzés még hiányzik. Frissítés előtt készíts projektmentést, és exportáld a fontos módosított bankokat.
 
-## Fontos: Yamaha ROM nincs a forráscsomagban
+## 1. Platform és csomag
 
-A repository **nem tartalmaz Yamaha firmware-t vagy gyári ROM-adatot**. Használd a saját, jogszerűen rendelkezésedre álló DX7 ROM dumpodat.
+Az előkészített bináris **macOS Apple Silicon (arm64), VST3**. Natív Apple Silicon hostban használd; nem Intel/Universal bináris. Az AU és Standalone cél helyben lefordul, de nem ezek az elsődleges kiadási csomagok. Windows- és Universal-build scriptek vannak, ezek nem ellenőrzött kiadási binárisok.
 
-A nálad korábban ellenőrzött DX7 Mk I v1.8 firmware jellemzői:
+A bináris ad-hoc aláírt, nem Developer ID aláírt és nem notarizált. A macOS jóváhagyást kérhet. Ne kapcsold ki a rendszer egészére vonatkozó biztonsági védelmeket. A macOS 11 a build script célverziója, nem minden rendszer/host kombináció tesztelésének ígérete.
 
-- méret: 16 384 byte
-- CRC32: `6cbb0865`
-- SHA-1: `715dbb8e96a4df2a7f096b368334a7654860bb26`
+## 2. Telepítés és első megszólaltatás
 
-## ROM elhelyezése macOS-en
+1. Zárd be a hostot, és mentsd a meglévő VDX7 plugint és projekteket.
+2. Csomagold ki a VST3 ZIP-et, és a teljes VDX7.vst3 csomagot másold ide:
+   `~/Library/Audio/Plug-Ins/VST3/`
+3. REAPERben indíts újrakeresést a Preferences → Plug-ins → VST alatt, majd illeszd be a VDX7-et virtuális hangszerként.
+4. Add meg saját kompatibilis firmware-edet a LOAD ROM gombbal vagy az alábbi automatikus keresési helyek egyikén.
+5. Válassz bankot/programot az LCD-n, vagy importálj megfelelő .syx fájlt a LOAD SYX gombbal.
+6. Játssz MIDI hangokat, vagy használd a képernyő-billentyűzetet.
 
-Ajánlott saját mappa:
+Ha nincs hang, ellenőrizd a firmware állapotát, a MIDI útvonalát, a sáv monitorozását és az OUTPUT hangerőt. Kerüld a párhuzamos VDX7-példányokat a felhasználói és rendszerszintű pluginmappákban.
 
-```text
-~/Library/Application Support/VDX7-JUCE/ROM/
+## 3. Firmware és bankok
+
+**Yamaha firmware és gyári hangadat nincs mellékelve.** Csak olyan fájlokat használj, amelyek használatára jogosult vagy; a projektmentés nem csomagolja be a firmware-t.
+
+Elfogadott ROM-elrendezések:
+
+- 16 384 bájtos DX7 Mk I firmware, opcionálisan mellette `dx7_factory_voices_32KB.bin`.
+- 49 152 bájtos kombinált `dx7.bin`: 16 KB firmware és 32 KB gyári hangadat.
+
+Automatikus keresési mappák:
+
+| Rendszer | Helyek |
+| --- | --- |
+| macOS | `~/Library/Application Support/VDX7-JUCE/ROM/`, `~/Library/Application Support/discoDSP/Retromulator/ROM/` |
+| Windows forrásból fordítva | `%USERPROFILE%\Documents\VDX7-JUCE\ROM\`, `%USERPROFILE%\Documents\discoDSP\Retromulator\ROM\` |
+
+Gyári hangadat esetén ROM1A–ROM4B érhető el: nyolc bank, bankonként 32 program. Enélkül kompatibilis hangszín-/bank-SysEx adat szükséges. A LOAD ROM kézi fájlválasztást is biztosít.
+
+## 4. Hangszínszerkesztés
+
+- Hat operátortab: kimeneti szint, durva/finom hangolás, detune, rate scaling, velocity- és amplitúdómoduláció-érzékenység.
+- OSC MODE vízszintes kapcsoló: RATIO vagy FIXED, alatta névleges arány/Hz. A kijelzés nem tartalmazza a detune és moduláció hatását.
+- Operátor-envelope: operátoronként négy Rate és négy Level.
+- Keyboard scaling: töréspont, bal/jobb mélység és négy görbetípus.
+- GLOBAL: négyszakaszos pitch envelope, 1–32 algoritmus, feedback, oszcillátor-szinkron, transzponálás és LFO-vezérlők.
+- LFO: sebesség, késleltetés, pitch/amplitude modulációmélység, szinkron, hat hullámforma és pitch-moduláció-érzékenység.
+- A grafikonok a burkológörbe alakját szemléltetik; nem kalibrált idő-/félhangdiagramok.
+
+## 5. Algoritmusábra és játékvezérlők
+
+Mind a 32 algoritmus kapcsolása látható. Operátorcsomópontra kattintva kiválasztod annak szerkesztőjét; a tabok és az ábra kijelölése együtt mozog. A kijelölés nem némít operátort és nem módosít hangot. Az OUT a kimeneti operátorokat jelöli; az F0–F7 a feedback értéke, nem élő jelszint.
+
+A képernyő-billentyűzet, a középre visszatérő pitch kerék, a helyzetét megtartó modulation kerék és a hangerőfader működik. A kerék bordázata az értékkel együtt mozog. A két kivezérlésmérő a kimeneti szintet mutatja; a mag mono jele mindkét csatornára kerül.
+
+A footer CPU-százaléka simított audio-callback terhelésbecslés, nem a teljes számítógép CPU-használata, és nem feltétlenül egyezik a REAPER mérőjével.
+
+## 6. Utility és SysEx
+
+A UTILITY menüben hangszínátnevezés (1–10 nyomtatható ASCII karakter), egyhangszínes export, bankexport és operátormásolás/-beillesztés található. A másolás mind a 21 operátormezőt tartalmazza. Vágólapja a pluginpéldányhoz tartozik, a projekt nem tárolja.
+
+A LOAD SYX egy teljes DX7-hangszínt (163 bájtos VCED) vagy bankot (4104 bájtos VMEM) fogad. Egy hangszín a kijelölt helyet, egy bank a szerkeszthető bankot cseréli le. Összefűzött dumpok és más hangszertípusok formátumai nem támogatottak. Importkor szerkezet- és checksum-ellenőrzés történik. Az export device/channel nibble értéke 0; az import 0–15 értéket fogad.
+
+## 7. Mentés és automatizálás
+
+148 host-paraméter érhető el: 145 hangparaméter és Master Volume, Pitch, Mod. A korábbi paraméterazonosítók és sorrendjük megmaradtak.
+
+A projekt szerkeszthető RAM-ot, bank-/programállapotot, ROM-útvonalat és vezérlőállapotot tárol. Projektköltöztetés után is legyen elérhető a külső ROM. A programváltás bezárt szerkesztőablaknál is szinkronizálja a paramétereket.
+
+A név melletti csillag nem exportált módosítást jelez. A DAW-projekt mentése és a SysEx-export külön művelet: a projektmentés nem törli az exportjelzést. Az egyhangszínes export egy hangot, a bankexport minden helyet nyugtáz.
+
+Kézi bank-/ROM-/SYX-csere előtt figyelmeztetés jelenik meg a nem exportált módosításokra. MIDI-vezérelt bankváltás nem nyit párbeszédablakot, és lecserélheti a bankot: előtte exportáld a fontos módosításokat. A jelzés nem visszavonási előzmény.
+
+## 8. A kezelőfelületi mérföldkő újdonságai
+
+A v0.6 sorozat kattintható algoritmusábrát, mechanikus kerékgrafikát, OUTPUT fadert, LCD-be épített bank-/programválasztókat, kétállású szinkronkapcsolókat, jobb billentyűkontrasztot/piros filcet, teljes keretet kitöltő envelope-rácsokat és finomított elrendezést hozott. A v0.6.6-ban enyhébb a tekerők hover-kiemelése, vízszintes az OSC MODE összevont kijelzéssel, és szorosabb a presetváltó elrendezése.
+
+## 9. Ismert korlátok
+
+- A PERFORMANCE és SETTINGS oldal még nincs megvalósítva.
+- Élő MIDI Out/SysEx-küldés nincs; SysEx-fájlimport/-export van.
+- A mintavételi frekvencia átalakítása jelenleg lineáris interpolációt használ; minőségi fejlesztése tervben van.
+- A hangparaméterek módosítása újratölti az aktív programot. Sűrű automatizálás és tartott hang alatti szerkesztés további hosttesztet igényel.
+- A hardveres és más szoftverekkel való SysEx-együttműködés nincs átfogóan ellenőrizve.
+- Nem ígér teljes DX7-funkcióazonosságot, kalibrált envelope-időzítést vagy általános hostkompatibilitást.
+- A fontos munkáról készíts biztonsági mentést; a pre-beta nem jelent produkciós stabilitási garanciát.
+
+## 10. Ellenőrzés és hibajelentés
+
+A helyi Apple Silicon VST3/AU/Standalone fordítások és ad-hoc aláírás-ellenőrzések sikeresek. Az automatizált tesztek hangadatot, SysEx-et, állapot-visszatöltést, korábbi paramétersorrendet, algoritmuskapcsolásokat, kapcsolóbekötéseket és három méretben a vezérlők elhelyezését ellenőrzik. Az offline hang 44,1/48/96 kHz-en, 64/128/256 mintás pufferekkel véges és nem néma volt.
+
+Korábbi változatokat a felhasználó REAPERben tesztelt. Ezek az ellenőrzések nem jelentenek teljes v0.6.6 hostminősítést. Kérjük, próbáld ki az újraindítás utáni preset-visszaállítást, automatizálást, tartott hangokat, kapcsolókat és átméretezést.
+
+Hibát a [GitHub Issues](https://github.com/RobCZart82/VDX7-JUCE/issues) oldalon jelezz verzióval, operációs rendszerrel, CPU-architektúrával, host/verzióval, mintavétellel/pufferrel, lépésekkel és elvárt/tényleges eredménnyel. Szükség esetén mellékelj képet vagy minimális projektet; jogvédett ROM-ot ne tölts fel.
+
+## 11. Fordítás forrásból
+
+Szükséges: C++20 fordító, CMake 3.22+, macOS-en Xcode/Command Line Tools. A függőségek verziója rögzített; a teljes forrás ZIP tartalmazza a JUCE-ot és dx7Lib-et offline fordításhoz. A sima Git checkout letölti ezeket. Lásd: [forrásfüggőségek](SOURCE_DEPENDENCIES.md).
+
+Fordítás a telepített plugin felülírása nélkül:
+
+```sh
+cmake -S . -B build-local -G Xcode -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+cmake --build build-local --config Release --target VDX7_VST3
 ```
 
-Ide teheted például:
+Kimenet: `build-local/VDX7_artefacts/Release/VST3/VDX7.vst3`.
 
-```text
-~/Library/Application Support/VDX7-JUCE/ROM/dx7.bin
+A kényelmi `scripts/build-macos-arm64.command` script a telepített felhasználói VST3-at is lecseréli; előtte mentsd azt. Universal- és Windows-segédek: `scripts/build-macos-universal.command`, `scripts/build-windows.bat`. A macOS GitHub Actions workflow Universal artifactot fordít; a sikeres build nem hostellenőrzés.
+
+Tesztek:
+
+```sh
+cmake --build build-local --config Release --target vdx7_voice_data_tests vdx7_algorithm_tests vdx7_processor_tests
+ctest --test-dir build-local -C Release --output-on-failure
+./build-local/Release/vdx7_processor_tests
 ```
 
-vagy:
+A processor teszt helyben felismerhető ROM-ot igényel (hiányában 77-es kilépés), nem nyit audioeszközt, és opcionálisan egy létező abszolút mappát fogad a PNG-előnézetekhez.
 
-```text
-~/Library/Application Support/VDX7-JUCE/ROM/DX7-V1-8.OBJ
-~/Library/Application Support/VDX7-JUCE/ROM/dx7_factory_voices_32KB.bin
-```
+## 12. Licenc és kiadási állapot
 
-A plugin a meglévő Retromulator mappát is automatikusan ellenőrzi:
+Ez a kiadás [GNU AGPLv3](LICENSE.txt) szerint érhető el. A wrapper és az eredeti GUI-erőforrások AGPL-3.0-only licencűek; a DX7-mag megőrzi GPL-3.0-or-later licencét és eredeti közléseit. A JUCE-ot AGPLv3 alatt használjuk. Az egyesített mű és a komponensek közlései: [NOTICE.md](NOTICE.md).
 
-```text
-~/Library/Application Support/discoDSP/Retromulator/ROM/dx7.bin
-~/Library/Application Support/discoDSP/Retromulator/ROM/DX7-V1-8.OBJ
-```
+A kiadás a bináris mellett teljes forrást biztosít a rögzített JUCE- és dx7Lib-forrással, build scriptekkel és licencközlésekkel. A szoftver garancia nélkül érhető el. A firmware nem része a szoftverlicencnek. A leírásban szereplő Yamaha-név kompatibilitást jelöl, nem támogatást vagy jóváhagyást; Yamaha-logó nincs mellékelve.
 
-Ha egyik helyen sem talál ROM-ot, a pluginban a **Load ROM...** gombbal manuálisan kiválaszthatod.
+## 13. Köszönet és következő lépések
 
-## ROM elhelyezése Windowson
+Köszönet a [VDX7/chiaccona](https://github.com/chiaccona/VDX7), [Retromulator/dx7Lib](https://github.com/reales/retromulator) és [JUCE](https://github.com/juce-framework/JUCE) fejlesztőinek. Csak a hordozható DX7-mag épül be, nem a teljes Retromulator alkalmazás.
 
-Ajánlott saját mappa:
-
-```text
-%USERPROFILE%\Documents\VDX7-JUCE\ROM\
-```
-
-A Retromulator meglévő helyét is ellenőrzi:
-
-```text
-%USERPROFILE%\Documents\discoDSP\Retromulator\ROM\
-```
-
-## macOS ARM64 VST3 fordítása
-
-### Követelmények
-
-- macOS 11 vagy újabb ajánlott
-- Xcode + Command Line Tools
-- CMake
-- internetkapcsolat az első buildnél, mert a CMake letölti:
-  - JUCE 9.0.1
-  - Retromulator `dx7Lib` forrást
-
-Terminálból:
-
-```bash
-cd VDX7-JUCE-prototype
-chmod +x scripts/build-macos-arm64.command
-./scripts/build-macos-arm64.command
-```
-
-A script:
-
-1. létrehozza az Xcode buildet;
-2. lefordítja a `VDX7_VST3` targetet;
-3. ad-hoc aláírja a helyi tesztbuildet;
-4. bemásolja ide:
-
-```text
-~/Library/Audio/Plug-Ins/VST3/VDX7.vst3
-```
-
-Ezután REAPER:
-
-```text
-Preferences > Plug-ins > VST > Re-scan
-```
-
-Majd keress rá: **VDX7**.
-
-## Universal macOS build
-
-```bash
-./scripts/build-macos-universal.command
-```
-
-Ez `arm64 + x86_64` VST3 bundle-t készít.
-
-## GitHub Actions – Mac nélkül is lefordítható
-
-A repository tartalmazza:
-
-```text
-.github/workflows/build-macos.yml
-```
-
-Ha a teljes projektet feltöltöd egy GitHub repositoryba:
-
-1. nyisd meg az **Actions** lapot;
-2. válaszd a **Build macOS VST3** workflow-t;
-3. `Run workflow`;
-4. a build végén töltsd le a **VDX7-macOS-universal-VST3** artifactot.
-
-Ez a workflow macOS runneren készíti el az Universal VST3-at.
-
-## Windows build
-
-Visual Studio 2022 + CMake mellett:
-
-```bat
-scripts\build-windows.bat
-```
-
-A VST3 várható helye:
-
-```text
-build-windows\VDX7_artefacts\Release\VST3\VDX7.vst3
-```
-
-## `.syx` bank betöltése
-
-A pluginban kattints:
-
-```text
-Load .SYX...
-```
-
-Az első prototípus 32-voice Yamaha DX7 bulk dumpot vár:
-
-- 4104 byte
-- `F0 43 nn 09 20 00 ... checksum F7`
-- az `nn` MIDI device/channel nibble lehet 0–15.
-
-A voice adat közvetlenül a DX7 belső 32-programos voice RAM-jába kerül, majd az aktuális program újratöltődik.
-
-## Factory bankok
-
-Ha a 48 KB-os kombinált `dx7.bin`-t használod, vagy a 16 KB firmware mellett megtalálható a `dx7_factory_voices_32KB.bin`, a GUI bankválasztója nyolc bankot kínál:
-
-```text
-ROM1A
-ROM1B
-ROM2A
-ROM2B
-ROM3A
-ROM3B
-ROM4A
-ROM4B
-```
-
-## REAPER használat
-
-1. Insert virtual instrument on new track.
-2. Válaszd `VDX7` VST3-at.
-3. Ha a ROM nincs automatikusan felismerve: **Load ROM...**.
-4. Válassz factory bankot/programot vagy tölts be `.syx` bankot.
-5. MIDI billentyűzettel vagy Piano Rollból játszd.
-
-A plugin mono DX7 hangot küld mindkét stereo kimenetre, ugyanúgy, ahogy a Retromulator DX7 adaptere.
-
-## Jelenlegi prototípus-korlátok
-
-Ez még **nem végleges release**.
-
-- Ebben a ChatGPT futtatókörnyezetben nincs macOS SDK/Xcode, ezért a tényleges Mach-O `VDX7.vst3` bundle-t itt nem tudtam helyben lefordítani és REAPERben betölteni.
-- A saját DX7 engine wrapper C++ kódja külön szintaktikai ellenőrzésen átment.
-- A CMake konfiguráció helyben elindul, de a sandbox hálózata nem tudta elérni a GitHubot a JUCE FetchContent letöltéséhez; Macen/GitHub Actions alatt ezt a build rendszer végzi.
-- A host sample-rate konverzió az első prototípusban egyszerű lineáris interpoláció. Működési tesztre alkalmas, de később érdemes minőségi sinc/polyphase resamplerre cserélni, különösen 44.1 kHz host sample rate esetén.
-- Nincs teljes DX7 front-panel editor. A firmware és a szintézis core működik, a GUI csak ROM/bank/program/SysEx kezelést céloz.
-- MIDI Out/SysEx dump küldés nincs bekötve a DAW felé az első verzióban.
-- Automatizálható DX7 paraméter-editor még nincs.
-
-## Miért a Retromulator `dx7Lib` port?
-
-Az eredeti VDX7 alkalmazás Linux/X11/JACK környezetre készült. A Retromulator repositoryban található `dx7Lib` ugyanennek a VDX7-emulációnak egy hordozhatóbb, plugin-integrációra már adaptált változata. A projekt csak ezt a DX7 core-részt fordítja; nem építi be a Retromulator teljes alkalmazását/UI-ját.
-
-Upstream:
-
-- VDX7: https://github.com/chiaccona/VDX7
-- Retromulator / dx7Lib: https://github.com/reales/retromulator
-- JUCE: https://github.com/juce-framework/JUCE
-
-## Licenc
-
-A VDX7 és a Retromulator DX7-emulációs része GPLv3-or-later eredetű. A wrapper forrása ennek megfelelően nyílt forrású prototípus. A JUCE 9 külön licencfeltételekkel (AGPLv3 vagy kereskedelmi JUCE licenc) érhető el; nyilvános bináris terjesztés előtt ezeket a feltételeket külön ellenőrizni kell.
-
-A Yamaha firmware **nincs mellékelve** és nem része a projekt licencének.
-
-## Első teszt, amit érdemes elvégezni
-
-A sikeres macOS build után:
-
-1. REAPER 48 kHz / 128 vagy 256 sample buffer;
-2. töltsd be a DX7 v1.8 ROM-ot;
-3. factory `ROM1A` → `E.PIANO 1` vagy ugyanazt a `.syx` bankot töltsd be;
-4. játssz C3–C5 tartományban;
-5. ellenőrizd Note Off, sustain, mod wheel, pitch bend működését;
-6. mentsd el a REAPER projektet, zárd be, nyisd újra és ellenőrizd a patch-state visszaállását.
-
-Ha az első macOS compiler/build logban hiba jelenik meg, a log alapján a következő iterációban célzottan javítható a wrapper.
+Következő prioritások: szélesebb hosttesztelés, Performance/Settings funkciók, tartott hangok alatti szerkesztés és a resampling/hangminőség vizsgálata.

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "dx7.h"
+#include "VDX7VoiceData.h"
 
 class VDX7Engine
 {
@@ -43,6 +44,12 @@ public:
     void setCurrentBankMarker(int bankIndex) noexcept { currentBank_ = (bankIndex >= 0 && bankIndex <= 7) ? bankIndex : -1; }
     int currentProgram() const noexcept { return currentProgram_; }
     std::string currentProgramName() const;
+    void copyCurrentProgramName(char* destination, std::size_t capacity) const noexcept;
+    int getOperatorParameter(int operatorIndex, VDX7VoiceData::Parameter) const noexcept;
+    bool setOperatorParameter(int operatorIndex, VDX7VoiceData::Parameter, int value) noexcept;
+    int getVoiceParameter(VDX7VoiceData::VoiceParameter) const noexcept;
+    bool setVoiceParameter(VDX7VoiceData::VoiceParameter, int value) noexcept;
+    void reloadCurrentProgram();
 
     bool saveRam(std::vector<uint8_t>& out) const;
     bool restoreRam(const std::vector<uint8_t>& in);
@@ -54,6 +61,8 @@ private:
     int generateNative(float* out, int maxSamples);
     float nextNativeSample();
     uint8_t mapVelocity(uint8_t velocity) const;
+    uint8_t* currentPackedVoice() noexcept;
+    const uint8_t* currentPackedVoice() const noexcept;
 
     dx7Emu::ToSynth* toSynth_ = nullptr;
     dx7Emu::ToGui* toGui_ = nullptr;
