@@ -418,19 +418,74 @@ void VDX7Engine::selectProgram(int programIndex)
 
 std::string VDX7Engine::currentProgramName() const
 {
-    const int p = std::clamp(currentProgram_, 0, 31);
-    const uint8_t* voice = dx7_.memory + 0x1000 + p * 128;
-    std::string name;
-    name.reserve(10);
-    for (int i = 0; i < 10; ++i)
-    {
-        char c = static_cast<char>(voice[118 + i]);
-        if (c < 32 || c > 126) c = ' ';
-        name.push_back(c);
-    }
+    char buffer[11] {};
+    copyCurrentProgramName(buffer, sizeof(buffer));
+    std::string name(buffer);
     while (!name.empty() && name.back() == ' ')
         name.pop_back();
     return name;
+}
+
+void VDX7Engine::copyCurrentProgramName(char* destination, std::size_t capacity) const noexcept
+{
+    if (destination == nullptr || capacity == 0)
+        return;
+
+    destination[0] = '\0';
+    if (!loaded_)
+        return;
+
+    const int program = std::clamp(currentProgram_, 0, 31);
+    const uint8_t* voice = dx7_.memory + 0x1000 + program * 128;
+    const auto length = std::min<std::size_t>(10, capacity - 1);
+
+    for (std::size_t i = 0; i < length; ++i)
+    {
+        char c = static_cast<char>(voice[118 + static_cast<int>(i)]);
+        destination[i] = (c >= 32 && c <= 126) ? c : ' ';
+    }
+
+    std::size_t trimmedLength = length;
+    while (trimmedLength > 0 && destination[trimmedLength - 1] == ' ')
+        --trimmedLength;
+    destination[trimmedLength] = '\0';
+}
+
+int VDX7Engine::getOperatorParameter(int operatorIndex,
+                                     VDX7VoiceData::Parameter parameter) const noexcept
+{
+    return VDX7VoiceData::getOperatorParameter(currentPackedVoice(),
+                                                VDX7VoiceData::kPackedVoiceSize,
+                                                operatorIndex, parameter);
+}
+
+bool VDX7Engine::setOperatorParameter(int operatorIndex,
+                                      VDX7VoiceData::Parameter parameter,
+                                      int value) noexcept
+{
+    return loaded_ && VDX7VoiceData::setOperatorParameter(
+        currentPackedVoice(), VDX7VoiceData::kPackedVoiceSize,
+        operatorIndex, parameter, value);
+}
+
+int VDX7Engine::getVoiceParameter(VDX7VoiceData::VoiceParameter parameter) const noexcept
+{
+    return VDX7VoiceData::getVoiceParameter(currentPackedVoice(),
+                                             VDX7VoiceData::kPackedVoiceSize,
+                                             parameter);
+}
+
+bool VDX7Engine::setVoiceParameter(VDX7VoiceData::VoiceParameter parameter,
+                                   int value) noexcept
+{
+    return loaded_ && VDX7VoiceData::setVoiceParameter(
+        currentPackedVoice(), VDX7VoiceData::kPackedVoiceSize, parameter, value);
+}
+
+void VDX7Engine::reloadCurrentProgram()
+{
+    if (loaded_)
+        selectProgram(currentProgram_);
 }
 
 bool VDX7Engine::saveRam(std::vector<uint8_t>& out) const
@@ -453,4 +508,20 @@ bool VDX7Engine::restoreRam(const std::vector<uint8_t>& in)
 uint8_t VDX7Engine::mapVelocity(uint8_t velocity) const
 {
     return velocityMap_[static_cast<std::size_t>(velocity)];
+}
+
+uint8_t* VDX7Engine::currentPackedVoice() noexcept
+{
+    if (!loaded_)
+        return nullptr;
+
+    return dx7_.memory + 0x1000 + std::clamp(currentProgram_, 0, 31) * 128;
+}
+
+const uint8_t* VDX7Engine::currentPackedVoice() const noexcept
+{
+    if (!loaded_)
+        return nullptr;
+
+    return dx7_.memory + 0x1000 + std::clamp(currentProgram_, 0, 31) * 128;
 }
