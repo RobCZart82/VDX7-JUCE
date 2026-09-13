@@ -326,7 +326,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     envelopeTitle_.setText("4-STAGE ENVELOPE", juce::dontSendNotification);
     pitchEnvelopeTitle_.setText("PITCH ENVELOPE", juce::dontSendNotification);
     voiceLfoTitle_.setText("VOICE + LFO", juce::dontSendNotification);
-    footerLeft_.setText("VDX7 Mk I     v0.6.6", juce::dontSendNotification);
+    footerLeft_.setText("VDX7 Mk I     v" VDX7_DISPLAY_VERSION, juce::dontSendNotification);
     footerCentre_.setText("6-OPERATOR FM SYNTHESIZER", juce::dontSendNotification);
     footerRight_.setText("CPU 0.0%", juce::dontSendNotification);
 
@@ -543,7 +543,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
         juce::AlertWindow::showMessageBoxAsync(
             juce::MessageBoxIconType::InfoIcon,
             "About VDX7 Mk I",
-            "VDX7 Mk I v0.6.6\nOscillator switch, subtle hover and full envelope grids\n\n"
+            "VDX7 Mk I v" VDX7_DISPLAY_VERSION "\nFull-range firmware MIDI input\n\n"
             "VDX7-JUCE: GNU AGPLv3, without warranty.\n"
             "DX7 core: chiaccona / Retromulator, GPLv3-or-later.\n"
             "JUCE: AGPLv3. Source and license notices:\n"

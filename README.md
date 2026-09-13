@@ -1,4 +1,10 @@
-# VDX7-JUCE v0.6.6 Pre-Beta 2
+# VDX7-JUCE — 1.0.0 development
+
+This branch builds **1.0.0-dev**, not the final release. See the
+[current development status](DEVELOPMENT_1.0_HU_EN.md) and
+[1.0 release gates](ROADMAP_1.0.md).
+
+The following documentation describes the previous v0.6.6 Pre-Beta 2 release.
 
 [Magyar dokumentáció](README_HU.md)
 

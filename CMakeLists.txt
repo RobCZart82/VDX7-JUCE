@@ -1,13 +1,19 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(VDX7_JUCE
-    VERSION 0.6.6
-    DESCRIPTION "Minimal JUCE VST3/AU wrapper for the VDX7 Yamaha DX7 Mk I emulation core"
+    VERSION 1.0.0
+    DESCRIPTION "VDX7 Yamaha DX7 Mk I hardware-emulation instrument"
     LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+option(VDX7_RELEASE_BUILD "Build an accepted final release (not a development build)" OFF)
+set(VDX7_DISPLAY_VERSION "${PROJECT_VERSION}-dev")
+if(VDX7_RELEASE_BUILD)
+    set(VDX7_DISPLAY_VERSION "${PROJECT_VERSION}")
+endif()
 
 include(FetchContent)
 
@@ -59,6 +65,9 @@ target_compile_features(vdx7_voice_data PUBLIC cxx_std_20)
 set_target_properties(vdx7_voice_data PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 enable_testing()
+add_executable(vdx7_deferred_midi_tests Tests/VDX7DeferredMidiTests.cpp)
+target_include_directories(vdx7_deferred_midi_tests PRIVATE Source)
+add_test(NAME vdx7_deferred_midi COMMAND vdx7_deferred_midi_tests)
 add_executable(vdx7_voice_data_tests Tests/VDX7VoiceDataTests.cpp)
 target_link_libraries(vdx7_voice_data_tests PRIVATE vdx7_voice_data)
 add_test(NAME vdx7_voice_data COMMAND vdx7_voice_data_tests)
@@ -132,6 +141,7 @@ target_include_directories(VDX7 PRIVATE
 )
 
 target_compile_definitions(VDX7 PUBLIC
+    VDX7_DISPLAY_VERSION="${VDX7_DISPLAY_VERSION}"
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
@@ -146,12 +156,45 @@ target_link_libraries(VDX7 PRIVATE
 )
 
 # Opt-in integration runner: uses the user's ROM locally, never bundles it.
+add_executable(vdx7_midi_range_tests EXCLUDE_FROM_ALL
+    Tests/VDX7MidiRangeTests.cpp Source/VDX7Engine.cpp)
+target_include_directories(vdx7_midi_range_tests PRIVATE Source)
+target_link_libraries(vdx7_midi_range_tests PRIVATE vdx7_core vdx7_voice_data)
+
+add_executable(vdx7_timing_tests EXCLUDE_FROM_ALL
+    Tests/VDX7TimingTests.cpp Source/VDX7Engine.cpp)
+target_include_directories(vdx7_timing_tests PRIVATE Source)
+target_link_libraries(vdx7_timing_tests PRIVATE vdx7_core vdx7_voice_data)
+
 add_executable(vdx7_processor_tests EXCLUDE_FROM_ALL Tests/VDX7ProcessorTests.cpp)
 target_link_libraries(vdx7_processor_tests PRIVATE VDX7)
 target_include_directories(vdx7_processor_tests PRIVATE
     $<TARGET_PROPERTY:VDX7,INCLUDE_DIRECTORIES>)
 target_compile_definitions(vdx7_processor_tests PRIVATE
     $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
+
+add_executable(vdx7_stability_tests EXCLUDE_FROM_ALL Tests/VDX7StabilityTests.cpp)
+target_link_libraries(vdx7_stability_tests PRIVATE VDX7)
+target_include_directories(vdx7_stability_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,INCLUDE_DIRECTORIES>)
+target_compile_definitions(vdx7_stability_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
+
+option(VDX7_ENABLE_ROM_TESTS "Register local integration tests using your own ROM" OFF)
+set(VDX7_TEST_ROM_FILE "" CACHE FILEPATH "Local user-supplied ROM; never packaged")
+if(VDX7_ENABLE_ROM_TESTS)
+    if(NOT EXISTS "${VDX7_TEST_ROM_FILE}")
+        message(FATAL_ERROR "VDX7_TEST_ROM_FILE must point to your local compatible ROM")
+    endif()
+    add_test(NAME vdx7_stability COMMAND vdx7_stability_tests "${VDX7_TEST_ROM_FILE}")
+    add_test(NAME vdx7_midi_range COMMAND vdx7_midi_range_tests "${VDX7_TEST_ROM_FILE}")
+    add_test(NAME vdx7_timing COMMAND vdx7_timing_tests "${VDX7_TEST_ROM_FILE}")
+    add_test(NAME vdx7_processor COMMAND vdx7_processor_tests)
+    set_tests_properties(vdx7_processor PROPERTIES
+        ENVIRONMENT "VDX7_TEST_ROM_PATH=${VDX7_TEST_ROM_FILE}")
+    set_tests_properties(vdx7_stability vdx7_midi_range vdx7_timing vdx7_processor
+        PROPERTIES SKIP_RETURN_CODE 77 LABELS "local-rom")
+endif()
 
 if(APPLE)
     # Ad-hoc signing is sufficient for a local REAPER test build.

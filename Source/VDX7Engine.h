@@ -33,7 +33,7 @@ public:
     void render(float* left, float* right, int numSamples);
 
     void handleMidi(const uint8_t* data, int size);
-    void handleSysex(const uint8_t* data, std::size_t size);
+    bool handleSysex(const uint8_t* data, std::size_t size);
     void allNotesOff();
 
     bool loadSyxBank(const uint8_t* data, std::size_t size);
@@ -55,10 +55,11 @@ public:
     bool restoreRam(const std::vector<uint8_t>& in);
 
 private:
+    friend struct VDX7RegressionAccess;
     void boot();
     void processQueuedMessage(dx7Emu::Message msg);
     void parseMidiBytes(const uint8_t* data, int size);
-    int generateNative(float* out, int maxSamples);
+    int generateNative(float* out);
     float nextNativeSample();
     uint8_t mapVelocity(uint8_t velocity) const;
     uint8_t* currentPackedVoice() noexcept;
@@ -71,24 +72,24 @@ private:
     dx7Emu::DX7 dx7_;
 
     std::vector<uint8_t> factoryVoices_;
+    // Stable, blank fallback for the core's non-owning cartridge pointer.
+    std::array<uint8_t, 4096> emptyFactoryBank_ {};
 
     static constexpr int kNativeBlockSize = 512;
     std::array<float, kNativeBlockSize> nativeBlock_{};
-    std::array<float, kNativeBlockSize> discardBlock_{};
     int nativePos_ = 0;
     int nativeCount_ = 0;
 
     double hostSampleRate_ = 48000.0;
-    double cpuCyclesPerNativeSample_ = 0.0;
-    double cpuCycleBudget_ = 0.0;
     double resamplePhase_ = 0.0;
     float resampleA_ = 0.0f;
     float resampleB_ = 0.0f;
     bool resamplerPrimed_ = false;
 
     float volume_ = 1.0f;
-    float midiExpression_ = 0.0f;
+    float midiExpression_ = 1.0f;
     std::array<uint8_t, 128> velocityMap_{};
+    std::array<bool, 128> activeMidiNotes_{};
 
     bool loaded_ = false;
     int currentBank_ = -1;

@@ -12,6 +12,7 @@ cmake -S "$ROOT" -B "$BUILD" -G Xcode \
 cmake --build "$BUILD" --config Release --target VDX7_VST3
 
 PLUGIN="$BUILD/VDX7_artefacts/Release/VST3/VDX7.vst3"
-codesign --force --deep --sign - "$PLUGIN" || true
+codesign --force --deep --sign - "$PLUGIN"
+codesign --verify --deep --strict "$PLUGIN"
 
 echo "Universal VST3: $PLUGIN"

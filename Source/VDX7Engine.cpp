@@ -10,8 +10,6 @@ VDX7Engine::VDX7Engine()
     toSynth_ = &appToSynth_;
     toGui_ = &nullToGui_;
 
-    cpuCyclesPerNativeSample_ = (9.4265e6 / 2.0 / 4.0) / kNativeSampleRate;
-
     // Same default curve used by VDX7/Retromulator: exponent 0.4.
     for (int i = 0; i < 128; ++i)
     {
@@ -25,10 +23,9 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
                               const uint8_t* optionalVoices,
                               std::size_t optionalVoicesSize)
 {
-    loaded_ = false;
-    factoryVoices_.clear();
-
-    if (data == nullptr)
+    // Reject invalid input without changing the running instrument.
+    if (data == nullptr || (size != kFirmwareSize && size != kCombinedRomSize)
+        || (optionalVoices != nullptr && optionalVoicesSize != kFactoryVoicesSize))
         return false;
 
     const uint8_t* firmware = nullptr;
@@ -55,15 +52,30 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
         return false;
     }
 
+    std::vector<uint8_t> newFactoryVoices;
+    if (voices != nullptr && voicesSize >= kFactoryVoicesSize)
+        newFactoryVoices.assign(voices, voices + kFactoryVoicesSize);
+
     if (!dx7_.loadFirmware(firmware, kFirmwareSize))
         return false;
 
-    if (voices != nullptr && voicesSize >= kFactoryVoicesSize)
-    {
-        factoryVoices_.assign(voices, voices + kFactoryVoicesSize);
-        if (!dx7_.loadVoices(factoryVoices_.data(), factoryVoices_.size()))
-            factoryVoices_.clear();
-    }
+    // loadVoices(nullptr, 0) does NOT clear the core's previous pointer.
+    dx7_.loadVoices(emptyFactoryBank_.data(), emptyFactoryBank_.size());
+    factoryVoices_ = std::move(newFactoryVoices);
+    if (!factoryVoices_.empty())
+        dx7_.loadVoices(factoryVoices_.data(), factoryVoices_.size());
+    activeMidiNotes_.fill(false);
+    midiExpression_ = 1.0f;
+    currentBank_ = -1;
+    currentProgram_ = 0;
+    dx7_.midiSerialRx.flush();
+    dx7_.midiSerialTx.flush();
+    dx7_.haveMsg = false;
+    dx7_.byte1Sent = false;
+    dx7_.pitchBendOffset = 0;
+    dx7_.midiVolume = 7;
+    dx7Emu::Message discarded;
+    while (toSynth_->pop(discarded)) {}
 
     boot();
     loaded_ = dx7_.isRomLoaded();
@@ -102,7 +114,6 @@ void VDX7Engine::resetAudioState()
 {
     nativePos_ = 0;
     nativeCount_ = 0;
-    cpuCycleBudget_ = 0.0;
     resamplePhase_ = 0.0;
     resampleA_ = 0.0f;
     resampleB_ = 0.0f;
@@ -151,7 +162,7 @@ float VDX7Engine::nextNativeSample()
 {
     if (nativePos_ >= nativeCount_)
     {
-        nativeCount_ = generateNative(nativeBlock_.data(), kNativeBlockSize);
+        nativeCount_ = generateNative(nativeBlock_.data());
         nativePos_ = 0;
         if (nativeCount_ <= 0)
             return 0.0f;
@@ -159,21 +170,23 @@ float VDX7Engine::nextNativeSample()
 
     const float raw = nativeBlock_[static_cast<std::size_t>(nativePos_++)];
     const float midiVolume = std::min(1.0f,
-        dx7_.midiVolTab[dx7_.midiVolume] + midiExpression_ + 1.0e-18f);
+        dx7_.midiVolTab[dx7_.midiVolume] * midiExpression_);
     return raw * volume_ * dx7_.midiFilter.operate(midiVolume);
 }
 
-int VDX7Engine::generateNative(float* out, int maxSamples)
+int VDX7Engine::generateNative(float* out)
 {
-    if (!loaded_ || out == nullptr || maxSamples <= 0)
+    if (!loaded_ || out == nullptr)
         return 0;
 
-    cpuCycleBudget_ += cpuCyclesPerNativeSample_ * static_cast<double>(maxSamples);
     int outCount = 0;
-    int discardCount = 0;
     dx7Emu::Message msg;
 
-    while (cpuCycleBudget_ > 0.0)
+    // Advance only to the next actual EGS sample. Rendering a 512-sample
+    // future here prevented intervening host MIDI events from reaching the
+    // machine in time. CPU instructions remain atomic and every emitted
+    // sample is retained (including instruction-boundary overshoot).
+    while (outCount == 0)
     {
         if (!dx7_.haveMsg && toSynth_->pop(msg))
             processQueuedMessage(msg);
@@ -181,21 +194,10 @@ int VDX7Engine::generateNative(float* out, int maxSamples)
         dx7_.run();
         const int cycles = (dx7_.inst != nullptr && dx7_.inst->cycles > 0) ? dx7_.inst->cycles : 1;
 
-        if (outCount < maxSamples)
-        {
-            dx7_.egs.clock(out, outCount, 4 * cycles);
-        }
-        else
-        {
-            if (discardCount >= kNativeBlockSize)
-                discardCount = 0;
-            dx7_.egs.clock(discardBlock_.data(), discardCount, 4 * cycles);
-        }
-
-        cpuCycleBudget_ -= static_cast<double>(cycles);
+        dx7_.egs.clock(out, outCount, 4 * cycles);
     }
 
-    return std::min(outCount, maxSamples);
+    return outCount;
 }
 
 void VDX7Engine::processQueuedMessage(dx7Emu::Message msg)
@@ -262,16 +264,11 @@ void VDX7Engine::handleMidi(const uint8_t* data, int size)
     parseMidiBytes(data, size);
 }
 
-void VDX7Engine::handleSysex(const uint8_t* data, std::size_t size)
+bool VDX7Engine::handleSysex(const uint8_t* data, std::size_t size)
 {
-    if (!loaded_ || data == nullptr || size == 0)
-        return;
-
-    if (size == 4104 && loadSyxBank(data, size))
-        return;
-
-    for (std::size_t i = 0; i < size; ++i)
-        dx7_.midiSerialRx.write(data[i]);
+    // No unchecked serial fallback: live parameter/single-voice dumps are not
+    // supported yet. Single voices remain available through file import.
+    return loadSyxBank(data, size);
 }
 
 void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
@@ -284,17 +281,18 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
     switch (status)
     {
         case 0x80: // Note off
-            if (size >= 2 && data[1] >= 36 && data[1] <= 96)
-                toSynth_->key_off(static_cast<uint8_t>(data[1] - 36));
-            return;
-
-        case 0x90: // Note on
-            if (size >= 3 && data[1] >= 36 && data[1] <= 96)
+        case 0x90: // Note on (velocity zero is note off)
+            if (size == 3 && data[1] < 128 && data[2] < 128)
             {
-                if (data[2] == 0)
-                    toSynth_->key_off(static_cast<uint8_t>(data[1] - 36));
-                else
-                    toSynth_->key_on(static_cast<uint8_t>(data[1] - 36), mapVelocity(data[2]));
+                const bool on = status == 0x90 && data[2] != 0;
+                // The sub-CPU keyboard protocol only supports 61 keys. Use the
+                // firmware MIDI receiver for all pitches, preserving legacy omni
+                // input by normalising host channels to its receive channel.
+                dx7_.midiSerialRx.write(static_cast<uint8_t>((on ? 0x90 : 0x80)
+                    | (dx7_.getMidiRxChannel() & 0x0f)));
+                dx7_.midiSerialRx.write(data[1]);
+                dx7_.midiSerialRx.write(on ? mapVelocity(data[2]) : 0);
+                activeMidiNotes_[data[1]] = on;
             }
             return;
 
@@ -314,16 +312,13 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
                     return;
                 case 32:
                     if (hasFactoryVoices())
-                    {
-                        currentBank_ = data[2] % 8;
-                        dx7_.setBank(currentBank_, true);
-                    }
+                        selectFactoryBank(data[2] % 8);
                     return;
                 case 64:
-                    toSynth_->analog(dx7Emu::Message::CtrlID::sustain, data[2]);
+                    toSynth_->sustain(data[2] >= 64);
                     return;
                 case 65:
-                    toSynth_->analog(dx7Emu::Message::CtrlID::porta, data[2]);
+                    toSynth_->porta(data[2] >= 64);
                     return;
                 case 123:
                     allNotesOff();
@@ -362,14 +357,26 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
     if (data[0] >= 0xF8)
         return;
 
+    // Match the note path's single-part omni policy for all channel messages,
+    // including program changes and firmware-handled CC7 volume.
     for (int i = 0; i < size; ++i)
-        dx7_.midiSerialRx.write(data[i]);
+        dx7_.midiSerialRx.write(i == 0 && data[0] < 0xf0
+            ? static_cast<uint8_t>((data[0] & 0xf0) | (dx7_.getMidiRxChannel() & 0x0f))
+            : data[i]);
 }
 
 void VDX7Engine::allNotesOff()
 {
-    for (int i = 0; i < 61; ++i)
-        toSynth_->key_off(static_cast<uint8_t>(i));
+    if (!loaded_) return;
+    toSynth_->analog(dx7Emu::Message::CtrlID::sustain, 0);
+    for (int i = 0; i < 128; ++i)
+        if (activeMidiNotes_[i])
+        {
+            dx7_.midiSerialRx.write(static_cast<uint8_t>(0x80 | (dx7_.getMidiRxChannel() & 0x0f)));
+            dx7_.midiSerialRx.write(static_cast<uint8_t>(i));
+            dx7_.midiSerialRx.write(0);
+        }
+    activeMidiNotes_.fill(false);
 }
 
 bool VDX7Engine::loadSyxBank(const uint8_t* data, std::size_t size)
@@ -384,6 +391,8 @@ bool VDX7Engine::loadSyxBank(const uint8_t* data, std::size_t size)
         data[3] != 0x09 || data[4] != 0x20 || data[5] != 0x00 || data[4103] != 0xF7)
         return false;
 
+    for (std::size_t i = 6; i <= 4102; ++i)
+        if (data[i] >= 128) return false;
     int checksum = data[4102];
     for (int i = 0; i < 4096; ++i)
         checksum += data[6 + i];

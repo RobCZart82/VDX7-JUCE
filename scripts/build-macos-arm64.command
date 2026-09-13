@@ -17,12 +17,7 @@ if [[ ! -d "$PLUGIN" ]]; then
   exit 1
 fi
 
-codesign --force --deep --sign - "$PLUGIN" || true
-
-DEST="$HOME/Library/Audio/Plug-Ins/VST3"
-mkdir -p "$DEST"
-rm -rf "$DEST/VDX7.vst3"
-ditto "$PLUGIN" "$DEST/VDX7.vst3"
-
-printf '\nBuilt and installed:\n  %s\n\n' "$DEST/VDX7.vst3"
-printf 'In REAPER: Preferences > Plug-ins > VST > Re-scan.\n'
+codesign --force --deep --sign - "$PLUGIN"
+codesign --verify --deep --strict "$PLUGIN"
+printf '\nBuilt (not installed):\n  %s\n\n' "$PLUGIN"
+printf 'Back up your existing plugin before manual installation.\n'

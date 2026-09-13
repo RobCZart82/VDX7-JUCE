@@ -44,6 +44,9 @@ int main(int argc, char** argv)
     try
     {
         VDX7AudioProcessor original;
+        const auto explicitRom = juce::SystemStats::getEnvironmentVariable("VDX7_TEST_ROM_PATH", {});
+        if (explicitRom.isNotEmpty())
+            require(original.loadRomFromFile(juce::File(explicitRom)), "explicit local test ROM");
         require(original.getParameters().size() == 148, "148 host parameters");
         for (int op = 0; op < 6; ++op)
             for (int p = 0; p < 15; ++p)

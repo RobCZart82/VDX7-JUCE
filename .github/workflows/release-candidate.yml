@@ -1,0 +1,63 @@
+name: Prepare exact-commit release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Full 40-character source commit SHA (no branch or tag names)
+        required: true
+        type: string
+
+# Deliberately cannot publish, tag, or overwrite any existing release asset.
+# Final publication is a separate step after ROADMAP_1.0.md acceptance.
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            platform: macOS-arm64
+            configure: -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          - os: windows-2022
+            platform: Windows-x64
+            configure: -A x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - name: Verify exact source identity
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+      - name: Configure development candidate
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DVDX7_RELEASE_BUILD=OFF ${{ matrix.configure }}
+      - name: Build plugin and ROM-free tests
+        run: cmake --build build --config Release --parallel 4 --target VDX7_VST3 vdx7_voice_data_tests vdx7_algorithm_tests vdx7_deferred_midi_tests
+      - name: Run ROM-free tests
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Verify macOS candidate signature
+        if: runner.os == 'macOS'
+        run: |
+          codesign --force --deep --sign - build/VDX7_artefacts/Release/VST3/VDX7.vst3
+          codesign --verify --deep --strict build/VDX7_artefacts/Release/VST3/VDX7.vst3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VDX7-1.0.0-dev-${{ matrix.platform }}-${{ inputs.source_commit }}
+          path: |
+            build/VDX7_artefacts/Release/VST3/VDX7.vst3
+            ROADMAP_1.0.md
+            DEVELOPMENT_1.0_HU_EN.md
+            LICENSE.txt
+            LICENSES
+            NOTICE.md
+            THIRD_PARTY.md
+          if-no-files-found: error

@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "VDX7Engine.h"
+#include "VDX7DeferredMidi.h"
 
 namespace VDX7ParameterIDs
 {
@@ -22,7 +23,7 @@ class VDX7AudioProcessor final : public juce::AudioProcessor,
                                   private juce::AudioProcessorValueTreeState::Listener
 {
 public:
-    VDX7AudioProcessor();
+    explicit VDX7AudioProcessor(bool detectRom = true);
     ~VDX7AudioProcessor() override;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -77,6 +78,12 @@ public:
     bool synchroniseOperatorParametersFromEngine();
 
 private:
+    friend struct VDX7RegressionAccess;
+    void restoreSavedStateLocked(const juce::ValueTree&);
+    juce::ValueTree pendingRestore_;
+    bool detectRom_ = true;
+    VDX7DeferredMidi deferredMidi_;
+    bool handleMidiEventLocked(const uint8_t*, int);
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     bool autoDetectRom();
     static bool readFile(const juce::File& file, std::vector<uint8_t>& data);

@@ -1,4 +1,8 @@
-# v0.6.6 Pre-Beta 2 corresponding source
+# Corresponding source dependencies
+
+The 1.0.0 development branch retains the dependency revisions below. Its wrapper
+source is the exact development commit recorded with the package, not v0.6.6.
+The remaining v0.6.6 packaging description is retained as historical context.
 
 - JUCE repository: https://github.com/juce-framework/JUCE
   Revision: e18f7f506c0b96f2c738a0bcd7fe6467a5005ad8 (local JUCE 9.0.1 checkout).

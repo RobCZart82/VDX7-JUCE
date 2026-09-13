@@ -1,6 +1,7 @@
 name: Build Windows VST3
 
 on:
+  pull_request:
   workflow_dispatch:
   push:
     branches:
@@ -27,7 +28,10 @@ jobs:
         run: >
           cmake --build build
           --config Release
-          --target VDX7_VST3
+          --target VDX7_VST3 vdx7_voice_data_tests vdx7_algorithm_tests vdx7_deferred_midi_tests
+
+      - name: ROM-free regression tests
+        run: ctest --test-dir build -C Release --output-on-failure
 
       - name: Locate VST3
         shell: powershell

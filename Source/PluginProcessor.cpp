@@ -122,7 +122,7 @@ juce::String VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter para
         kVoiceParameterSuffixes[static_cast<std::size_t>(safeParameter)]);
 }
 
-VDX7AudioProcessor::VDX7AudioProcessor()
+VDX7AudioProcessor::VDX7AudioProcessor(bool detectRom)
     : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       parameters_(*this, nullptr, kParameterStateType, createParameterLayout())
 {
@@ -164,7 +164,8 @@ VDX7AudioProcessor::VDX7AudioProcessor()
 
     outputGain_.setCurrentAndTargetValue(
         juce::Decibels::decibelsToGain(masterVolumeParameter_->load()));
-    autoDetectRom();
+    detectRom_ = detectRom;
+    if (detectRom_) autoDetectRom();
 }
 
 VDX7AudioProcessor::~VDX7AudioProcessor()
@@ -266,12 +267,18 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     if (buffer.getNumSamples() > 0)
         loadTimer.emplace(processLoadMeasurer_, buffer.getNumSamples());
     buffer.clear();
+    keyboardState_.processNextMidiBuffer(midi, 0, buffer.getNumSamples(), true);
 
     // A long ROM/SysEx operation is allowed to silence a block, but it must
     // never make the real-time audio thread wait on the UI thread.
     std::unique_lock lock(engineMutex_, std::try_to_lock);
     if (!lock.owns_lock() || !engine_.isLoaded())
     {
+        if (engineLoaded_.load(std::memory_order_acquire))
+            for (const auto event : midi)
+                deferredMidi_.push(event.data, static_cast<std::size_t>(event.numBytes));
+        else
+            deferredMidi_.clear();
         midi.clear();
         clearMeters();
         return;
@@ -283,13 +290,16 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     applyPerformanceControls();
 
     const int total = buffer.getNumSamples();
-    keyboardState_.processNextMidiBuffer(midi, 0, total, true);
 
     auto* left = buffer.getWritePointer(0);
     auto* right = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : left;
     int cursor = 0;
 
     bool programMemoryChanged = false;
+    deferredMidi_.drain(
+        [&](const uint8_t* data, std::size_t size)
+        { programMemoryChanged |= handleMidiEventLocked(data, static_cast<int>(size)); },
+        [&] { engine_.allNotesOff(); keyboardState_.reset(); });
     for (const auto metadata : midi)
     {
         const int eventPos = juce::jlimit(0, total, metadata.samplePosition);
@@ -299,20 +309,7 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
             cursor = eventPos;
         }
 
-        const auto message = metadata.getMessage();
-        if (message.isSysEx())
-        {
-            engine_.handleSysex(message.getRawData(), static_cast<std::size_t>(message.getRawDataSize()));
-        }
-        else
-        {
-            const auto* raw = message.getRawData();
-            engine_.handleMidi(raw, message.getRawDataSize());
-            if (message.isController() && message.getControllerNumber() == 32
-                && engine_.hasFactoryVoices()) modifiedVoices_.store(0);
-            programMemoryChanged = programMemoryChanged || message.isProgramChange()
-                || (message.isController() && message.getControllerNumber() == 32);
-        }
+        programMemoryChanged |= handleMidiEventLocked(metadata.data, metadata.numBytes);
     }
 
     if (programMemoryChanged)
@@ -333,6 +330,21 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     updateMeters(buffer);
 
     midi.clear();
+}
+
+bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
+{
+    if (size <= 0) return false;
+    if (data[0] == 0xf0)
+    {
+        if (!engine_.handleSysex(data, static_cast<std::size_t>(size))) return false;
+        modifiedVoices_.store(0xffffffffu); // Incoming bank has not been exported.
+        return true;
+    }
+    engine_.handleMidi(data, size);
+    const bool bankChange = size == 3 && (data[0] & 0xf0) == 0xb0 && data[1] == 32;
+    if (bankChange && engine_.hasFactoryVoices()) modifiedVoices_.store(0);
+    return bankChange || (size == 2 && (data[0] & 0xf0) == 0xc0);
 }
 
 void VDX7AudioProcessor::applyPendingCommands()
@@ -606,6 +618,13 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 
     {
         std::scoped_lock lock(engineMutex_);
+        // A project saved while its firmware is missing must retain its sound.
+        if (pendingRestore_.isValid())
+        {
+            if (auto xml = pendingRestore_.createXml())
+                copyXmlToBinary(*xml, destData);
+            return;
+        }
         // Capture even the most recent GUI/automation edits if the host asks
         // for state before another audio block has had a chance to run.
         if (applyOperatorParameters() | applyVoiceParameters())
@@ -644,6 +663,18 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     if (!state.isValid() || state.getType().toString() != kStateType)
         return;
 
+    const auto ramText = state.getProperty("ram").toString();
+    if (ramText.isNotEmpty())
+    {
+        juce::MemoryBlock ram;
+        if (!ram.fromBase64Encoding(ramText) || ram.getSize() != VDX7Engine::kRamStateSize)
+            return; // Malformed state must not replace a usable/pending project.
+    }
+
+    {
+        std::scoped_lock lock(engineMutex_);
+        pendingRestore_ = state.createCopy();
+    }
     const auto parameterState = state.getChildWithName(juce::Identifier(kParameterStateType));
     if (parameterState.isValid())
     {
@@ -656,14 +687,26 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     const juce::File savedRom(state.getProperty("romPath").toString());
     if (savedRom.existsAsFile())
         loadRomFromFile(savedRom, nullptr);
-    else if (!isRomLoaded())
+    else if (!isRomLoaded() && detectRom_)
         autoDetectRom();
 
     {
         std::scoped_lock lock(engineMutex_);
-        if (!engine_.isLoaded())
-            return;
+        if (engine_.isLoaded() && pendingRestore_.isValid())
+        {
+            restoreSavedStateLocked(pendingRestore_);
+            pendingRestore_ = {};
+        }
+    }
+    if (!isRomLoaded())
+    {
+        std::scoped_lock lock(metadataMutex_);
+        statusText_ = "Project preserved: load compatible ROM to restore its sound";
+    }
+}
 
+void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
+{
         const int bank = static_cast<int>(state.getProperty("bank", -1));
         const int program = static_cast<int>(state.getProperty("program", 0));
 
@@ -695,7 +738,6 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
         lastPitchMsb_ = -1;
         lastModValue_ = -1;
         updateEngineSnapshot();
-    }
 }
 
 bool VDX7AudioProcessor::readFile(const juce::File& file, std::vector<uint8_t>& data)
@@ -734,7 +776,6 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
             std::scoped_lock metadataLock(metadataMutex_);
             statusText_ = "Invalid ROM: expected 16 KB firmware or 48 KB combined image";
             if (error != nullptr) *error = statusText_;
-            updateEngineSnapshot();
             return false;
         }
 
@@ -747,7 +788,13 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         pendingProgram_.store(-1, std::memory_order_release);
         lastPitchMsb_ = -1;
         lastModValue_ = -1;
-        updateEngineSnapshot();
+        if (pendingRestore_.isValid())
+        {
+            restoreSavedStateLocked(pendingRestore_);
+            pendingRestore_ = {};
+        }
+        else
+            updateEngineSnapshot();
     }
 
     {

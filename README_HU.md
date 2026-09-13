@@ -1,4 +1,10 @@
-# VDX7-JUCE v0.6.6 Pre-Beta 2
+# VDX7-JUCE — az 1.0.0 fejlesztése
+
+Ez az ág **1.0.0-dev** változatot készít, nem végleges kiadást. Lásd az
+[aktuális fejlesztői állapotot](DEVELOPMENT_1.0_HU_EN.md) és az
+[1.0 kiadás feltételeit](ROADMAP_1.0.md).
+
+Az alábbi dokumentáció a korábbi v0.6.6 Pre-Beta 2 kiadást írja le.
 
 [English documentation](README.md)
 
