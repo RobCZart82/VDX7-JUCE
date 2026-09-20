@@ -76,6 +76,90 @@ static juce::MemoryBlock encode(const juce::ValueTree& s)
     return result;
 }
 
+static void checkEditOrdering(const juce::File& romFile)
+{
+    for (bool bankSwitch : {false, true})
+        for (bool editFirst : {false, true})
+            for (bool audioFlush : {false, true})
+            for (bool operatorEdit : {false, true})
+            {
+                VDX7AudioProcessor p(false);
+                require(p.loadRomFromFile(romFile), "ordering ROM");
+                p.selectProgramFromUi(3);
+                const auto before = decode(save(p));
+                juce::MemoryBlock originalRam;
+                require(originalRam.fromBase64Encoding(before["ram"].toString()), "ordering initial RAM");
+                auto* feedback = p.parameters().getParameter(operatorEdit
+                    ? VDX7ParameterIDs::operatorParameter(5, VDX7VoiceData::Parameter::outputLevel)
+                    : VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback));
+                const int editValue = (juce::roundToInt(feedback->convertFrom0to1(feedback->getValue())) + 1)
+                    % (operatorEdit ? 100 : 8);
+                auto patchExpected = [&](juce::MemoryBlock& ram, int program) {
+                    auto* voice = static_cast<uint8_t*>(ram.getData()) + program*128;
+                    if (operatorEdit)
+                        VDX7VoiceData::setOperatorParameter(voice, 128, 5,
+                            VDX7VoiceData::Parameter::outputLevel, editValue);
+                    else VDX7VoiceData::setVoiceParameter(voice, 128,
+                            VDX7VoiceData::VoiceParameter::feedback, editValue);
+                };
+                auto edit = [&] { feedback->setValueNotifyingHost(feedback->convertTo0to1(editValue)); };
+                auto change = [&] {
+                    if (bankSwitch) require(p.selectFactoryBank(1), "ordering bank selection");
+                    else p.selectProgramFromUi(4);
+                };
+                if (editFirst) { edit(); change(); } else { change(); edit(); }
+                if (audioFlush)
+                {
+                    juce::AudioBuffer<float> audio(2, 64);
+                    juce::MidiBuffer midi;
+                    p.processBlock(audio, midi);
+                }
+                juce::MemoryBlock actual;
+                require(actual.fromBase64Encoding(decode(save(p))["ram"].toString()), "ordering final RAM");
+                if (bankSwitch)
+                {
+                    VDX7AudioProcessor reference(false);
+                    require(reference.loadRomFromFile(romFile), "reference ROM");
+                    reference.selectProgramFromUi(3);
+                    reference.selectFactoryBank(1);
+                    juce::MemoryBlock expected;
+                    require(expected.fromBase64Encoding(decode(save(reference))["ram"].toString()), "bank reference RAM");
+                    // Factory-bank loading replaces the single internal RAM bank:
+                    // an earlier edit must not leak into the newly loaded bank.
+                    if (!editFirst)
+                        patchExpected(expected, 3);
+                    require(std::memcmp(actual.getData(), expected.getData(), 4096) == 0,
+                            "bank switch/edit ordering preserves destination bank");
+                }
+                else
+                {
+                    patchExpected(originalRam, editFirst ? 3 : 4);
+                    require(std::memcmp(actual.getData(), originalRam.getData(), 4096) == 0,
+                            "program switch/edit ordering preserves correct voice");
+                }
+            }
+
+    VDX7AudioProcessor rapid(false);
+    require(rapid.loadRomFromFile(romFile), "rapid selection ROM");
+    juce::MemoryBlock expected;
+    require(expected.fromBase64Encoding(decode(save(rapid))["ram"].toString()), "rapid original RAM");
+    auto* parameter = rapid.parameters().getParameter(VDX7ParameterIDs::voiceParameter(
+        VDX7VoiceData::VoiceParameter::feedback));
+    int value = juce::roundToInt(parameter->convertFrom0to1(parameter->getValue()));
+    for (int program = 0; program < 32; ++program)
+    {
+        rapid.setCurrentProgram(program);
+        value = (value + 1) % 8;
+        parameter->setValueNotifyingHost(parameter->convertTo0to1(value));
+        VDX7VoiceData::setVoiceParameter(static_cast<uint8_t*>(expected.getData()) + program*128,
+            128, VDX7VoiceData::VoiceParameter::feedback, value);
+    }
+    juce::MemoryBlock actual;
+    require(actual.fromBase64Encoding(decode(save(rapid))["ram"].toString()), "rapid final RAM");
+    require(std::memcmp(expected.getData(), actual.getData(), 4096) == 0,
+            "32 successive program/edit pairs are not coalesced or misdirected");
+}
+
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -85,6 +169,7 @@ int main(int argc, char** argv)
         juce::File romFile(juce::String::fromUTF8(argv[1]));
         juce::MemoryBlock rom;
         require(romFile.loadFileAsData(rom), "read local ROM");
+        checkEditOrdering(romFile);
         VDX7Engine engine;
         require(engine.loadRomImage(static_cast<const uint8_t*>(rom.getData()), rom.getSize()), "engine ROM");
         VDX7RegressionAccess::checkControllers(engine);

@@ -9,6 +9,7 @@
 
 #include "VDX7Engine.h"
 #include "VDX7DeferredMidi.h"
+#include "VDX7EditQueue.h"
 
 namespace VDX7ParameterIDs
 {
@@ -140,10 +141,7 @@ private:
     std::atomic<float> outputPeakLeft_ { 0.0f };
     std::atomic<float> outputPeakRight_ { 0.0f };
 
-    // Single-value command mailboxes keep routine UI changes off the engine
-    // mutex. The audio thread consumes the newest request at block boundaries.
-    std::atomic<int> pendingBank_ { -1 };
-    std::atomic<int> pendingProgram_ { -1 };
+    VDX7EditQueue editQueue_;
     int lastPitchMsb_ = -1;
     int lastModValue_ = -1;
 
