@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "VDX7AllocationProbe.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -11,11 +12,23 @@
 static void require(bool ok, const char* message)
 { if (!ok) throw std::runtime_error(message); }
 
+static void processChecked(VDX7AudioProcessor& p, juce::AudioBuffer<float>& audio, juce::MidiBuffer& midi)
+{
+    using namespace VDX7AllocationProbe;
+    allocations = deallocations = 0;
+    enabled = true;
+    try { p.processBlock(audio, midi); }
+    catch (...) { enabled = false; throw; }
+    enabled = false;
+    require(allocations == 0 && deallocations == 0, "ordinary C++ allocation/deallocation in audio callback");
+}
+
 struct VDX7RegressionAccess
 {
     static bool held(const VDX7AudioProcessor& p) { return p.engine_.hasHeldMidiNotes(); }
     static void mirror(VDX7AudioProcessor& p) { p.mirrorKeyboardOnMessageThread(); }
     static bool note(const VDX7AudioProcessor& p, int note) { return p.engine_.activeMidiNotes_[note]; }
+    static uint64_t overloads(const VDX7AudioProcessor& p) { return p.engine_.midiOverloadCount(); }
 };
 
 struct StressResult { std::vector<float> audio; double maxMs = 0, totalMs = 0; };
@@ -42,7 +55,7 @@ static void probeKeyboardLock()
         juce::AudioBuffer<float> audio(2, 64);
         juce::MidiBuffer midi;
         audioStarted.set_value();
-        p.processBlock(audio, midi);
+        processChecked(p, audio, midi);
     });
     audioStarted.get_future().wait();
     const bool blocked = callback.wait_for(std::chrono::seconds(1)) == std::future_status::timeout;
@@ -162,12 +175,12 @@ static StressResult run(const juce::File& rom, int rate, int block)
         if (start >= 6144 * scale && start <= 12288 * scale && start % (1024 * scale) == 0)
             feedback->setValueNotifyingHost(feedback->convertTo0to1(float((start / (1024 * scale)) % 8)));
         const auto begin = std::chrono::steady_clock::now();
-        p.processBlock(audio, midi);
+        processChecked(p, audio, midi);
         const double ms = std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - begin).count();
         result.maxMs = std::max(result.maxMs, ms); result.totalMs += ms;
         require(midi.isEmpty(), "instrument consumes MIDI");
-        independent.processBlock(silent, empty);
+        processChecked(independent, silent, empty);
         require(silent.getMagnitude(0, block) < 1.0e-5f, "instances remain isolated");
         for (int i = 0; i < block; ++i)
         {
@@ -185,6 +198,56 @@ static StressResult run(const juce::File& rom, int rate, int block)
     return result;
 }
 
+static void checkLongRunAndOverload(const juce::File& rom)
+{
+    VDX7AudioProcessor p(false);
+    require(p.loadRomFromFile(rom), "long-run ROM");
+    p.prepareToPlay(48000, 256);
+    juce::AudioBuffer<float> audio(2, 256);
+    juce::MidiBuffer midi;
+    midi.ensureSize(131072); // Host setup, deliberately outside measured callback.
+    auto* feedback = p.parameters().getParameter(
+        VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback));
+    for (int block = 0; block < 11250; ++block) // 60 seconds of simulated audio.
+    {
+        if (block % 32 == 0)
+        {
+            for (int n = 48; n < 64; ++n)
+                midi.addEvent(juce::MidiMessage::noteOn(1, n, juce::uint8(100)), n - 48);
+            feedback->setValueNotifyingHost(feedback->convertTo0to1(float((block / 32) % 8)));
+        }
+        if (block % 32 == 24)
+            for (int n = 48; n < 64; ++n) midi.addEvent(juce::MidiMessage::noteOff(1, n), n - 48);
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 1, block % 128), 20);
+        processChecked(p, audio, midi);
+        require(std::isfinite(audio.getMagnitude(0, 256)), "long-run finite output");
+    }
+    require(VDX7RegressionAccess::overloads(p) == 0, "ordinary sustained load must not overload");
+    // Each burst is intentionally far above either queue capacity. Run both
+    // serial and controller cases; a later note-off must never be lost silently.
+    for (int kind = 0; kind < 2; ++kind)
+    {
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
+        for (int i = 0; i < 5000; ++i)
+            midi.addEvent(kind == 0 ? juce::MidiMessage::noteOn(1, 60, juce::uint8(100))
+                                   : juce::MidiMessage::controllerEvent(1, 1, i % 128), 0);
+        midi.addEvent(juce::MidiMessage::noteOff(1, 60), 0);
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), 0);
+        processChecked(p, audio, midi);
+        require(!VDX7RegressionAccess::held(p), "overload reconciles held notes and pedal");
+        for (int block = 0; block < 600; ++block) processChecked(p, audio, midi);
+        require(audio.getMagnitude(0, 256) < 1e-4f, "firmware voices release after overload");
+    }
+    require(VDX7RegressionAccess::overloads(p) == 2, "both overload paths counted");
+    require(p.getStatusText().contains("MIDI overload"), "overload is visible in status");
+    midi.addEvent(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)), 0);
+    float peak = 0;
+    for (int block = 0; block < 100; ++block)
+    { processChecked(p, audio, midi); peak = std::max(peak, audio.getMagnitude(0, 256)); }
+    require(peak > 1e-5f && VDX7RegressionAccess::held(p), "fresh audible note after overload");
+    std::cout << "PASS: 60-second simulated load, serial/controller overflow recovery, callback C++ heap probe\n";
+}
+
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -192,8 +255,15 @@ int main(int argc, char** argv)
     try
     {
         const juce::File rom(argv[1]);
+        VDX7AllocationProbe::enabled = true;
+        auto* allocation = ::operator new(16);
+        ::operator delete(allocation);
+        VDX7AllocationProbe::enabled = false;
+        require(VDX7AllocationProbe::allocations == 1 && VDX7AllocationProbe::deallocations == 1,
+                "allocation probe self-test");
         checkKeyboard(rom);
         checkLatencyPublication();
+        checkLongRunAndOverload(rom);
         for (int rate : {44100, 48000, 96000})
         {
             std::vector<float> reference;

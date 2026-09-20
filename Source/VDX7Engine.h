@@ -39,6 +39,8 @@ public:
     bool handleSysex(const uint8_t* data, std::size_t size);
     void allNotesOff();
     bool hasHeldMidiNotes() const noexcept;
+    uint64_t midiOverloadCount() const noexcept { return midiOverloadCount_; }
+    bool isMidiRecovering() const noexcept { return midiRecovering_; }
 
     bool loadSyxBank(const uint8_t* data, std::size_t size);
     bool selectFactoryBank(int bankIndex);
@@ -63,6 +65,8 @@ private:
     void boot();
     void processQueuedMessage(dx7Emu::Message msg);
     void parseMidiBytes(const uint8_t* data, int size);
+    bool reserveMidi(int bytes);
+    void recoverMidiOverflow();
     int generateNative(float* out);
     float nextNativeSample();
     uint8_t mapVelocity(uint8_t velocity) const;
@@ -92,6 +96,8 @@ private:
     std::array<uint8_t, 128> velocityMap_{};
     std::array<bool, 128> activeMidiNotes_{};
     bool sustainDown_ = false;
+    bool midiRecovering_ = false;
+    uint64_t midiOverloadCount_ = 0;
 
     bool loaded_ = false;
     int currentBank_ = -1;

@@ -149,6 +149,7 @@ private:
     std::atomic<bool> hasOperatorClipboard_ { false };
 
     std::atomic<bool> engineLoaded_ { false };
+    std::atomic<uint64_t> midiOverloadSnapshot_ {0};
     std::atomic<bool> factoryVoicesAvailable_ { false };
     std::atomic<int> currentBankSnapshot_ { -1 };
     std::atomic<int> currentProgramSnapshot_ { 0 };

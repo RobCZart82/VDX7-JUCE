@@ -24,6 +24,10 @@ indices compatible with saved projects.
 - [x] Move direct voice-parameter notifications outside the audio callback and
   engine lock; editorless/reentrant state tests (see `VALIDATION_1.0_HOST_PUBLICATION.md`).
 - [ ] Complete remaining audio-thread allocation/locking audit and contention stress test.
+- [x] Guard firmware serial/controller saturation; validate recovery with a
+  60-second simulated load and callback ordinary-C++ heap probe
+  (`VALIDATION_1.0_MIDI_OVERLOAD.md`). Direct-C/aligned heap profiling and live
+  host soak acceptance remain open; this is not a hard-realtime guarantee.
 - [x] Remove keyboard-state locking/listeners from audio; bounded UI MIDI handoff
   and 12-configuration local stress grid (see `VALIDATION_1.0_REALTIME_BASELINE.md`).
   Full allocation/overload audit and host acceptance are still open.

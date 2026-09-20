@@ -11,6 +11,57 @@ static void require(bool ok, const char* message)
 
 struct VDX7RegressionAccess
 {
+    static void checkSerialOverflow(VDX7Engine& e)
+    {
+        e.dx7_.midiSerialRx.flush();
+        for (int i = 0; i < 8190; ++i) e.dx7_.midiSerialRx.write(0xf8);
+        const uint8_t note[] {0x90, 60, 100};
+        e.handleMidi(note, 3);
+        require(!e.hasHeldMidiNotes(), "serial overflow must reconcile note ownership");
+        const int pending = (e.dx7_.midiSerialRx.writeIdx - e.dx7_.midiSerialRx.readIdx) & 8191;
+        require(pending >= 384 && pending < 8191, "serial overflow must enqueue complete recovery messages");
+        for (int pitch = 0; pitch < 128; ++pitch)
+        {
+            uint8_t status = 0, noteNumber = 0, velocity = 1;
+            require(e.dx7_.midiSerialRx.read(status) && e.dx7_.midiSerialRx.read(noteNumber)
+                    && e.dx7_.midiSerialRx.read(velocity), "complete recovery note-off");
+            require((status & 0xf0) == 0x80 && noteNumber == pitch && velocity == 0,
+                    "recovery releases every MIDI pitch");
+        }
+        e.handleMidi(note, 3);
+        require(!e.hasHeldMidiNotes(), "same-timestamp events stay dropped during recovery");
+        std::array<float, 256> left {}, right {};
+        e.render(left.data(), right.data(), 256);
+        require(!e.isMidiRecovering() && e.midiOverloadCount() == 1, "serial recovery completes");
+        dx7Emu::Message ignored;
+        while (e.toSynth_->pop(ignored)) {}
+        e.processQueuedMessage({dx7Emu::Message::CtrlID::modulate, 7});
+        for (int i = 0; i < 10000 && !e.dx7_.byte1Sent; ++i) e.dx7_.run();
+        require(e.dx7_.byte1Sent && e.dx7_.haveMsg, "reach real in-flight controller handshake");
+        for (int i = 0; i < 1024; ++i) e.toSynth_->analog(dx7Emu::Message::CtrlID::modulate, 127);
+        const uint8_t pedal[] {0xb0, 64, 127};
+        e.handleMidi(pedal, 3);
+        require(e.isMidiRecovering() && e.midiOverloadCount() == 2 && !e.hasHeldMidiNotes(),
+                "controller saturation must not lose pedal reconciliation");
+        require((e.dx7_.P_CRT_PEDALS_LCD & 3) == 0, "recovery releases sustain and portamento");
+        require(e.dx7_.byte1Sent && e.dx7_.haveMsg && e.dx7_.msg.byte2 == 7,
+                "overload must preserve in-flight controller handshake");
+        e.render(left.data(), right.data(), 1);
+        std::vector<uint8_t> bank;
+        require(e.saveRam(bank), "capture bank for live SysEx regression");
+        bank.resize(4096);
+        const auto sysex = VDX7Sysex::encode(bank);
+        const int beforeBank = (e.dx7_.midiSerialRx.writeIdx - e.dx7_.midiSerialRx.readIdx) & 8191;
+        require(e.handleSysex(sysex.data(), sysex.size()), "live bank after recovery starts draining");
+        const int afterBank = (e.dx7_.midiSerialRx.writeIdx - e.dx7_.midiSerialRx.readIdx) & 8191;
+        require(beforeBank >= 384 && afterBank == beforeBank + 2,
+                "live bank must preserve queued recovery note-offs");
+        e.resetMidiLifecycle();
+        require(!e.isMidiRecovering(), "restart during recovery reconciles lifecycle");
+        e.handleMidi(note, 3);
+        require(e.hasHeldMidiNotes(), "fresh note accepted after recovery");
+        e.allNotesOff();
+    }
     static void publishWithoutEditor(VDX7AudioProcessor& p) { p.timerCallback(); }
     static bool invalidRom(VDX7AudioProcessor& p)
     { return p.loadRomData(juce::File(), std::vector<uint8_t>(7), nullptr); }
@@ -286,6 +337,7 @@ int main(int argc, char** argv)
         require(engine.loadRomImage(static_cast<const uint8_t*>(rom.getData()), rom.getSize()), "engine ROM");
         VDX7RegressionAccess::checkControllers(engine);
         VDX7RegressionAccess::checkProgramBytes(engine);
+        VDX7RegressionAccess::checkSerialOverflow(engine);
         std::vector<uint8_t> before, after;
         engine.saveRam(before);
         const uint8_t invalid[7] {};

@@ -67,6 +67,8 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
         dx7_.loadVoices(factoryVoices_.data(), factoryVoices_.size());
     activeMidiNotes_.fill(false);
     sustainDown_ = false;
+    midiRecovering_ = false;
+    midiOverloadCount_ = 0;
     midiExpression_ = 1.0f;
     currentBank_ = -1;
     currentProgram_ = 0;
@@ -126,10 +128,11 @@ void VDX7Engine::resetMidiLifecycle()
     if (!loaded_) { resetAudioState(); return; }
     dx7_.midiSerialRx.flush();
     dx7_.midiSerialTx.flush();
-    dx7_.haveMsg = false;
-    dx7_.byte1Sent = false;
+    // Let any already-started sub-CPU handshake finish during the drain below.
     dx7Emu::Message discarded;
     while (toSynth_->pop(discarded)) {}
+    midiRecovering_ = false;
+    activeMidiNotes_.fill(true); // Also release notes whose ownership was lost during overload.
     allNotesOff();
     toSynth_->porta(false);
     // Let the unmodified firmware consume releases (up to 128*3 serial bytes)
@@ -168,6 +171,48 @@ void VDX7Engine::render(float* left, float* right, int numSamples)
         if (right != nullptr) right[i] = out;
 
     }
+    if (midiRecovering_)
+    {
+        // Restore the latest requested program after the complete release batch.
+        dx7_.midiSerialRx.write(static_cast<uint8_t>(0xc0 | (dx7_.getMidiRxChannel() & 15)));
+        dx7_.midiSerialRx.write(static_cast<uint8_t>(currentProgram_));
+        midiRecovering_ = false;
+    }
+}
+
+bool VDX7Engine::reserveMidi(int bytes)
+{
+    if (midiRecovering_) return false;
+    const auto& queue = dx7_.midiSerialRx;
+    const int occupied = (queue.writeIdx - queue.readIdx) & (queue.size - 1);
+    // Leave one slot empty: the core uses readIdx == writeIdx for empty and
+    // its unchecked writer would otherwise wrap over unread message bytes.
+    if (bytes > queue.size - 1 - occupied || appToSynth_.lfq.wasFull())
+    { recoverMidiOverflow(); return false; }
+    return true;
+}
+
+void VDX7Engine::recoverMidiOverflow()
+{
+    ++midiOverloadCount_;
+    midiRecovering_ = true;
+    dx7_.midiSerialRx.flush();
+    dx7Emu::Message ignored;
+    for (int i = 0; i < 1024 && toSynth_->pop(ignored); ++i) {}
+    // Do not abort a half-delivered sub-CPU message: its second byte must still
+    // reach firmware. Only queued (not in-flight) controller messages are lost.
+    dx7_.sustain(false);
+    dx7_.porta(false);
+    sustainDown_ = false;
+    // Release every pitch, not just wrapper ownership: some previous bytes
+    // may already have reached the firmware, or a note may be sustained.
+    for (int note = 0; note < 128; ++note)
+    {
+        dx7_.midiSerialRx.write(static_cast<uint8_t>(0x80 | (dx7_.getMidiRxChannel() & 15)));
+        dx7_.midiSerialRx.write(static_cast<uint8_t>(note));
+        dx7_.midiSerialRx.write(0);
+    }
+    activeMidiNotes_.fill(false);
 }
 
 float VDX7Engine::nextNativeSample()
@@ -288,6 +333,9 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
     if (size < 1 || size > 3)
         return;
 
+    if (data[0] >= 0xf8) return;
+    if (!reserveMidi(size)) return;
+
     const uint8_t status = data[0] & 0xF0;
 
     switch (status)
@@ -335,7 +383,8 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
                     return;
                 case 123:
                     allNotesOff();
-                    break;
+                    if (midiRecovering_) return;
+                    break; // Keep the original CC123 delivery to firmware too.
                 default:
                     break;
             }
@@ -382,6 +431,7 @@ void VDX7Engine::allNotesOff()
 {
     sustainDown_ = false;
     if (!loaded_) return;
+    if (!reserveMidi(128 * 3 + 3)) return; // Include a possible following CC123.
     toSynth_->analog(dx7Emu::Message::CtrlID::sustain, 0);
     for (int i = 0; i < 128; ++i)
         if (activeMidiNotes_[i])
@@ -401,7 +451,7 @@ bool VDX7Engine::hasHeldMidiNotes() const noexcept
 
 bool VDX7Engine::loadSyxBank(const uint8_t* data, std::size_t size)
 {
-    if (!loaded_ || data == nullptr || size != 4104)
+    if (!loaded_ || midiRecovering_ || data == nullptr || size != 4104)
         return false;
 
     // Standard Yamaha DX7 32-voice bulk dump. Byte 2 contains the MIDI
@@ -420,7 +470,8 @@ bool VDX7Engine::loadSyxBank(const uint8_t* data, std::size_t size)
         return false;
 
     std::memcpy(dx7_.memory + 0x1000, data + 6, 4096);
-    dx7_.midiSerialRx.flush();
+    // Preserve queued note-offs, including an overload recovery still draining
+    // through firmware. A bank replacement must not silently erase releases.
     dx7_.tune(0);
     currentBank_ = -1;
     selectProgram(currentProgram_);
