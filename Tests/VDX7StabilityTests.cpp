@@ -59,6 +59,19 @@ struct VDX7RegressionAccess
     }
     static bool noteActive(VDX7AudioProcessor& p, int note)
     { return p.engine_.activeMidiNotes_[note]; }
+    static void checkProgramBytes(VDX7Engine& e)
+    {
+        for (int program : {0, 31, 32, 127})
+        {
+            e.dx7_.midiSerialRx.flush();
+            const uint8_t message[] {0xc0, static_cast<uint8_t>(program)};
+            e.handleMidi(message, 2);
+            uint8_t status = 0, value = 0;
+            require(e.dx7_.midiSerialRx.read(status) && e.dx7_.midiSerialRx.read(value), "firmware program bytes");
+            require((status & 0xf0) == 0xc0 && value == std::min(program, 31)
+                    && e.currentProgram() == value, "program metadata and firmware input agree");
+        }
+    }
 };
 
 static juce::MemoryBlock save(VDX7AudioProcessor& p)
@@ -272,6 +285,7 @@ int main(int argc, char** argv)
         VDX7Engine engine;
         require(engine.loadRomImage(static_cast<const uint8_t*>(rom.getData()), rom.getSize()), "engine ROM");
         VDX7RegressionAccess::checkControllers(engine);
+        VDX7RegressionAccess::checkProgramBytes(engine);
         std::vector<uint8_t> before, after;
         engine.saveRam(before);
         const uint8_t invalid[7] {};
@@ -383,6 +397,15 @@ int main(int argc, char** argv)
         restarted.prepareToPlay(48000, 256);
         juce::AudioBuffer<float> audio(2, 256);
         juce::MidiBuffer events;
+        events.addEvent(juce::MidiMessage::noteOn(1, 59, uint8_t(100)), 0);
+        events.addEvent(juce::MidiMessage::noteOff(1, 59), 192);
+        VDX7RegressionAccess::contend(restarted, events);
+        juce::AudioBuffer<float> shortAudio(2, 64);
+        events.clear();
+        restarted.processBlock(shortAudio, events);
+        require(VDX7RegressionAccess::noteActive(restarted, 59), "deferred note duration must not collapse");
+        for (int i = 0; i < 3; ++i) restarted.processBlock(shortAudio, events);
+        require(!VDX7RegressionAccess::noteActive(restarted, 59), "deferred note-off retains its later position");
         events.addEvent(juce::MidiMessage::noteOn(1, 60, uint8_t(100)), 0);
         restarted.processBlock(audio, events);
         require(VDX7RegressionAccess::noteActive(restarted, 60), "note starts");
@@ -403,6 +426,26 @@ int main(int argc, char** argv)
         events.clear(); restarted.processBlock(audio, events);
         require(!VDX7RegressionAccess::noteActive(restarted, 61)
                 && !VDX7RegressionAccess::noteActive(restarted, 62), "overflow releases without replaying stale ons");
+
+        events.addEvent(juce::MidiMessage::noteOn(1, 60, uint8_t(100)), 0);
+        restarted.processBlock(audio, events);
+        events.addEvent(juce::MidiMessage::noteOn(1, 61, uint8_t(100)), 64);
+        VDX7RegressionAccess::contend(restarted, events);
+        const auto beforeRestart = decode(save(restarted));
+        restarted.releaseResources();
+        restarted.prepareToPlay(96000, 64);
+        require(!VDX7RegressionAccess::noteActive(restarted, 60), "device restart clears old note ownership");
+        events.clear();
+        for (int i = 0; i < 16; ++i) restarted.processBlock(shortAudio, events);
+        require(!VDX7RegressionAccess::noteActive(restarted, 61), "device restart discards deferred note-on");
+        require(shortAudio.getMagnitude(0, 64) < 0.00001f, "device restart silences previous voices");
+        const auto afterRestart = decode(save(restarted));
+        juce::MemoryBlock ramBeforeRestart, ramAfterRestart;
+        require(ramBeforeRestart.fromBase64Encoding(beforeRestart["ram"].toString())
+                && ramAfterRestart.fromBase64Encoding(afterRestart["ram"].toString()), "restart RAM decode");
+        require(std::memcmp(ramBeforeRestart.getData(), ramAfterRestart.getData(), 4096) == 0
+                && beforeRestart["bank"] == afterRestart["bank"]
+                && beforeRestart["program"] == afterRestart["program"], "restart preserves bank/program/voices");
 
         juce::MemoryBlock ram;
         require(ram.fromBase64Encoding(restored["ram"].toString()), "decode RAM for bank");

@@ -245,6 +245,9 @@ void VDX7AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     processLoadMeasurer_.reset(sampleRate, samplesPerBlock);
     std::scoped_lock lock(engineMutex_);
     currentSampleRate_ = sampleRate;
+    deferredMidi_.clear();
+    keyboardState_.reset();
+    engine_.resetMidiLifecycle();
     engine_.prepare(sampleRate);
     outputGain_.reset(sampleRate, 0.02);
     outputGain_.setCurrentAndTargetValue(
@@ -256,6 +259,11 @@ void VDX7AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 void VDX7AudioProcessor::releaseResources()
 {
     processLoadMeasurer_.reset();
+    std::scoped_lock lock(engineMutex_);
+    deferredMidi_.clear();
+    keyboardState_.reset();
+    engine_.resetMidiLifecycle();
+    clearMeters();
 }
 
 bool VDX7AudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -272,17 +280,22 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         loadTimer.emplace(processLoadMeasurer_, buffer.getNumSamples());
     buffer.clear();
     keyboardState_.processNextMidiBuffer(midi, 0, buffer.getNumSamples(), true);
-
-    // A long ROM/SysEx operation is allowed to silence a block, but it must
-    // never make the real-time audio thread wait on the UI thread.
+    const int total = buffer.getNumSamples();
+    // A long transaction may silence a block, but never blocks audio.
     std::unique_lock lock(engineMutex_, std::try_to_lock);
+    const bool useDeferred = deferredMidi_.active() || !lock.owns_lock();
+    if (engineLoaded_.load(std::memory_order_acquire) && useDeferred)
+    {
+        for (const auto event : midi)
+            deferredMidi_.push(event.data, static_cast<std::size_t>(event.numBytes),
+                               juce::jlimit(0, total, event.samplePosition));
+        // Do not replay an arbitrarily old performance after a long transaction.
+        deferredMidi_.advanceInputBlock(total,
+            static_cast<uint64_t>(std::max(currentSampleRate_ * 2.0, static_cast<double>(total))));
+    }
+    else if (!engineLoaded_.load(std::memory_order_acquire)) deferredMidi_.clear();
     if (!lock.owns_lock() || !engine_.isLoaded())
     {
-        if (engineLoaded_.load(std::memory_order_acquire))
-            for (const auto event : midi)
-                deferredMidi_.push(event.data, static_cast<std::size_t>(event.numBytes));
-        else
-            deferredMidi_.clear();
         midi.clear();
         clearMeters();
         return;
@@ -293,34 +306,35 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     applyPendingCommands();
     applyPerformanceControls();
 
-    const int total = buffer.getNumSamples();
-
     auto* left = buffer.getWritePointer(0);
     auto* right = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : left;
     int cursor = 0;
 
     bool programMemoryChanged = false;
-    deferredMidi_.drain(
-        [&](const uint8_t* data, std::size_t size)
-        { programMemoryChanged |= handleMidiEventLocked(data, static_cast<int>(size)); },
-        [&] { engine_.allNotesOff(); keyboardState_.reset(); });
-    for (const auto metadata : midi)
+    auto deliver = [&](const uint8_t* data, std::size_t size, int eventPos)
     {
-        const int eventPos = juce::jlimit(0, total, metadata.samplePosition);
         if (eventPos > cursor)
         {
             engine_.render(left + cursor, right + cursor, eventPos - cursor);
             cursor = eventPos;
         }
 
-        programMemoryChanged |= handleMidiEventLocked(metadata.data, metadata.numBytes);
-    }
+        programMemoryChanged |= handleMidiEventLocked(data, static_cast<int>(size));
+    };
+    if (useDeferred)
+        deferredMidi_.renderBlock(total, deliver,
+            [&] { engine_.allNotesOff(); keyboardState_.reset(); });
+    else
+        for (const auto event : midi)
+            deliver(event.data, static_cast<std::size_t>(event.numBytes),
+                    juce::jlimit(0, total, event.samplePosition));
 
     if (programMemoryChanged)
         updateEngineSnapshot();
 
     if (cursor < total)
         engine_.render(left + cursor, right + cursor, total - cursor);
+    if (!engine_.hasHeldMidiNotes()) deferredMidi_.resetIfEmpty();
 
     outputGain_.setTargetValue(
         juce::Decibels::decibelsToGain(masterVolumeParameter_->load()));

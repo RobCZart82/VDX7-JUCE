@@ -30,11 +30,13 @@ public:
 
     void prepare(double hostSampleRate);
     void resetAudioState();
+    void resetMidiLifecycle(); // Non-RT; host has stopped processBlock.
     void render(float* left, float* right, int numSamples);
 
     void handleMidi(const uint8_t* data, int size);
     bool handleSysex(const uint8_t* data, std::size_t size);
     void allNotesOff();
+    bool hasHeldMidiNotes() const noexcept;
 
     bool loadSyxBank(const uint8_t* data, std::size_t size);
     bool selectFactoryBank(int bankIndex);
@@ -90,6 +92,7 @@ private:
     float midiExpression_ = 1.0f;
     std::array<uint8_t, 128> velocityMap_{};
     std::array<bool, 128> activeMidiNotes_{};
+    bool sustainDown_ = false;
 
     bool loaded_ = false;
     int currentBank_ = -1;
