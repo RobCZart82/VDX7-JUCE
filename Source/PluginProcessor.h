@@ -71,6 +71,8 @@ public:
     bool isCurrentVoiceModified() const noexcept;
     // Message-thread controls, saved in existing RAM state; not host automation.
     std::array<int, 16> getControllerSettings() const;
+    std::array<int, 2> getPitchBendSettings() const;
+    bool setPitchBendSettingFromUi(int field, int value);
     bool setControllerSettingFromUi(int controller, int field, int value);
 
     bool isRomLoaded() const;

@@ -1321,6 +1321,25 @@ std::array<int, 16> VDX7AudioProcessor::getControllerSettings() const
     return result;
 }
 
+std::array<int, 2> VDX7AudioProcessor::getPitchBendSettings() const
+{
+    std::scoped_lock lock(engineMutex_);
+    return {engine_.getPitchBendSetting(0), engine_.getPitchBendSetting(1)};
+}
+
+bool VDX7AudioProcessor::setPitchBendSettingFromUi(int field, int value)
+{
+    bool changed;
+    {
+        std::scoped_lock lock(engineMutex_);
+        const int previous = engine_.getPitchBendSetting(field);
+        if (!engine_.setPitchBendSetting(field, value)) return false;
+        changed = previous != value;
+    }
+    if (changed) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    return true;
+}
+
 bool VDX7AudioProcessor::setControllerSettingFromUi(int controller, int field, int value)
 {
     bool changed = false;

@@ -1007,12 +1007,12 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     if (performanceVisible_)
     {
         g.setFont(juce::Font(juce::FontOptions(16.0f * scaleY)));
-        g.drawText("CONTROLLER RANGE + ASSIGNMENTS", referenceRect(54, 397, 1080, 28),
+        g.drawText("PITCH BEND + CONTROLLER ASSIGNMENTS", referenceRect(54, 397, 1080, 28),
                    juce::Justification::centredLeft);
         g.setColour(juce::Colour(0xff91a5ac));
         g.drawText("Global settings are saved in your DAW project, not in voice/bank SysEx.",
                    referenceRect(54, 435, 1080, 28), juce::Justification::centredLeft);
-        g.drawText("Play mode, pitch bend settings and portamento controls are planned for the next stage.",
+        g.drawText("Pitch bend STEP 0 is continuous; nonzero STEP uses firmware quantisation. Play mode/portamento follow later.",
                    referenceRect(54, 467, 1080, 28), juce::Justification::centredLeft);
         return;
     }

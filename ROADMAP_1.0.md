@@ -143,7 +143,10 @@ The existing skin remains in use during the first functional integration chapter
    First slice: four controller range/assignment panels connected to firmware
    battery RAM, persistent project recall and EDIT/PERFORMANCE switching.
    No new host automation IDs; these are message-thread global controls.
-   Play mode, pitch bend/portamento and SETTINGS remain subsequent slices.
+   Pitch-bend range/step now have firmware-backed PERFORMANCE selectors (0-12)
+   and project persistence. The extra wrapper pitch offset was removed: zero
+   range is respected and nonzero step follows the firmware's own quantisation.
+   Play mode, portamento and SETTINGS remain subsequent slices.
 3. **USER preset storage / Save As:** default destination is a USER bank + slot,
    with name entry and explicit occupied-slot overwrite confirmation. Preserve
    factory originals; make saved USER banks selectable from the LCD. Also support
