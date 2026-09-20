@@ -11,6 +11,62 @@ static void require(bool ok, const char* message)
 
 struct VDX7RegressionAccess
 {
+    static void checkInvalidMidi(VDX7AudioProcessor& p)
+    {
+        const std::vector<std::vector<uint8_t>> invalid {
+            {0x90}, {0x90, 60}, {0x90, 60, 128}, {0x80, 128, 0},
+            {0xb0, 11, 255}, {0xb0, 64, 128}, {0xc0}, {0xc0, 255},
+            {0xc0, 3, 0}, {0xd0, 128}, {0xe0, 128, 64}, {0x40, 60, 100},
+            {0xf1, 0}, {0xf2, 0, 0}, {0xf3, 0}, {0xf6}, {0xf8}, {0xff}
+        };
+        p.engine_.resetMidiLifecycle();
+        const auto program = p.engine_.currentProgram();
+        const auto bank = p.engine_.currentBank();
+        const auto expression = p.engine_.midiExpression_;
+        const auto revision = p.engine_.factoryBankLoadRevision();
+        const auto write = p.engine_.dx7_.midiSerialRx.writeIdx;
+        const auto overload = p.engine_.midiOverloadCount();
+        for (const auto& event : invalid)
+        {
+            p.engine_.handleMidi(event.data(), static_cast<int>(event.size()));
+            require(!p.handleMidiEventLocked(event.data(), static_cast<int>(event.size())),
+                    "invalid MIDI cannot publish program state");
+        }
+        require(p.engine_.currentProgram() == program && p.engine_.currentBank() == bank
+                && p.engine_.midiExpression_ == expression && p.engine_.factoryBankLoadRevision() == revision,
+                "invalid MIDI preserves engine metadata");
+        require(p.engine_.dx7_.midiSerialRx.writeIdx == write && p.engine_.midiOverloadCount() == overload,
+                "invalid MIDI never enters serial queue");
+        for (const auto& note : p.keyboardSnapshot_) require(note.load() == 0, "invalid MIDI cannot light a key");
+
+        // The reported lost Note Off must not become a mirrored/retriggered UI note.
+        p.keyboardState_.noteOn(1, 60, 1.0f);
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        p.processBlock(audio, midi);
+        for (int i = 0; i < 140; ++i)
+        { p.keyboardState_.noteOn(1, 61, 1.0f); p.keyboardState_.noteOff(1, 61, 0.0f); }
+        p.keyboardState_.noteOff(1, 60, 0.0f); // Dropped queue event still clears UI ownership.
+        p.processBlock(audio, midi);
+        p.mirrorKeyboardOnMessageThread();
+        require(!p.keyboardState_.isNoteOn(1, 60) && !p.keyboardState_.isNoteOn(1, 61),
+                "overflow plus UI releases does not leave keys lit");
+        require(!p.engine_.hasHeldMidiNotes(), "overflow plus releases reconciles engine notes");
+        VDX7KeyboardQueue::Event event;
+        require(!p.keyboardQueue_.pop(event), "mirroring does not retrigger MIDI");
+        for (int i = 0; i < 300; ++i)
+            midi.addEvent(juce::MidiMessage::midiClock(), 0);
+        midi.addEvent(juce::MidiMessage::noteOn(1, 62, uint8_t(100)), 0);
+        contend(p, midi);
+        p.processBlock(audio, midi);
+        require(p.engine_.activeMidiNotes_[62], "ignored clock traffic cannot overflow deferred queue");
+        midi.addEvent(juce::MidiMessage::noteOff(1, 62), 0);
+        p.processBlock(audio, midi);
+        // contend() delays a 256-sample block; preserve that timeline rather
+        // than expecting a later host note-off in the first 64-sample block.
+        for (int block = 0; block < 8; ++block) p.processBlock(audio, midi);
+        require(!p.engine_.hasHeldMidiNotes(), "valid note-off works after ignored traffic");
+    }
     static void checkSerialOverflow(VDX7Engine& e)
     {
         e.dx7_.midiSerialRx.flush();
@@ -341,6 +397,12 @@ int main(int argc, char** argv)
         require(romFile.loadFileAsData(rom), "read local ROM");
         checkAudioPublication(romFile);
         checkEditOrdering(romFile);
+        {
+            VDX7AudioProcessor input(false);
+            require(input.loadRomFromFile(romFile), "MIDI validation ROM");
+            input.prepareToPlay(48000, 64);
+            VDX7RegressionAccess::checkInvalidMidi(input);
+        }
         VDX7Engine engine;
         require(engine.loadRomImage(static_cast<const uint8_t*>(rom.getData()), rom.getSize()), "engine ROM");
         VDX7RegressionAccess::checkControllers(engine);

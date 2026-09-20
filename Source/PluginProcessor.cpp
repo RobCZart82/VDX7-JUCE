@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "VDX7Sysex.h"
+#include "VDX7MidiValidation.h"
 #include "PluginEditor.h"
 
 #include <cstring>
@@ -300,8 +301,13 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         for (std::size_t i = 0; i < keyboardCount; ++i)
             deferredMidi_.push(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
+        {
+            if (event.numBytes <= 0 || (event.data[0] != 0xf0
+                && !VDX7MidiValidation::isChannelMessage(event.data, static_cast<std::size_t>(event.numBytes))))
+                continue;
             deferredMidi_.push(event.data, static_cast<std::size_t>(event.numBytes),
                                juce::jlimit(0, total, event.samplePosition));
+        }
         // Do not replay an arbitrarily old performance after a long transaction.
         deferredMidi_.advanceInputBlock(total,
             static_cast<uint64_t>(std::max(currentSampleRate_ * 2.0, static_cast<double>(total))));
@@ -370,7 +376,7 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
 
 bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
 {
-    if (size <= 0) return false;
+    if (data == nullptr || size <= 0) return false;
     if (data[0] == 0xf0)
     {
         if (!engine_.handleSysex(data, static_cast<std::size_t>(size))) return false;
@@ -378,6 +384,7 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
         return true;
     }
     const auto bankRevision = engine_.factoryBankLoadRevision();
+    if (!VDX7MidiValidation::isChannelMessage(data, static_cast<std::size_t>(size))) return false;
     engine_.handleMidi(data, size);
     const bool bankChange = engine_.factoryBankLoadRevision() != bankRevision;
     if (bankChange) modifiedVoices_.store(0);
