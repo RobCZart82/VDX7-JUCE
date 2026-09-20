@@ -69,6 +69,7 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     sustainDown_ = false;
     midiRecovering_ = false;
     midiOverloadCount_ = 0;
+    controllerRefreshMessages_ = 0;
     midiExpression_ = 1.0f;
     currentBank_ = -1;
     currentProgram_ = 0;
@@ -245,8 +246,20 @@ int VDX7Engine::generateNative(float* out)
     // sample is retained (including instruction-boundary overshoot).
     while (outCount == 0)
     {
-        if (!dx7_.haveMsg && toSynth_->pop(msg))
-            processQueuedMessage(msg);
+        if (!dx7_.haveMsg)
+        {
+            if (toSynth_->pop(msg)) processQueuedMessage(msg);
+            else if (controllerRefreshMessages_ != 0)
+            {
+                // Firmware scales all four sources every second analog event.
+                // Re-submit the latest firmware wheel input after queued input
+                // drains; do not inject stale values into the bounded FIFO.
+                --controllerRefreshMessages_;
+                // IRQ expands the seven-bit sub-CPU value by one left shift.
+                processQueuedMessage({dx7Emu::Message::CtrlID::modulate,
+                    static_cast<uint8_t>(dx7_.memory[0x2337] >> 1)});
+            }
+        }
 
         dx7_.run();
         const int cycles = (dx7_.inst != nullptr && dx7_.inst->cycles > 0) ? dx7_.inst->cycles : 1;
@@ -575,13 +588,46 @@ bool VDX7Engine::saveRam(std::vector<uint8_t>& out) const
     return dx7_.saveRAM(out);
 }
 
+int VDX7Engine::getControllerSetting(int controller, int field) const noexcept
+{
+    if (!loaded_ || controller < 0 || controller >= 4 || field < 0 || field >= 4)
+        return 0;
+    // Firmware order: wheel, foot, breath, aftertouch. The pinned core's foot /
+    // breath field names are swapped; use the verified firmware locations.
+    constexpr int offsets[] { 0, 2, 4, 6 };
+    const int offset = offsets[controller];
+    if (field == 0) return std::clamp(int(dx7_.memory[0x2336 + offset]), 0, 99);
+    return (dx7_.memory[0x232e + offset] >> (field - 1)) & 1;
+}
+
+bool VDX7Engine::setControllerSetting(int controller, int field, int value) noexcept
+{
+    if (!loaded_ || controller < 0 || controller >= 4 || field < 0 || field >= 4
+        || value < 0 || value > (field == 0 ? 99 : 1)) return false;
+    constexpr int offsets[] { 0, 2, 4, 6 };
+    const int offset = offsets[controller];
+    auto& target = dx7_.memory[(field == 0 ? 0x2336 : 0x232e) + offset];
+    const auto previous = target;
+    if (field == 0) target = static_cast<uint8_t>(value);
+    else
+    {
+        const int mask = 1 << (field - 1);
+        target = static_cast<uint8_t>((target & ~mask) | (value != 0 ? mask : 0));
+    }
+    if (previous != target) controllerRefreshMessages_ = 2;
+    return true;
+}
+
 bool VDX7Engine::restoreRam(const std::vector<uint8_t>& in)
 {
     if (!loaded_ || in.size() != kRamStateSize)
         return false;
     const bool ok = dx7_.restoreRAM(in);
     if (ok)
+    {
+        controllerRefreshMessages_ = 2;
         selectProgram(currentProgram_);
+    }
     return ok;
 }
 

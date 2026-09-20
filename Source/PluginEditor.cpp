@@ -264,6 +264,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     : AudioProcessorEditor(&processor),
       processor_(processor),
       keyboard_(processor.keyboardState()),
+      performancePanel_(processor),
       chassis_(loadImage(VDX7Assets::mainwindow_png, VDX7Assets::mainwindow_pngSize)),
       wordmark_(loadImage(VDX7Assets::vdx7wordmark_png, VDX7Assets::vdx7wordmark_pngSize)),
       lcdFrame_(loadImage(VDX7Assets::lcdframe_png, VDX7Assets::lcdframe_pngSize)),
@@ -361,8 +362,10 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     algorithmView_.onOperatorSelected = [this](int op) { selectOperator(op); };
     settings_.setEnabled(false);
     settings_.setTooltip("The settings page will be connected in the next GUI milestone.");
-    performanceTab_.setEnabled(false);
-    performanceTab_.setTooltip("Performance controls will be expanded in a later milestone.");
+    addChildComponent(performancePanel_);
+    editTab_.onClick = [this] { showPerformance(false); };
+    performanceTab_.onClick = [this] { showPerformance(true); };
+    performanceTab_.setTooltip("Global controller range and assignments; saved with the DAW project.");
     utilityTab_.setClickingTogglesState(false);
     utilityTab_.setRadioGroupId(0);
     utilityTab_.setTooltip("Rename, save voice/bank and copy/paste the selected operator.");
@@ -982,12 +985,27 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     g.setFont(juce::Font(juce::FontOptions(20.0f * scaleY)));
     g.setColour(juce::Colour(0xffe6eef0));
     g.drawText("VOICE", referenceRect(52, 145, 250, 30), juce::Justification::centredLeft);
-    g.drawText("GLOBAL", referenceRect(52, 350, 250, 30), juce::Justification::centredLeft);
+    g.drawText(performanceVisible_ ? "PERFORMANCE" : "GLOBAL",
+               referenceRect(52, 350, 250, 30), juce::Justification::centredLeft);
     g.drawText("ALGORITHM", referenceRect(980, 145, 126, 30), juce::Justification::centredLeft);
 
     g.drawImage(divider_, referenceRect(52, 178, 280, 2).toFloat());
     g.drawImage(divider_, referenceRect(52, 382, 1115, 2).toFloat());
-    g.drawImage(divider_, referenceRect(52, 568, 1110, 2).toFloat());
+    if (!performanceVisible_)
+        g.drawImage(divider_, referenceRect(52, 568, 1110, 2).toFloat());
+
+    if (performanceVisible_)
+    {
+        g.setFont(juce::Font(juce::FontOptions(16.0f * scaleY)));
+        g.drawText("CONTROLLER RANGE + ASSIGNMENTS", referenceRect(54, 397, 1080, 28),
+                   juce::Justification::centredLeft);
+        g.setColour(juce::Colour(0xff91a5ac));
+        g.drawText("Global settings are saved in your DAW project, not in voice/bank SysEx.",
+                   referenceRect(54, 435, 1080, 28), juce::Justification::centredLeft);
+        g.drawText("Play mode, pitch bend settings and portamento controls are planned for the next stage.",
+                   referenceRect(54, 467, 1080, 28), juce::Justification::centredLeft);
+        return;
+    }
 
     g.setFont(juce::Font(juce::FontOptions(11.0f * scaleY)));
     g.setColour(juce::Colour(0xff91a5ac));
@@ -1001,6 +1019,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
 void VDX7AudioProcessorEditor::resized()
 {
     updateResponsiveTypography();
+    performancePanel_.setBounds(referenceRect(44, 536, 1352, 250));
 
     mkLabel_.setBounds(referenceRect(360, 88, 85, 44));
     hardwareLabel_.setBounds(referenceRect(450, 94, 220, 17));
@@ -1177,12 +1196,37 @@ void VDX7AudioProcessorEditor::refresh(bool refreshMetadata)
 
     if (refreshMetadata)
     {
+        if (performanceVisible_) performancePanel_.refresh();
         status_.setText(processor_.hasUnexportedEdits() ? "Bank has unexported edits\nSAVE AS... to export"
                         : processor_.getStatusText(), juce::dontSendNotification);
         loadRom_.setTooltip(processor_.getRomPath());
     }
 
     internalUiUpdate_ = false;
+}
+
+void VDX7AudioProcessorEditor::showPerformance(bool visible)
+{
+    performanceVisible_ = visible;
+    editTab_.setToggleState(!visible, juce::dontSendNotification);
+    performanceTab_.setToggleState(visible, juce::dontSendNotification);
+    const auto showEdit = [visible](auto& components)
+    {
+        for (auto& component : components) component.setVisible(!visible);
+    };
+    showEdit(operatorTabs_);
+    showEdit(operatorKnobs_); showEdit(operatorKnobCaptions_); showEdit(operatorKnobValues_);
+    showEdit(operatorScaleKnobs_); showEdit(operatorScaleCaptions_); showEdit(operatorScaleValues_);
+    operatorScaleValues_[0].setVisible(false); // combined oscillator-mode/frequency label
+    showEdit(envelopeFaders_); showEdit(envelopeCaptions_); showEdit(envelopeValues_);
+    showEdit(pitchEnvelopeFaders_); showEdit(pitchEnvelopeCaptions_); showEdit(pitchEnvelopeValues_);
+    showEdit(voiceKnobs_); showEdit(voiceKnobCaptions_); showEdit(voiceKnobValues_);
+    for (auto* label : { &operatorTitle_, &frequencyValue_, &envelopeTitle_,
+                         &pitchEnvelopeTitle_, &voiceLfoTitle_ })
+        label->setVisible(!visible);
+    performancePanel_.setVisible(visible);
+    if (visible) performancePanel_.refresh();
+    repaint();
 }
 
 void VDX7AudioProcessorEditor::chooseRom()

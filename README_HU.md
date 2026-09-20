@@ -76,7 +76,7 @@ A fejléc SAVE AS... gombja is eléri az egyhangszínes és a 32 hangszínes ban
 SysEx-fájlexportját. Ez külön fájlt ment, a factory ROM-ot nem írja felül.
 Egyelőre nem hoz létre USER-könyvtárat, és nem választ célhelyet saját bankban.
 A hangszín-SysEx nem tartalmazza a teljes plugin-/projektállapotot vagy a globális
-PERFORMANCE-beállításokat. A USER-bank tárolás és az elfogadott PERFORMANCE nézet
+PERFORMANCE-beállításokat. A USER-bank tárolás és a teljes elfogadott PERFORMANCE nézet
 bekötése következő fejlesztési szakasz.
 A presetléptető nyilak az LCD mellé kerültek, a fejlécből a kettőzött presetkijelzés
 eltűnt. A léptetés az aktuális bankon belül körbefordul. Az algoritmus az ábra
@@ -100,7 +100,14 @@ A v0.6 sorozat kattintható algoritmusábrát, mechanikus kerékgrafikát, OUTPU
 
 ## 9. Ismert korlátok
 
-- A PERFORMANCE és SETTINGS oldal még nincs megvalósítva.
+- A PERFORMANCE oldalon már működik a modulációs kerék, lábvezérlő (CC4),
+  légzésvezérlő (CC2) és csatorna-aftertouch tartománya (0–99), valamint
+  pitch/amplitude/EG-bias hozzárendelése. Ezek globális, DAW-projektben mentett
+  beállítások, nem kerülnek a hangszín-/bank-SysEx fájlba, és nem új automatizálható
+  hostparaméterek. Kitartott vezérlőértéknél is érvényesülnek a hangfeldolgozás során.
+  A meglévő 148 paraméter változatlan marad.
+- A játékmód, pitch bend beállítások, portamento kezelők és a SETTINGS még hátravannak.
+  Ez az első működő PERFORMANCE panel, még nem a végleges hardverhatású külső.
 - Élő MIDI Out/SysEx-küldés nincs; SysEx-fájlimport/-export van.
 - A mintavételi frekvencia átalakítása jelenleg lineáris interpolációt használ; minőségi fejlesztése tervben van.
 - A hangparaméterek módosítása újratölti az aktív programot. Sűrű automatizálás és tartott hang alatti szerkesztés további hosttesztet igényel.

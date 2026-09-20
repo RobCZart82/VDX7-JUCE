@@ -1264,6 +1264,31 @@ bool VDX7AudioProcessor::exportSyx(const juce::File& file, bool entireBank, juce
     return true;
 }
 
+std::array<int, 16> VDX7AudioProcessor::getControllerSettings() const
+{
+    std::array<int, 16> result {};
+    std::scoped_lock lock(engineMutex_);
+    for (int controller = 0; controller < 4; ++controller)
+        for (int field = 0; field < 4; ++field)
+            result[controller * 4 + field] = engine_.getControllerSetting(controller, field);
+    return result;
+}
+
+bool VDX7AudioProcessor::setControllerSettingFromUi(int controller, int field, int value)
+{
+    bool changed = false;
+    {
+        std::scoped_lock lock(engineMutex_);
+        const int previous = engine_.getControllerSetting(controller, field);
+        if (!engine_.setControllerSetting(controller, field, value)) return false;
+        changed = previous != value;
+    }
+    // Do not mark a voice dirty: these globals are outside the packed voice bank.
+    // Notification must remain outside engineMutex_ (host may re-enter state save).
+    if (changed) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    return true;
+}
+
 bool VDX7AudioProcessor::selectFactoryBank(int bank)
 {
     if (!engineLoaded_.load(std::memory_order_acquire)

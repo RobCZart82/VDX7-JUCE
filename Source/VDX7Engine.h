@@ -60,6 +60,12 @@ public:
     bool saveRam(std::vector<uint8_t>& out) const;
     bool restoreRam(const std::vector<uint8_t>& in);
 
+    // Global battery-RAM controller settings, NOT voice/SysEx parameters.
+    // Controller order: wheel, foot, breath, aftertouch. Field 0: range 0-99;
+    // fields 1-3: pitch, amplitude, EG-bias assignments (0/1).
+    int getControllerSetting(int controller, int field) const noexcept;
+    bool setControllerSetting(int controller, int field, int value) noexcept;
+
 private:
     friend struct VDX7RegressionAccess;
     void boot();
@@ -98,6 +104,7 @@ private:
     bool sustainDown_ = false;
     bool midiRecovering_ = false;
     uint64_t midiOverloadCount_ = 0;
+    unsigned controllerRefreshMessages_ = 0;
 
     bool loaded_ = false;
     int currentBank_ = -1;

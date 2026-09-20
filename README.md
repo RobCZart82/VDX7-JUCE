@@ -76,7 +76,7 @@ The header SAVE AS... button also opens single-voice or 32-voice bank SysEx file
 export. This writes a separate file, never factory ROM. It does not yet create a
 USER library or choose a destination bank slot. Voice SysEx contains voice data,
 not the complete plug-in/project or global performance state. USER bank storage
-and the approved PERFORMANCE layout remain upcoming integration chapters.
+and the complete approved PERFORMANCE layout remain upcoming integration chapters.
 Previous/next program buttons now sit beside the LCD; the duplicated header
 preset display has been removed. Program navigation wraps within the current bank.
 
@@ -98,7 +98,13 @@ The v0.6 series adds clickable algorithm diagrams, mechanical wheel graphics, an
 
 ## 9. Known limitations
 
-- PERFORMANCE and SETTINGS pages are not implemented.
+- PERFORMANCE now exposes controller range (0–99) and pitch/amplitude/EG-bias
+  assignments for mod wheel, foot (CC4), breath (CC2) and channel aftertouch.
+  These global settings are recalled by the DAW project, not voice/bank SysEx;
+  they are not additional host automation parameters. Changes apply during
+  rendering, including held controller input. Existing 148 parameters are unchanged.
+- Play mode, pitch-bend settings, portamento controls and SETTINGS remain pending.
+  This is the first functional PERFORMANCE panel, not the final hardware-style skin.
 - No live MIDI Out/SysEx transmission; SysEx file import/export is available.
 - Sample-rate conversion currently uses linear interpolation; quality improvements remain planned.
 - Voice edits reload the active program. Dense automation and held-note editing need further host testing.

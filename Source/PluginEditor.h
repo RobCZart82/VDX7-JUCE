@@ -6,6 +6,7 @@
 
 #include "PluginProcessor.h"
 #include "VDX7LookAndFeel.h"
+#include "VDX7PerformancePanel.h"
 
 class VDX7Keyboard final : public juce::MidiKeyboardComponent
 {
@@ -82,6 +83,7 @@ private:
     void chooseSyx();
     void showUtilityMenu();
     void showSaveAsMenu();
+    void showPerformance(bool);
     void chooseExport(bool entireBank);
     void renameVoice();
     void confirmReplacement(std::function<void()> action);
@@ -90,6 +92,8 @@ private:
     VDX7AudioProcessor& processor_;
     VDX7LookAndFeel lookAndFeel_;
     VDX7Keyboard keyboard_;
+    VDX7PerformancePanel performancePanel_;
+    bool performanceVisible_ = false;
 
     juce::Image chassis_;
     juce::Image wordmark_;

@@ -32,7 +32,7 @@ items, host-to-selector/diagram and selector-to-host/diagram/RAM for all 32
 algorithms, removal of duplicate ALGO encoder, and LCD 01/32 navigation wrap.
 Existing tests cover legacy indices, state/RAM restore, all voice parameters,
 rename, single/bank export/import, failed-I/O dirty protection, operator selection,
-and rendering. UI checks run at 960, 1200 and 1440 pixel widths. The 960-pixel
+and rendering. UI checks run at 960, 1440 and 1600 pixel widths. The 960-pixel
 editor snapshot was visually inspected for LCD, header and algorithm layout.
 
 VST3 built successfully; direct ad-hoc signing and strict verification passed.
