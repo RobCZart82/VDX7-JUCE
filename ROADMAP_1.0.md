@@ -165,6 +165,22 @@ nélkül. Ez elfogadott tervezési irány, nem már elkészült GUI vagy jogi mi
 
 These are recorded design requirements, not completed implementation.
 
+### Operator space and vector control finish — implementation chapter
+
+- [x] Expand the operator panel downward by 40 reference units and move the
+  keyboard section and footer down by the same amount. Preserve the outer size
+  for now, reducing the unused bottom margin rather than stretching the window.
+- [x] Increase envelope slider height from 116 to 169 reference units and extend
+  the neighbouring graph from 164 to 239. Align graph bottom with value-row bottom.
+  Enlarge operator knobs and separate rows with consistent vertical clearance.
+- [x] Add vector knob bevels/knurling, native fader tracks/ticks/caps and restrained
+  panel/graph gradients. Existing parameter bindings and audio behaviour unchanged.
+- [ ] Complete final header/logo/About integration, material texture, percentage
+  size controls and outer-margin fitting after visual acceptance. This chapter
+  is not a declaration that the entire skin or Retina/Windows acceptance is final.
+
+### Header and LCD checklist
+
 - [x] Narrow the LCD and its black frame horizontally by moving their left edge
   rightward while retaining the current height and right edge. Reserve a clear
   gap between the UTILITY button and the black frame; all three view buttons

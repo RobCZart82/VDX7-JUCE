@@ -537,6 +537,18 @@ int main(int argc, char** argv)
                 editor->setSize(width, juce::roundToInt(width * 1110.0 / 1440.0));
                 int lcdSelectors = 0;
                 const float scale = float(width) / 1440.0f;
+                int operatorEnvelopeControls = 0;
+                for (auto* child : editor->getChildren())
+                    if (auto* slider = dynamic_cast<juce::Slider*>(child))
+                        if (slider->getName().startsWith("Operator envelope "))
+                        {
+                            ++operatorEnvelopeControls;
+                            require(slider->getHeight() >= 168 * scale,
+                                    "operator envelope uses expanded vertical travel");
+                            require(slider->getBottom() <= 796 * scale + 1,
+                                    "operator envelope leaves room for value and keyboard");
+                        }
+                require(operatorEnvelopeControls == 8, "all eight expanded envelope controls");
                 const juce::Rectangle<float> lcdArea(422 * scale, 190 * scale,
                                                       505 * scale, 86 * scale);
                 for (auto* child : editor->getChildren())
