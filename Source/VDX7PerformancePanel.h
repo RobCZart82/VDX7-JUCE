@@ -28,7 +28,8 @@ public:
                 refresh();
             };
             addAndMakeVisible(box);
-            playLabels_[field].setText(playNames[field], juce::dontSendNotification);
+            constexpr const char* captions[] {"Voice mode", "Mode", "Glissando", "Time"};
+            playLabels_[field].setText(captions[field], juce::dontSendNotification);
             addAndMakeVisible(playLabels_[field]);
         }
         for (int field = 0; field < 2; ++field)
@@ -40,7 +41,7 @@ public:
             box.setTooltip("Firmware pitch bend. Nonzero STEP uses firmware stepped bending; RANGE applies to continuous mode. Saved in the project, not SysEx.");
             box.onChange = [this, field] { processor_.setPitchBendSettingFromUi(field, bend_[field].getSelectedId() - 1); };
             addAndMakeVisible(box);
-            bendLabels_[field].setText(box.getName(), juce::dontSendNotification);
+            bendLabels_[field].setText(field == 0 ? "Range" : "Step", juce::dontSendNotification);
             addAndMakeVisible(bendLabels_[field]);
         }
         constexpr const char* assignments[] { "PITCH", "AMPLITUDE", "EG BIAS" };
@@ -105,19 +106,26 @@ public:
         const float scale = getHeight() / 394.0f;
         const int top = juce::roundToInt(144 * scale);
         const float headerColumn = getWidth() * 0.83f / 3;
+        const auto place = [scale](juce::Label& label, juce::ComboBox& box,
+                                   float x, float y, float width)
+        {
+            label.setBounds(juce::roundToInt(x), juce::roundToInt(y * scale),
+                            juce::roundToInt(width), juce::roundToInt(20 * scale));
+            box.setBounds(juce::roundToInt(x), juce::roundToInt((y + 21) * scale),
+                          juce::roundToInt(width), juce::roundToInt(28 * scale));
+        };
+        const float inset = 12 * scale;
+        place(playLabels_[0], play_[0], inset, 48, headerColumn - 2 * inset);
         for (int field = 0; field < 2; ++field)
         {
-            const int x = juce::roundToInt(field * headerColumn + 12 * scale);
-            bendLabels_[field].setBounds(x, 0, int(headerColumn - 24 * scale), int(25 * scale));
-            bend_[field].setBounds(x, int(27 * scale), int(headerColumn - 24 * scale), int(28 * scale));
+            const float x = headerColumn + field * headerColumn / 2 + inset;
+            place(bendLabels_[field], bend_[field], x, 48, headerColumn / 2 - 2 * inset);
         }
-        for (int field = 0; field < 4; ++field)
+        place(playLabels_[1], play_[1], 2 * headerColumn + inset, 28, headerColumn - 2 * inset);
+        for (int field = 2; field < 4; ++field)
         {
-            const int cell = field + 2;
-            const int x = juce::roundToInt((cell % 3) * headerColumn + 12 * scale);
-            const int y = juce::roundToInt((cell / 3) * 64 * scale);
-            playLabels_[field].setBounds(x, y, int(headerColumn - 24 * scale), int(25 * scale));
-            play_[field].setBounds(x, y + int(27 * scale), int(headerColumn - 24 * scale), int(28 * scale));
+            const float x = 2 * headerColumn + (field - 2) * headerColumn / 2 + inset;
+            place(playLabels_[field], play_[field], x, 82, headerColumn / 2 - 2 * inset);
         }
         for (int c = 0; c < 4; ++c)
         {
@@ -137,6 +145,19 @@ public:
         const float column = getWidth() / 4.0f;
         const float scale = getHeight() / 394.0f;
         const float top = 144 * scale;
+        const float headerColumn = getWidth() * 0.83f / 3;
+        constexpr const char* groups[] {"PLAY MODE", "PITCH BEND", "PORTAMENTO"};
+        for (int group = 0; group < 3; ++group)
+        {
+            auto bounds = juce::Rectangle<float>(group * headerColumn + 3, 0,
+                                                 headerColumn - 6, top - 5 * scale);
+            g.setColour(juce::Colour(0xff302d29));
+            g.fillRoundedRectangle(bounds, 4.0f);
+            g.setColour(juce::Colour(0xffeee9dc));
+            g.setFont(juce::Font(juce::FontOptions(juce::jmax(10.0f, 16.0f * scale))));
+            g.drawText(groups[group], bounds.removeFromTop(27 * scale).reduced(10, 0),
+                       juce::Justification::centredLeft);
+        }
         for (int c = 0; c < 4; ++c)
         {
             auto bounds = juce::Rectangle<float>(c * column + 3, top, column - 6, float(getHeight()) - top);

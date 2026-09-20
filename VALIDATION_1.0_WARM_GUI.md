@@ -30,3 +30,21 @@ replacement, tag or release publication is part of this development chapter.
 Final local macOS arm64 full CTest: 10/10 passed in 57.80 seconds. VST3 build
 and strict ad-hoc signature verification passed. Existing Xcode licence warning
 from the helper remains; no system licence was accepted or settings changed.
+
+## PERFORMANCE grouping follow-up
+
+Three top cards now group PLAY MODE, PITCH BEND (Range/Step) and PORTAMENTO
+(Mode/Glissando/Time), instead of one undifferentiated six-field grid. The top
+row retains the existing width reservation for OUTPUT; all six controls remain
+functional selectors with unchanged names, callbacks, persistence and semantics.
+Shorter labels avoid redundant group-name prefixes at small sizes. Four controller
+cards below are unchanged. Layout regression asserts play/portamento membership
+alongside existing bounds and binding checks at 960/1440/1600 pixels.
+
+Local follow-up CTest: 10/10 passed in 57.85 seconds. Additional screenshot run
+passed; the 960-pixel PERFORMANCE image was visually inspected. VST3 build and
+strict ad-hoc signature verification passed. Fresh PR CI remains required.
+
+Still not a final skin or a host-acceptance claim. Knob-versus-selector refinements,
+fader/wheel styling, typography, material treatment and Windows/HiDPI acceptance
+remain follow-up work.

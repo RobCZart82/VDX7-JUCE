@@ -660,6 +660,10 @@ int main(int argc, char** argv)
                             const int field = box->getName() == "Play mode" ? 0
                                 : box->getName() == "Portamento mode" ? 1
                                 : box->getName() == "Glissando" ? 2 : 3;
+                            const float groupWidth = performance->getWidth() * 0.83f / 3;
+                            require(field == 0 ? box->getRight() < groupWidth
+                                               : box->getX() > 2 * groupWidth,
+                                    "play and portamento controls stay in their visual groups");
                             box->setSelectedId(2, juce::sendNotificationSync);
                             if (restored.getPlaySettings()[field] != 1)
                                 std::cerr << "Play GUI field " << field << " name " << box->getName()
