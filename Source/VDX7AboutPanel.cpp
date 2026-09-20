@@ -55,7 +55,7 @@ void VDX7AboutPanel::paint(juce::Graphics& g)
     g.setColour(juce::Colour(0xff71685b));
     g.drawRect(bounds.reduced(0.5f), 1.0f);
     if (wordmark_) wordmark_->drawWithin(g, { 60, 38, 530, 70 }, juce::RectanglePlacement::centred, 1.0f);
-    if (gyr_) gyr_->drawWithin(g, { 115, 200, 110, 158 }, juce::RectanglePlacement::centred, 1.0f);
+    if (gyr_) gyr_->drawWithin(g, { 64, 200, 110, 158 }, juce::RectanglePlacement::centred, 1.0f);
     g.setColour(juce::Colour(0xff68c7bb).withAlpha(0.65f));
     for (int y : { 175, 398 }) g.drawHorizontalLine(y, 40.0f, 610.0f);
 }
