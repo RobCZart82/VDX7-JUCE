@@ -1,4 +1,5 @@
 #include "VDX7Engine.h"
+#include "VDX7MidiValidation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -363,7 +364,7 @@ bool VDX7Engine::handleSysex(const uint8_t* data, std::size_t size)
 
 void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
 {
-    if (size < 1 || size > 3)
+    if (size <= 0 || !VDX7MidiValidation::isChannelMessage(data, static_cast<std::size_t>(size)))
         return;
 
     if (data[0] >= 0xf8) return;

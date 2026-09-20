@@ -27,7 +27,15 @@ Next chapter order: verified CC32 fix -> malformed MIDI input validation and
 targeted overflow UI reproduction -> SETTINGS channel/tuning -> remaining GUI
 visual integration and host acceptance. Reclassify reported risks as confirmed
 bugs only with source evidence or reproduction; do not apply the rejected APVTS
-normalisation or remove implemented play controls. PR/CI/user-merge gates remain.
+  normalisation or remove implemented play controls. PR/CI/user-merge gates remain.
+
+- [x] Shared complete channel-message validation before engine/GUI mutation and
+  deferred storage; ROM-free exhaustive status/length/data-byte tests and local
+  integration regressions. Unsupported system common/realtime traffic is ignored;
+  validated bank SysEx stays on its dedicated path. See `VALIDATION_1.0_MIDI_INPUT.md`.
+- [x] Reproduce the reported overflow + lost UI Note Off scenario: local test
+  confirms release and no mirror-triggered note. No speculative UI reset applied.
+  Broader simultaneous-held-key/host-contention acceptance remains open.
 
 - [x] Deferred multi-block MIDI timeline, restart cleanup and consistent program
   normalization implemented; see `VALIDATION_1.0_MIDI_LIFECYCLE.md` for policy

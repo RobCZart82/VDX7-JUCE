@@ -1,6 +1,7 @@
 #include "VDX7DeferredMidi.h"
 #include "VDX7EditQueue.h"
 #include "VDX7KeyboardQueue.h"
+#include "VDX7MidiValidation.h"
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -13,6 +14,26 @@ static void checkKeyboardQueue();
 void require(bool result) { if (!result) std::exit(1); }
 int main()
 {
+    // Exhaust every status, length and data-byte value without ROM or JUCE.
+    require(!VDX7MidiValidation::isChannelMessage(nullptr, 3));
+    for (int status = 0; status < 256; ++status)
+        for (std::size_t size = 0; size <= 4; ++size)
+        {
+            uint8_t bytes[] {static_cast<uint8_t>(status), 0, 127, 0};
+            const auto kind = status & 0xf0;
+            const std::size_t expected = kind == 0xc0 || kind == 0xd0 ? 2 : 3;
+            require(VDX7MidiValidation::isChannelMessage(bytes, size)
+                    == (status >= 0x80 && status < 0xf0 && size == expected));
+            if (status < 0x80 || status >= 0xf0 || size != expected) continue;
+            for (std::size_t position = 1; position < size; ++position)
+                for (int value = 0; value < 256; ++value)
+                {
+                    bytes[1] = bytes[2] = 0;
+                    bytes[position] = static_cast<uint8_t>(value);
+                    require(VDX7MidiValidation::isChannelMessage(bytes, size) == (value < 128));
+                }
+        }
+    std::cout << "PASS: complete channel message validation, all statuses/lengths/data bytes\n";
     checkEditQueue();
     checkMidiTimeline();
     checkKeyboardQueue();
