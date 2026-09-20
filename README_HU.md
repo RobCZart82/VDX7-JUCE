@@ -56,7 +56,7 @@ Gyári hangadat esetén ROM1A–ROM4B érhető el: nyolc bank, bankonként 32 pr
 - OSC MODE vízszintes kapcsoló: RATIO vagy FIXED, alatta névleges arány/Hz. A kijelzés nem tartalmazza a detune és moduláció hatását.
 - Operátor-envelope: operátoronként négy Rate és négy Level.
 - Keyboard scaling: töréspont, bal/jobb mélység és négy görbetípus.
-- GLOBAL: négyszakaszos pitch envelope, 1–32 algoritmus, feedback, oszcillátor-szinkron, transzponálás és LFO-vezérlők.
+- GLOBAL: négyszakaszos pitch envelope, feedback, oszcillátor-szinkron, transzponálás és LFO-vezérlők. Az 1–32 algoritmus az ábra melletti listából választható.
 - LFO: sebesség, késleltetés, pitch/amplitude modulációmélység, szinkron, hat hullámforma és pitch-moduláció-érzékenység.
 - A grafikonok a burkológörbe alakját szemléltetik; nem kalibrált idő-/félhangdiagramok.
 
@@ -71,6 +71,16 @@ A footer CPU-százaléka simított audio-callback terhelésbecslés, nem a telje
 ## 6. Utility és SysEx
 
 A UTILITY menüben hangszínátnevezés (1–10 nyomtatható ASCII karakter), egyhangszínes export, bankexport és operátormásolás/-beillesztés található. A másolás mind a 21 operátormezőt tartalmazza. Vágólapja a pluginpéldányhoz tartozik, a projekt nem tárolja.
+
+A fejléc SAVE AS... gombja is eléri az egyhangszínes és a 32 hangszínes bank
+SysEx-fájlexportját. Ez külön fájlt ment, a factory ROM-ot nem írja felül.
+Egyelőre nem hoz létre USER-könyvtárat, és nem választ célhelyet saját bankban.
+A hangszín-SysEx nem tartalmazza a teljes plugin-/projektállapotot vagy a globális
+PERFORMANCE-beállításokat. A USER-bank tárolás és az elfogadott PERFORMANCE nézet
+bekötése következő fejlesztési szakasz.
+A presetléptető nyilak az LCD mellé kerültek, a fejlécből a kettőzött presetkijelzés
+eltűnt. A léptetés az aktuális bankon belül körbefordul. Az algoritmus az ábra
+melletti 1–32-es listából választható, a korábbi automatizálható paraméterrel.
 
 A LOAD SYX egy teljes DX7-hangszínt (163 bájtos VCED) vagy bankot (4104 bájtos VMEM) fogad. Egy hangszín a kijelölt helyet, egy bank a szerkeszthető bankot cseréli le. Összefűzött dumpok és más hangszertípusok formátumai nem támogatottak. Importkor szerkezet- és checksum-ellenőrzés történik. Az export device/channel nibble értéke 0; az import 0–15 értéket fogad.
 

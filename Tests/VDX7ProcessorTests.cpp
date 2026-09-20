@@ -44,6 +44,24 @@ int main(int argc, char** argv)
     try
     {
         VDX7AudioProcessor original;
+        {
+            VDX7AudioProcessor noRom(false);
+            std::unique_ptr<juce::AudioProcessorEditor> editor(noRom.createEditor());
+            int saveButtons = 0;
+            for (auto* child : editor->getChildren())
+            {
+                if (auto* button = dynamic_cast<juce::TextButton*>(child))
+                    if (button->getButtonText() == "SAVE AS...")
+                    {
+                        ++saveButtons;
+                        require(!button->isEnabled(), "Save As disabled without ROM");
+                    }
+                if (auto* box = dynamic_cast<juce::ComboBox*>(child))
+                    if (box->getName() == "Algorithm")
+                        require(!box->isEnabled(), "Algorithm disabled without ROM");
+            }
+            require(saveButtons == 1, "one persistent Save As button");
+        }
         const auto explicitRom = juce::SystemStats::getEnvironmentVariable("VDX7_TEST_ROM_PATH", {});
         if (explicitRom.isNotEmpty())
             require(original.loadRomFromFile(juce::File(explicitRom)), "explicit local test ROM");
@@ -226,11 +244,43 @@ int main(int argc, char** argv)
                 for (auto* child:editor->getChildren())
                     if (auto* view=dynamic_cast<VDX7AlgorithmView*>(child)) diagram=view;
                 require(diagram!=nullptr,"Algorithm view exists");
+                juce::ComboBox* algorithmBox = nullptr;
+                juce::TextButton* previous = nullptr;
+                juce::TextButton* next = nullptr;
+                for (auto* child : editor->getChildren())
+                {
+                    if (auto* box = dynamic_cast<juce::ComboBox*>(child))
+                        if (box->getName() == "Algorithm") algorithmBox = box;
+                    if (auto* button = dynamic_cast<juce::TextButton*>(child))
+                    {
+                        if (button->getButtonText() == "<") previous = button;
+                        if (button->getButtonText() == ">") next = button;
+                        if (button->getButtonText() == "SAVE AS...")
+                            require(button->isEnabled(), "Save As enabled with ROM");
+                    }
+                    if (auto* label = dynamic_cast<juce::Label*>(child))
+                        require(label->getText() != "ALGO", "duplicate algorithm encoder removed");
+                }
+                require(algorithmBox && algorithmBox->getNumItems() == 32,
+                        "numbered 32-algorithm selector");
+                require(previous && next, "LCD navigation buttons present");
+                require(previous->getY() > int(180 * scale) && next->getY() > int(180 * scale),
+                        "preset arrows moved out of header into LCD row");
+                require(!previous->getBounds().intersects(next->getBounds()), "separate LCD arrows");
+                restored.selectProgramFromUi(0);
+                save(restored);
+                previous->onClick();
+                save(restored);
+                require(restored.getCurrentProgram() == 31, "LCD previous wraps 01 to 32");
+                next->onClick();
+                save(restored);
+                require(restored.getCurrentProgram() == 0, "LCD next wraps 32 to 01");
                 const auto algoID=VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::algorithm);
                 for (int algorithm=1;algorithm<=32;++algorithm)
                 {
                     set(restored,algoID,float(algorithm));
                     require(diagram->algorithm()==algorithm,"Algorithm parameter updates diagram");
+                    require(algorithmBox->getSelectedId() == algorithm, "automation updates dropdown");
                     auto beforeSelection=ram(save(restored));
                     for (int op=0;op<6;++op)
                     {
@@ -247,6 +297,19 @@ int main(int argc, char** argv)
                             require(!bounds.intersects(diagram->nodeBounds(other)),"Nodes do not overlap");
                     }
                     require(beforeSelection==ram(save(restored)),"Selecting node does not edit voice RAM");
+                }
+                for (int algorithm = 32; algorithm >= 1; --algorithm)
+                {
+                    algorithmBox->setSelectedId(algorithm, juce::sendNotificationSync);
+                    require(juce::roundToInt(value(restored, algoID)) == algorithm,
+                            "dropdown updates existing host parameter");
+                    require(diagram->algorithm() == algorithm, "dropdown updates diagram immediately");
+                    const auto packed = ram(save(restored));
+                    const auto* selectedVoice = static_cast<const uint8_t*>(packed.getData())
+                        + restored.getCurrentProgram() * 128;
+                    require(VDX7VoiceData::getVoiceParameter(selectedVoice, 128,
+                        VDX7VoiceData::VoiceParameter::algorithm) == algorithm,
+                        "dropdown commits to firmware voice RAM");
                 }
                 set(restored,algoID,4);
                 for (auto* child : editor->getChildren())

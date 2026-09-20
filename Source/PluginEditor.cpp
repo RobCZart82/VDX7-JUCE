@@ -92,9 +92,8 @@ constexpr std::array<VDX7VoiceData::VoiceParameter, 8> kPitchEnvelopeParameters
     VDX7VoiceData::VoiceParameter::pitchLevel4
 };
 
-constexpr std::array<VDX7VoiceData::VoiceParameter, 11> kVoiceKnobParameters
+constexpr std::array<VDX7VoiceData::VoiceParameter, 10> kVoiceKnobParameters
 {
-    VDX7VoiceData::VoiceParameter::algorithm,
     VDX7VoiceData::VoiceParameter::feedback,
     VDX7VoiceData::VoiceParameter::oscillatorKeySync,
     VDX7VoiceData::VoiceParameter::transpose,
@@ -107,9 +106,9 @@ constexpr std::array<VDX7VoiceData::VoiceParameter, 11> kVoiceKnobParameters
     VDX7VoiceData::VoiceParameter::pitchModSensitivity
 };
 
-constexpr std::array<const char*, 11> kVoiceKnobCaptions
+constexpr std::array<const char*, 10> kVoiceKnobCaptions
 {
-    "ALGO", "FDBK", "O-SYNC", "TRANS", "SPEED", "DELAY",
+    "FDBK", "O-SYNC", "TRANS", "SPEED", "DELAY",
     "PMD", "AMD", "L-SYNC", "WAVE", "PMS"
 };
 
@@ -284,7 +283,6 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     configureLabel(mkLabel_, 37.0f, juce::Justification::centredLeft);
     configureLabel(hardwareLabel_, 16.0f, juce::Justification::centredLeft);
     configureLabel(firmwareLabel_, 13.0f, juce::Justification::centredLeft, juce::Colour(0xff91a5ac));
-    configureLabel(headerPatch_, 18.0f, juce::Justification::centred, juce::Colour(0xff00e7e7));
     configureLabel(status_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xff91a5ac));
     configureLabel(patch_, 29.0f, juce::Justification::centredLeft, juce::Colour(0xff06352e));
     configureLabel(bankCaption_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xff06352e));
@@ -296,8 +294,6 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     configureLabel(outputCaption_, 19.0f, juce::Justification::centred);
     configureLabel(leftCaption_, 12.0f, juce::Justification::centred);
     configureLabel(rightCaption_, 12.0f, juce::Justification::centred);
-    configureLabel(algorithmDisplay_, 30.0f, juce::Justification::centred,
-                   juce::Colour(0xff00e7e7));
     configureLabel(operatorTitle_, 20.0f, juce::Justification::centredLeft);
     configureLabel(frequencyValue_, 14.0f, juce::Justification::centredRight,
                    juce::Colour(0xff00e7e7));
@@ -320,7 +316,6 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     outputCaption_.setText("OUTPUT", juce::dontSendNotification);
     leftCaption_.setText("LEFT", juce::dontSendNotification);
     rightCaption_.setText("RIGHT", juce::dontSendNotification);
-    algorithmDisplay_.setText("1", juce::dontSendNotification);
     operatorTitle_.setText("OPERATOR 1", juce::dontSendNotification);
     frequencyValue_.setText("RATIO 1.00 x", juce::dontSendNotification);
     envelopeTitle_.setText("4-STAGE ENVELOPE", juce::dontSendNotification);
@@ -330,18 +325,15 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     footerCentre_.setText("6-OPERATOR FM SYNTHESIZER", juce::dontSendNotification);
     footerRight_.setText("CPU 0.0%", juce::dontSendNotification);
 
-    headerPatch_.setColour(juce::Label::backgroundColourId, juce::Colour(0xff050b0d));
-    headerPatch_.setColour(juce::Label::outlineColourId, juce::Colour(0xff24444b));
-
-    for (auto* label : { &mkLabel_, &hardwareLabel_, &firmwareLabel_, &headerPatch_, &status_,
+    for (auto* label : { &mkLabel_, &hardwareLabel_, &firmwareLabel_, &status_,
                          &patch_, &bankCaption_, &programCaption_, &masterCaption_,
                          &masterValue_, &pitchCaption_, &modCaption_, &outputCaption_, &leftCaption_,
-                         &rightCaption_, &algorithmDisplay_, &operatorTitle_, &frequencyValue_,
+                         &rightCaption_, &operatorTitle_, &frequencyValue_,
                          &envelopeTitle_, &pitchEnvelopeTitle_, &voiceLfoTitle_, &footerLeft_,
                          &footerCentre_, &footerRight_ })
         addAndMakeVisible(*label);
 
-    for (auto* button : { &loadRom_, &loadSyx_, &settings_, &about_, &previous_, &next_,
+    for (auto* button : { &loadRom_, &loadSyx_, &saveAs_, &settings_, &about_, &previous_, &next_,
                           &editTab_, &performanceTab_, &utilityTab_ })
         addAndMakeVisible(*button);
 
@@ -360,6 +352,12 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     }
 
     addAndMakeVisible(algorithmView_);
+    for (int algorithm = 1; algorithm <= 32; ++algorithm)
+        algorithm_.addItem(juce::String(algorithm), algorithm);
+    algorithm_.setName("Algorithm");
+    algorithm_.setTooltip("DX7 algorithm (1-32). Uses the existing automatable algorithm parameter.");
+    algorithm_.onChange = [this] { updateVoiceValueLabels(); };
+    addAndMakeVisible(algorithm_);
     algorithmView_.onOperatorSelected = [this](int op) { selectOperator(op); };
     settings_.setEnabled(false);
     settings_.setTooltip("The settings page will be connected in the next GUI milestone.");
@@ -490,7 +488,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     for (std::size_t i = 0; i < voiceKnobs_.size(); ++i)
     {
         configureOperatorSlider(voiceKnobs_[i], false);
-        if (i == 2 || i == 8)
+        if (i == 1 || i == 7)
         {
             voiceKnobs_[i].setSliderStyle(juce::Slider::LinearVertical);
             voiceKnobs_[i].setSliderSnapsToMousePosition(true);
@@ -513,6 +511,8 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     }
 
     auto& parameters = processor_.parameters();
+    algorithmAttachment_ = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        parameters, VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::algorithm), algorithm_);
     masterVolumeAttachment_ = std::make_unique<SliderAttachment>(
         parameters, VDX7ParameterIDs::masterVolume, masterVolume_);
     pitchWheelAttachment_ = std::make_unique<SliderAttachment>(
@@ -538,6 +538,10 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
 
     loadRom_.onClick = [this] { chooseRom(); };
     loadSyx_.onClick = [this] { chooseSyx(); };
+    saveAs_.onClick = [this] { showSaveAsMenu(); };
+    saveAs_.setTooltip("Save a separate voice or bank SysEx file. Does not overwrite factory ROM.");
+    previous_.setTooltip("Previous program in the current bank (wraps 01-32)");
+    next_.setTooltip("Next program in the current bank (wraps 01-32)");
     about_.onClick = [this]
     {
         juce::AlertWindow::showMessageBoxAsync(
@@ -659,8 +663,8 @@ void VDX7AudioProcessorEditor::selectOperator(int operatorIndex)
     bindSelectedOperatorParameters();
     updateOperatorValueLabels();
     repaint(referenceRect(34, 526, 1372, 258));
-    algorithmView_.setState(juce::roundToInt(voiceKnobs_[0].getValue()), selectedOperator_,
-                            juce::roundToInt(voiceKnobs_[1].getValue()));
+    algorithmView_.setState(algorithm_.getSelectedId(), selectedOperator_,
+                            juce::roundToInt(voiceKnobs_[0].getValue()));
 }
 
 void VDX7AudioProcessorEditor::bindSelectedOperatorParameters()
@@ -759,11 +763,8 @@ void VDX7AudioProcessorEditor::updateVoiceValueLabels()
         voiceKnobValues_[i].setText(text, juce::dontSendNotification);
     }
 
-    algorithmDisplay_.setText(
-        juce::String(juce::roundToInt(voiceKnobs_[0].getValue())),
-        juce::dontSendNotification);
-    algorithmView_.setState(juce::roundToInt(voiceKnobs_[0].getValue()), selectedOperator_,
-                            juce::roundToInt(voiceKnobs_[1].getValue()));
+    algorithmView_.setState(algorithm_.getSelectedId(), selectedOperator_,
+                            juce::roundToInt(voiceKnobs_[0].getValue()));
 }
 
 void VDX7AudioProcessorEditor::drawOperatorEnvelope(juce::Graphics& g)
@@ -894,7 +895,6 @@ void VDX7AudioProcessorEditor::updateResponsiveTypography()
     setFont(mkLabel_, 37.0f);
     setFont(hardwareLabel_, 14.0f, juce::Font::bold);
     setFont(firmwareLabel_, 14.0f);
-    setFont(headerPatch_, 18.0f, juce::Font::bold);
     setFont(status_, 12.0f);
     setFont(patch_, 29.0f, juce::Font::bold);
     setFont(bankCaption_, 14.0f);
@@ -906,7 +906,6 @@ void VDX7AudioProcessorEditor::updateResponsiveTypography()
     setFont(outputCaption_, 19.0f);
     setFont(leftCaption_, 12.0f);
     setFont(rightCaption_, 12.0f);
-    setFont(algorithmDisplay_, 18.0f, juce::Font::bold);
     setFont(operatorTitle_, 20.0f);
     setFont(frequencyValue_, 10.0f);
     setFont(pitchEnvelopeTitle_, 12.0f, juce::Font::bold);
@@ -984,7 +983,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colour(0xffe6eef0));
     g.drawText("VOICE", referenceRect(52, 145, 250, 30), juce::Justification::centredLeft);
     g.drawText("GLOBAL", referenceRect(52, 350, 250, 30), juce::Justification::centredLeft);
-    g.drawText("ALGORITHM", referenceRect(986, 145, 155, 30), juce::Justification::centredLeft);
+    g.drawText("ALGORITHM", referenceRect(980, 145, 126, 30), juce::Justification::centredLeft);
 
     g.drawImage(divider_, referenceRect(52, 178, 280, 2).toFloat());
     g.drawImage(divider_, referenceRect(52, 382, 1115, 2).toFloat());
@@ -1006,23 +1005,23 @@ void VDX7AudioProcessorEditor::resized()
     mkLabel_.setBounds(referenceRect(360, 88, 85, 44));
     hardwareLabel_.setBounds(referenceRect(450, 94, 220, 17));
     firmwareLabel_.setBounds(referenceRect(450, 108, 220, 19));
-    previous_.setBounds(referenceRect(652, 76, 34, 46));
-    headerPatch_.setBounds(referenceRect(686, 76, 208, 46));
-    next_.setBounds(referenceRect(894, 76, 34, 46));
-    loadRom_.setBounds(referenceRect(1000, 76, 104, 46));
-    loadSyx_.setBounds(referenceRect(1106, 76, 104, 46));
+    previous_.setBounds(referenceRect(401, 191, 32, 86));
+    next_.setBounds(referenceRect(891, 191, 32, 86));
+    loadRom_.setBounds(referenceRect(894, 76, 104, 46));
+    loadSyx_.setBounds(referenceRect(1000, 76, 104, 46));
+    saveAs_.setBounds(referenceRect(1106, 76, 104, 46));
     settings_.setBounds(referenceRect(1212, 76, 104, 46));
     about_.setBounds(referenceRect(1318, 76, 90, 46));
-    for (auto* button : { &loadRom_, &loadSyx_, &settings_, &about_ })
+    for (auto* button : { &loadRom_, &loadSyx_, &saveAs_, &settings_, &about_ })
         button->getProperties().set("vdx7WideHeader", true);
     status_.setBounds(referenceRect(56, 242, 324, 64));
 
     editTab_.setBounds(referenceRect(54, 190, 100, 42));
     performanceTab_.setBounds(referenceRect(160, 190, 118, 42));
     utilityTab_.setBounds(referenceRect(284, 190, 100, 42));
-    patch_.setBounds(referenceRect(421, 190, 473, 40));
-    bankCaption_.setBounds(referenceRect(421, 238, 52, 24));
-    bank_.setBounds(referenceRect(473, 238, 94, 24));
+    patch_.setBounds(referenceRect(442, 190, 442, 40));
+    bankCaption_.setBounds(referenceRect(442, 238, 52, 24));
+    bank_.setBounds(referenceRect(494, 238, 94, 24));
     programCaption_.setBounds(referenceRect(595, 238, 76, 24));
     program_.setBounds(referenceRect(671, 238, 72, 24));
 
@@ -1034,7 +1033,7 @@ void VDX7AudioProcessorEditor::resized()
     masterVolume_.setBounds(referenceRect(1274, 202, 58, 232));
     rightMeter_.setBounds(referenceRect(1348, 202, 38, 232));
     masterValue_.setBounds(referenceRect(1255, 467, 96, 32));
-    algorithmDisplay_.setBounds(referenceRect(1143, 145, 34, 30));
+    algorithm_.setBounds(referenceRect(1109, 145, 68, 30));
     algorithmView_.setBounds(referenceRect(980, 180, 200, 124));
     pitchEnvelopeTitle_.setBounds(referenceRect(52, 384, 260, 20));
     voiceLfoTitle_.setBounds(referenceRect(602, 384, 260, 20));
@@ -1047,7 +1046,7 @@ void VDX7AudioProcessorEditor::resized()
     }
     for (std::size_t i = 0; i < voiceKnobs_.size(); ++i)
     {
-        const float x = 602.0f + static_cast<float>(i) * 51.0f;
+        const float x = 606.0f + static_cast<float>(i) * 56.0f;
         voiceKnobCaptions_[i].setBounds(referenceRect(x, 404, 48, 16));
         voiceKnobs_[i].setBounds(referenceRect(x, 426, 48, 48));
         voiceKnobValues_[i].setBounds(referenceRect(x, 486, 48, 18));
@@ -1153,7 +1152,6 @@ void VDX7AudioProcessorEditor::refresh(bool refreshMetadata)
     const int bankIndex = processor_.getCurrentBank();
     const int programIndex = processor_.getCurrentProgram();
 
-    headerPatch_.setText(patchName, juce::dontSendNotification);
     patch_.setText(juce::String(programIndex + 1).paddedLeft('0', 2) + "   " + patchName,
                    juce::dontSendNotification);
 
@@ -1163,6 +1161,8 @@ void VDX7AudioProcessorEditor::refresh(bool refreshMetadata)
     bank_.setEnabled(loaded && factories);
     program_.setEnabled(loaded);
     loadSyx_.setEnabled(loaded);
+    saveAs_.setEnabled(loaded);
+    algorithm_.setEnabled(loaded);
     utilityTab_.setEnabled(loaded);
     algorithmView_.setEnabled(loaded);
     previous_.setEnabled(loaded);
@@ -1177,7 +1177,7 @@ void VDX7AudioProcessorEditor::refresh(bool refreshMetadata)
 
     if (refreshMetadata)
     {
-        status_.setText(processor_.hasUnexportedEdits() ? "Bank has unexported edits\nUTILITY to save"
+        status_.setText(processor_.hasUnexportedEdits() ? "Bank has unexported edits\nSAVE AS... to export"
                         : processor_.getStatusText(), juce::dontSendNotification);
         loadRom_.setTooltip(processor_.getRomPath());
     }
@@ -1237,7 +1237,7 @@ void VDX7AudioProcessorEditor::confirmReplacement(std::function<void()> action)
     juce::Component::SafePointer<VDX7AudioProcessorEditor> safe(this);
     juce::AlertWindow::showOkCancelBox(juce::MessageBoxIconType::WarningIcon,
         "Unexported voice edits",
-        "This action can replace edited sounds. Cancel and use UTILITY > Save bank first "
+        "This action can replace edited sounds. Cancel and use SAVE AS > Bank file first "
         "to preserve all edited voices in a separate file. Your DAW project saves remain independent.",
         "Continue", "Cancel", nullptr,
         juce::ModalCallbackFunction::create([safe, action = std::move(action)](int result)
@@ -1246,6 +1246,21 @@ void VDX7AudioProcessorEditor::confirmReplacement(std::function<void()> action)
             if (result != 0) action();
             safe->refresh(true);
         }));
+}
+
+void VDX7AudioProcessorEditor::showSaveAsMenu()
+{
+    juce::PopupMenu menu;
+    menu.addSectionHeader("Save a separate SysEx file");
+    menu.addItem(1, "Voice file (.syx)...");
+    menu.addItem(2, "Bank file - 32 voices (.syx)...");
+    juce::Component::SafePointer<VDX7AudioProcessorEditor> safe(this);
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&saveAs_),
+        [safe](int result)
+        {
+            if (safe != nullptr && (result == 1 || result == 2))
+                safe->chooseExport(result == 2);
+        });
 }
 
 void VDX7AudioProcessorEditor::showUtilityMenu()

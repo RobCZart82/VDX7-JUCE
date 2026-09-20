@@ -81,6 +81,7 @@ private:
     void chooseRom();
     void chooseSyx();
     void showUtilityMenu();
+    void showSaveAsMenu();
     void chooseExport(bool entireBank);
     void renameVoice();
     void confirmReplacement(std::function<void()> action);
@@ -101,7 +102,6 @@ private:
     juce::Label mkLabel_;
     juce::Label hardwareLabel_;
     juce::Label firmwareLabel_;
-    juce::Label headerPatch_;
     juce::Label status_;
     juce::Label patch_;
     juce::Label bankCaption_;
@@ -113,7 +113,7 @@ private:
     juce::Label outputCaption_;
     juce::Label leftCaption_;
     juce::Label rightCaption_;
-    juce::Label algorithmDisplay_;
+    juce::ComboBox algorithm_;
     VDX7AlgorithmView algorithmView_;
     juce::Label operatorTitle_;
     juce::Label frequencyValue_;
@@ -126,6 +126,7 @@ private:
 
     juce::TextButton loadRom_ { "LOAD ROM" };
     juce::TextButton loadSyx_ { "LOAD SYX" };
+    juce::TextButton saveAs_ { "SAVE AS..." };
     juce::TextButton settings_ { "SETTINGS" };
     juce::TextButton about_ { "ABOUT" };
     juce::TextButton previous_ { "<" };
@@ -154,9 +155,9 @@ private:
     std::array<juce::Slider, 8> pitchEnvelopeFaders_;
     std::array<juce::Label, 8> pitchEnvelopeCaptions_;
     std::array<juce::Label, 8> pitchEnvelopeValues_;
-    std::array<juce::Slider, 11> voiceKnobs_;
-    std::array<juce::Label, 11> voiceKnobCaptions_;
-    std::array<juce::Label, 11> voiceKnobValues_;
+    std::array<juce::Slider, 10> voiceKnobs_;
+    std::array<juce::Label, 10> voiceKnobCaptions_;
+    std::array<juce::Label, 10> voiceKnobValues_;
 
     std::unique_ptr<SliderAttachment> masterVolumeAttachment_;
     std::unique_ptr<SliderAttachment> pitchWheelAttachment_;
@@ -165,7 +166,8 @@ private:
     std::array<std::unique_ptr<SliderAttachment>, 8> envelopeAttachments_;
     std::array<std::unique_ptr<SliderAttachment>, 6> operatorScaleAttachments_;
     std::array<std::unique_ptr<SliderAttachment>, 8> pitchEnvelopeAttachments_;
-    std::array<std::unique_ptr<SliderAttachment>, 11> voiceKnobAttachments_;
+    std::array<std::unique_ptr<SliderAttachment>, 10> voiceKnobAttachments_;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> algorithmAttachment_;
     std::unique_ptr<juce::FileChooser> chooser_;
 
     bool internalUiUpdate_ = false;
