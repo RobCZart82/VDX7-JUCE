@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="466" height="61" viewBox="10 11 466 61">
+  <title>VDX7 Mk 1.</title>
+  <defs>
+    <linearGradient id="metal" x1="0" y1="11" x2="0" y2="72" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#eeeae1"/>
+      <stop offset="0.28" stop-color="#b5afa5"/>
+      <stop offset="0.48" stop-color="#ded9cf"/>
+      <stop offset="0.52" stop-color="#a39e96"/>
+      <stop offset="1" stop-color="#d0cbc2"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#metal)">
+    <path d="M10 11H34L62 53 90 11H114L74 72H50Z"/>
+    <path d="M119 11H177L198 26H119Z M119 30H137V53H119Z M172 30H200L211 41 199 53H172L185 41Z M119 57H197L177 72H119Z"/>
+    <path d="M199 11H224L242 29 260 11H285L255 41 286 72H261L242 53 223 72H198L229 41Z"/>
+    <path fill-rule="evenodd" d="M299 11H370V25L324 72H303L350 25H299Z M302 14V22H357L310 69H323L367 24V14Z"/>
+    <path transform="translate(-12 3)" d="M397 69V40H403L412 59 421 40H427V69H422V49L414 66H410L402 49V69Z M433 69V40H438V56L447 48H454L443 58 455 69H448L438 60V69Z M464 49V44L471 40H476V69H470V47Z M482 63H488V69H482Z"/>
+  </g>
+</svg>

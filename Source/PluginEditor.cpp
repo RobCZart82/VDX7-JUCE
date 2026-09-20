@@ -269,7 +269,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
       keyboard_(processor.keyboardState()),
       performancePanel_(processor),
       chassis_(loadImage(VDX7Assets::mainwindow_png, VDX7Assets::mainwindow_pngSize)),
-      wordmark_(loadImage(VDX7Assets::vdx7wordmark_png, VDX7Assets::vdx7wordmark_pngSize)),
+      wordmark_(juce::Drawable::createFromImageData(VDX7Assets::vdx7mk1_svg, VDX7Assets::vdx7mk1_svgSize)),
       lcdFrame_(loadImage(VDX7Assets::lcdframe_png, VDX7Assets::lcdframe_pngSize)),
       panel_(loadImage(VDX7Assets::panel9slice_png, VDX7Assets::panel9slice_pngSize)),
       valueField_(loadImage(VDX7Assets::valuefield_png, VDX7Assets::valuefield_pngSize)),
@@ -284,9 +284,6 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
         constrainer->setFixedAspectRatio(kReferenceWidth / kReferenceHeight);
     setSize(1200, 925);
 
-    configureLabel(mkLabel_, 37.0f, juce::Justification::centredLeft);
-    configureLabel(hardwareLabel_, 16.0f, juce::Justification::centredLeft);
-    configureLabel(firmwareLabel_, 13.0f, juce::Justification::centredLeft, juce::Colour(0xffbdb8ac));
     configureLabel(status_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xffbdb8ac));
     configureLabel(patch_, 29.0f, juce::Justification::centredLeft, juce::Colour(0xff273019));
     configureLabel(bankCaption_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xff273019));
@@ -311,9 +308,6 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     configureLabel(footerCentre_, 15.0f, juce::Justification::centred, juce::Colour(0xffb0aa9d));
     configureLabel(footerRight_, 12.0f, juce::Justification::centredRight, juce::Colour(0xffbdb8ac));
 
-    mkLabel_.setText("Mk I.", juce::dontSendNotification);
-    hardwareLabel_.setText("HARDWARE EMULATION", juce::dontSendNotification);
-    firmwareLabel_.setText("Original firmware required", juce::dontSendNotification);
     masterCaption_.setText("VOLUME", juce::dontSendNotification);
     pitchCaption_.setText("PITCH", juce::dontSendNotification);
     modCaption_.setText("MOD", juce::dontSendNotification);
@@ -329,7 +323,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     footerCentre_.setText("6-OPERATOR FM SYNTHESIZER", juce::dontSendNotification);
     footerRight_.setText("CPU 0.0%", juce::dontSendNotification);
 
-    for (auto* label : { &mkLabel_, &hardwareLabel_, &firmwareLabel_, &status_,
+    for (auto* label : { &status_,
                          &patch_, &bankCaption_, &programCaption_, &masterCaption_,
                          &masterValue_, &pitchCaption_, &modCaption_, &outputCaption_, &leftCaption_,
                          &rightCaption_, &operatorTitle_, &frequencyValue_,
@@ -920,9 +914,6 @@ void VDX7AudioProcessorEditor::updateResponsiveTypography()
             juce::jmax(8.0f, referenceSize * scale), style)));
     };
 
-    setFont(mkLabel_, 37.0f);
-    setFont(hardwareLabel_, 14.0f, juce::Font::bold);
-    setFont(firmwareLabel_, 14.0f);
     setFont(status_, 12.0f);
     setFont(patch_, 29.0f, juce::Font::bold);
     setFont(bankCaption_, 14.0f);
@@ -987,7 +978,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
 
     drawPanel(34, 135, 920, 190);
     drawPanel(968, 135, 220, 190);
-    drawPanel(1200, 125, 206, 401);
+    drawPanel(1200, 135, 206, 391);
     drawPanel(34, 340, 1154, performanceVisible_ ? 210 : 175);
     if (performanceVisible_)
         drawPanel(34, 550, 1372, 286);
@@ -995,10 +986,28 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
         drawPanel(34, 526, 1372, 310);
     drawPanel(34, 838, 1372, 180);
 
-    // Original typographic identity, not the hardware's striped product logo.
-    g.setColour(juce::Colour(0xffeee9dc));
-    g.setFont(juce::Font(juce::FontOptions(66.0f * scaleY, juce::Font::bold)));
-    g.drawText("VDX7", referenceRect(44, 58, 300, 72), juce::Justification::centredLeft);
+    // Align actual ink/geometry, not font boxes: header buttons paint 1.5px
+    // inside their bounds. Use that same visible lower edge for logo and text.
+    const float headerBottom = about_.getBottom() - 1.5f;
+    const float scaleX = float(getWidth()) / kReferenceWidth;
+    const float logoWidth = 420.0f * scaleX;
+    const float logoHeight = logoWidth * 61.0f / 466.0f;
+    if (wordmark_)
+        wordmark_->drawWithin(g, { 44.0f * scaleX, headerBottom - logoHeight,
+                                  logoWidth, logoHeight }, juce::RectanglePlacement::stretchToFit, 1.0f);
+    const auto headerText = [&g, scaleX, scaleY](const juce::String& text, float bottom,
+                                                float size, int style)
+    {
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText(juce::Font(juce::FontOptions(size * scaleY, style)), text, 0, 0);
+        const auto ink = glyphs.getBoundingBox(0, -1, true);
+        g.setColour(juce::Colour(0xffd2cdc1));
+        glyphs.draw(g, juce::AffineTransform::translation(490.0f * scaleX - ink.getX(), bottom - ink.getBottom()));
+    };
+    headerText("HARDWARE EMULATION", headerBottom - 25.0f * scaleY, 21.0f, juce::Font::bold);
+    headerText("Original firmware required.", headerBottom, 19.0f, juce::Font::plain);
+    g.setColour(juce::Colour(0xff71685b));
+    g.fillRect(referenceRect(34, 131, 1372, 1));
     g.setColour(juce::Colour(0xff141510));
     g.fillRoundedRectangle(referenceRect(412, 180, 525, 112).toFloat(), 5.0f);
     const auto lcd = referenceRect(422, 190, 505, 86).toFloat();
@@ -1051,9 +1060,6 @@ void VDX7AudioProcessorEditor::resized()
     updateResponsiveTypography();
     performancePanel_.setBounds(referenceRect(44, 392, 1352, 434));
 
-    mkLabel_.setBounds(referenceRect(360, 88, 85, 44));
-    hardwareLabel_.setBounds(referenceRect(450, 94, 220, 17));
-    firmwareLabel_.setBounds(referenceRect(450, 108, 220, 19));
     previous_.setBounds(referenceRect(431, 198, 32, 70));
     next_.setBounds(referenceRect(887, 198, 32, 70));
     loadRom_.setBounds(referenceRect(894, 76, 104, 46));
