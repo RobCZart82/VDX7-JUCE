@@ -34,6 +34,14 @@ int main()
                 }
         }
     std::cout << "PASS: complete channel message validation, all statuses/lengths/data bytes\n";
+    for (int selected = 0; selected <= 16; ++selected)
+        for (int channel = 1; channel <= 16; ++channel)
+            for (int kind = 0x80; kind < 0xf0; kind += 0x10)
+            {
+                const uint8_t event[] {static_cast<uint8_t>(kind | (channel-1)), 7, 64};
+                require(VDX7MidiValidation::acceptsHostEvent(event, kind == 0xc0 || kind == 0xd0 ? 2 : 3, selected)
+                        == (selected == 0 || selected == channel));
+            }
     checkEditQueue();
     checkMidiTimeline();
     checkKeyboardQueue();

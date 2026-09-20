@@ -18,4 +18,14 @@ inline bool isChannelMessage(const uint8_t* data, std::size_t size) noexcept
         if (data[i] >= 0x80) return false;
     return true;
 }
+
+// Channel selection is a host-input filter, not a change to firmware routing.
+// Bulk SysEx remains a global import, validated by the dedicated bank loader.
+inline bool acceptsHostEvent(const uint8_t* data, std::size_t size, int channel) noexcept
+{
+    if (data == nullptr || size == 0) return false;
+    if (data[0] == 0xf0) return true;
+    return isChannelMessage(data, size)
+        && (channel == 0 || (data[0] & 15) + 1 == channel);
+}
 }

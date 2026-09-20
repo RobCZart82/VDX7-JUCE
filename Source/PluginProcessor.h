@@ -74,6 +74,8 @@ public:
     std::array<int, 2> getPitchBendSettings() const;
     std::array<int, 4> getPlaySettings() const;
     int getMasterTune() const;
+    int getMidiInputChannel() const noexcept { return midiInputChannel_.load(); }
+    bool setMidiInputChannelFromUi(int channel);
     bool setMasterTuneFromUi(int value);
     bool setPlaySettingFromUi(int field, int value);
     bool setPitchBendSettingFromUi(int field, int value);
@@ -135,6 +137,9 @@ private:
     void flushVoiceEditsLocked();
 
     mutable std::mutex engineMutex_;
+    std::atomic<int> midiInputChannel_ {0}; // 0=legacy OMNI, 1-16=host input filter.
+    int audioMidiInputChannel_ = 0; // Audio-thread owned.
+    bool channelReleasePending_ = false; // Audio-thread owned across contention.
     mutable std::mutex metadataMutex_;
     VDX7Engine engine_;
     juce::AudioProcessorValueTreeState parameters_;
