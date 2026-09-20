@@ -139,6 +139,8 @@ target_sources(VDX7 PRIVATE
     Source/VDX7UserBank.cpp
     Source/PluginEditor.h
     Source/PluginEditor.cpp
+    Source/VDX7AboutPanel.h
+    Source/VDX7AboutPanel.cpp
     Source/VDX7Algorithms.h
     Source/VDX7AlgorithmView.h
     Source/VDX7MechanicalDrawing.h

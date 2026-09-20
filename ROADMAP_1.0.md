@@ -185,7 +185,13 @@ Vector header implementation: embedded SVG `VDX7 Mk 1.` with a closer Mk 1.
 suffix, metal gradient and no font/bitmap dependency. Actual logo bottom and
 lower text ink edge align to the visible bottom edge of header buttons. Full
 separator below; OUTPUT top panel moved down 10 units to clear the separator.
-The accepted operator/keyboard layout is unchanged. About integration remains open.
+The accepted operator/keyboard layout is unchanged. About follow-up is recorded below.
+
+About follow-up: SAWSTAR-inspired information layout implemented with VDX7's warm
+palette, embedded VDX7/GYR vectors, developer credit, actual development version,
+clickable source URL, retained component licenses and ROM requirement. Separate
+owned dialog content avoids dependence on the editor's lifetime. Visual approval,
+physical HiDPI and Windows host checks remain; no stable-version claim is made.
 
 - [x] Narrow the LCD and its black frame horizontally by moving their left edge
   rightward while retaining the current height and right edge. Reserve a clear

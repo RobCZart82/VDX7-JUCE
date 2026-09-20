@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "VDX7AboutPanel.h"
 
 #include <BinaryData.h>
 
@@ -550,22 +551,15 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
         button->getProperties().set("vdx7LcdArrow", true);
     about_.onClick = [this]
     {
-        auto* dialog = new juce::AlertWindow("About VDX7 Mk I",
-            "VDX7 Mk I v" VDX7_DISPLAY_VERSION "\nFull-range firmware MIDI input\n\n"
-            "VDX7-JUCE: GNU AGPLv3, without warranty.\n"
-            "DX7 core: chiaccona / Retromulator, GPLv3-or-later.\n"
-            "JUCE: AGPLv3. Source and license notices:\n"
-            "https://github.com/RobCZart82/VDX7-JUCE\n\n"
-            "No Yamaha logo or firmware is included. A user-supplied compatible ROM is required.",
-            juce::MessageBoxIconType::NoIcon);
-        auto logo = std::make_shared<juce::ImageComponent>();
-        logo->setName("GYR logo");
-        logo->setImage(loadImage(VDX7Assets::gyrlogo_png, VDX7Assets::gyrlogo_pngSize));
-        logo->setSize(330, 140);
-        dialog->setColour(juce::AlertWindow::backgroundColourId, juce::Colour(0xff302d29));
-        dialog->addCustomComponent(logo.get());
-        dialog->addButton("Close", 0, juce::KeyPress(juce::KeyPress::escapeKey));
-        dialog->enterModalState(true, juce::ModalCallbackFunction::create([logo](int) {}), true);
+        juce::DialogWindow::LaunchOptions options;
+        options.dialogTitle = "About VDX7 Mk 1.";
+        options.dialogBackgroundColour = juce::Colour(0xff302d29);
+        options.content.setOwned(new VDX7AboutPanel());
+        options.componentToCentreAround = this;
+        options.escapeKeyTriggersCloseButton = true;
+        options.useNativeTitleBar = false;
+        options.resizable = false;
+        options.launchAsync();
     };
 
     bankCaption_.setText("Bank:", juce::dontSendNotification);
