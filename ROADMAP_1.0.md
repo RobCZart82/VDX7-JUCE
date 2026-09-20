@@ -7,6 +7,28 @@ indices compatible with saved projects.
 
 ## Stabilization
 
+- [x] Priority bug fix: reject unsupported CC32 bank values instead of modulo-8
+  wrapping. Only a successful accepted factory-bank load may clear unexported
+  voice markers or publish a bank-change result. Test 0/7 and ignored 8/15/127,
+  preserving patch RAM and dirty flags in edited CUSTOM/USER working copies.
+  See `VALIDATION_1.0_BANK_SELECT.md` for implementation and local test scope.
+  Existing CC0-ignore / immediate CC32 behavior remains unchanged; a different
+  MSB/LSB policy needs an explicit compatibility decision and host acceptance.
+- [ ] Follow-up static-review validation: malformed MIDI status/length/data-byte
+  rejection, system-common handling, and keyboard UI-held state after overflow.
+  Reproduce before claiming stuck audio; mirroring suppresses MIDI feedback and
+  UI note-off already clears held state before queue insertion. Keep mixed host
+  MIDI/automation ordering and independent SRC/PDC acceptance in the test scope.
+  Review of report dated 2026-09-20: missing play methods used mixed revisions;
+  APVTS ValueTree stores denormalised values, so do NOT apply its suggested
+  XML normalisation. Existing ordered-edit and impulse tests must be retained.
+
+Next chapter order: verified CC32 fix -> malformed MIDI input validation and
+targeted overflow UI reproduction -> SETTINGS channel/tuning -> remaining GUI
+visual integration and host acceptance. Reclassify reported risks as confirmed
+bugs only with source evidence or reproduction; do not apply the rejected APVTS
+normalisation or remove implemented play controls. PR/CI/user-merge gates remain.
+
 - [x] Deferred multi-block MIDI timeline, restart cleanup and consistent program
   normalization implemented; see `VALIDATION_1.0_MIDI_LIFECYCLE.md` for policy
   and local tests. Actual host transport acceptance remains open.

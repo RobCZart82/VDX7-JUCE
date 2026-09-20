@@ -377,11 +377,14 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
         modifiedVoices_.store(0xffffffffu); // Incoming bank has not been exported.
         return true;
     }
+    const auto bankRevision = engine_.factoryBankLoadRevision();
     engine_.handleMidi(data, size);
+    const bool bankChange = engine_.factoryBankLoadRevision() != bankRevision;
+    if (bankChange) modifiedVoices_.store(0);
     if (engine_.isMidiRecovering())
     {
         clearKeyboardSnapshot();
-        return false;
+        return bankChange;
     }
     if (size == 3 && data[1] < 128)
     {
@@ -392,8 +395,6 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
             keyboardSnapshot_[data[1]].fetch_and(static_cast<uint16_t>(~mask));
         else if (status == 0xb0 && data[1] == 123) clearKeyboardSnapshot();
     }
-    const bool bankChange = size == 3 && (data[0] & 0xf0) == 0xb0 && data[1] == 32;
-    if (bankChange && engine_.hasFactoryVoices()) modifiedVoices_.store(0);
     return bankChange || (size == 2 && (data[0] & 0xf0) == 0xc0);
 }
 

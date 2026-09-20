@@ -15,6 +15,14 @@ struct VDX7RegressionAccess
     {
         e.dx7_.midiSerialRx.flush();
         for (int i = 0; i < 8190; ++i) e.dx7_.midiSerialRx.write(0xf8);
+        const auto revision = e.factoryBankLoadRevision();
+        for (uint8_t value : {8, 15, 127})
+        {
+            const uint8_t bank[] {0xb0, 32, value};
+            e.handleMidi(bank, 3);
+        }
+        require(!e.isMidiRecovering() && e.factoryBankLoadRevision() == revision,
+                "unsupported banks are inert even with a full serial queue");
         const uint8_t note[] {0x90, 60, 100};
         e.handleMidi(note, 3);
         require(!e.hasHeldMidiNotes(), "serial overflow must reconcile note ownership");
@@ -519,6 +527,49 @@ int main(int argc, char** argv)
         events.clear(); events.addEvent(sysex.data(), static_cast<int>(sysex.size()), 0);
         restarted.processBlock(audio, events);
         require(restarted.getCurrentPatchName().startsWith("L"), "invalid live bank ignored");
+        const auto checkUnsupportedBanks = [&] {
+            const int bank = restarted.getCurrentBank();
+            const int program = restarted.getCurrentProgram();
+            const bool dirty = restarted.hasUnexportedEdits();
+            juce::MemoryBlock before;
+            require(before.fromBase64Encoding(decode(save(restarted))["ram"].toString()), "before unsupported bank");
+            for (int value : {8, 15, 127})
+            {
+                events.clear();
+                events.addEvent(juce::MidiMessage::controllerEvent(1, 32, value), 0);
+                restarted.processBlock(audio, events);
+                juce::MemoryBlock after;
+                require(after.fromBase64Encoding(decode(save(restarted))["ram"].toString()), "after unsupported bank");
+                require(restarted.getCurrentBank() == bank && restarted.getCurrentProgram() == program,
+                        "unsupported CC32 preserves bank and program");
+                require(restarted.hasUnexportedEdits() == dirty, "unsupported CC32 preserves dirty state");
+                require(std::memcmp(before.getData(), after.getData(), 4096) == 0,
+                        "unsupported CC32 preserves working voices");
+            }
+        };
+        checkUnsupportedBanks(); // Dirty CUSTOM working bank from live SysEx.
+        for (int bank : {0, 7, 7}) // Same-bank reload must count as a real load.
+        {
+            auto* feedback = restarted.parameters().getParameter(VDX7ParameterIDs::voiceParameter(
+                VDX7VoiceData::VoiceParameter::feedback));
+            const int value = (juce::roundToInt(feedback->convertFrom0to1(feedback->getValue())) + 1) % 8;
+            feedback->setValueNotifyingHost(feedback->convertTo0to1(value));
+            save(restarted); // Flush the ordered edit before bank selection.
+            require(restarted.hasUnexportedEdits(), "bank regression starts with edits");
+            checkUnsupportedBanks();
+            events.clear();
+            events.addEvent(juce::MidiMessage::controllerEvent(1, 0, 0), 0);
+            events.addEvent(juce::MidiMessage::controllerEvent(1, 32, bank), 0);
+            events.addEvent(juce::MidiMessage::programChange(1, 5), 0);
+            restarted.processBlock(audio, events);
+            require(restarted.getCurrentBank() == bank && restarted.getCurrentProgram() == 5,
+                    "CC0 CC32 program sequence");
+            require(!restarted.hasUnexportedEdits(), "successful bank reload clears dirty state");
+            juce::MemoryBlock loaded;
+            require(loaded.fromBase64Encoding(decode(save(restarted))["ram"].toString()), "loaded bank RAM");
+            require(std::memcmp(loaded.getData(), static_cast<const uint8_t*>(rom.getData())
+                    + 16384 + bank*4096, 4096) == 0, "boundary bank bytes match factory");
+        }
         events.clear();
         events.addEvent(juce::MidiMessage::controllerEvent(16, 32, 2), 0);
         restarted.processBlock(audio, events);
