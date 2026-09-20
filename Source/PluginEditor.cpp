@@ -368,13 +368,14 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     performanceTab_.setTooltip("Global controller range and assignments; saved with the DAW project.");
     utilityTab_.setClickingTogglesState(false);
     utilityTab_.setRadioGroupId(0);
-    utilityTab_.setTooltip("Rename, save voice/bank and copy/paste the selected operator.");
+    utilityTab_.setTooltip("Rename voice and copy/paste the selected operator.");
     utilityTab_.onClick = [this] { showUtilityMenu(); };
 
     static constexpr const char* bankNames[] =
         { "ROM1A", "ROM1B", "ROM2A", "ROM2B", "ROM3A", "ROM3B", "ROM4A", "ROM4B" };
     for (int i = 0; i < 8; ++i)
         bank_.addItem(bankNames[i], i + 1);
+    bank_.addItem("USER (load copy)", 9);
 
     for (int i = 0; i < 32; ++i)
         program_.addItem(juce::String(i + 1).paddedLeft('0', 2), i + 1);
@@ -542,7 +543,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     loadRom_.onClick = [this] { chooseRom(); };
     loadSyx_.onClick = [this] { chooseSyx(); };
     saveAs_.onClick = [this] { showSaveAsMenu(); };
-    saveAs_.setTooltip("Save a separate voice or bank SysEx file. Does not overwrite factory ROM.");
+    saveAs_.setTooltip("Save a patch to USER, or export a patch/bank SysEx file. Factory ROM is unchanged.");
     previous_.setTooltip("Previous program in the current bank (wraps 01-32)");
     next_.setTooltip("Next program in the current bank (wraps 01-32)");
     about_.onClick = [this]
@@ -575,7 +576,16 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
         if (bankIndex >= 0)
         {
             refresh(false);
-            confirmReplacement([this, bankIndex] { processor_.selectFactoryBank(bankIndex); });
+            confirmReplacement([this, bankIndex]
+            {
+                if (bankIndex == 8)
+                {
+                    juce::String error;
+                    if (!processor_.loadUserBank(VDX7AudioProcessor::userBankFile(), error))
+                        showError("USER bank", error);
+                }
+                else processor_.selectFactoryBank(bankIndex);
+            });
         }
     };
 
@@ -1177,7 +1187,8 @@ void VDX7AudioProcessorEditor::refresh(bool refreshMetadata)
     bank_.setSelectedId(bankIndex >= 0 ? bankIndex + 1 : 0, juce::dontSendNotification);
     bank_.setTextWhenNothingSelected(loaded ? "CUSTOM" : "");
     program_.setSelectedId(programIndex + 1, juce::dontSendNotification);
-    bank_.setEnabled(loaded && factories);
+    for (int i = 1; i <= 8; ++i) bank_.setItemEnabled(i, factories);
+    bank_.setEnabled(loaded);
     program_.setEnabled(loaded);
     loadSyx_.setEnabled(loaded);
     saveAs_.setEnabled(loaded);
@@ -1281,7 +1292,7 @@ void VDX7AudioProcessorEditor::confirmReplacement(std::function<void()> action)
     juce::Component::SafePointer<VDX7AudioProcessorEditor> safe(this);
     juce::AlertWindow::showOkCancelBox(juce::MessageBoxIconType::WarningIcon,
         "Unexported voice edits",
-        "This action can replace edited sounds. Cancel and use SAVE AS > Bank file first "
+        "This action can replace edited sounds. Cancel and use SAVE AS > Export Bank first "
         "to preserve all edited voices in a separate file. Your DAW project saves remain independent.",
         "Continue", "Cancel", nullptr,
         juce::ModalCallbackFunction::create([safe, action = std::move(action)](int result)
@@ -1294,25 +1305,79 @@ void VDX7AudioProcessorEditor::confirmReplacement(std::function<void()> action)
 
 void VDX7AudioProcessorEditor::showSaveAsMenu()
 {
-    juce::PopupMenu menu;
-    menu.addSectionHeader("Save a separate SysEx file");
-    menu.addItem(1, "Voice file (.syx)...");
-    menu.addItem(2, "Bank file - 32 voices (.syx)...");
+    VDX7UserBank::Voice patch;
+    juce::String error;
+    if (!processor_.captureUserPatch(patch, error)) { showError("Save failed", error); return; }
+    const auto revision = processor_.getOperatorVoiceRevision();
+    const int program = processor_.getCurrentProgram();
+    const auto file = VDX7AudioProcessor::userBankFile();
+    VDX7UserBank::Snapshot bank;
+    const auto loaded = VDX7UserBank::load(file, bank);
+    auto* dialog = new juce::AlertWindow("SAVE AS",
+        "Save a copy of the captured patch. Global PERFORMANCE settings stay in the DAW project.\n"
+        "USER destination: " + file.getFullPathName()
+        + (loaded.failed() ? "\nUSER unavailable: " + loaded.getErrorMessage() : juce::String()),
+        juce::MessageBoxIconType::NoIcon);
+    dialog->addComboBox("action", { "Save Patch to USER bank", "Export Patch (.syx)...", "Export Bank (.syx)..." }, "Action:");
+    dialog->addTextEditor("name", juce::String::fromUTF8(reinterpret_cast<const char*>(patch.data() + 118), 10).trimEnd(), "USER patch name:");
+    dialog->getTextEditor("name")->setInputRestrictions(10);
+    juce::StringArray slots;
+    int firstEmpty = 0;
+    bool foundEmpty = false;
+    for (int i = 0; i < 32; ++i)
+    {
+        slots.add(juce::String(i + 1).paddedLeft('0', 2) + "  "
+                  + (bank.occupied(i) ? bank.name(i) : "[empty]"));
+        if (!foundEmpty && !bank.occupied(i)) { firstEmpty = i; foundEmpty = true; }
+    }
+    dialog->addComboBox("slot", slots, "USER destination slot:");
+    dialog->getComboBoxComponent("slot")->setSelectedItemIndex(firstEmpty);
+    dialog->addButton("Continue", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    dialog->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
     juce::Component::SafePointer<VDX7AudioProcessorEditor> safe(this);
-    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&saveAs_),
-        [safe](int result)
+    dialog->enterModalState(true, juce::ModalCallbackFunction::create(
+        [safe, dialog, file, bank, patch, loaded, revision, program](int result)
         {
-            if (safe != nullptr && (result == 1 || result == 2))
-                safe->chooseExport(result == 2);
-        });
+            if (safe == nullptr || result != 1) return;
+            const int action = dialog->getComboBoxComponent("action")->getSelectedItemIndex();
+            if (action == 1 || action == 2)
+            {
+                VDX7UserBank::Voice current;
+                juce::String error;
+                if (!safe->processor_.captureUserPatch(current, error) || current != patch
+                    || safe->processor_.getCurrentProgram() != program
+                    || safe->processor_.getOperatorVoiceRevision() != revision)
+                { safe->showError("Voice changed", "The working voice/bank changed. Reopen SAVE AS to export."); return; }
+                safe->chooseExport(action == 2);
+                return;
+            }
+            if (loaded.failed()) { safe->showError("USER bank unavailable", loaded.getErrorMessage()); return; }
+            const int slot = dialog->getComboBoxComponent("slot")->getSelectedItemIndex();
+            const auto name = dialog->getTextEditorContents("name");
+            auto write = [safe, file, bank, patch, slot, name](bool confirmed)
+            {
+                if (safe == nullptr) return;
+                auto outcome = file.getParentDirectory().createDirectory();
+                if (outcome.wasOk()) outcome = VDX7UserBank::savePatch(file, bank, slot, patch, name, confirmed);
+                if (outcome.failed()) safe->showError("USER save failed", outcome.getErrorMessage());
+                else juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,
+                    "Patch saved", "Saved a copy to USER slot " + juce::String(slot + 1)
+                    + ".\nSelect USER (load copy) in the LCD bank menu to play it.\n"
+                    "The current working bank and its edit markers are unchanged.");
+                safe->refresh(true);
+            };
+            if (!bank.occupied(slot)) { write(false); return; }
+            juce::AlertWindow::showOkCancelBox(juce::MessageBoxIconType::WarningIcon,
+                "Overwrite USER patch?", "Replace slot " + juce::String(slot + 1) + " (" + bank.name(slot)
+                + ") with " + name + "? Other slots will be kept.", "Overwrite", "Cancel", nullptr,
+                juce::ModalCallbackFunction::create([write](int answer) { if (answer != 0) write(true); }));
+        }), true);
 }
 
 void VDX7AudioProcessorEditor::showUtilityMenu()
 {
     juce::PopupMenu menu;
     menu.addItem(1, "Rename voice...");
-    menu.addItem(2, "Save voice (.syx)...");
-    menu.addItem(3, "Save bank - 32 voices (.syx)...");
     menu.addSeparator();
     menu.addItem(4, "Copy OP" + juce::String(selectedOperator_+1));
     menu.addItem(5, "Paste into OP" + juce::String(selectedOperator_+1), processor_.hasCopiedOperator());
@@ -1325,8 +1390,6 @@ void VDX7AudioProcessorEditor::showUtilityMenu()
             switch (result)
             {
                 case 1: safe->renameVoice(); break;
-                case 2: safe->chooseExport(false); break;
-                case 3: safe->chooseExport(true); break;
                 case 4: safe->processor_.copyOperator(op); break;
                 case 5: safe->processor_.pasteOperator(op); break;
                 default: break;

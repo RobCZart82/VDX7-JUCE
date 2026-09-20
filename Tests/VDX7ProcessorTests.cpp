@@ -38,6 +38,77 @@ static juce::MemoryBlock ram(const juce::MemoryBlock& state)
     return result;
 }
 
+static void checkUserLibrary(const juce::File& romFile, const juce::File& imageFolder)
+{
+    juce::TemporaryFile temporary;
+    const auto file = temporary.getFile();
+    VDX7AudioProcessor p(false);
+    VDX7UserBank::Voice captured {};
+    juce::String error;
+    require(!p.captureUserPatch(captured, error), "capture requires ROM");
+    require(p.loadRomFromFile(romFile), "USER test ROM");
+    require(p.renameVoice("CAPTURED"), "rename source");
+    {
+        std::unique_ptr<juce::AudioProcessorEditor> editor(p.createEditor());
+        juce::TextButton* saveButton = nullptr;
+        bool userItem = false;
+        for (auto* child : editor->getChildren())
+        {
+            if (auto* button = dynamic_cast<juce::TextButton*>(child))
+                if (button->getButtonText() == "SAVE AS...") saveButton = button;
+            if (auto* box = dynamic_cast<juce::ComboBox*>(child))
+                userItem |= box->getItemText(box->indexOfItemId(9)) == "USER (load copy)";
+        }
+        require(saveButton && saveButton->isEnabled() && userItem, "USER GUI entry points");
+        require(juce::Desktop::getInstance().getDisplays().getPrimaryDisplay() != nullptr,
+                "SAVE AS GUI test requires desktop/display access (not a headless sandbox)");
+        saveButton->onClick();
+        auto* dialog = dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());
+        require(dialog != nullptr, "SAVE AS dialog opens");
+        require(dialog->getComboBoxComponent("action")->getSelectedItemIndex() == 0, "USER is default save action");
+        require(dialog->getComboBoxComponent("slot")->getNumItems() == 32, "32 destination slots");
+        require(dialog->getTextEditorContents("name") == "CAPTURED", "captured patch name in dialog");
+        if (imageFolder != juce::File())
+        {
+            juce::FileOutputStream stream(imageFolder.getChildFile("VDX7-save-as.png"));
+            require(stream.openedOk(), "save dialog screenshot file");
+            require(juce::PNGImageFormat().writeImageToStream(dialog->createComponentSnapshot(dialog->getLocalBounds()), stream), "save dialog screenshot");
+        }
+        dialog->exitModalState(0); // Cancel: callback has no writes; editor destruction is safe.
+    }
+    require(p.captureUserPatch(captured, error), "capture queued voice");
+    const auto before = ram(save(p));
+    VDX7UserBank::Snapshot expected;
+    require(VDX7UserBank::load(file, expected).wasOk(), "empty library snapshot");
+    require(VDX7UserBank::savePatch(file, expected, 7, captured, "USER ONE", false).wasOk(), "save USER copy");
+    require(ram(save(p)) == before && p.hasUnexportedEdits(), "copy does not mutate working bank or dirty flag");
+    require(p.renameVoice("LATER"), "edit after snapshot");
+    require(VDX7UserBank::load(file, expected).wasOk(), "reopen library");
+    require(VDX7UserBank::savePatch(file, expected, 12, captured, "USER TWO", false).wasOk(), "save immutable snapshot");
+    require(p.setControllerSettingFromUi(0, 0, 42), "global before USER load");
+    const auto controllers = p.getControllerSettings();
+    require(p.loadUserBank(file, error), "USER load");
+    require(p.getCurrentProgram() == 7 && p.getCurrentPatchName() == "USER ONE", "first occupied slot selected");
+    require(p.getCurrentBank() == -1 && !p.hasUnexportedEdits(), "USER is independent clean CUSTOM copy");
+    require(p.getControllerSettings() == controllers, "USER load preserves globals");
+    VDX7UserBank::Voice loaded;
+    require(p.captureUserPatch(loaded, error), "capture loaded USER");
+    require(std::equal(captured.begin(), captured.begin() + 118, loaded.begin()), "saved voice bytes unchanged");
+    auto state = save(p);
+    VDX7AudioProcessor restored(false);
+    require(restored.loadRomFromFile(romFile), "restore USER ROM");
+    restored.setStateInformation(state.getData(), int(state.getSize()));
+    require(restored.getCurrentPatchName() == "USER ONE", "USER copy restores in project");
+    require(restored.getControllerSettings() == controllers, "USER project globals restore");
+    juce::MemoryBlock diskBefore, diskAfter;
+    require(file.loadFileAsData(diskBefore), "read library bytes");
+    require(p.renameVoice("WORKING"), "edit working copy");
+    require(file.loadFileAsData(diskAfter) && diskBefore == diskAfter, "working edits do not autosave USER file");
+    require(file.replaceWithText("damaged"), "corrupt test library");
+    auto preserved = ram(save(p));
+    require(!p.loadUserBank(file, error) && ram(save(p)) == preserved, "damaged USER does not replace working bank");
+}
+
 static void checkControllers(const juce::File& romFile)
 {
     VDX7AudioProcessor p(false);
@@ -220,6 +291,7 @@ int main(int argc, char** argv)
 
         original.prepareToPlay(48000, 256);
         checkControllers(juce::File(original.getRomPath()));
+        checkUserLibrary(juce::File(original.getRomPath()), argc > 1 ? juce::File(argv[1]) : juce::File());
         // Check patch/host coherence without creating an editor.
         original.selectProgramFromUi(3);
         auto state = save(original);

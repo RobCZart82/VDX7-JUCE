@@ -1098,6 +1098,56 @@ bool VDX7AudioProcessor::loadSyxFromFile(const juce::File& file, juce::String* e
         if (error != nullptr) *error = "Expected one valid DX7 voice (163 bytes) or bank (4104 bytes), with a valid checksum.";
         return false;
     }
+    if (!loadPackedVoices(packed, error)) return false;
+    {
+        std::scoped_lock lock(metadataMutex_);
+        statusText_ = "Loaded SysEx: " + file.getFileName();
+    }
+    return true;
+}
+
+juce::File VDX7AudioProcessor::userBankFile()
+{
+    auto root = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
+#if JUCE_MAC
+    root = root.getChildFile("Application Support");
+#endif
+    return root.getChildFile("VDX7-JUCE").getChildFile("User Banks").getChildFile("USER.vub");
+}
+
+bool VDX7AudioProcessor::captureUserPatch(VDX7UserBank::Voice& voice, juce::String& error)
+{
+    std::scoped_lock lock(engineMutex_);
+    if (!engine_.isLoaded()) { error = "Load the firmware first."; return false; }
+    flushVoiceEditsLocked();
+    std::vector<uint8_t> ram;
+    if (!engine_.saveRam(ram)) { error = "Cannot capture voice RAM."; return false; }
+    std::copy_n(ram.begin() + engine_.currentProgram() * 128, 128, voice.begin());
+    return true;
+}
+
+bool VDX7AudioProcessor::loadUserBank(const juce::File& file, juce::String& error)
+{
+    VDX7UserBank::Snapshot bank;
+    if (auto result = VDX7UserBank::load(file, bank); result.failed())
+    { error = result.getErrorMessage(); return false; }
+    if (!bank.exists || bank.occupiedMask == 0)
+    { error = "No saved USER patches yet. Use SAVE AS to save your first patch."; return false; }
+    std::vector<uint8_t> packed;
+    for (const auto& voice : bank.voices) packed.insert(packed.end(), voice.begin(), voice.end());
+    int firstOccupied = 0;
+    while (!bank.occupied(firstOccupied)) ++firstOccupied;
+    if (!loadPackedVoices(packed, &error, firstOccupied)) return false;
+    {
+        std::scoped_lock lock(metadataMutex_);
+        statusText_ = "Loaded USER bank as editable CUSTOM copy";
+    }
+    return true;
+}
+
+bool VDX7AudioProcessor::loadPackedVoices(const std::vector<uint8_t>& packed, juce::String* error, int selectProgram)
+{
+    if (packed.size() != 128 && packed.size() != 4096) return false;
     {
         std::scoped_lock lock(engineMutex_);
         if (!engine_.isLoaded())
@@ -1114,6 +1164,7 @@ bool VDX7AudioProcessor::loadSyxFromFile(const juce::File& file, juce::String* e
         std::copy(packed.begin(), packed.end(), ram.begin() + offset);
         if (!engine_.restoreRam(ram)) return false;
         engine_.setCurrentBankMarker(-1);
+        if (selectProgram >= 0 && selectProgram < 32) engine_.selectProgram(selectProgram);
         if (single) modifiedVoices_.fetch_and(~(uint32_t(1) << engine_.currentProgram()));
         else modifiedVoices_.store(0);
 
@@ -1125,10 +1176,6 @@ bool VDX7AudioProcessor::loadSyxFromFile(const juce::File& file, juce::String* e
         updateEngineSnapshot();
     }
 
-    {
-        std::scoped_lock lock(metadataMutex_);
-        statusText_ = "Loaded SysEx: " + file.getFileName();
-    }
     synchroniseOperatorParametersFromEngine();
     updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
     return true;

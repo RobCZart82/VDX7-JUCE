@@ -165,9 +165,14 @@ The existing skin remains in use during the first functional integration chapter
    project state, never silently included in voice SysEx.
    First storage slice implements a versioned, checked 32-slot bank file and
    conflict-aware patch updates. This backend is tested independently without
-   ROM; it is NOT yet connected to the plugin or exposed in the Save As menu.
-   Next slice must connect capture/name/destination/confirmation, library folder,
-   LCD USER selection and reload, plus GUI/processor integration tests.
+   ROM. The next integration slice connects the backend to a shared SAVE AS dialog
+   (default USER action, name, 32 destination slots and overwrite confirmation),
+   a per-user library folder, and LCD `USER (load copy)` selection. Loading opens
+   an independent CUSTOM working copy, selecting its first occupied slot; edits
+   never automatically overwrite the library file. Save-copy retains working-bank
+   dirty markers conservatively. UTILITY now contains editing tools only.
+   Remaining acceptance: real DAW interaction, Windows GUI validation, multi-instance
+   library usage, and final visual styling. Multiple named USER banks are not yet implemented.
 4. **Visual integration and acceptance:** combine concept 3's approved layout
    with the hardware-inspired material/colour direction above for
    EDIT/PERFORMANCE/UTILITY, green-yellow-red meters, resize/readability
@@ -178,6 +183,8 @@ The existing skin remains in use during the first functional integration chapter
 - [ ] USER bank library, destination slot and non-destructive Save As workflow.
 - [x] USER-bank storage foundation: persistent 32-slot file, single-slot update,
   overwrite/conflict protection, checked temporary-file replacement and ROM-free CI tests.
+- [x] Initial USER GUI wiring: shared Save As dialog, immutable patch capture,
+  per-user USER bank, LCD load-copy action and processor/session regression tests.
 - [ ] PERFORMANCE panel layout with firmware-backed bindings and project recall.
 - [x] First PERFORMANCE slice: four controller ranges and 12 assignment switches,
   project/missing-ROM recall, real MIDI/audio regression and persistent LCD/header.
