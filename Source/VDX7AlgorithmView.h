@@ -40,7 +40,7 @@ public:
     {
         const auto& graph=VDX7Algorithms::get(algorithm_);
         const float sx=getWidth()/200.0f, sy=getHeight()/124.0f;
-        const auto cyan=juce::Colour(0xff00e7e7);
+        const auto cyan=juce::Colour(0xff68c7bb);
         const auto wire=juce::Colour(0xff82a4ac);
         const float stroke=juce::jmax(0.8f,sx);
         auto line=[&](juce::Point<float> a,juce::Point<float> b)

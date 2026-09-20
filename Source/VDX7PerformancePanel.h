@@ -140,9 +140,9 @@ public:
         for (int c = 0; c < 4; ++c)
         {
             auto bounds = juce::Rectangle<float>(c * column + 3, top, column - 6, float(getHeight()) - top);
-            g.setColour(juce::Colour(0xff101b1e));
+            g.setColour(juce::Colour(0xff302d29));
             g.fillRoundedRectangle(bounds, 4.0f);
-            g.setColour(juce::Colour(0xffe6eef0));
+            g.setColour(juce::Colour(0xffeee9dc));
             g.setFont(juce::Font(juce::FontOptions(juce::jmax(11.0f, 17.0f * scale))));
             g.drawText(titles[c], bounds.removeFromTop(32 * scale).reduced(12, 0),
                        juce::Justification::centredLeft);

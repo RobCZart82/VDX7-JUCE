@@ -37,13 +37,13 @@ VDX7LookAndFeel::VDX7LookAndFeel()
     faderTrack_ = faderTrack_.getClippedImage(
         faderTrack_.getBounds().withTrimmedTop(60).withTrimmedBottom(60));
 
-    setColour(juce::Label::textColourId, juce::Colour(0xffe6eef0));
-    setColour(juce::ComboBox::textColourId, juce::Colour(0xffe6eef0));
-    setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff071014));
-    setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff31515a));
-    setColour(juce::ComboBox::arrowColourId, juce::Colour(0xff00e7e7));
-    setColour(juce::PopupMenu::backgroundColourId, juce::Colour(0xff0b181b));
-    setColour(juce::PopupMenu::textColourId, juce::Colour(0xffe6eef0));
+    setColour(juce::Label::textColourId, juce::Colour(0xffeee9dc));
+    setColour(juce::ComboBox::textColourId, juce::Colour(0xffeee9dc));
+    setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff24221f));
+    setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff6b655b));
+    setColour(juce::ComboBox::arrowColourId, juce::Colour(0xff68c7bb));
+    setColour(juce::PopupMenu::backgroundColourId, juce::Colour(0xff302d29));
+    setColour(juce::PopupMenu::textColourId, juce::Colour(0xffeee9dc));
     setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(0xff087b82));
     setColour(juce::PopupMenu::highlightedTextColourId, juce::Colours::white);
 }
@@ -85,25 +85,24 @@ const juce::Image& VDX7LookAndFeel::faderThumbImage(bool active, bool highlighte
 void VDX7LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button,
                                             const juce::Colour&, bool highlighted, bool down)
 {
-    const bool isTab = static_cast<bool>(button.getProperties().getWithDefault("vdx7Tab", false));
-    const auto& image = buttonImage(isTab, button.getToggleState(), highlighted, down);
     juce::Graphics::ScopedSaveState state(g);
     g.setOpacity(button.isEnabled() ? 1.0f : 0.35f);
-    if (bool(button.getProperties().getWithDefault("vdx7WideHeader", false)))
-    {
-        const int inset = juce::roundToInt(image.getWidth() * 0.10f);
-        g.drawImage(image, 0, 0, button.getWidth(), button.getHeight(),
-                    inset, 0, image.getWidth() - 2 * inset, image.getHeight());
-        return;
-    }
-    g.drawImage(image, button.getLocalBounds().toFloat());
+    const auto bounds = button.getLocalBounds().toFloat().reduced(1.5f);
+    auto colour = button.getToggleState() ? juce::Colour(0xff68c7bb) : juce::Colour(0xff454139);
+    if (highlighted) colour = colour.brighter(0.12f);
+    if (down) colour = colour.darker(0.18f);
+    g.setGradientFill(juce::ColourGradient(colour.brighter(0.06f), 0, bounds.getY(),
+        colour.darker(0.10f), 0, bounds.getBottom(), false));
+    g.fillRoundedRectangle(bounds, 3.0f);
+    g.setColour(button.hasKeyboardFocus(true) ? juce::Colour(0xffc9d68e) : juce::Colour(0xff777064));
+    g.drawRoundedRectangle(bounds, 3.0f, button.hasKeyboardFocus(true) ? 2.0f : 1.0f);
 }
 
 void VDX7LookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button,
                                       bool, bool down)
 {
     const bool active = button.getToggleState();
-    g.setColour(active ? juce::Colour(0xff031012) : juce::Colour(0xffe6eef0));
+    g.setColour(active ? juce::Colour(0xff031012) : juce::Colour(0xffeee9dc));
     g.setFont(getTextButtonFont(button, button.getHeight()));
     g.drawFittedText(button.getButtonText(), button.getLocalBounds().reduced(5).translated(0, down ? 1 : 0),
                      juce::Justification::centred, 1);
@@ -119,20 +118,16 @@ void VDX7LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int widt
                                         float sliderPos, float startAngle, float endAngle,
                                         juce::Slider& slider)
 {
-    const auto& image = knobNormal_;
     const float diameter = static_cast<float>(juce::jmin(width, height));
     const auto bounds = juce::Rectangle<float>(static_cast<float>(x), static_cast<float>(y),
                                                 static_cast<float>(width), static_cast<float>(height))
                             .withSizeKeepingCentre(diameter, diameter)
                             .reduced(2.0f);
-    g.drawImage(image, bounds);
-
-    if (slider.isMouseOverOrDragging())
-    {
-        juce::Graphics::ScopedSaveState save(g);
-        g.setOpacity(slider.isMouseButtonDown() ? 0.16f : 0.08f);
-        g.drawImage(knobHover_, bounds);
-    }
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff444641), bounds.getX(), bounds.getY(),
+        juce::Colour(0xff111410), bounds.getRight(), bounds.getBottom(), false));
+    g.fillEllipse(bounds);
+    g.setColour(slider.isMouseOverOrDragging() ? juce::Colour(0xff68c7bb) : juce::Colour(0xff111410));
+    g.drawEllipse(bounds, 1.5f);
 
     const float angle = startAngle + sliderPos * (endAngle - startAngle);
     const float radius = bounds.getWidth() * 0.39f;
@@ -140,8 +135,27 @@ void VDX7LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int widt
     marker.addRoundedRectangle(-1.5f, -radius, 3.0f, radius * 0.37f, 1.5f);
     marker.applyTransform(juce::AffineTransform::rotation(angle)
                               .translated(bounds.getCentreX(), bounds.getCentreY()));
-    g.setColour(juce::Colour(0xff00e7e7));
+    g.setColour(juce::Colour(0xff68c7bb));
     g.fillPath(marker);
+}
+
+void VDX7LookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& button, bool highlighted, bool)
+{
+    auto bounds = button.getLocalBounds().toFloat();
+    const float height = bounds.getHeight();
+    const bool on = button.getToggleState();
+    g.setOpacity(button.isEnabled() ? 1.0f : 0.4f);
+    g.setColour(juce::Colour(0xffeee9dc));
+    g.setFont(juce::Font(juce::FontOptions(height * 0.56f)));
+    g.drawText(button.getButtonText(), bounds.withWidth(bounds.getWidth()*0.58f), juce::Justification::centredLeft);
+    const juce::Rectangle<float> track(bounds.getWidth()*0.60f, height*0.13f, height*1.55f, height*0.74f);
+    g.setColour(juce::Colour(0xff151612)); g.fillRoundedRectangle(track, height*0.37f);
+    g.setColour(on ? juce::Colour(0xff68c7bb) : juce::Colour(0xff817c70));
+    g.fillEllipse(track.getX() + (on ? track.getWidth()-height*0.66f : height*0.04f), height*0.17f, height*0.66f, height*0.66f);
+    g.setColour(juce::Colour(0xffeee9dc));
+    g.drawText(on ? "ON" : "OFF", bounds.withTrimmedLeft(bounds.getWidth()*0.83f), juce::Justification::centredRight);
+    if (highlighted || button.hasKeyboardFocus(true))
+    { g.setColour(juce::Colour(0xffc9d68e)); g.drawRoundedRectangle(bounds.reduced(0.5f), 2, 1); }
 }
 
 void VDX7LookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
@@ -173,7 +187,7 @@ void VDX7LookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int widt
         g.setGradientFill(juce::ColourGradient(juce::Colour(0xff849498), lever.getTopLeft(),
                                               juce::Colour(0xff19262d), lever.getBottomLeft(), false));
         g.fillRoundedRectangle(lever, 2.0f);
-        g.setColour(on ? juce::Colour(0xff00e7e7) : juce::Colour(0xff90a4aa));
+        g.setColour(on ? juce::Colour(0xff68c7bb) : juce::Colour(0xff90a4aa));
         g.fillRect(lever.reduced(2.0f).withHeight(2.0f).withY(lever.getCentreY()));
         return;
     }

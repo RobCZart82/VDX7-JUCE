@@ -10,6 +10,7 @@ public:
     void drawButtonBackground(juce::Graphics&, juce::Button&, const juce::Colour&,
                               bool highlighted, bool down) override;
     void drawButtonText(juce::Graphics&, juce::TextButton&, bool highlighted, bool down) override;
+    void drawToggleButton(juce::Graphics&, juce::ToggleButton&, bool, bool) override;
     juce::Font getTextButtonFont(juce::TextButton&, int buttonHeight) override;
 
     void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height,

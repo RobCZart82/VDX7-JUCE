@@ -94,6 +94,26 @@ static void checkUserLibrary(const juce::File& romFile, const juce::File& imageF
                 tuning->createComponentSnapshot(tuning->getLocalBounds()), stream), "settings screenshot");
         }
         tuning->exitModalState(0);
+        juce::TextButton* about = nullptr;
+        for (auto* child : editor->getChildren())
+            if (auto* button = dynamic_cast<juce::TextButton*>(child))
+                if (button->getButtonText() == "ABOUT") about = button;
+        require(about != nullptr, "ABOUT button exists");
+        about->onClick();
+        auto* credits = dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());
+        require(credits != nullptr, "ABOUT opens");
+        bool foundLogo = false;
+        for (auto* child : credits->getChildren())
+            if (auto* logo = dynamic_cast<juce::ImageComponent*>(child))
+                foundLogo |= logo->getName() == "GYR logo" && logo->getImage().isValid();
+        require(foundLogo, "ABOUT embeds valid GYR logo");
+        if (imageFolder != juce::File())
+        {
+            juce::FileOutputStream stream(imageFolder.getChildFile("VDX7-about.png"));
+            require(stream.openedOk() && juce::PNGImageFormat().writeImageToStream(
+                credits->createComponentSnapshot(credits->getLocalBounds()), stream), "about screenshot");
+        }
+        credits->exitModalState(0);
     }
     require(p.captureUserPatch(captured, error), "capture queued voice");
     const auto before = ram(save(p));
