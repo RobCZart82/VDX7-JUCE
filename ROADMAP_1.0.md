@@ -154,6 +154,12 @@ nélkül. Ez elfogadott tervezési irány, nem már elkészült GUI vagy jogi mi
 
 ## GUI/function integration chapters — approved 2026-09-20
 
+- [x] SETTINGS host MIDI input channel: OMNI or 1-16, legacy/missing-field
+  projects default to OMNI. Switching releases old notes/sustain and discards
+  stale delayed input; UI keyboard and bank SysEx remain global. Project and
+  missing-ROM resave regressions added. See `VALIDATION_1.0_MIDI_CHANNEL.md`.
+  Physical controller/DAW acceptance remains open before final GUI polish.
+
 - [x] First SETTINGS slice: master tuning -256..255 using the core's existing
   firmware RAM tuning API, project recall, bounds and measured pitch regression.
   SETTINGS opens a functional Apply/Cancel dialog; these are native units, not

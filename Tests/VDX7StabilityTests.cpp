@@ -11,6 +11,48 @@ static void require(bool ok, const char* message)
 
 struct VDX7RegressionAccess
 {
+    static void checkInputChannel(VDX7AudioProcessor& p)
+    {
+        juce::AudioBuffer<float> audio(2, 256);
+        juce::MidiBuffer midi;
+        require(!p.setMidiInputChannelFromUi(-1) && !p.setMidiInputChannelFromUi(17), "channel bounds");
+        require(p.getMidiInputChannel() == 0, "legacy OMNI default");
+        for (int selected : {1, 16, 7})
+        {
+            require(p.setMidiInputChannelFromUi(selected), "set input channel");
+            for (int ch = 1; ch <= 16; ++ch)
+                midi.addEvent(juce::MidiMessage::noteOn(ch, 40+ch, uint8_t(100)), 0);
+            p.processBlock(audio, midi);
+            for (int ch = 1; ch <= 16; ++ch)
+                require(p.engine_.activeMidiNotes_[40+ch] == (ch == selected), "only selected channel sounds");
+        }
+        const int program = p.engine_.currentProgram();
+        const float expression = p.engine_.midiExpression_;
+        midi.addEvent(juce::MidiMessage::programChange(1, (program+1)%32), 0);
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 11, 0), 0);
+        p.processBlock(audio, midi);
+        require(p.engine_.currentProgram() == program && p.engine_.midiExpression_ == expression,
+                "rejected channel cannot change program or expression");
+        midi.addEvent(juce::MidiMessage::controllerEvent(7, 64, 127), 0);
+        p.processBlock(audio, midi);
+        require(p.engine_.sustainDown_, "selected channel sustain");
+        midi.addEvent(juce::MidiMessage::noteOn(7, 70, uint8_t(100)), 0);
+        contend(p, midi); // Pending old-channel note must never replay.
+        p.setMidiInputChannelFromUi(2);
+        midi.addEvent(juce::MidiMessage::noteOn(2, 72, uint8_t(100)), 0);
+        contend(p, midi); // Change while engine lock is unavailable.
+        p.processBlock(audio, midi);
+        require(!p.engine_.sustainDown_ && !p.engine_.activeMidiNotes_[47]
+                && !p.engine_.activeMidiNotes_[70] && p.engine_.activeMidiNotes_[72],
+                "switch clears old timeline and sustain, preserves new-channel event");
+        p.keyboardState_.noteOn(1, 75, 1.0f);
+        p.processBlock(audio, midi);
+        require(p.engine_.activeMidiNotes_[75], "UI keyboard bypasses host channel filter");
+        p.keyboardState_.noteOff(1, 75, 0.0f);
+        p.setMidiInputChannelFromUi(0);
+        p.processBlock(audio, midi);
+        require(!p.engine_.hasHeldMidiNotes(), "return to OMNI releases notes");
+    }
     static void checkInvalidMidi(VDX7AudioProcessor& p)
     {
         const std::vector<std::vector<uint8_t>> invalid {
@@ -402,6 +444,7 @@ int main(int argc, char** argv)
             require(input.loadRomFromFile(romFile), "MIDI validation ROM");
             input.prepareToPlay(48000, 64);
             VDX7RegressionAccess::checkInvalidMidi(input);
+            VDX7RegressionAccess::checkInputChannel(input);
         }
         VDX7Engine engine;
         require(engine.loadRomImage(static_cast<const uint8_t*>(rom.getData()), rom.getSize()), "engine ROM");

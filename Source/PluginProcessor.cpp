@@ -287,6 +287,14 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     if (buffer.getNumSamples() > 0)
         loadTimer.emplace(processLoadMeasurer_, buffer.getNumSamples());
     buffer.clear();
+    const int inputChannel = midiInputChannel_.load();
+    if (inputChannel != audioMidiInputChannel_)
+    {
+        audioMidiInputChannel_ = inputChannel;
+        channelReleasePending_ = true;
+        deferredMidi_.clear(); // Do not replay old-channel events after switching.
+        clearKeyboardSnapshot();
+    }
     std::array<VDX7KeyboardQueue::Event, VDX7KeyboardQueue::capacity> keyboardEvents;
     std::size_t keyboardCount = 0;
     if (keyboardQueue_.recoverOverflow()) deferredMidi_.requestPanic();
@@ -302,8 +310,8 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
             deferredMidi_.push(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
         {
-            if (event.numBytes <= 0 || (event.data[0] != 0xf0
-                && !VDX7MidiValidation::isChannelMessage(event.data, static_cast<std::size_t>(event.numBytes))))
+            if (event.numBytes <= 0 || !VDX7MidiValidation::acceptsHostEvent(
+                    event.data, static_cast<std::size_t>(event.numBytes), inputChannel))
                 continue;
             deferredMidi_.push(event.data, static_cast<std::size_t>(event.numBytes),
                                juce::jlimit(0, total, event.samplePosition));
@@ -320,6 +328,12 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         return;
     }
 
+    if (channelReleasePending_)
+    {
+        engine_.allNotesOff(); // Also releases sustain before new-channel notes.
+        clearKeyboardSnapshot();
+        channelReleasePending_ = false;
+    }
     if (applyOperatorParameters() | applyVoiceParameters())
         engine_.reloadCurrentProgram();
     applyPendingCommands();
@@ -348,8 +362,10 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         for (std::size_t i = 0; i < keyboardCount; ++i)
             deliver(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
-            deliver(event.data, static_cast<std::size_t>(event.numBytes),
-                    juce::jlimit(0, total, event.samplePosition));
+            if (event.numBytes > 0 && VDX7MidiValidation::acceptsHostEvent(
+                    event.data, static_cast<std::size_t>(event.numBytes), inputChannel))
+                deliver(event.data, static_cast<std::size_t>(event.numBytes),
+                        juce::jlimit(0, total, event.samplePosition));
     }
 
     if (programMemoryChanged)
@@ -799,6 +815,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         // A project saved while its firmware is missing must retain its sound.
         if (pendingRestore_.isValid())
         {
+            pendingRestore_.setProperty("midiInputChannel", midiInputChannel_.load(), nullptr);
             capturePendingRestoreEditsLocked();
             if (auto xml = pendingRestore_.createXml())
                 copyXmlToBinary(*xml, destData);
@@ -810,6 +827,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
             engine_.reloadCurrentProgram();
         applyPendingCommands();
         state.setProperty("bank", engine_.currentBank(), nullptr);
+        state.setProperty("midiInputChannel", midiInputChannel_.load(), nullptr);
         state.setProperty("program", engine_.currentProgram(), nullptr);
         state.setProperty("modifiedVoices", static_cast<juce::int64>(modifiedVoices_.load()), nullptr);
 
@@ -878,6 +896,8 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     {
         std::scoped_lock lock(engineMutex_);
         pendingRestore_ = state.createCopy();
+        const int channel = static_cast<int>(state.getProperty("midiInputChannel", 0));
+        midiInputChannel_.store(channel >= 0 && channel <= 16 ? channel : 0);
         operatorParameterDirty_[0].store(0);
         operatorParameterDirty_[1].store(0);
         voiceParameterDirty_.store(0);
@@ -1358,6 +1378,14 @@ int VDX7AudioProcessor::getMasterTune() const
 {
     std::scoped_lock lock(engineMutex_);
     return engine_.masterTune();
+}
+
+bool VDX7AudioProcessor::setMidiInputChannelFromUi(int channel)
+{
+    if (channel < 0 || channel > 16) return false;
+    if (midiInputChannel_.exchange(channel) != channel)
+        updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    return true;
 }
 
 bool VDX7AudioProcessor::setMasterTuneFromUi(int value)

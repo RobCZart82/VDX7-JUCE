@@ -84,6 +84,9 @@ static void checkUserLibrary(const juce::File& romFile, const juce::File& imageF
         auto* tuning = dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());
         require(tuning && tuning->getTextEditorContents("tuning") == juce::String(p.getMasterTune()),
                 "SETTINGS shows current firmware tuning");
+        require(tuning->getComboBoxComponent("channel")->getNumItems() == 17
+                && tuning->getComboBoxComponent("channel")->getSelectedItemIndex() == p.getMidiInputChannel(),
+                "SETTINGS has OMNI plus 16 channels");
         if (imageFolder != juce::File())
         {
             juce::FileOutputStream stream(imageFolder.getChildFile("VDX7-settings.png"));
@@ -140,13 +143,23 @@ static void checkControllers(const juce::File& romFile)
     require(std::memcmp(voicesBeforeTuning.getData(), tuned.getData(), 4096) == 0
             && !p.hasUnexportedEdits(), "tuning preserves voice bank and dirty state");
     {
+        require(p.setMidiInputChannelFromUi(16), "select stored MIDI channel");
         const auto state = save(p);
         VDX7AudioProcessor restored(false);
         require(!restored.setMasterTuneFromUi(1), "tuning requires ROM");
         require(restored.loadRomFromFile(romFile), "tuning restore ROM");
         restored.setStateInformation(state.getData(), int(state.getSize()));
         require(restored.getMasterTune() == 255, "tuning project recall");
+        require(restored.getMidiInputChannel() == 16, "MIDI input channel project recall");
+        auto legacy = juce::ValueTree::fromXml(*juce::AudioProcessor::getXmlFromBinary(
+            state.getData(), int(state.getSize())));
+        legacy.removeProperty("midiInputChannel", nullptr);
+        juce::MemoryBlock legacyBytes;
+        juce::AudioProcessor::copyXmlToBinary(*legacy.createXml(), legacyBytes);
+        restored.setStateInformation(legacyBytes.getData(), int(legacyBytes.getSize()));
+        require(restored.getMidiInputChannel() == 0, "legacy state restores OMNI");
     }
+    p.setMidiInputChannelFromUi(0);
     require(p.setMasterTuneFromUi(0), "reset tuning");
     require(!p.setPlaySettingFromUi(-1, 0) && !p.setPlaySettingFromUi(4, 0)
             && !p.setPlaySettingFromUi(0, 2) && !p.setPlaySettingFromUi(3, 100), "play setting bounds");
@@ -232,17 +245,21 @@ static void checkControllers(const juce::File& romFile)
     auto xml = juce::AudioProcessor::getXmlFromBinary(state.getData(), int(state.getSize()));
     auto missingState = juce::ValueTree::fromXml(*xml);
     missingState.setProperty("romPath", "", nullptr);
+    missingState.setProperty("midiInputChannel", 12, nullptr);
     juce::MemoryBlock missingData;
     juce::AudioProcessor::copyXmlToBinary(*missingState.createXml(), missingData);
     VDX7AudioProcessor missing(false);
     missing.setStateInformation(missingData.getData(), int(missingData.getSize()));
     require(!missing.isRomLoaded(), "deliberate missing ROM");
+    require(missing.getMidiInputChannel() == 12, "missing-ROM channel recall");
+    require(missing.setMidiInputChannelFromUi(9), "edit channel while ROM missing");
     require(!missing.setControllerSettingFromUi(0, 0, 1), "missing ROM preserves pending globals");
     const auto resaved = save(missing);
     VDX7AudioProcessor restored(false);
     restored.setStateInformation(resaved.getData(), int(resaved.getSize()));
     require(restored.loadRomFromFile(romFile), "restore global controller RAM");
     require(restored.getControllerSettings() == settings, "missing-ROM round trip restores controllers");
+    require(restored.getMidiInputChannel() == 9, "missing-ROM resave keeps edited channel");
     require(p.getControllerSettings()[0] == 12, "instances have independent controllers");
 
     // Each MIDI controller must actually reach firmware modulation, not just change UI/RAM.
