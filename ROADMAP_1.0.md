@@ -32,6 +32,33 @@ indices compatible with saved projects.
 - [ ] Measure resampling/aliasing; quality implementation accepted against references.
 - [ ] Current documentation matches all shipping features and limitations.
 
+## Agreed GUI direction — 2026-09-20 (not implemented)
+
+The three GUI visual concepts remain references, not a final approved skin.
+The following functional/layout requirements were explicitly agreed with the
+user. Record them now; implementation follows the stabilization work.
+
+- [ ] Make the LCD the single bank/patch navigation centre: bank selector,
+  direct program selector, current program number/name and modified-state `*`.
+- [ ] LCD left/right arrows provide the same previous/next preset behavior as
+  the existing header quick switch. Remove that header switch and its duplicate
+  preset display. Keep the LCD and navigation available in EDIT, PERFORMANCE
+  and UTILITY views; view switching must not hide them.
+- [ ] Place an explicitly numbered algorithm dropdown (1–32) beside the
+  algorithm diagram. Selection updates the diagram immediately. Remove the
+  duplicate GLOBAL ALGO encoder, while retaining the existing underlying host
+  parameter ID/index and saved-project/automation compatibility.
+- [ ] Output level-meter LEDs run predominantly GREEN from the bottom upward,
+  then YELLOW near the top and RED at the very top. No blue/cyan lower LEDs.
+  Exact level thresholds and clipping indication remain implementation details
+  to specify and validate; the concepts do not define a calibrated meter scale.
+
+Magyar összefoglaló: állandó LCD-s bank-/hangszínkezelés bal–jobb léptetéssel;
+a felső gyorsváltó megszűnik. Az algoritmusábra mellett 1–32-es lenyíló lista
+váltja a GLOBAL ALGO tekerőt. A szintmérő alulról nagyrészt zöld, majd sárga,
+legfelül piros; kék alsó LED-ek nélkül. A végleges grafikai stílus még nincs
+elfogadva, ez a bejegyzés nem GUI-implementáció.
+
 ## Publication gate
 
 - [ ] M1 REAPER acceptance: multiple instances, automation, transport stop,
