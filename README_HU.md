@@ -119,7 +119,7 @@ cmake --build build-local --config Release --target VDX7_VST3
 
 Kimenet: `build-local/VDX7_artefacts/Release/VST3/VDX7.vst3`.
 
-A kényelmi `scripts/build-macos-arm64.command` script a telepített felhasználói VST3-at is lecseréli; előtte mentsd azt. Universal- és Windows-segédek: `scripts/build-macos-universal.command`, `scripts/build-windows.bat`. A macOS GitHub Actions workflow Universal artifactot fordít; a sikeres build nem hostellenőrzés.
+A kényelmi `scripts/build-macos-arm64.command` script fordít, ad-hoc aláír és szigorúan ellenőrzi a csomagot. Nem telepít és nem cseréli le a telepített VST3-at; a telepítés külön, kézi lépés. Universal- és Windows-segédek: `scripts/build-macos-universal.command`, `scripts/build-windows.bat`. A macOS GitHub Actions workflow Universal artifactot fordít; a sikeres build nem hostellenőrzés.
 
 Tesztek:
 

@@ -98,6 +98,33 @@ int main(int argc, char** argv)
         require(engine.loadRomImage(static_cast<const uint8_t*>(rom.getData()), 16384), "firmware-only reload");
         require(!engine.hasFactoryVoices() && engine.currentBank() == -1, "no stale factory bank");
 
+        // Temporary local firmware is removed by the directory guard,
+        // including when the assertion throws. Never part of an artifact.
+        const auto temporaryDirectory = juce::File::getSpecialLocation(juce::File::tempDirectory)
+            .getNonexistentChildFile("vdx7-companion-regression", "", false);
+        require(temporaryDirectory.createDirectory().wasOk(), "create private test directory");
+        struct RemoveDirectory
+        {
+            juce::File directory;
+            ~RemoveDirectory() { directory.deleteRecursively(); }
+        } cleanup { temporaryDirectory };
+        const auto firmwareFile = temporaryDirectory.getChildFile("firmware.bin");
+        require(firmwareFile.replaceWithData(rom.getData(), 16384), "write temporary firmware");
+        require(temporaryDirectory.getChildFile("dx7_factory_voices_32KB.bin")
+                    .replaceWithData(invalid, sizeof(invalid)), "write invalid companion");
+        VDX7AudioProcessor companion(false);
+        require(companion.loadRomFromFile(firmwareFile), "invalid optional companion permits firmware load");
+        require(companion.isRomLoaded() && !companion.hasFactoryVoices(), "firmware-only companion fallback");
+        require(companion.getStatusText().containsIgnoreCase("ignored"), "companion warning status");
+        const auto companionFile = temporaryDirectory.getChildFile("dx7_factory_voices_32KB.bin");
+        require(companionFile.replaceWithData(static_cast<const uint8_t*>(rom.getData()) + 16384,
+                                             32768), "write valid temporary companion");
+        require(companion.loadRomFromFile(firmwareFile) && companion.hasFactoryVoices(),
+                "valid companion loads factory banks");
+        require(companionFile.deleteFile(), "remove temporary companion");
+        require(companion.loadRomFromFile(firmwareFile) && !companion.hasFactoryVoices(),
+                "absent companion loads firmware only");
+
         VDX7AudioProcessor original(false);
         require(original.loadRomFromFile(romFile), "processor ROM");
         original.selectProgramFromUi(5);
@@ -116,22 +143,58 @@ int main(int argc, char** argv)
         waiting.setStateInformation(missing.getData(), static_cast<int>(missing.getSize()));
         require(!waiting.isRomLoaded(), "missing ROM remains unloaded");
         require(decode(save(waiting)).isEquivalentTo(saved), "save preserves pending state");
+        auto* master = waiting.parameters().getParameter("masterVolume");
+        require(master != nullptr, "master parameter exists");
+        master->setValueNotifyingHost(0.37f);
+        const float editedMasterValue = master->getValue();
+        const auto editedPending = decode(save(waiting));
+        require(!editedPending.isEquivalentTo(saved), "missing-ROM re-save includes new host parameter");
+        require(editedPending["ram"] == saved["ram"]
+                && editedPending["bank"] == saved["bank"]
+                && editedPending["program"] == saved["program"], "missing-ROM edit preserves sound data");
         VDX7AudioProcessor restarted(false);
         auto pending = save(waiting);
         restarted.setStateInformation(pending.getData(), static_cast<int>(pending.getSize()));
+        require(std::abs(restarted.parameters().getParameter("masterVolume")->getValue() - editedMasterValue)
+                < 0.00001f, "missing-ROM master edit survives second restore");
         require(restarted.loadRomFromFile(romFile), "manual ROM resumes restore");
+        require(std::abs(restarted.parameters().getParameter("masterVolume")->getValue() - editedMasterValue)
+                < 0.00001f, "master edit survives firmware load");
         auto restored = decode(save(restarted));
         require(restored["ram"] == saved["ram"] && restored["program"] == saved["program"]
                 && restored["bank"] == saved["bank"], "exact deferred RAM/bank/program restore");
         require(restarted.getCurrentPatchName() == "RESTORE1", "restored name");
+        for (bool saveBeforeLoad : {false, true})
+        {
+            VDX7AudioProcessor edited(false);
+            edited.setStateInformation(missing.getData(), static_cast<int>(missing.getSize()));
+            auto* editedFeedback = edited.parameters().getParameter(VDX7ParameterIDs::voiceParameter(
+                VDX7VoiceData::VoiceParameter::feedback));
+            editedFeedback->setValueNotifyingHost(editedFeedback->convertTo0to1(2));
+            auto* editedOperator = edited.parameters().getParameter(VDX7ParameterIDs::operatorParameter(
+                5, VDX7VoiceData::Parameter::outputLevel));
+            editedOperator->setValueNotifyingHost(editedOperator->convertTo0to1(42));
+            if (saveBeforeLoad)
+            {
+                const auto checkpoint = save(edited);
+                edited.setStateInformation(checkpoint.getData(), static_cast<int>(checkpoint.getSize()));
+            }
+            require(edited.loadRomFromFile(romFile), "load after offline voice edit");
+            require(editedFeedback->getValue() == editedFeedback->convertTo0to1(2),
+                    "explicit offline voice edit overrides saved RAM");
+            require(editedOperator->getValue() == editedOperator->convertTo0to1(42),
+                    "offline operator edit in upper dirty mask survives restore");
+            require(edited.getCurrentPatchName() == "RESTORE1", "offline edit preserves remaining voice data");
+        }
         auto malformed = saved.createCopy();
         malformed.setProperty("ram", "invalid-base64", nullptr);
         auto malformedBytes = encode(malformed);
         restarted.setStateInformation(malformedBytes.getData(), static_cast<int>(malformedBytes.getSize()));
         require(decode(save(restarted))["ram"] == saved["ram"], "malformed state preserves sound");
         for (auto* parameter : original.getParameters())
-            require(std::abs(parameter->getValue() - restarted.getParameters()[parameter->getParameterIndex()]->getValue())
-                    < 0.00001f, "restored host parameter");
+            if (parameter != original.parameters().getParameter("masterVolume"))
+                require(std::abs(parameter->getValue() - restarted.getParameters()[parameter->getParameterIndex()]->getValue())
+                        < 0.00001f, "restored host parameter");
 
         restarted.prepareToPlay(48000, 256);
         juce::AudioBuffer<float> audio(2, 256);

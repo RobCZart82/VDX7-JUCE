@@ -80,6 +80,7 @@ public:
 private:
     friend struct VDX7RegressionAccess;
     void restoreSavedStateLocked(const juce::ValueTree&);
+    void capturePendingRestoreEditsLocked();
     juce::ValueTree pendingRestore_;
     bool detectRom_ = true;
     VDX7DeferredMidi deferredMidi_;

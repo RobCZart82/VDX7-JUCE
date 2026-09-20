@@ -17,7 +17,9 @@ indices compatible with saved projects.
 - [ ] Audio-thread ownership/notification audit and contention stress test.
 - [x] Full 0–127 note range and pitch/release regressions (local ROM).
 - [x] Configure PR ROM-free CI and opt-in local ROM integration CTest gate.
-- [ ] Run the new CI configuration on GitHub (not pushed or triggered yet).
+- [x] Run the development CI configuration on GitHub: macOS and Windows passed
+  on `5164fabd36c8fdd745e272fc1f493c0c352c1ced`. Every subsequent change needs
+  fresh checks; this does not constitute RC or host acceptance.
 
 ## Features and quality
 

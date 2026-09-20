@@ -119,7 +119,7 @@ cmake --build build-local --config Release --target VDX7_VST3
 
 Output: `build-local/VDX7_artefacts/Release/VST3/VDX7.vst3`.
 
-The convenience script `scripts/build-macos-arm64.command` also replaces the installed user VST3; back it up first. Universal and Windows helpers: `scripts/build-macos-universal.command`, `scripts/build-windows.bat`. The macOS GitHub Actions workflow builds Universal artifacts; a successful build is not host validation.
+The convenience script `scripts/build-macos-arm64.command` builds, ad-hoc signs and strictly verifies the bundle. It does not install or replace any installed VST3. Installation is a separate manual step. Universal and Windows helpers: `scripts/build-macos-universal.command`, `scripts/build-windows.bat`. The macOS GitHub Actions workflow builds Universal artifacts; a successful build is not host validation.
 
 Tests:
 

@@ -621,6 +621,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         // A project saved while its firmware is missing must retain its sound.
         if (pendingRestore_.isValid())
         {
+            capturePendingRestoreEditsLocked();
             if (auto xml = pendingRestore_.createXml())
                 copyXmlToBinary(*xml, destData);
             return;
@@ -674,6 +675,9 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     {
         std::scoped_lock lock(engineMutex_);
         pendingRestore_ = state.createCopy();
+        operatorParameterDirty_[0].store(0);
+        operatorParameterDirty_[1].store(0);
+        voiceParameterDirty_.store(0);
     }
     const auto parameterState = state.getChildWithName(juce::Identifier(kParameterStateType));
     if (parameterState.isValid())
@@ -705,6 +709,39 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     }
 }
 
+void VDX7AudioProcessor::capturePendingRestoreEditsLocked()
+{
+    if (!pendingRestore_.isValid()) return;
+    const auto previous = pendingRestore_.getChildWithName(juce::Identifier(kParameterStateType));
+    if (previous.isValid()) pendingRestore_.removeChild(previous, nullptr);
+    pendingRestore_.addChild(parameters_.copyState(), -1, nullptr);
+
+    // Explicit edits made AFTER restore override RAM; untouched host defaults
+    // never override authoritative packed RAM, including legacy projects.
+    auto edits = pendingRestore_.getChildWithName("DeferredVoiceEdits");
+    const auto low = operatorParameterDirty_[0].exchange(0);
+    const auto high = operatorParameterDirty_[1].exchange(0);
+    const auto voice = voiceParameterDirty_.exchange(0);
+    if ((low | high | voice) == 0) return;
+    if (!edits.isValid())
+    {
+        edits = juce::ValueTree("DeferredVoiceEdits");
+        pendingRestore_.addChild(edits, -1, nullptr);
+    }
+    for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
+        for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
+        {
+            const int index = op * VDX7VoiceData::kParameterCount + p;
+            if (((index < 64 ? low : high) & (uint64_t{1} << (index % 64))) != 0)
+                edits.setProperty(juce::Identifier("op" + juce::String(index)),
+                    juce::roundToInt(pendingOperatorValues_[op][p].load()), nullptr);
+        }
+    for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
+        if ((voice & (uint32_t{1} << p)) != 0)
+            edits.setProperty(juce::Identifier("voice" + juce::String(p)),
+                juce::roundToInt(pendingVoiceValues_[p].load()), nullptr);
+}
+
 void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
 {
         const int bank = static_cast<int>(state.getProperty("bank", -1));
@@ -730,6 +767,28 @@ void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
         engine_.selectProgram(program);
         modifiedVoices_.store(static_cast<uint32_t>(static_cast<juce::int64>(
             state.getProperty("modifiedVoices", juce::int64(ramText.isNotEmpty() ? -1 : 0)))));
+        const auto edits = state.getChildWithName("DeferredVoiceEdits");
+        bool changed = false;
+        for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
+            for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
+            {
+                const juce::Identifier key("op" + juce::String(op * VDX7VoiceData::kParameterCount + p));
+                if (edits.hasProperty(key))
+                    changed |= engine_.setOperatorParameter(op, static_cast<VDX7VoiceData::Parameter>(p),
+                                                            static_cast<int>(edits[key]));
+            }
+        for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
+        {
+            const juce::Identifier key("voice" + juce::String(p));
+            if (edits.hasProperty(key))
+                changed |= engine_.setVoiceParameter(static_cast<VDX7VoiceData::VoiceParameter>(p),
+                                                     static_cast<int>(edits[key]));
+        }
+        if (changed)
+        {
+            engine_.reloadCurrentProgram();
+            modifiedVoices_.fetch_or(uint32_t{1} << engine_.currentProgram());
+        }
         operatorParameterDirty_[0].store(0, std::memory_order_release);
         operatorParameterDirty_[1].store(0, std::memory_order_release);
         voiceParameterDirty_.store(0, std::memory_order_release);
@@ -758,17 +817,25 @@ bool VDX7AudioProcessor::readFile(const juce::File& file, std::vector<uint8_t>& 
 bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<uint8_t>& rom, juce::String* error)
 {
     std::vector<uint8_t> voices;
+    bool ignoredCompanion = false;
 
     if (rom.size() == VDX7Engine::kFirmwareSize)
     {
         // Optional companion file created by the README/package workflow.
         const auto companion = file.getSiblingFile("dx7_factory_voices_32KB.bin");
-        if (companion.existsAsFile())
-            readFile(companion, voices);
+        if (companion.exists())
+        {
+            ignoredCompanion = !companion.existsAsFile()
+                || companion.getSize() != VDX7Engine::kFactoryVoicesSize
+                || !readFile(companion, voices)
+                || voices.size() != VDX7Engine::kFactoryVoicesSize;
+            if (ignoredCompanion) voices.clear();
+        }
     }
 
     {
         std::scoped_lock lock(engineMutex_);
+        capturePendingRestoreEditsLocked();
         const bool ok = engine_.loadRomImage(rom.data(), rom.size(),
                                              voices.empty() ? nullptr : voices.data(), voices.size());
         if (!ok)
@@ -803,6 +870,8 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         statusText_ = factoryVoicesAvailable_.load(std::memory_order_acquire)
             ? "DX7 firmware loaded + 8 factory banks"
             : "DX7 firmware loaded (factory voice image not found)";
+        if (ignoredCompanion)
+            statusText_ = "DX7 firmware loaded; invalid or unreadable optional factory voice image ignored";
     }
     return true;
 }
