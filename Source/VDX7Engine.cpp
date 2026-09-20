@@ -70,6 +70,8 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     midiRecovering_ = false;
     midiOverloadCount_ = 0;
     controllerRefreshMessages_ = 0;
+    pitchBendRefresh_ = false;
+    lastPitchBendInput_ = 64;
     midiExpression_ = 1.0f;
     currentBank_ = -1;
     currentProgram_ = 0;
@@ -249,6 +251,12 @@ int VDX7Engine::generateNative(float* out)
         if (!dx7_.haveMsg)
         {
             if (toSynth_->pop(msg)) processQueuedMessage(msg);
+            else if (pitchBendRefresh_)
+            {
+                pitchBendRefresh_ = false;
+                processQueuedMessage({dx7Emu::Message::CtrlID::pitchbend,
+                    lastPitchBendInput_});
+            }
             else if (controllerRefreshMessages_ != 0)
             {
                 // Firmware scales all four sources every second analog event.
@@ -302,10 +310,13 @@ void VDX7Engine::processQueuedMessage(dx7Emu::Message msg)
 
         case CtrlID::pitchbend:
         {
-            uint8_t pbRange = dx7_.memory[0x2076] & 0x0F;
-            if (pbRange == 0) pbRange = 2;
-            const int centered = static_cast<int>(msg.byte2) - 64;
-            dx7_.pitchBendOffset = static_cast<int16_t>(centered * 1365 * pbRange / 63);
+            // A fresh queued wheel event already refreshes the new settings.
+            // Do not follow it with an older RAM value before firmware consumes it.
+            pitchBendRefresh_ = false;
+            lastPitchBendInput_ = msg.byte2;
+            // The firmware owns range, step quantisation and the resulting bend.
+            // Adding a second EGS offset bypassed zero range and double-counted bend.
+            dx7_.pitchBendOffset = 0;
             dx7_.msg = msg;
             dx7_.haveMsg = true;
             break;
@@ -588,6 +599,19 @@ bool VDX7Engine::saveRam(std::vector<uint8_t>& out) const
     return dx7_.saveRAM(out);
 }
 
+int VDX7Engine::getPitchBendSetting(int field) const noexcept
+{
+    return loaded_ && field >= 0 && field < 2 ? std::clamp(int(dx7_.memory[0x2328 + field]), 0, 12) : 0;
+}
+
+bool VDX7Engine::setPitchBendSetting(int field, int value) noexcept
+{
+    if (!loaded_ || field < 0 || field > 1 || value < 0 || value > 12) return false;
+    auto& target = dx7_.memory[0x2328 + field];
+    if (target != value) { target = static_cast<uint8_t>(value); pitchBendRefresh_ = true; }
+    return true;
+}
+
 int VDX7Engine::getControllerSetting(int controller, int field) const noexcept
 {
     if (!loaded_ || controller < 0 || controller >= 4 || field < 0 || field >= 4)
@@ -626,6 +650,8 @@ bool VDX7Engine::restoreRam(const std::vector<uint8_t>& in)
     if (ok)
     {
         controllerRefreshMessages_ = 2;
+        pitchBendRefresh_ = true;
+        lastPitchBendInput_ = static_cast<uint8_t>(dx7_.memory[0x232a] >> 1);
         selectProgram(currentProgram_);
     }
     return ok;

@@ -77,6 +77,26 @@ int main(int argc, char** argv)
         const double expected=440*std::pow(2.0,(note-69)/12.0);
         std::cout << "Pitch " << note << ": " << hz << " expected " << expected << std::endl;
         if(std::abs(hz-expected)>std::max(1.0,expected*0.025)) ++failures;
+        if (note == 60)
+        {
+            // Held note: each setting change must update without a new note-on.
+            struct Bend { int range, step, wheel; double semitones; };
+            for (const auto test : {Bend{0,0,127,0}, Bend{6,0,127,6}, Bend{12,0,127,12}, Bend{6,0,-1,6},
+                                   Bend{12,0,0,-12}, Bend{0,3,127,12}, Bend{12,0,64,0}})
+            {
+                e.setPitchBendSetting(0, test.range); e.setPitchBendSetting(1, test.step);
+                uint8_t wheel[] {0xe0,0,static_cast<uint8_t>(test.wheel)};
+                if (test.wheel >= 0) e.handleMidi(wheel,3);
+                for (int b=0;b<40;++b) e.render(l,r,256);
+                crossings=0; prev=0;
+                for(int b=0;b<172;++b) {e.render(l,r,256); for(float v:l){if(prev<0 && v>=0) ++crossings; prev=v;}}
+                const double measured=crossings*44100.0/(172*256);
+                const double wanted=expected*std::pow(2.0,test.semitones/12.0);
+                std::cout << "Bend " << test.range << "/" << test.step << "/" << test.wheel
+                          << ": " << measured << " expected " << wanted << std::endl;
+                if(std::abs(measured-wanted)>std::max(1.5,wanted*0.03)) ++failures;
+            }
+        }
     }
     return failures == 0 ? 0 : 1;
 }

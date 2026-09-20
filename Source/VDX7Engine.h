@@ -64,6 +64,8 @@ public:
     // Controller order: wheel, foot, breath, aftertouch. Field 0: range 0-99;
     // fields 1-3: pitch, amplitude, EG-bias assignments (0/1).
     int getControllerSetting(int controller, int field) const noexcept;
+    int getPitchBendSetting(int field) const noexcept;
+    bool setPitchBendSetting(int field, int value) noexcept;
     bool setControllerSetting(int controller, int field, int value) noexcept;
 
 private:
@@ -105,6 +107,8 @@ private:
     bool midiRecovering_ = false;
     uint64_t midiOverloadCount_ = 0;
     unsigned controllerRefreshMessages_ = 0;
+    bool pitchBendRefresh_ = false;
+    uint8_t lastPitchBendInput_ = 64;
 
     bool loaded_ = false;
     int currentBank_ = -1;

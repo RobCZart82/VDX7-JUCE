@@ -114,6 +114,18 @@ static void checkControllers(const juce::File& romFile)
     VDX7AudioProcessor p(false);
     require(!p.setControllerSettingFromUi(0, 0, 50), "controller edit needs ROM");
     require(p.loadRomFromFile(romFile), "controller test ROM");
+    require(!p.setPitchBendSettingFromUi(-1, 2) && !p.setPitchBendSettingFromUi(2, 2)
+            && !p.setPitchBendSettingFromUi(0, 13) && !p.setPitchBendSettingFromUi(1, -1), "bend validation");
+    for (int field = 0; field < 2; ++field)
+        for (int v : {0,12,3}) require(p.setPitchBendSettingFromUi(field, v), "bend settings");
+    require(!p.hasUnexportedEdits(), "bend globals do not dirty voice");
+    {
+        auto state = save(p);
+        VDX7AudioProcessor other(false);
+        require(other.loadRomFromFile(romFile), "bend restore ROM");
+        other.setStateInformation(state.getData(), int(state.getSize()));
+        require(other.getPitchBendSettings() == p.getPitchBendSettings(), "bend project restore");
+    }
     const auto initial = ram(save(p));
     constexpr int offsets[] { 0, 2, 4, 6 };
     for (int c = 0; c < 4; ++c)
@@ -541,12 +553,20 @@ int main(int argc, char** argv)
                 require(performance->isVisible() && !modeSwitch->isVisible(), "performance replaces operator controls");
                 require(previous->isVisible() && next->isVisible() && algorithmBox->isVisible(),
                         "performance keeps LCD navigation and algorithm");
-                int ranges = 0, assignments = 0;
+                int ranges = 0, assignments = 0, bendFields = 0;
                 const auto voiceBeforePerformance = ram(save(restored));
                 for (auto* child : performance->getChildren())
                 {
                     require(performance->getLocalBounds().contains(child->getBounds())
                             && !child->getBounds().isEmpty(), "performance control bounds");
+                    if (auto* box = dynamic_cast<juce::ComboBox*>(child))
+                    {
+                        const int field = box->getName() == "Pitch bend range" ? 0 : 1;
+                        require(box->getNumItems() == 13, "bend choices 0-12");
+                        box->setSelectedId(6, juce::sendNotificationSync);
+                        require(restored.getPitchBendSettings()[field] == 5, "bend GUI writes firmware");
+                        ++bendFields;
+                    }
                     if (auto* slider = dynamic_cast<juce::Slider*>(child))
                     {
                         slider->setValue(25 + ranges, juce::sendNotificationSync);
@@ -568,6 +588,7 @@ int main(int argc, char** argv)
                     }
                 }
                 require(ranges == 4 && assignments == 12, "complete four-controller matrix");
+                require(bendFields == 2, "two pitch-bend selectors");
                 const auto afterPerformance = ram(save(restored));
                 require(std::memcmp(voiceBeforePerformance.getData(), afterPerformance.getData(), 4096) == 0,
                         "performance UI preserves voice bank");
