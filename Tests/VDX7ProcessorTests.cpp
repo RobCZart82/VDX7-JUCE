@@ -75,6 +75,22 @@ static void checkUserLibrary(const juce::File& romFile, const juce::File& imageF
             require(juce::PNGImageFormat().writeImageToStream(dialog->createComponentSnapshot(dialog->getLocalBounds()), stream), "save dialog screenshot");
         }
         dialog->exitModalState(0); // Cancel: callback has no writes; editor destruction is safe.
+        juce::TextButton* settings = nullptr;
+        for (auto* child : editor->getChildren())
+            if (auto* button = dynamic_cast<juce::TextButton*>(child))
+                if (button->getButtonText() == "SETTINGS") settings = button;
+        require(settings && settings->isEnabled(), "SETTINGS is connected");
+        settings->onClick();
+        auto* tuning = dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());
+        require(tuning && tuning->getTextEditorContents("tuning") == juce::String(p.getMasterTune()),
+                "SETTINGS shows current firmware tuning");
+        if (imageFolder != juce::File())
+        {
+            juce::FileOutputStream stream(imageFolder.getChildFile("VDX7-settings.png"));
+            require(stream.openedOk() && juce::PNGImageFormat().writeImageToStream(
+                tuning->createComponentSnapshot(tuning->getLocalBounds()), stream), "settings screenshot");
+        }
+        tuning->exitModalState(0);
     }
     require(p.captureUserPatch(captured, error), "capture queued voice");
     const auto before = ram(save(p));
@@ -114,6 +130,24 @@ static void checkControllers(const juce::File& romFile)
     VDX7AudioProcessor p(false);
     require(!p.setControllerSettingFromUi(0, 0, 50), "controller edit needs ROM");
     require(p.loadRomFromFile(romFile), "controller test ROM");
+    require(!p.setMasterTuneFromUi(-257) && !p.setMasterTuneFromUi(256), "tuning bounds");
+    const auto voicesBeforeTuning = ram(save(p));
+    for (int value = -256; value <= 255; ++value)
+    {
+        require(p.setMasterTuneFromUi(value) && p.getMasterTune() == value, "all tuning values round-trip");
+    }
+    const auto tuned = ram(save(p));
+    require(std::memcmp(voicesBeforeTuning.getData(), tuned.getData(), 4096) == 0
+            && !p.hasUnexportedEdits(), "tuning preserves voice bank and dirty state");
+    {
+        const auto state = save(p);
+        VDX7AudioProcessor restored(false);
+        require(!restored.setMasterTuneFromUi(1), "tuning requires ROM");
+        require(restored.loadRomFromFile(romFile), "tuning restore ROM");
+        restored.setStateInformation(state.getData(), int(state.getSize()));
+        require(restored.getMasterTune() == 255, "tuning project recall");
+    }
+    require(p.setMasterTuneFromUi(0), "reset tuning");
     require(!p.setPlaySettingFromUi(-1, 0) && !p.setPlaySettingFromUi(4, 0)
             && !p.setPlaySettingFromUi(0, 2) && !p.setPlaySettingFromUi(3, 100), "play setting bounds");
     for (int field = 0; field < 4; ++field)

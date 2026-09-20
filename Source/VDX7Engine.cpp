@@ -621,6 +621,19 @@ int VDX7Engine::getPlaySetting(int field) const noexcept
         ? std::clamp(int(dx7_.memory[addresses[field]]), 0, field == 3 ? 99 : 1) : 0;
 }
 
+int VDX7Engine::masterTune() const noexcept
+{
+    return loaded_ ? std::clamp((int(dx7_.memory[0x2311]) << 8)
+                              + int(dx7_.memory[0x2312]) - 256, -256, 255) : 0;
+}
+
+bool VDX7Engine::setMasterTune(int value) noexcept
+{
+    if (!loaded_ || value < -256 || value > 255) return false;
+    dx7_.tune(value);
+    return true;
+}
+
 bool VDX7Engine::setPlaySetting(int field, int value)
 {
     if (!loaded_ || field < 0 || field > 3 || value < 0 || value > (field == 3 ? 99 : 1)) return false;

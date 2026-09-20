@@ -84,6 +84,22 @@ int main(int argc, char** argv)
         if(std::abs(hz-expected)>std::max(1.0,expected*0.025)) ++failures;
         if (note == 60)
         {
+            double tuningHz[3] {};
+            int tuningIndex = 0;
+            for (int tune : {-256, 0, 255})
+            {
+                if (!e.setMasterTune(tune)) ++failures;
+                for (int b=0;b<100;++b) e.render(l,r,256);
+                int count = 0; float last = 0;
+                for (int b=0;b<344;++b)
+                { e.render(l,r,256); for (float v:l) { if (last<0 && v>=0) ++count; last=v; } }
+                tuningHz[tuningIndex++] = count*44100.0/(344*256);
+            }
+            std::cout << "Master tuning low/zero/high Hz: " << tuningHz[0] << "/"
+                      << tuningHz[1] << "/" << tuningHz[2] << std::endl;
+            if (!(tuningHz[0] < tuningHz[1] && tuningHz[1] < tuningHz[2])
+                || std::abs(tuningHz[1]-expected)>1.0) ++failures;
+            e.setMasterTune(0);
             int previousRate = 256;
             for (int time = 0; time <= 99; ++time)
             {

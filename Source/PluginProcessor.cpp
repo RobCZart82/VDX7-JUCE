@@ -1354,6 +1354,24 @@ bool VDX7AudioProcessor::setPlaySettingFromUi(int field, int value)
     return true;
 }
 
+int VDX7AudioProcessor::getMasterTune() const
+{
+    std::scoped_lock lock(engineMutex_);
+    return engine_.masterTune();
+}
+
+bool VDX7AudioProcessor::setMasterTuneFromUi(int value)
+{
+    bool changed;
+    {
+        std::scoped_lock lock(engineMutex_);
+        changed = engine_.masterTune() != value;
+        if (!engine_.setMasterTune(value)) return false;
+    }
+    if (changed) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    return true;
+}
+
 bool VDX7AudioProcessor::setPitchBendSettingFromUi(int field, int value)
 {
     bool changed;

@@ -82,6 +82,7 @@ private:
     void chooseRom();
     void chooseSyx();
     void showUtilityMenu();
+    void showSettings();
     void showSaveAsMenu();
     void showPerformance(bool);
     void chooseExport(bool entireBank);

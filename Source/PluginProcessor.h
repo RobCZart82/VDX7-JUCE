@@ -73,6 +73,8 @@ public:
     std::array<int, 16> getControllerSettings() const;
     std::array<int, 2> getPitchBendSettings() const;
     std::array<int, 4> getPlaySettings() const;
+    int getMasterTune() const;
+    bool setMasterTuneFromUi(int value);
     bool setPlaySettingFromUi(int field, int value);
     bool setPitchBendSettingFromUi(int field, int value);
     bool setControllerSettingFromUi(int controller, int field, int value);
