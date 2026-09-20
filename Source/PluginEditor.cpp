@@ -16,7 +16,8 @@ constexpr int kCpuTextRefreshFrames = 15;
 
 void drawEnvelopeGrid(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
-    g.setColour(juce::Colour(0xff242823));
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff111b17), bounds.getTopLeft(),
+        juce::Colour(0xff29342b), bounds.getBottomRight(), false));
     g.fillRoundedRectangle(bounds, 3.0f);
     const auto grid = bounds.reduced(1.0f);
     g.setColour(juce::Colour(0xff40483a));
@@ -421,6 +422,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     for (std::size_t i = 0; i < envelopeFaders_.size(); ++i)
     {
         configureOperatorSlider(envelopeFaders_[i], true);
+        envelopeFaders_[i].setName("Operator envelope " + juce::String(kEnvelopeCaptions[i]));
         configureLabel(envelopeCaptions_[i], 11.0f, juce::Justification::centred,
                        juce::Colour(0xffbdb8ac));
         configureLabel(envelopeValues_[i], 11.0f, juce::Justification::centred,
@@ -433,7 +435,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
         envelopeFaders_[i].onValueChange = [this]
         {
             updateOperatorValueLabels();
-            repaint(referenceRect(1080, 578, 312, 174));
+            repaint(referenceRect(1080, 578, 312, 245));
         };
         addAndMakeVisible(envelopeFaders_[i]);
         addAndMakeVisible(envelopeCaptions_[i]);
@@ -688,7 +690,7 @@ void VDX7AudioProcessorEditor::selectOperator(int operatorIndex)
                            juce::dontSendNotification);
     bindSelectedOperatorParameters();
     updateOperatorValueLabels();
-    repaint(referenceRect(34, 526, 1372, 258));
+    repaint(referenceRect(34, 526, 1372, 310));
     algorithmView_.setState(algorithm_.getSelectedId(), selectedOperator_,
                             juce::roundToInt(voiceKnobs_[0].getValue()));
 }
@@ -796,7 +798,7 @@ void VDX7AudioProcessorEditor::updateVoiceValueLabels()
 void VDX7AudioProcessorEditor::drawOperatorEnvelope(juce::Graphics& g)
 {
     const float scaleY = static_cast<float>(getHeight()) / kReferenceHeight;
-    const auto graph = referenceRect(1084, 580, 300, 164).toFloat();
+    const auto graph = referenceRect(1084, 580, 300, 239).toFloat();
     drawEnvelopeGrid(g, graph);
     g.setColour(juce::Colour(0xff17343a));
     g.drawRoundedRectangle(graph, 4.0f * scaleY, juce::jmax(1.0f, scaleY));
@@ -976,7 +978,8 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     const auto drawPanel = [this, &g](float x, float y, float width, float height)
     {
         const auto panel = referenceRect(x, y, width, height).toFloat();
-        g.setColour(juce::Colour(0xff292723));
+        g.setGradientFill(juce::ColourGradient(juce::Colour(0xff312e28), panel.getTopLeft(),
+            juce::Colour(0xff23221e), panel.getBottomLeft(), false));
         g.fillRoundedRectangle(panel, 5.0f);
         g.setColour(juce::Colour(0xff504b42));
         g.drawRoundedRectangle(panel, 5.0f, 1.0f);
@@ -985,9 +988,12 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     drawPanel(34, 135, 920, 190);
     drawPanel(968, 135, 220, 190);
     drawPanel(1200, 125, 206, 401);
-    drawPanel(34, 340, 1154, 175);
-    drawPanel(34, 526, 1372, 270);
-    drawPanel(34, 798, 1372, 180);
+    drawPanel(34, 340, 1154, performanceVisible_ ? 210 : 175);
+    if (performanceVisible_)
+        drawPanel(34, 550, 1372, 286);
+    else
+        drawPanel(34, 526, 1372, 310);
+    drawPanel(34, 838, 1372, 180);
 
     // Original typographic identity, not the hardware's striped product logo.
     g.setColour(juce::Colour(0xffeee9dc));
@@ -999,7 +1005,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     g.setGradientFill(juce::ColourGradient(juce::Colour(0xffc9d68e), lcd.getX(), lcd.getY(),
         juce::Colour(0xffa5b76e), lcd.getX(), lcd.getBottom(), false));
     g.fillRoundedRectangle(lcd, 3.0f);
-    const auto footerBounds = referenceRect(18, 990, 1404, 44).toFloat();
+    const auto footerBounds = referenceRect(18, 1030, 1404, 44).toFloat();
     juce::ColourGradient footerGradient(juce::Colour(0xff24221f), footerBounds.getX(),
                                         footerBounds.getCentreY(), juce::Colour(0xff24221f),
                                         footerBounds.getRight(), footerBounds.getCentreY(), false);
@@ -1023,7 +1029,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     if (!performanceVisible_)
     {
         g.fillRect(referenceRect(52, 574, 1336, 1));
-        g.fillRect(referenceRect(48, 702, 632, 1));
+        g.fillRect(referenceRect(48, 720, 632, 1));
     }
 
     if (performanceVisible_)
@@ -1043,7 +1049,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
 void VDX7AudioProcessorEditor::resized()
 {
     updateResponsiveTypography();
-    performancePanel_.setBounds(referenceRect(44, 392, 1352, 394));
+    performancePanel_.setBounds(referenceRect(44, 392, 1352, 434));
 
     mkLabel_.setBounds(referenceRect(360, 88, 85, 44));
     hardwareLabel_.setBounds(referenceRect(450, 94, 220, 17));
@@ -1100,44 +1106,44 @@ void VDX7AudioProcessorEditor::resized()
             referenceRect(42.0f + op * 104.0f, 532, 96, 38));
 
     operatorTitle_.setBounds(referenceRect(52, 578, 260, 28));
-    frequencyValue_.setBounds(referenceRect(52, 763, 92, 16));
+    frequencyValue_.setBounds(referenceRect(52, 801, 92, 16));
     envelopeTitle_.setBounds(referenceRect(704, 578, 240, 28));
     for (std::size_t i = 0; i < operatorKnobs_.size(); ++i)
     {
         const float x = 48.0f + static_cast<float>(i) * 92.0f;
         operatorKnobCaptions_[i].setBounds(referenceRect(x, 606, 80, 18));
-        operatorKnobs_[i].setBounds(referenceRect(x + 14.0f, 624, 52, 52));
-        operatorKnobValues_[i].setBounds(referenceRect(x, 677, 80, 20));
+        operatorKnobs_[i].setBounds(referenceRect(x + 11.0f, 626, 58, 58));
+        operatorKnobValues_[i].setBounds(referenceRect(x, 690, 80, 20));
     }
     for (std::size_t i = 0; i < operatorScaleKnobs_.size(); ++i)
     {
         const float x = 48.0f + static_cast<float>(i) * 106.0f;
-        operatorScaleCaptions_[i].setBounds(referenceRect(x, 709, 92, 16));
-        operatorScaleKnobs_[i].setBounds(referenceRect(x + 27.0f, 725, 38, 38));
+        operatorScaleCaptions_[i].setBounds(referenceRect(x, 733, 92, 16));
+        operatorScaleKnobs_[i].setBounds(referenceRect(x + 24.0f, 753, 44, 44));
         if (i == 0)
-            operatorScaleKnobs_[i].setBounds(referenceRect(x + 17.0f, 725, 58, 38));
-        operatorScaleValues_[i].setBounds(referenceRect(x, 763, 92, 16));
+            operatorScaleKnobs_[i].setBounds(referenceRect(x + 17.0f, 753, 58, 44));
+        operatorScaleValues_[i].setBounds(referenceRect(x, 801, 92, 16));
     }
 
     for (std::size_t i = 0; i < envelopeFaders_.size(); ++i)
     {
         const float x = 704.0f + static_cast<float>(i) * 47.0f;
         envelopeCaptions_[i].setBounds(referenceRect(x, 606, 36, 18));
-        envelopeFaders_[i].setBounds(referenceRect(x, 626, 36, 116));
-        envelopeValues_[i].setBounds(referenceRect(x, 746, 36, 20));
+        envelopeFaders_[i].setBounds(referenceRect(x, 626, 36, 169));
+        envelopeValues_[i].setBounds(referenceRect(x, 799, 36, 20));
     }
 
-    pitchCaption_.setBounds(referenceRect(48, 807, 72, 24));
-    modCaption_.setBounds(referenceRect(124, 807, 72, 24));
-    pitchWheel_.setBounds(referenceRect(64.75f, 830, 40.5f, 138));
-    modWheel_.setBounds(referenceRect(140.75f, 830, 40.5f, 138));
-    keyboard_.setBounds(referenceRect(210, 830, 1184, 138));
+    pitchCaption_.setBounds(referenceRect(48, 847, 72, 24));
+    modCaption_.setBounds(referenceRect(124, 847, 72, 24));
+    pitchWheel_.setBounds(referenceRect(64.75f, 870, 40.5f, 138));
+    modWheel_.setBounds(referenceRect(140.75f, 870, 40.5f, 138));
+    keyboard_.setBounds(referenceRect(210, 870, 1184, 138));
     keyboard_.setKeyWidth(static_cast<float>(keyboard_.getWidth()) / 36.0f);
     keyboard_.setLowestVisibleKey(36);
 
-    footerLeft_.setBounds(referenceRect(38, 994, 300, 34));
-    footerCentre_.setBounds(referenceRect(480, 994, 480, 34));
-    footerRight_.setBounds(referenceRect(1050, 994, 350, 34));
+    footerLeft_.setBounds(referenceRect(38, 1034, 300, 34));
+    footerCentre_.setBounds(referenceRect(480, 1034, 480, 34));
+    footerRight_.setBounds(referenceRect(1050, 1034, 350, 34));
 }
 
 void VDX7AudioProcessorEditor::timerCallback()

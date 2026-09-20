@@ -70,7 +70,7 @@ inline void faderCap(juce::Graphics& g, juce::Rectangle<float> b, bool hover, bo
     g.setColour(juce::Colour(0xff080c0e)); g.fillPath(front);
     g.setColour(juce::Colour(0xff596162));
     g.drawLine(top.getX()+u,top.getY()+u,top.getRight()-u,top.getY()+u,0.7f*u);
-    g.setColour(juce::Colour(0xff00e7e7));
+    g.setColour(juce::Colour(0xff68c7bb));
     const float y=top.getY()+top.getHeight()*0.48f;
     g.fillRect(top.getX()+u,y,top.getWidth()-2*u,1.6f*u);
     g.setColour(juce::Colour(0xff00797d));
