@@ -1,5 +1,6 @@
 #include "VDX7DeferredMidi.h"
 #include "VDX7EditQueue.h"
+#include "VDX7KeyboardQueue.h"
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -7,12 +8,14 @@
 
 static void checkEditQueue();
 static void checkMidiTimeline();
+static void checkKeyboardQueue();
 
 void require(bool result) { if (!result) std::exit(1); }
 int main()
 {
     checkEditQueue();
     checkMidiTimeline();
+    checkKeyboardQueue();
     VDX7DeferredMidi queue;
     const uint8_t on[] {0x90, 60, 100}, off[] {0x80, 60, 0};
     require(queue.push(on, 3) && queue.push(off, 3));
@@ -34,6 +37,44 @@ int main()
     queue.clear();
     require(queue.push(off, 3));
     std::cout << "PASS: deferred event ordering, overflow panic, recovery and byte bounds\n";
+}
+
+static void checkKeyboardQueue()
+{
+    VDX7KeyboardQueue q;
+    VDX7KeyboardQueue::Event event;
+    for (int round = 0; round < 100; ++round)
+    {
+        for (int i = 0; i < 256; ++i) require(q.push({0x90, static_cast<uint8_t>(i), 100}));
+        for (int i = 0; i < 256; ++i)
+            require(q.pop(event) && event[1] == static_cast<uint8_t>(i));
+        require(!q.pop(event));
+    }
+    for (int i = 0; i < 256; ++i) require(q.push({0x90, 60, 100}));
+    require(!q.push({0x80, 60, 0}));
+    require(q.recoverOverflow() && !q.pop(event));
+    require(q.push({0x80, 60, 0}) && q.pop(event) && event[0] == 0x80);
+    // Producer and consumer overlap, with bounded batches preventing overload.
+    std::atomic<int> acknowledged {0};
+    std::thread producer([&] {
+        for (int batch = 0; batch < 200; ++batch)
+        {
+            while (acknowledged.load() != batch) std::this_thread::yield();
+            for (int i = 0; i < 128; ++i) require(q.push({0x90, static_cast<uint8_t>(i), 100}));
+        }
+    });
+    for (int batch = 0; batch < 200; ++batch)
+    {
+        for (int i = 0; i < 128; ++i)
+        {
+            while (!q.pop(event)) std::this_thread::yield();
+            require(event[1] == i);
+        }
+        acknowledged.store(batch + 1);
+    }
+    producer.join();
+    require(!q.recoverOverflow());
+    std::cout << "PASS: keyboard queue ordering, ring reuse, overflow recovery and concurrent handoff\n";
 }
 
 static void checkMidiTimeline()

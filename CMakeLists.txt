@@ -68,6 +68,7 @@ enable_testing()
 add_executable(vdx7_deferred_midi_tests Tests/VDX7DeferredMidiTests.cpp)
 target_include_directories(vdx7_deferred_midi_tests PRIVATE Source)
 add_test(NAME vdx7_deferred_midi COMMAND vdx7_deferred_midi_tests)
+set_tests_properties(vdx7_deferred_midi PROPERTIES TIMEOUT 60)
 add_executable(vdx7_voice_data_tests Tests/VDX7VoiceDataTests.cpp)
 target_link_libraries(vdx7_voice_data_tests PRIVATE vdx7_voice_data)
 add_test(NAME vdx7_voice_data COMMAND vdx7_voice_data_tests)
@@ -166,6 +167,12 @@ add_executable(vdx7_timing_tests EXCLUDE_FROM_ALL
 target_include_directories(vdx7_timing_tests PRIVATE Source)
 target_link_libraries(vdx7_timing_tests PRIVATE vdx7_core vdx7_voice_data)
 
+add_executable(vdx7_resampling_tests Tests/VDX7ResamplingTests.cpp Source/VDX7Engine.cpp)
+target_include_directories(vdx7_resampling_tests PRIVATE Source)
+target_link_libraries(vdx7_resampling_tests PRIVATE vdx7_core vdx7_voice_data)
+add_test(NAME vdx7_resampling COMMAND vdx7_resampling_tests)
+set_tests_properties(vdx7_resampling PROPERTIES TIMEOUT 60)
+
 add_executable(vdx7_processor_tests EXCLUDE_FROM_ALL Tests/VDX7ProcessorTests.cpp)
 target_link_libraries(vdx7_processor_tests PRIVATE VDX7)
 target_include_directories(vdx7_processor_tests PRIVATE
@@ -181,6 +188,10 @@ target_compile_definitions(vdx7_stability_tests PRIVATE
     $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
 
 option(VDX7_ENABLE_ROM_TESTS "Register local integration tests using your own ROM" OFF)
+add_executable(vdx7_stress_tests EXCLUDE_FROM_ALL Tests/VDX7StressTests.cpp)
+target_link_libraries(vdx7_stress_tests PRIVATE VDX7)
+target_include_directories(vdx7_stress_tests PRIVATE $<TARGET_PROPERTY:VDX7,INCLUDE_DIRECTORIES>)
+target_compile_definitions(vdx7_stress_tests PRIVATE $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
 set(VDX7_TEST_ROM_FILE "" CACHE FILEPATH "Local user-supplied ROM; never packaged")
 if(VDX7_ENABLE_ROM_TESTS)
     if(NOT EXISTS "${VDX7_TEST_ROM_FILE}")
@@ -190,9 +201,11 @@ if(VDX7_ENABLE_ROM_TESTS)
     add_test(NAME vdx7_midi_range COMMAND vdx7_midi_range_tests "${VDX7_TEST_ROM_FILE}")
     add_test(NAME vdx7_timing COMMAND vdx7_timing_tests "${VDX7_TEST_ROM_FILE}")
     add_test(NAME vdx7_processor COMMAND vdx7_processor_tests)
+    add_test(NAME vdx7_stress COMMAND vdx7_stress_tests "${VDX7_TEST_ROM_FILE}")
+    set_tests_properties(vdx7_stress PROPERTIES TIMEOUT 120)
     set_tests_properties(vdx7_processor PROPERTIES
         ENVIRONMENT "VDX7_TEST_ROM_PATH=${VDX7_TEST_ROM_FILE}")
-    set_tests_properties(vdx7_stability vdx7_midi_range vdx7_timing vdx7_processor
+    set_tests_properties(vdx7_stability vdx7_midi_range vdx7_timing vdx7_processor vdx7_stress
         PROPERTIES SKIP_RETURN_CODE 77 LABELS "local-rom")
 endif()
 

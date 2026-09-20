@@ -167,6 +167,7 @@ VDX7AudioProcessor::VDX7AudioProcessor(bool detectRom)
     outputGain_.setCurrentAndTargetValue(
         juce::Decibels::decibelsToGain(masterVolumeParameter_->load()));
     detectRom_ = detectRom;
+    keyboardState_.addListener(this);
     if (detectRom_) autoDetectRom();
     startTimerHz(30); // Processor-owned: publication does not require an editor.
 }
@@ -174,6 +175,7 @@ VDX7AudioProcessor::VDX7AudioProcessor(bool detectRom)
 VDX7AudioProcessor::~VDX7AudioProcessor()
 {
     stopTimer();
+    keyboardState_.removeListener(this);
     for (const auto& operatorIDs : operatorParameterIDs_)
         for (const auto& id : operatorIDs)
             parameters_.removeParameterListener(id, this);
@@ -246,7 +248,8 @@ void VDX7AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     std::scoped_lock lock(engineMutex_);
     currentSampleRate_ = sampleRate;
     deferredMidi_.clear();
-    keyboardState_.reset();
+    keyboardQueue_.discard();
+    clearKeyboardSnapshot();
     engine_.resetMidiLifecycle();
     engine_.prepare(sampleRate);
     outputGain_.reset(sampleRate, 0.02);
@@ -261,7 +264,8 @@ void VDX7AudioProcessor::releaseResources()
     processLoadMeasurer_.reset();
     std::scoped_lock lock(engineMutex_);
     deferredMidi_.clear();
-    keyboardState_.reset();
+    keyboardQueue_.discard();
+    clearKeyboardSnapshot();
     engine_.resetMidiLifecycle();
     clearMeters();
 }
@@ -279,13 +283,19 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     if (buffer.getNumSamples() > 0)
         loadTimer.emplace(processLoadMeasurer_, buffer.getNumSamples());
     buffer.clear();
-    keyboardState_.processNextMidiBuffer(midi, 0, buffer.getNumSamples(), true);
+    std::array<VDX7KeyboardQueue::Event, VDX7KeyboardQueue::capacity> keyboardEvents;
+    std::size_t keyboardCount = 0;
+    if (keyboardQueue_.recoverOverflow()) deferredMidi_.requestPanic();
+    while (keyboardCount < keyboardEvents.size() && keyboardQueue_.pop(keyboardEvents[keyboardCount]))
+        ++keyboardCount;
     const int total = buffer.getNumSamples();
     // A long transaction may silence a block, but never blocks audio.
     std::unique_lock lock(engineMutex_, std::try_to_lock);
     const bool useDeferred = deferredMidi_.active() || !lock.owns_lock();
     if (engineLoaded_.load(std::memory_order_acquire) && useDeferred)
     {
+        for (std::size_t i = 0; i < keyboardCount; ++i)
+            deferredMidi_.push(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
             deferredMidi_.push(event.data, static_cast<std::size_t>(event.numBytes),
                                juce::jlimit(0, total, event.samplePosition));
@@ -323,11 +333,15 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     };
     if (useDeferred)
         deferredMidi_.renderBlock(total, deliver,
-            [&] { engine_.allNotesOff(); keyboardState_.reset(); });
+            [&] { engine_.allNotesOff(); clearKeyboardSnapshot(); });
     else
+    {
+        for (std::size_t i = 0; i < keyboardCount; ++i)
+            deliver(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
             deliver(event.data, static_cast<std::size_t>(event.numBytes),
                     juce::jlimit(0, total, event.samplePosition));
+    }
 
     if (programMemoryChanged)
         updateEngineSnapshot();
@@ -360,6 +374,15 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
         return true;
     }
     engine_.handleMidi(data, size);
+    if (size == 3 && data[1] < 128)
+    {
+        const auto mask = static_cast<uint16_t>(1u << (data[0] & 15));
+        const auto status = data[0] & 0xf0;
+        if (status == 0x90 && data[2] != 0) keyboardSnapshot_[data[1]].fetch_or(mask);
+        else if (status == 0x80 || (status == 0x90 && data[2] == 0))
+            keyboardSnapshot_[data[1]].fetch_and(static_cast<uint16_t>(~mask));
+        else if (status == 0xb0 && data[1] == 123) clearKeyboardSnapshot();
+    }
     const bool bankChange = size == 3 && (data[0] & 0xf0) == 0xb0 && data[1] == 32;
     if (bankChange && engine_.hasFactoryVoices()) modifiedVoices_.store(0);
     return bankChange || (size == 2 && (data[0] & 0xf0) == 0xc0);
@@ -617,8 +640,53 @@ bool VDX7AudioProcessor::synchroniseOperatorParametersFromEngine()
 
 void VDX7AudioProcessor::timerCallback()
 {
+    mirrorKeyboardOnMessageThread();
     if (voicePublicationNeeded_.load(std::memory_order_acquire) || editQueue_.pending())
         synchroniseOperatorParametersFromEngine();
+}
+
+namespace { thread_local const VDX7AudioProcessor* mirroringKeyboard = nullptr; }
+
+void VDX7AudioProcessor::handleNoteOn(juce::MidiKeyboardState*, int channel, int note, float velocity)
+{
+    if (mirroringKeyboard == this) return;
+    keyboardUiHeld_[static_cast<std::size_t>(note)].fetch_or(static_cast<uint16_t>(1u << (channel - 1)));
+    keyboardQueue_.push({static_cast<uint8_t>(0x90 | (channel - 1)),
+        static_cast<uint8_t>(note), static_cast<uint8_t>(juce::jlimit(1, 127, juce::roundToInt(velocity * 127)))});
+}
+
+void VDX7AudioProcessor::handleNoteOff(juce::MidiKeyboardState*, int channel, int note, float)
+{
+    if (mirroringKeyboard == this) return;
+    keyboardUiHeld_[static_cast<std::size_t>(note)].fetch_and(static_cast<uint16_t>(~(1u << (channel - 1))));
+    keyboardQueue_.push({static_cast<uint8_t>(0x80 | (channel - 1)), static_cast<uint8_t>(note), 0});
+}
+
+void VDX7AudioProcessor::clearKeyboardSnapshot() noexcept
+{
+    for (auto& note : keyboardSnapshot_) note.store(0, std::memory_order_relaxed);
+}
+
+void VDX7AudioProcessor::mirrorKeyboardOnMessageThread()
+{
+    const juce::ScopedValueSetter<const VDX7AudioProcessor*> guard(mirroringKeyboard, this);
+    for (int note = 0; note < 128; ++note)
+    {
+        const auto channels = keyboardSnapshot_[static_cast<std::size_t>(note)].load()
+                            | keyboardUiHeld_[static_cast<std::size_t>(note)].load();
+        for (int channel = 1; channel <= 16; ++channel)
+        {
+            const bool down = (channels & (1u << (channel - 1))) != 0;
+            if (down != keyboardState_.isNoteOn(channel, note))
+                keyboardState_.processNextMidiEvent(down
+                    ? juce::MidiMessage::noteOn(channel, note, juce::uint8(100))
+                    : juce::MidiMessage::noteOff(channel, note));
+        }
+    }
+    // JUCE also keeps an indirect-event buffer for UI notes. Our listener
+    // already delivered those via the bounded queue, so discard its copy here.
+    juce::MidiBuffer unused;
+    keyboardState_.processNextMidiBuffer(unused, 0, 1, false);
 }
 
 void VDX7AudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
