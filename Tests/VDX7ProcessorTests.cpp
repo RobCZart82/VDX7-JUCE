@@ -577,6 +577,17 @@ int main(int argc, char** argv)
                 require(previous->getY() > int(180 * scale) && next->getY() > int(180 * scale),
                         "preset arrows moved out of header into LCD row");
                 require(!previous->getBounds().intersects(next->getBounds()), "separate LCD arrows");
+                for (auto* arrow : { previous, next })
+                {
+                    require(bool(arrow->getProperties().getWithDefault("vdx7LcdArrow", false)),
+                            "LCD arrow uses integrated display style");
+                    require(lcdArea.contains(arrow->getBounds().toFloat()), "LCD arrow contained in display");
+                    for (auto* child : editor->getChildren())
+                        if (auto* box = dynamic_cast<juce::ComboBox*>(child))
+                            if (bool(box->getProperties().getWithDefault("vdx7LcdCombo", false)))
+                                require(!arrow->getBounds().intersects(box->getBounds()),
+                                        "LCD arrow does not overlap selector hit area");
+                }
                 restored.selectProgramFromUi(0);
                 save(restored);
                 previous->onClick();

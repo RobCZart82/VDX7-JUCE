@@ -161,6 +161,42 @@ törtfehér feliratok, fekete bordázott kezelőszervek, elefántcsontszínű bi
 Saját VDX7-arculat és újrarajzolt elemek, eredeti márkajelzés és fotókivágások
 nélkül. Ez elfogadott tervezési irány, nem már elkészült GUI vagy jogi minősítés.
 
+### Header alignment and section dividers — approved 2026-09-20
+
+These are recorded design requirements, not completed implementation.
+
+- [ ] LCD previous/next arrow buttons must look like graphics drawn by the LCD,
+  matching the BANK and PATCH dropdowns: yellow-green display background, dark
+  arrows and restrained dark outlines. No raised hardware-button treatment,
+  metallic bezel or external glowing turquoise button skin. Keep both arrows
+  inside the display layout with clear spacing from the selectors and patch text.
+  Provide readable LCD-style hover, pressed and keyboard-focus states, adequate
+  hit areas, and retain the existing previous/next preset behaviour across views.
+
+- [ ] Header wordmark text is exactly `VDX7 Mk 1.`. Align the bottom of the
+  `Mk 1.` lettering with the VDX7 wordmark, as in the corrected vector draft.
+- [ ] Place `HARDWARE EMULATION` and, underneath it, `Original firmware required.`
+  beside the logo. The logo block, the two-line text block and the right-hand
+  action-button row share a common lower alignment guide. Keep button bottoms
+  aligned, button heights consistent, and labels vertically centred within buttons.
+- [ ] Use consistent horizontal/vertical guides, spacing and panel padding
+  throughout the GUI. No action button may intrude into the LCD, its frame or
+  navigation controls; neither visible bounds nor interactive hit areas may overlap.
+- [ ] Add a horizontal separator between the two rotary-control rows in the
+  operator section. Span the full width of that rotary-control subsection,
+  respecting equal left/right padding; do not cross into the neighbouring envelope.
+- [ ] Every section divider spans its entire associated section's inner width,
+  not just half of it. Use consistent inset, thickness and contrast, and leave
+  clearance around labels and controls.
+- [ ] Verify these alignments and non-overlap constraints in EDIT, PERFORMANCE
+  and UTILITY at planned 75%, 100% and 125% UI sizes and Retina/HiDPI display scales.
+
+Magyar elfogadási feltétel: a logó, a mellette lévő kétsoros tájékoztató és a
+jobb oldali gombsor közös alsó igazítási vonalra üljön. Ne legyen LCD-re rálógó
+vagy egymást fedő gomb. Az operátor két potmétersora közé teljes al-szekciószélességű
+elválasztó kerüljön; minden szeparátor az érintett szekció teljes belső szélességén
+fusson végig, egységes margókkal.
+
 ## GUI/function integration chapters — approved 2026-09-20
 
 - [x] SETTINGS host MIDI input channel: OMNI or 1-16, legacy/missing-field

@@ -548,6 +548,10 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     saveAs_.setTooltip("Save a patch to USER, or export a patch/bank SysEx file. Factory ROM is unchanged.");
     previous_.setTooltip("Previous program in the current bank (wraps 01-32)");
     next_.setTooltip("Next program in the current bank (wraps 01-32)");
+    previous_.setName("Previous patch");
+    next_.setName("Next patch");
+    for (auto* button : { &previous_, &next_ })
+        button->getProperties().set("vdx7LcdArrow", true);
     about_.onClick = [this]
     {
         auto* dialog = new juce::AlertWindow("About VDX7 Mk I",
@@ -1013,10 +1017,14 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
                referenceRect(52, 350, 250, 30), juce::Justification::centredLeft);
     g.drawText("ALGORITHM", referenceRect(980, 145, 126, 30), juce::Justification::centredLeft);
 
-    g.drawImage(divider_, referenceRect(52, 178, 280, 2).toFloat());
-    g.drawImage(divider_, referenceRect(52, 382, 1115, 2).toFloat());
+    g.setColour(juce::Colour(0xff575248));
+    g.fillRect(referenceRect(52, 176, 884, 1));
+    g.fillRect(referenceRect(52, 382, 1118, 1));
     if (!performanceVisible_)
-        g.drawImage(divider_, referenceRect(52, 568, 1110, 2).toFloat());
+    {
+        g.fillRect(referenceRect(52, 574, 1336, 1));
+        g.fillRect(referenceRect(48, 702, 632, 1));
+    }
 
     if (performanceVisible_)
     {
@@ -1040,8 +1048,8 @@ void VDX7AudioProcessorEditor::resized()
     mkLabel_.setBounds(referenceRect(360, 88, 85, 44));
     hardwareLabel_.setBounds(referenceRect(450, 94, 220, 17));
     firmwareLabel_.setBounds(referenceRect(450, 108, 220, 19));
-    previous_.setBounds(referenceRect(401, 191, 32, 86));
-    next_.setBounds(referenceRect(891, 191, 32, 86));
+    previous_.setBounds(referenceRect(401, 198, 32, 70));
+    next_.setBounds(referenceRect(887, 198, 32, 70));
     loadRom_.setBounds(referenceRect(894, 76, 104, 46));
     loadSyx_.setBounds(referenceRect(1000, 76, 104, 46));
     saveAs_.setBounds(referenceRect(1106, 76, 104, 46));
@@ -1092,7 +1100,7 @@ void VDX7AudioProcessorEditor::resized()
             referenceRect(42.0f + op * 104.0f, 532, 96, 38));
 
     operatorTitle_.setBounds(referenceRect(52, 578, 260, 28));
-    frequencyValue_.setBounds(referenceRect(52, 751, 92, 16));
+    frequencyValue_.setBounds(referenceRect(52, 763, 92, 16));
     envelopeTitle_.setBounds(referenceRect(704, 578, 240, 28));
     for (std::size_t i = 0; i < operatorKnobs_.size(); ++i)
     {
@@ -1104,11 +1112,11 @@ void VDX7AudioProcessorEditor::resized()
     for (std::size_t i = 0; i < operatorScaleKnobs_.size(); ++i)
     {
         const float x = 48.0f + static_cast<float>(i) * 106.0f;
-        operatorScaleCaptions_[i].setBounds(referenceRect(x, 697, 92, 16));
-        operatorScaleKnobs_[i].setBounds(referenceRect(x + 27.0f, 713, 38, 38));
+        operatorScaleCaptions_[i].setBounds(referenceRect(x, 709, 92, 16));
+        operatorScaleKnobs_[i].setBounds(referenceRect(x + 27.0f, 725, 38, 38));
         if (i == 0)
-            operatorScaleKnobs_[i].setBounds(referenceRect(x + 17.0f, 713, 58, 38));
-        operatorScaleValues_[i].setBounds(referenceRect(x, 751, 92, 16));
+            operatorScaleKnobs_[i].setBounds(referenceRect(x + 17.0f, 725, 58, 38));
+        operatorScaleValues_[i].setBounds(referenceRect(x, 763, 92, 16));
     }
 
     for (std::size_t i = 0; i < envelopeFaders_.size(); ++i)
