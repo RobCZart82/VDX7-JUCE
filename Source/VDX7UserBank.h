@@ -4,7 +4,7 @@
 #include <cstdint>
 
 // Non-realtime storage only. No firmware, PERFORMANCE globals or DAW state.
-// GUI integration follows separately; callers own the library directory.
+// Callers own the library directory; this class performs no UI or engine work.
 class VDX7UserBank
 {
 public:

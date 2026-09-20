@@ -11,6 +11,7 @@
 #include "VDX7DeferredMidi.h"
 #include "VDX7EditQueue.h"
 #include "VDX7KeyboardQueue.h"
+#include "VDX7UserBank.h"
 
 namespace VDX7ParameterIDs
 {
@@ -58,6 +59,10 @@ public:
     bool selectFactoryBank(int bank);
     void selectProgramFromUi(int program);
     bool exportSyx(const juce::File&, bool entireBank, juce::String& error);
+    // Message-thread library operations. Capture is immutable across open dialogs.
+    bool captureUserPatch(VDX7UserBank::Voice&, juce::String& error);
+    bool loadUserBank(const juce::File&, juce::String& error);
+    static juce::File userBankFile();
     bool renameVoice(const juce::String& name);
     bool copyOperator(int op);
     bool pasteOperator(int op);
@@ -88,6 +93,7 @@ public:
     bool synchroniseOperatorParametersFromEngine();
 
 private:
+    bool loadPackedVoices(const std::vector<uint8_t>&, juce::String* error, int selectProgram = -1);
     friend struct VDX7RegressionAccess;
     void restoreSavedStateLocked(const juce::ValueTree&);
     void capturePendingRestoreEditsLocked();

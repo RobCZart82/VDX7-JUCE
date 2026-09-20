@@ -135,6 +135,7 @@ target_sources(VDX7 PRIVATE
     Source/VDX7Engine.cpp
     Source/PluginProcessor.h
     Source/PluginProcessor.cpp
+    Source/VDX7UserBank.cpp
     Source/PluginEditor.h
     Source/PluginEditor.cpp
     Source/VDX7Algorithms.h
