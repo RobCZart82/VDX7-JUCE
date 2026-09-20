@@ -10,6 +10,7 @@
 #include "VDX7Engine.h"
 #include "VDX7DeferredMidi.h"
 #include "VDX7EditQueue.h"
+#include "VDX7KeyboardQueue.h"
 
 namespace VDX7ParameterIDs
 {
@@ -22,6 +23,7 @@ juce::String voiceParameter(VDX7VoiceData::VoiceParameter);
 
 class VDX7AudioProcessor final : public juce::AudioProcessor,
                                   private juce::AudioProcessorValueTreeState::Listener,
+                                  private juce::MidiKeyboardState::Listener,
                                   private juce::Timer
 {
 public:
@@ -73,6 +75,8 @@ public:
     juce::File getSuggestedRomFolder() const;
 
     juce::AudioProcessorValueTreeState& parameters() noexcept { return parameters_; }
+    // UI/message-thread interface. Audio communicates only through the queue
+    // and atomic snapshots, never by calling MidiKeyboardState.
     juce::MidiKeyboardState& keyboardState() noexcept { return keyboardState_; }
     float getOutputPeak(int channel) const noexcept;
     double getCpuUsagePercent() const;
@@ -99,6 +103,14 @@ private:
     void applyPerformanceControls();
     void updateEngineSnapshot() noexcept;
     void timerCallback() override;
+    void handleNoteOn(juce::MidiKeyboardState*, int, int, float) override;
+    void handleNoteOff(juce::MidiKeyboardState*, int, int, float) override;
+    void mirrorKeyboardOnMessageThread();
+    void clearKeyboardSnapshot() noexcept;
+    VDX7KeyboardQueue keyboardQueue_;
+    static_assert(std::atomic<uint16_t>::is_always_lock_free);
+    std::array<std::atomic<uint16_t>, 128> keyboardSnapshot_ {};
+    std::array<std::atomic<uint16_t>, 128> keyboardUiHeld_ {};
     std::atomic<bool> voicePublicationNeeded_ {false};
     std::atomic<bool> publishingParameters_ {false};
     void clearMeters() noexcept;

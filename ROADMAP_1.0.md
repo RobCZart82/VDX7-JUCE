@@ -24,6 +24,9 @@ indices compatible with saved projects.
 - [x] Move direct voice-parameter notifications outside the audio callback and
   engine lock; editorless/reentrant state tests (see `VALIDATION_1.0_HOST_PUBLICATION.md`).
 - [ ] Complete remaining audio-thread allocation/locking audit and contention stress test.
+- [x] Remove keyboard-state locking/listeners from audio; bounded UI MIDI handoff
+  and 12-configuration local stress grid (see `VALIDATION_1.0_REALTIME_BASELINE.md`).
+  Full allocation/overload audit and host acceptance are still open.
 - [x] Full 0–127 note range and pitch/release regressions (local ROM).
 - [x] Configure PR ROM-free CI and opt-in local ROM integration CTest gate.
 - [x] Run the development CI configuration on GitHub: macOS and Windows passed
@@ -41,6 +44,8 @@ publication remain outside this authorization.
       assignments, MIDI input channel and tuning, preserving state compatibility.
 - [ ] Decide mono/portamento scope from firmware capabilities and host tests.
 - [ ] Measure resampling/aliasing; quality implementation accepted against references.
+  Baseline measured in milestone 3A: linear SRC suppression is insufficient;
+  band-limited replacement and latency/CPU validation are the next quality gate.
 - [ ] Current documentation matches all shipping features and limitations.
 
 ## Agreed GUI direction — 2026-09-20 (not implemented)

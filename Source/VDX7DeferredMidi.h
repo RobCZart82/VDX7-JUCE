@@ -63,6 +63,7 @@ public:
     // note-on and a future note-off which has not arrived from the host yet.
     void resetIfEmpty() noexcept { if (count_ == 0 && !panic_) clear(); }
     bool active() const noexcept { return panic_ || count_ != 0 || inputTime_ != playbackTime_; }
+    void requestPanic() noexcept { clear(); panic_ = true; }
     void clear() noexcept
     { count_ = used_ = 0; inputTime_ = playbackTime_ = 0; panic_ = false; }
 private:
