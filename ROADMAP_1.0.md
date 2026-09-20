@@ -57,7 +57,8 @@ fresh PR checks and user merge before the next chapter.
 
 ## Agreed GUI direction — 2026-09-20 (not implemented)
 
-The three GUI visual concepts remain references, not a final approved skin.
+The three GUI visual concepts remain layout references, not a finished skin.
+The approved hardware-inspired material/colour direction is specified below.
 The following functional/layout requirements were explicitly agreed with the
 user. Record them now; implementation follows the stabilization work.
 
@@ -79,9 +80,47 @@ user. Record them now; implementation follows the stabilization work.
 Magyar összefoglaló: állandó LCD-s bank-/hangszínkezelés bal–jobb léptetéssel;
 a felső gyorsváltó megszűnik. Az algoritmusábra mellett 1–32-es lenyíló lista
 váltja a GLOBAL ALGO tekerőt. A szintmérő alulról nagyrészt zöld, majd sárga,
-legfelül piros; kék alsó LED-ek nélkül. A végleges grafikai stílus még nincs
-elfogadva. Az első funkcionális GUI-bekötési kör alább szerepel; a végleges
+legfelül piros; kék alsó LED-ek nélkül. A hardverfotók alapján elfogadott
+anyag- és színvilág alább szerepel. Az első funkcionális GUI-bekötési kör
+szintén alább található; a végleges
 grafikai átdolgozás és a PERFORMANCE-oldal még külön feladat.
+
+### Final visual direction — hardware references approved 2026-09-20
+
+User-supplied `concept-1.jpg` and `concept-4.jpg` are visual references only;
+do not copy the photos, their branding or cropped surface textures into the
+plug-in or redistribute them as project assets. The direction is an original
+VDX7 interface with a restrained vintage hardware feel, not a replica front panel.
+
+- [ ] Warm brown-charcoal enclosure with a fine-grained matte finish instead of
+  the current blue-metal appearance. Use subtle depth and natural shading;
+  avoid artificial wear, heavy chrome, excessive neon or bloom.
+- [ ] Yellow-green LCD with dark, high-contrast characters, a slightly recessed
+  black surround and a readable character-display feel. Preserve the modern
+  bank/program selectors, patch name/number, modified indicator and arrow buttons;
+  do not reproduce the photographed display's text or impose its limited layout.
+- [ ] Restrained turquoise, lavender and salmon button surfaces assigned
+  consistently by function group. States must also be recognisable through
+  labels, position or shape, not colour alone.
+- [ ] Off-white, readable labels and simple panel-divider lines. Test typography
+  and control states at supported small sizes as well as Retina/HiDPI scales.
+- [ ] Black ribbed wheels and slider caps, natural ivory-white keys, subtle
+  highlights and clear press/hover/focus states. No invented aged/grimy texture.
+- [ ] Original VDX7 wordmark, icons and newly drawn interface assets. Rework the
+  current striped wordmark toward a more independent identity; do not reuse
+  Yamaha logos, original product lettering or trace the original front panel.
+- [ ] Preserve the approved EDIT/PERFORMANCE structure and functional LCD,
+  SAVE AS..., algorithm, output and keyboard controls across views. The colour
+  redesign must not remove, duplicate or disconnect implemented functionality.
+- [ ] Level-meter LEDs remain predominantly green from the bottom upward,
+  then yellow and red at the top; no cyan/blue lower segments. Meter colours
+  remain distinct from the turquoise used for controls.
+
+Magyar irányelv: meleg barnás-antracit, finoman szemcsés matt ház; sárgászöld
+LCD fekete kerettel; visszafogott türkiz, levendula és lazac gombszínek;
+törtfehér feliratok, fekete bordázott kezelőszervek, elefántcsontszínű billentyűk.
+Saját VDX7-arculat és újrarajzolt elemek, eredeti márkajelzés és fotókivágások
+nélkül. Ez elfogadott tervezési irány, nem már elkészült GUI vagy jogi minősítés.
 
 ## GUI/function integration chapters — approved 2026-09-20
 
@@ -109,15 +148,16 @@ The existing skin remains in use during the first functional integration chapter
    controller/global state. DAW project save remains independent. Verify exact
    export/import, cancellation, failed writes, changes while dialogs are open,
    missing files, bank switching and session restart before marking complete.
-4. **Visual integration and acceptance:** apply concept 3's restrained visual
-   style to EDIT/PERFORMANCE/UTILITY, green-yellow-red meters, resize/readability
+4. **Visual integration and acceptance:** combine concept 3's approved layout
+   with the hardware-inspired material/colour direction above for
+   EDIT/PERFORMANCE/UTILITY, green-yellow-red meters, resize/readability
    checks and real host interaction checks. Generated mockup is reference only,
    not a screenshot of the shipping plugin. No release until all release gates pass.
 
 - [x] First-stage SAVE AS... button exposes real voice/bank SysEx file export.
 - [ ] USER bank library, destination slot and non-destructive Save As workflow.
 - [ ] PERFORMANCE panel layout with firmware-backed bindings and project recall.
-- [ ] Final concept-3 visual treatment and host usability acceptance.
+- [ ] Final hardware-inspired visual treatment, original VDX7 identity and host usability acceptance.
 
 ## Publication gate
 
