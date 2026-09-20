@@ -72,6 +72,8 @@ public:
     // Message-thread controls, saved in existing RAM state; not host automation.
     std::array<int, 16> getControllerSettings() const;
     std::array<int, 2> getPitchBendSettings() const;
+    std::array<int, 4> getPlaySettings() const;
+    bool setPlaySettingFromUi(int field, int value);
     bool setPitchBendSettingFromUi(int field, int value);
     bool setControllerSettingFromUi(int controller, int field, int value);
 

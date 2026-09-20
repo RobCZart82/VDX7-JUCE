@@ -65,6 +65,9 @@ public:
     // fields 1-3: pitch, amplitude, EG-bias assignments (0/1).
     int getControllerSetting(int controller, int field) const noexcept;
     int getPitchBendSetting(int field) const noexcept;
+    int getPlaySetting(int field) const noexcept;
+    // UI-only: a play-mode change drains a bounded firmware reset and ends notes.
+    bool setPlaySetting(int field, int value);
     bool setPitchBendSetting(int field, int value) noexcept;
     bool setControllerSetting(int controller, int field, int value) noexcept;
 
@@ -108,6 +111,7 @@ private:
     uint64_t midiOverloadCount_ = 0;
     unsigned controllerRefreshMessages_ = 0;
     bool pitchBendRefresh_ = false;
+    bool portamentoRefresh_ = false;
     uint8_t lastPitchBendInput_ = 64;
 
     bool loaded_ = false;
