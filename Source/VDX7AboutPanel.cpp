@@ -63,9 +63,9 @@ void VDX7AboutPanel::paint(juce::Graphics& g)
 void VDX7AboutPanel::resized()
 {
     subtitle_.setBounds(35, 126, 580, 28);
-    developerCaption_.setBounds(250, 209, 290, 24);
-    developer_.setBounds(235, 246, 330, 42);
-    version_.setBounds(245, 310, 310, 26);
+    developerCaption_.setBounds((getWidth() - 290) / 2, 209, 290, 24);
+    developer_.setBounds((getWidth() - 330) / 2, 246, 330, 42);
+    version_.setBounds((getWidth() - 310) / 2, 310, 310, 26);
     source_.setBounds(70, 362, 510, 26);
     licenses_.setBounds(35, 411, 580, 60);
     firmware_.setBounds(35, 480, 580, 40);
