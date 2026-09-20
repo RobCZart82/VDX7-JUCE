@@ -367,6 +367,9 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
         return;
 
     if (data[0] >= 0xf8) return;
+    // Unsupported bank requests must not trigger serial-overflow recovery.
+    if ((data[0] & 0xf0) == 0xb0 && size == 3 && data[1] == 32
+        && (data[2] >= 8 || !hasFactoryVoices())) return;
     if (!reserveMidi(size)) return;
 
     const uint8_t status = data[0] & 0xF0;
@@ -405,8 +408,8 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
                     midiExpression_ = static_cast<float>(data[2]) / 127.0f;
                     return;
                 case 32:
-                    if (hasFactoryVoices())
-                        selectFactoryBank(data[2] % 8);
+                    if (data[2] < 8)
+                        selectFactoryBank(data[2]);
                     return;
                 case 64:
                     sustainDown_ = data[2] >= 64;
@@ -518,6 +521,7 @@ bool VDX7Engine::selectFactoryBank(int bankIndex)
         return false;
 
     dx7_.setBank(bankIndex, false);
+    ++factoryBankLoadRevision_;
     currentBank_ = bankIndex;
     selectProgram(currentProgram_);
     return true;

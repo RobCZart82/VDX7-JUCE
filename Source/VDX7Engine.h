@@ -44,6 +44,9 @@ public:
 
     bool loadSyxBank(const uint8_t* data, std::size_t size);
     bool selectFactoryBank(int bankIndex);
+    // Engine-thread token: advances only when factory voice RAM is replaced,
+    // including reselecting the same bank. Not part of saved project state.
+    uint64_t factoryBankLoadRevision() const noexcept { return factoryBankLoadRevision_; }
     void selectProgram(int programIndex);
 
     int currentBank() const noexcept { return currentBank_; }
@@ -72,6 +75,7 @@ public:
     bool setControllerSetting(int controller, int field, int value) noexcept;
 
 private:
+    uint64_t factoryBankLoadRevision_ = 0;
     friend struct VDX7RegressionAccess;
     void boot();
     void processQueuedMessage(dx7Emu::Message msg);
