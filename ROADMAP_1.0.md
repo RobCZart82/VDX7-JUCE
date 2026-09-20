@@ -41,8 +41,10 @@ indices compatible with saved projects.
 
 User decision (2026-09-20): milestones through 4 may be developed, with PR/CI
 gates between chapters. Milestone 4 uses firmware-faithful behavior as its base;
-modern extensions require a separate decision. GUI redesign and release
-publication remain outside this authorization.
+modern extensions require a separate decision. Subsequent user approval extends
+development to the agreed GUI/function integration and Save As workflow below.
+Release publication remains outside this authorization. Each chapter still needs
+fresh PR checks and user merge before the next chapter.
 
 - [ ] PERFORMANCE/SETTINGS scope implemented and tested: pitch range, controller
       assignments, MIDI input channel and tuning, preserving state compatibility.
@@ -61,11 +63,11 @@ user. Record them now; implementation follows the stabilization work.
 
 - [ ] Make the LCD the single bank/patch navigation centre: bank selector,
   direct program selector, current program number/name and modified-state `*`.
-- [ ] LCD left/right arrows provide the same previous/next preset behavior as
+- [x] LCD left/right arrows provide the same previous/next preset behavior as
   the existing header quick switch. Remove that header switch and its duplicate
   preset display. Keep the LCD and navigation available in EDIT, PERFORMANCE
   and UTILITY views; view switching must not hide them.
-- [ ] Place an explicitly numbered algorithm dropdown (1–32) beside the
+- [x] Place an explicitly numbered algorithm dropdown (1–32) beside the
   algorithm diagram. Selection updates the diagram immediately. Remove the
   duplicate GLOBAL ALGO encoder, while retaining the existing underlying host
   parameter ID/index and saved-project/automation compatibility.
@@ -78,7 +80,44 @@ Magyar összefoglaló: állandó LCD-s bank-/hangszínkezelés bal–jobb lépte
 a felső gyorsváltó megszűnik. Az algoritmusábra mellett 1–32-es lenyíló lista
 váltja a GLOBAL ALGO tekerőt. A szintmérő alulról nagyrészt zöld, majd sárga,
 legfelül piros; kék alsó LED-ek nélkül. A végleges grafikai stílus még nincs
-elfogadva, ez a bejegyzés nem GUI-implementáció.
+elfogadva. Az első funkcionális GUI-bekötési kör alább szerepel; a végleges
+grafikai átdolgozás és a PERFORMANCE-oldal még külön feladat.
+
+## GUI/function integration chapters — approved 2026-09-20
+
+The PERFORMANCE concept based on visual concept 3 is the agreed layout direction,
+not a specification of implemented functionality or controller default values.
+Implement real bindings, persistence and round-trip tests alongside each control.
+The existing skin remains in use during the first functional integration chapter.
+
+1. **Navigation/export wiring (current chapter):** move preset arrows to the LCD,
+   replace the algorithm encoder with its numbered dropdown using the unchanged
+   host parameter, expose existing single-voice and 32-voice SysEx export through
+   a persistent SAVE AS... header button. This is file export, NOT yet a USER
+   library. Existing UTILITY export remains available. Factory ROM is never written.
+2. **Firmware-backed PERFORMANCE:** establish parameter ranges and behavior from
+   the core/firmware, then connect the approved play mode, pitch bend, portamento
+   and four controller-assignment panels. No decorative active controls. Keep LCD,
+   algorithm, output, Save As and keyboard available across views. Test both GUI
+   and MIDI paths, project restore and compatibility with the 148 existing IDs/indices.
+   SETTINGS MIDI channel/tuning are included in this functional work.
+3. **USER preset storage / Save As:** default destination is a USER bank + slot,
+   with name entry and explicit occupied-slot overwrite confirmation. Preserve
+   factory originals; make saved USER banks selectable from the LCD. Also support
+   single-patch export and whole-bank export. Separate voice payload from global
+   PERFORMANCE settings; ordinary voice SysEx must not silently claim to contain
+   controller/global state. DAW project save remains independent. Verify exact
+   export/import, cancellation, failed writes, changes while dialogs are open,
+   missing files, bank switching and session restart before marking complete.
+4. **Visual integration and acceptance:** apply concept 3's restrained visual
+   style to EDIT/PERFORMANCE/UTILITY, green-yellow-red meters, resize/readability
+   checks and real host interaction checks. Generated mockup is reference only,
+   not a screenshot of the shipping plugin. No release until all release gates pass.
+
+- [x] First-stage SAVE AS... button exposes real voice/bank SysEx file export.
+- [ ] USER bank library, destination slot and non-destructive Save As workflow.
+- [ ] PERFORMANCE panel layout with firmware-backed bindings and project recall.
+- [ ] Final concept-3 visual treatment and host usability acceptance.
 
 ## Publication gate
 

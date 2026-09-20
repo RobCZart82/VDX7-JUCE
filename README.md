@@ -56,7 +56,7 @@ Factory data enables ROM1A–ROM4B: eight banks of 32 programs. Without it, supp
 - OSC MODE horizontal switch: RATIO or FIXED, with nominal ratio/Hz below it. The value excludes detune and modulation.
 - Operator envelopes: four rates and four levels per operator.
 - Keyboard scaling: breakpoint, left/right depth and four curve types.
-- GLOBAL: four-stage pitch envelope, algorithm 1–32, feedback, oscillator key sync, transpose and LFO controls.
+- GLOBAL: four-stage pitch envelope, feedback, oscillator key sync, transpose and LFO controls. Algorithm 1–32 is selected with the dropdown beside its diagram, using the same host automation parameter.
 - LFO: speed, delay, pitch/amplitude modulation depth, key sync, six waveforms and pitch-modulation sensitivity.
 - Graphs show envelope shape; they are not calibrated time/semitone plots.
 
@@ -71,6 +71,14 @@ The footer CPU percentage is a smoothed audio-callback load estimate, not total 
 ## 6. Utility and SysEx
 
 UTILITY provides voice renaming (1–10 printable ASCII characters), single-voice export, bank export and operator copy/paste. Copy/paste includes all 21 operator fields. Its clipboard is local to the plug-in instance and is not stored in projects.
+
+The header SAVE AS... button also opens single-voice or 32-voice bank SysEx file
+export. This writes a separate file, never factory ROM. It does not yet create a
+USER library or choose a destination bank slot. Voice SysEx contains voice data,
+not the complete plug-in/project or global performance state. USER bank storage
+and the approved PERFORMANCE layout remain upcoming integration chapters.
+Previous/next program buttons now sit beside the LCD; the duplicated header
+preset display has been removed. Program navigation wraps within the current bank.
 
 LOAD SYX accepts one complete DX7 single voice (163-byte VCED) or bank (4104-byte VMEM). A single voice replaces the current slot; a bank replaces the editable bank. Concatenated dumps and other instrument formats are unsupported. Imports validate message structure and checksum. Export uses device/channel nibble 0; import accepts 0–15.
 
