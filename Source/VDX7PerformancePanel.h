@@ -9,6 +9,28 @@ public:
     explicit VDX7PerformancePanel(VDX7AudioProcessor& processor) : processor_(processor)
     {
         setName("Performance controllers");
+        constexpr const char* playNames[] {"Play mode", "Portamento mode", "Glissando", "Portamento time"};
+        for (int field = 0; field < 4; ++field)
+        {
+            auto& box = play_[field];
+            box.setName(playNames[field]);
+            if (field == 0) box.addItemList({"POLY", "MONO"}, 1);
+            else if (field == 1) box.addItemList({"Retain", "Follow"}, 1);
+            else if (field == 2) box.addItemList({"OFF", "ON"}, 1);
+            else for (int n = 0; n < 100; ++n) box.addItem(juce::String(n), n + 1);
+            box.setTooltip(field == 0 ? "Changing play mode ends sounding notes in this instance. Saved with the project."
+                : "Firmware portamento; CC65 controls the pedal. Time 0 is immediate. Saved with the project, not voice SysEx.");
+            box.onChange = [this, field]
+            {
+                if (!processor_.setPlaySettingFromUi(field, play_[field].getSelectedId() - 1))
+                    juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,
+                        "Performance setting", "The firmware could not apply this setting. Please retry after playback stops.");
+                refresh();
+            };
+            addAndMakeVisible(box);
+            playLabels_[field].setText(playNames[field], juce::dontSendNotification);
+            addAndMakeVisible(playLabels_[field]);
+        }
         for (int field = 0; field < 2; ++field)
         {
             auto& box = bend_[field];
@@ -55,6 +77,15 @@ public:
     {
         setEnabled(processor_.isRomLoaded());
         const auto settings = processor_.getControllerSettings();
+        const auto play = processor_.getPlaySettings();
+        if (lastMono_ != play[0])
+        {
+            lastMono_ = play[0];
+            play_[1].changeItemText(1, lastMono_ ? "Fingered" : "Retain");
+            play_[1].changeItemText(2, lastMono_ ? "Full time" : "Follow");
+        }
+        for (int field = 0; field < 4; ++field)
+            play_[field].setSelectedId(play[field] + 1, juce::dontSendNotification);
         const auto bend = processor_.getPitchBendSettings();
         for (int field = 0; field < 2; ++field)
             bend_[field].setSelectedId(bend[field] + 1, juce::dontSendNotification);
@@ -71,13 +102,22 @@ public:
     void resized() override
     {
         const float column = getWidth() / 4.0f;
-        const float scale = getHeight() / 320.0f;
-        const int top = juce::roundToInt(70 * scale);
+        const float scale = getHeight() / 394.0f;
+        const int top = juce::roundToInt(144 * scale);
+        const float headerColumn = getWidth() * 0.83f / 3;
         for (int field = 0; field < 2; ++field)
         {
-            const int x = juce::roundToInt(field * column + 12 * scale);
-            bendLabels_[field].setBounds(x, 0, int(column - 24 * scale), int(25 * scale));
-            bend_[field].setBounds(x, int(27 * scale), int(column - 24 * scale), int(28 * scale));
+            const int x = juce::roundToInt(field * headerColumn + 12 * scale);
+            bendLabels_[field].setBounds(x, 0, int(headerColumn - 24 * scale), int(25 * scale));
+            bend_[field].setBounds(x, int(27 * scale), int(headerColumn - 24 * scale), int(28 * scale));
+        }
+        for (int field = 0; field < 4; ++field)
+        {
+            const int cell = field + 2;
+            const int x = juce::roundToInt((cell % 3) * headerColumn + 12 * scale);
+            const int y = juce::roundToInt((cell / 3) * 64 * scale);
+            playLabels_[field].setBounds(x, y, int(headerColumn - 24 * scale), int(25 * scale));
+            play_[field].setBounds(x, y + int(27 * scale), int(headerColumn - 24 * scale), int(28 * scale));
         }
         for (int c = 0; c < 4; ++c)
         {
@@ -95,8 +135,8 @@ public:
     {
         constexpr const char* titles[] { "MOD WHEEL", "FOOT CONTROL", "BREATH CONTROL", "AFTERTOUCH" };
         const float column = getWidth() / 4.0f;
-        const float scale = getHeight() / 320.0f;
-        const float top = 70 * scale;
+        const float scale = getHeight() / 394.0f;
+        const float top = 144 * scale;
         for (int c = 0; c < 4; ++c)
         {
             auto bounds = juce::Rectangle<float>(c * column + 3, top, column - 6, float(getHeight()) - top);
@@ -114,6 +154,9 @@ public:
 
 private:
     VDX7AudioProcessor& processor_;
+    std::array<juce::ComboBox, 4> play_;
+    std::array<juce::Label, 4> playLabels_;
+    int lastMono_ = -1;
     std::array<juce::ComboBox, 2> bend_;
     std::array<juce::Label, 2> bendLabels_;
     std::array<juce::Slider, 4> ranges_;

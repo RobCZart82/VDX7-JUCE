@@ -146,7 +146,10 @@ The existing skin remains in use during the first functional integration chapter
    Pitch-bend range/step now have firmware-backed PERFORMANCE selectors (0-12)
    and project persistence. The extra wrapper pitch offset was removed: zero
    range is respected and nonzero step follows the firmware's own quantisation.
-   Play mode, portamento and SETTINGS remain subsequent slices.
+   Next functional slice adds POLY/MONO, mode-dependent portamento choices,
+   glissando and time 0-99. Mode switching ends notes through native firmware CC
+   processing; time updates/recalled time refresh the firmware's derived rate.
+   Physical pedal/host acceptance and SETTINGS channel/tuning remain open.
 3. **USER preset storage / Save As:** default destination is a USER bank + slot,
    with name entry and explicit occupied-slot overwrite confirmation. Preserve
    factory originals; make saved USER banks selectable from the LCD. Also support

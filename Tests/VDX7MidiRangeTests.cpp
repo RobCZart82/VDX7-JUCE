@@ -5,6 +5,11 @@
 #include <cmath>
 #include <algorithm>
 
+struct VDX7RegressionAccess
+{
+    static int portaRate(const VDX7Engine& e) { return e.dx7_.memory[0xe0]; }
+};
+
 int main(int argc, char** argv)
 {
     if (argc != 2) { std::cerr << "Supply a local combined ROM path\n"; return 77; }
@@ -79,6 +84,26 @@ int main(int argc, char** argv)
         if(std::abs(hz-expected)>std::max(1.0,expected*0.025)) ++failures;
         if (note == 60)
         {
+            int previousRate = 256;
+            for (int time = 0; time <= 99; ++time)
+            {
+                if (!e.setPlaySetting(3, time)) ++failures;
+                for (int b = 0; b < 4; ++b) e.render(l,r,256);
+                const int rate = VDX7RegressionAccess::portaRate(e);
+                if (e.getPlaySetting(3) != time || rate > previousRate || rate < 1) ++failures;
+                previousRate = rate;
+            }
+            std::vector<uint8_t> slowState;
+            e.saveRam(slowState);
+            e.setPlaySetting(3, 0);
+            for (int b=0;b<8;++b) e.render(l,r,256);
+            if (VDX7RegressionAccess::portaRate(e) != 255) ++failures;
+            e.restoreRam(slowState);
+            for (int b=0;b<8;++b) e.render(l,r,256);
+            if (VDX7RegressionAccess::portaRate(e) != 1) ++failures;
+            e.setPlaySetting(3, 0);
+            e.handleMidi(on,3); // RAM restore/program activation ended the earlier note.
+            for(int b=0;b<100;++b) e.render(l,r,256);
             // Held note: each setting change must update without a new note-on.
             struct Bend { int range, step, wheel; double semitones; };
             for (const auto test : {Bend{0,0,127,0}, Bend{6,0,127,6}, Bend{12,0,127,12}, Bend{6,0,-1,6},
@@ -96,6 +121,34 @@ int main(int argc, char** argv)
                           << ": " << measured << " expected " << wanted << std::endl;
                 if(std::abs(measured-wanted)>std::max(1.5,wanted*0.03)) ++failures;
             }
+            if (!e.setPlaySetting(0,1) || !e.setPlaySetting(1,1) || !e.setPlaySetting(2,0)) ++failures;
+            uint8_t pedal[] {0xb0,65,127}, low[] {0x90,60,100}, high[] {0x90,72,100};
+            e.handleMidi(pedal,3); e.handleMidi(low,3);
+            for(int b=0;b<100;++b) e.render(l,r,256);
+            e.setPlaySetting(3,99); e.handleMidi(high,3);
+            for(int b=0;b<10;++b) e.render(l,r,256);
+            auto measure = [&]
+            {
+                int count=0; float last=0;
+                for(int b=0;b<64;++b) {e.render(l,r,256); for(float v:l){if(last<0 && v>=0) ++count; last=v;}}
+                return count*44100.0/(64*256);
+            };
+            const double slow = measure();
+            e.setPlaySetting(3,0);
+            for(int b=0;b<20;++b) e.render(l,r,256);
+            const double fast = measure();
+            std::cout << "Mono portamento slow " << slow << " fast " << fast << std::endl;
+            if (!(slow > 240 && slow < 450 && std::abs(fast-expected*2) < 12)) ++failures;
+            e.allNotesOff();
+            for(int b=0;b<500;++b) e.render(l,r,256);
+            float tail=0; for(float v:l) tail=std::max(tail,std::abs(v));
+            if(tail>0.001f || !e.setPlaySetting(0,0)) ++failures;
+            for (int n=0;n<60;++n) e.selectProgram(n % 32);
+            const bool accepted = e.setPlaySetting(0,1);
+            for (int b=0;b<4000;++b) e.render(l,r,256);
+            // A busy rejection must never turn into a delayed mode change.
+            if (e.getPlaySetting(0) != (accepted ? 1 : 0)) ++failures;
+            if (!e.setPlaySetting(0,1)) ++failures;
         }
     }
     return failures == 0 ? 0 : 1;

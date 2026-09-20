@@ -114,6 +114,22 @@ static void checkControllers(const juce::File& romFile)
     VDX7AudioProcessor p(false);
     require(!p.setControllerSettingFromUi(0, 0, 50), "controller edit needs ROM");
     require(p.loadRomFromFile(romFile), "controller test ROM");
+    require(!p.setPlaySettingFromUi(-1, 0) && !p.setPlaySettingFromUi(4, 0)
+            && !p.setPlaySettingFromUi(0, 2) && !p.setPlaySettingFromUi(3, 100), "play setting bounds");
+    for (int field = 0; field < 4; ++field)
+    {
+        require(p.setPlaySettingFromUi(field, field == 3 ? 63 : 1), "play setting accepted");
+        require(p.getPlaySettings()[field] == (field == 3 ? 63 : 1), "play setting immediate capture");
+    }
+    {
+        const auto state = save(p);
+        VDX7AudioProcessor restored(false);
+        require(restored.loadRomFromFile(romFile), "play restore ROM");
+        restored.setStateInformation(state.getData(), int(state.getSize()));
+        require(restored.getPlaySettings() == p.getPlaySettings(), "play settings restore");
+        require(!p.hasUnexportedEdits(), "play settings do not dirty voice bank");
+    }
+    require(p.setPlaySettingFromUi(0, 0), "return to poly");
     require(!p.setPitchBendSettingFromUi(-1, 2) && !p.setPitchBendSettingFromUi(2, 2)
             && !p.setPitchBendSettingFromUi(0, 13) && !p.setPitchBendSettingFromUi(1, -1), "bend validation");
     for (int field = 0; field < 2; ++field)
@@ -548,12 +564,19 @@ int main(int argc, char** argv)
                     }
                 }
                 require(performanceTab && editTab && performance, "performance view exists");
+                // Earlier exhaustive algorithm sweeps deliberately queued many
+                // program reloads without audio. Let the host consume them.
+                {
+                    juce::AudioBuffer<float> audio(2, 256);
+                    juce::MidiBuffer midi;
+                    for (int block = 0; block < 4000; ++block) restored.processBlock(audio, midi);
+                }
                 require(!performance->isVisible(), "editor starts in edit view");
                 performanceTab->onClick();
                 require(performance->isVisible() && !modeSwitch->isVisible(), "performance replaces operator controls");
                 require(previous->isVisible() && next->isVisible() && algorithmBox->isVisible(),
                         "performance keeps LCD navigation and algorithm");
-                int ranges = 0, assignments = 0, bendFields = 0;
+                int ranges = 0, assignments = 0, bendFields = 0, playFields = 0;
                 const auto voiceBeforePerformance = ram(save(restored));
                 for (auto* child : performance->getChildren())
                 {
@@ -561,6 +584,19 @@ int main(int argc, char** argv)
                             && !child->getBounds().isEmpty(), "performance control bounds");
                     if (auto* box = dynamic_cast<juce::ComboBox*>(child))
                     {
+                        if (!box->getName().startsWith("Pitch bend"))
+                        {
+                            const int field = box->getName() == "Play mode" ? 0
+                                : box->getName() == "Portamento mode" ? 1
+                                : box->getName() == "Glissando" ? 2 : 3;
+                            box->setSelectedId(2, juce::sendNotificationSync);
+                            if (restored.getPlaySettings()[field] != 1)
+                                std::cerr << "Play GUI field " << field << " name " << box->getName()
+                                          << " selected " << box->getSelectedId() << " actual " << restored.getPlaySettings()[field] << '\n';
+                            require(restored.getPlaySettings()[field] == 1, "play GUI binding");
+                            ++playFields;
+                            continue;
+                        }
                         const int field = box->getName() == "Pitch bend range" ? 0 : 1;
                         require(box->getNumItems() == 13, "bend choices 0-12");
                         box->setSelectedId(6, juce::sendNotificationSync);
@@ -589,6 +625,7 @@ int main(int argc, char** argv)
                 }
                 require(ranges == 4 && assignments == 12, "complete four-controller matrix");
                 require(bendFields == 2, "two pitch-bend selectors");
+                require(playFields == 4, "four play/portamento selectors");
                 const auto afterPerformance = ram(save(restored));
                 require(std::memcmp(voiceBeforePerformance.getData(), afterPerformance.getData(), 4096) == 0,
                         "performance UI preserves voice bank");

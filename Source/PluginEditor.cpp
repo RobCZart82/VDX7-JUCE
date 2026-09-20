@@ -1006,14 +1006,6 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
 
     if (performanceVisible_)
     {
-        g.setFont(juce::Font(juce::FontOptions(16.0f * scaleY)));
-        g.drawText("PITCH BEND + CONTROLLER ASSIGNMENTS", referenceRect(54, 397, 1080, 28),
-                   juce::Justification::centredLeft);
-        g.setColour(juce::Colour(0xff91a5ac));
-        g.drawText("Global settings are saved in your DAW project, not in voice/bank SysEx.",
-                   referenceRect(54, 435, 1080, 28), juce::Justification::centredLeft);
-        g.drawText("Pitch bend STEP 0 is continuous; nonzero STEP uses firmware quantisation. Play mode/portamento follow later.",
-                   referenceRect(54, 467, 1080, 28), juce::Justification::centredLeft);
         return;
     }
 
@@ -1029,7 +1021,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
 void VDX7AudioProcessorEditor::resized()
 {
     updateResponsiveTypography();
-    performancePanel_.setBounds(referenceRect(44, 536, 1352, 250));
+    performancePanel_.setBounds(referenceRect(44, 392, 1352, 394));
 
     mkLabel_.setBounds(referenceRect(360, 88, 85, 44));
     hardwareLabel_.setBounds(referenceRect(450, 94, 220, 17));
