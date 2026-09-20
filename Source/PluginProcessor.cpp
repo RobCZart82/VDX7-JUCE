@@ -349,18 +349,40 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
 
 void VDX7AudioProcessor::applyPendingCommands()
 {
-    const int bank = pendingBank_.exchange(-1, std::memory_order_acq_rel);
-    if (bank >= 0)
+    VDX7EditQueue::Command command;
+    bool selectionChanged = false, edited = false;
+    for (std::size_t n = 0; n < VDX7EditQueue::capacity && editQueue_.pop(command); ++n)
     {
-        engine_.selectFactoryBank(bank);
-        modifiedVoices_.store(0);
+        bool changed = false;
+        switch (command.kind)
+        {
+            case VDX7EditQueue::Kind::bank:
+                selectionChanged = true;
+                // Factory banks replace the single internal RAM bank, just as
+                // before. Earlier edits must never migrate into this new bank.
+                engine_.selectFactoryBank(command.value);
+                modifiedVoices_.store(0);
+                edited = false;
+                break;
+            case VDX7EditQueue::Kind::program:
+                selectionChanged = true;
+                engine_.selectProgram(command.value);
+                edited = false;
+                break;
+            case VDX7EditQueue::Kind::op:
+                changed = engine_.setOperatorParameter(command.index / VDX7VoiceData::kParameterCount,
+                    static_cast<VDX7VoiceData::Parameter>(command.index % VDX7VoiceData::kParameterCount),
+                    command.value);
+                break;
+            case VDX7EditQueue::Kind::voice:
+                changed = engine_.setVoiceParameter(static_cast<VDX7VoiceData::VoiceParameter>(command.index),
+                                                    command.value);
+                break;
+        }
+        if (changed) { markVoiceModified(); edited = true; }
     }
-
-    const int program = pendingProgram_.exchange(-1, std::memory_order_acq_rel);
-    if (program >= 0)
-        engine_.selectProgram(program);
-
-    if (bank >= 0 || program >= 0)
+    if (edited) engine_.reloadCurrentProgram();
+    if (selectionChanged)
         updateEngineSnapshot();
 }
 
@@ -561,6 +583,11 @@ void VDX7AudioProcessor::parameterChanged(const juce::String& parameterID, float
                 continue;
 
             const int index = op * VDX7VoiceData::kParameterCount + p;
+            if (engineLoaded_.load(std::memory_order_acquire))
+            {
+                editQueue_.push({VDX7EditQueue::Kind::op, index, juce::roundToInt(newValue)});
+                return;
+            }
             pendingOperatorValues_[static_cast<std::size_t>(op)][static_cast<std::size_t>(p)]
                 .store(newValue, std::memory_order_relaxed);
             operatorParameterDirty_[static_cast<std::size_t>(index / 64)].fetch_or(
@@ -574,6 +601,11 @@ void VDX7AudioProcessor::parameterChanged(const juce::String& parameterID, float
         if (voiceParameterIDs_[static_cast<std::size_t>(p)] != parameterID)
             continue;
 
+        if (engineLoaded_.load(std::memory_order_acquire))
+        {
+            editQueue_.push({VDX7EditQueue::Kind::voice, p, juce::roundToInt(newValue)});
+            return;
+        }
         pendingVoiceValues_[static_cast<std::size_t>(p)].store(newValue, std::memory_order_relaxed);
         voiceParameterDirty_.fetch_or(uint32_t { 1 } << p, std::memory_order_release);
         return;
@@ -596,8 +628,8 @@ void VDX7AudioProcessor::setCurrentProgram(int index)
         return;
 
     const int program = juce::jlimit(0, 31, index);
-    currentProgramSnapshot_.store(program, std::memory_order_release);
-    pendingProgram_.store(program, std::memory_order_release);
+    if (editQueue_.push({VDX7EditQueue::Kind::program, 0, program}))
+        currentProgramSnapshot_.store(program, std::memory_order_release);
 }
 
 const juce::String VDX7AudioProcessor::getProgramName(int index)
@@ -792,8 +824,7 @@ void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
         operatorParameterDirty_[0].store(0, std::memory_order_release);
         operatorParameterDirty_[1].store(0, std::memory_order_release);
         voiceParameterDirty_.store(0, std::memory_order_release);
-        pendingBank_.store(-1, std::memory_order_release);
-        pendingProgram_.store(-1, std::memory_order_release);
+        editQueue_.discard();
         lastPitchMsb_ = -1;
         lastModValue_ = -1;
         updateEngineSnapshot();
@@ -851,8 +882,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         operatorParameterDirty_[0].store(0, std::memory_order_release);
         operatorParameterDirty_[1].store(0, std::memory_order_release);
         voiceParameterDirty_.store(0, std::memory_order_release);
-        pendingBank_.store(-1, std::memory_order_release);
-        pendingProgram_.store(-1, std::memory_order_release);
+        editQueue_.discard();
         lastPitchMsb_ = -1;
         lastModValue_ = -1;
         if (pendingRestore_.isValid())
@@ -925,8 +955,7 @@ bool VDX7AudioProcessor::loadSyxFromFile(const juce::File& file, juce::String* e
         operatorParameterDirty_[0].store(0, std::memory_order_release);
         operatorParameterDirty_[1].store(0, std::memory_order_release);
         voiceParameterDirty_.store(0, std::memory_order_release);
-        pendingBank_.store(-1, std::memory_order_release);
-        pendingProgram_.store(-1, std::memory_order_release);
+        editQueue_.discard();
         updateEngineSnapshot();
     }
 
@@ -945,13 +974,13 @@ void VDX7AudioProcessor::markVoiceModified() noexcept
 
 bool VDX7AudioProcessor::hasUnexportedEdits() const noexcept
 {
-    return modifiedVoices_.load() != 0 || operatorParameterDirty_[0].load() != 0
+    return editQueue_.hasEdits() || modifiedVoices_.load() != 0 || operatorParameterDirty_[0].load() != 0
         || operatorParameterDirty_[1].load() != 0 || voiceParameterDirty_.load() != 0;
 }
 
 bool VDX7AudioProcessor::isCurrentVoiceModified() const noexcept
 {
-    return (modifiedVoices_.load() & (uint32_t(1) << currentProgramSnapshot_.load())) != 0
+    return editQueue_.hasEdits() || (modifiedVoices_.load() & (uint32_t(1) << currentProgramSnapshot_.load())) != 0
         || operatorParameterDirty_[0].load() != 0 || operatorParameterDirty_[1].load() != 0
         || voiceParameterDirty_.load() != 0;
 }
@@ -1073,8 +1102,8 @@ bool VDX7AudioProcessor::selectFactoryBank(int bank)
         || bank < 0 || bank > 7)
         return false;
 
+    if (!editQueue_.push({VDX7EditQueue::Kind::bank, 0, bank})) return false;
     currentBankSnapshot_.store(bank, std::memory_order_release);
-    pendingBank_.store(bank, std::memory_order_release);
     {
         std::scoped_lock lock(metadataMutex_);
         statusText_ = "Factory bank " + bankName(bank);
@@ -1134,6 +1163,8 @@ juce::String VDX7AudioProcessor::getRomPath() const
 
 juce::String VDX7AudioProcessor::getStatusText() const
 {
+    if (editQueue_.overflowed())
+        return "Edit queue full: further edits blocked; save/export accepted edits, then reload the project";
     std::scoped_lock lock(metadataMutex_);
     return statusText_;
 }

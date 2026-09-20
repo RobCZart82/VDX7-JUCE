@@ -7,6 +7,9 @@ indices compatible with saved projects.
 
 ## Stabilization
 
+- [x] Ordered program/bank/voice/operator edit queue with local save/audio
+  regressions; see `VALIDATION_1.0_EDIT_ORDER.md` for scope and overload policy.
+
 - [x] Missing-ROM deferred project restore, including re-save/restart (local automated tests).
 - [x] Invalid-ROM rejection preserves RAM and pending UI edits; firmware-only reload tested.
 - [x] CC64/65 thresholds and CC11 expression regression tests.
