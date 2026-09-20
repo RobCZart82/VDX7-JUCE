@@ -165,6 +165,16 @@ nélkül. Ez elfogadott tervezési irány, nem már elkészült GUI vagy jogi mi
 
 These are recorded design requirements, not completed implementation.
 
+- [x] Narrow the LCD and its black frame horizontally by moving their left edge
+  rightward while retaining the current height and right edge. Reserve a clear
+  gap between the UTILITY button and the black frame; all three view buttons
+  must fit entirely to the left. Reflow the LCD arrows, patch text and selectors
+  within the reduced width without overlaps or reduced text readability. Verify
+  the gap and content bounds at every supported UI size. Do not shrink vertically.
+  Implemented: left edges +30 reference units, right edges and heights unchanged;
+  28-unit UTILITY/frame clearance. Local GUI tests pass at 960/1440/1600 widths.
+  Planned percentage-size settings and real-host HiDPI acceptance remain open.
+
 - [ ] LCD previous/next arrow buttons must look like graphics drawn by the LCD,
   matching the BANK and PATCH dropdowns: yellow-green display background, dark
   arrows and restrained dark outlines. No raised hardware-button treatment,

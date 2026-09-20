@@ -994,8 +994,8 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     g.setFont(juce::Font(juce::FontOptions(66.0f * scaleY, juce::Font::bold)));
     g.drawText("VDX7", referenceRect(44, 58, 300, 72), juce::Justification::centredLeft);
     g.setColour(juce::Colour(0xff141510));
-    g.fillRoundedRectangle(referenceRect(382, 180, 555, 112).toFloat(), 5.0f);
-    const auto lcd = referenceRect(392, 190, 535, 86).toFloat();
+    g.fillRoundedRectangle(referenceRect(412, 180, 525, 112).toFloat(), 5.0f);
+    const auto lcd = referenceRect(422, 190, 505, 86).toFloat();
     g.setGradientFill(juce::ColourGradient(juce::Colour(0xffc9d68e), lcd.getX(), lcd.getY(),
         juce::Colour(0xffa5b76e), lcd.getX(), lcd.getBottom(), false));
     g.fillRoundedRectangle(lcd, 3.0f);
@@ -1048,7 +1048,7 @@ void VDX7AudioProcessorEditor::resized()
     mkLabel_.setBounds(referenceRect(360, 88, 85, 44));
     hardwareLabel_.setBounds(referenceRect(450, 94, 220, 17));
     firmwareLabel_.setBounds(referenceRect(450, 108, 220, 19));
-    previous_.setBounds(referenceRect(401, 198, 32, 70));
+    previous_.setBounds(referenceRect(431, 198, 32, 70));
     next_.setBounds(referenceRect(887, 198, 32, 70));
     loadRom_.setBounds(referenceRect(894, 76, 104, 46));
     loadSyx_.setBounds(referenceRect(1000, 76, 104, 46));
@@ -1062,11 +1062,11 @@ void VDX7AudioProcessorEditor::resized()
     editTab_.setBounds(referenceRect(54, 190, 100, 42));
     performanceTab_.setBounds(referenceRect(160, 190, 118, 42));
     utilityTab_.setBounds(referenceRect(284, 190, 100, 42));
-    patch_.setBounds(referenceRect(442, 190, 442, 40));
-    bankCaption_.setBounds(referenceRect(442, 238, 52, 24));
-    bank_.setBounds(referenceRect(494, 238, 94, 24));
-    programCaption_.setBounds(referenceRect(595, 238, 76, 24));
-    program_.setBounds(referenceRect(671, 238, 72, 24));
+    patch_.setBounds(referenceRect(472, 190, 412, 40));
+    bankCaption_.setBounds(referenceRect(472, 238, 52, 24));
+    bank_.setBounds(referenceRect(524, 238, 94, 24));
+    programCaption_.setBounds(referenceRect(625, 238, 76, 24));
+    program_.setBounds(referenceRect(701, 238, 72, 24));
 
     outputCaption_.setBounds(referenceRect(1210, 146, 186, 30));
     leftCaption_.setBounds(referenceRect(1210, 178, 58, 22));

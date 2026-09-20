@@ -537,8 +537,8 @@ int main(int argc, char** argv)
                 editor->setSize(width, juce::roundToInt(width * 1110.0 / 1440.0));
                 int lcdSelectors = 0;
                 const float scale = float(width) / 1440.0f;
-                const juce::Rectangle<float> lcdArea(382 * scale, 190 * scale,
-                                                      550 * scale, 86 * scale);
+                const juce::Rectangle<float> lcdArea(422 * scale, 190 * scale,
+                                                      505 * scale, 86 * scale);
                 for (auto* child : editor->getChildren())
                     if (auto* box = dynamic_cast<juce::ComboBox*>(child))
                         if (bool(box->getProperties().getWithDefault("vdx7LcdCombo", false)))
@@ -565,6 +565,9 @@ int main(int argc, char** argv)
                     {
                         if (button->getButtonText() == "<") previous = button;
                         if (button->getButtonText() == ">") next = button;
+                        if (button->getButtonText() == "UTILITY")
+                            require(412 * scale - button->getRight() >= 27 * scale - 1,
+                                    "UTILITY has clear gap before LCD frame");
                         if (button->getButtonText() == "SAVE AS...")
                             require(button->isEnabled(), "Save As enabled with ROM");
                     }
