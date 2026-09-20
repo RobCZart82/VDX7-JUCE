@@ -10,7 +10,9 @@ The remaining v0.6.6 packaging description is retained as historical context.
   Revision: d5473776a0449d60a997b91bdc888598a33265ac.
   Included source subset: source/dx7Lib, compiled HD6303R.cpp,
   HD6303R_inst.cpp and dx7.cpp plus headers.
-- Wrapper/resources: the release tag v0.6.6.
+- Wrapper/resources for 1.0 development/RC packages: the exact 40-character
+  source commit recorded in the package manifest. Historical v0.6.6 packages
+  used the v0.6.6 tag; that tag does not identify current development sources.
 
 The corresponding-source ZIP places dependencies at third_party/JUCE and
 third_party/dx7Lib. CMake detects these folders automatically and does not

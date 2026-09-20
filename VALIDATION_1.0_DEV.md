@@ -1,7 +1,19 @@
 # 1.0.0-dev01 validation — 2026-09-13
 
 This is the first stabilization milestone toward 1.0.0, NOT final acceptance.
-The published main and release assets are unchanged.
+This milestone was backed up to main as
+`5164fabd36c8fdd745e272fc1f493c0c352c1ced`. Release assets were not changed.
+
+## GitHub checks (verified 2026-09-20)
+
+The above source commit passed both ROM-free CI workflows:
+
+- [macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/34740626597)
+- [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/34740626610)
+
+These results are separate from the local, user-supplied-ROM results below.
+The exact-commit `release-candidate.yml` workflow remains NOT RUN. Neither CI
+result certifies REAPER acceptance or changes still under development.
 
 ## Automated checks on macOS arm64
 
