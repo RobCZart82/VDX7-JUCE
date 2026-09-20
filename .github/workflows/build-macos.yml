@@ -26,7 +26,7 @@ jobs:
         run: |
           cmake --build build \
             --config Release \
-            --target VDX7_VST3 vdx7_voice_data_tests vdx7_algorithm_tests vdx7_deferred_midi_tests vdx7_resampling_tests vdx7_stress_tests
+            --target VDX7_VST3 vdx7_voice_data_tests vdx7_algorithm_tests vdx7_deferred_midi_tests vdx7_resampling_tests vdx7_stress_tests vdx7_user_bank_tests
 
       - name: ROM-free regression tests
         run: ctest --test-dir build -C Release --output-on-failure

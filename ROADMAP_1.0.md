@@ -152,6 +152,22 @@ The existing skin remains in use during the first functional integration chapter
    controller/global state. DAW project save remains independent. Verify exact
    export/import, cancellation, failed writes, changes while dialogs are open,
    missing files, bank switching and session restart before marking complete.
+   Approved save logic: ONE header SAVE AS... button opens a shared dialog with
+   **Patch -> USER bank** as the default, **Export Patch...** and **Export Bank...**
+   as explicit alternatives. A persistent custom bank can be populated one patch
+   at a time; saving a patch replaces only the chosen slot. Ask for the patch name
+   and destination slot, show the existing occupant before overwrite confirmation,
+   and retain all other slots. Factory originals remain unchanged.
+   UTILITY is for editing/organisation (rename, operator copy/paste, later bank
+   organisation), not a second save workflow. Remove its duplicate export items
+   only when the complete shared Save As dialog replaces them. No additional
+   Save Patch / Save Bank header buttons. Global PERFORMANCE settings remain
+   project state, never silently included in voice SysEx.
+   First storage slice implements a versioned, checked 32-slot bank file and
+   conflict-aware patch updates. This backend is tested independently without
+   ROM; it is NOT yet connected to the plugin or exposed in the Save As menu.
+   Next slice must connect capture/name/destination/confirmation, library folder,
+   LCD USER selection and reload, plus GUI/processor integration tests.
 4. **Visual integration and acceptance:** combine concept 3's approved layout
    with the hardware-inspired material/colour direction above for
    EDIT/PERFORMANCE/UTILITY, green-yellow-red meters, resize/readability
@@ -160,6 +176,8 @@ The existing skin remains in use during the first functional integration chapter
 
 - [x] First-stage SAVE AS... button exposes real voice/bank SysEx file export.
 - [ ] USER bank library, destination slot and non-destructive Save As workflow.
+- [x] USER-bank storage foundation: persistent 32-slot file, single-slot update,
+  overwrite/conflict protection, checked temporary-file replacement and ROM-free CI tests.
 - [ ] PERFORMANCE panel layout with firmware-backed bindings and project recall.
 - [x] First PERFORMANCE slice: four controller ranges and 12 assignment switches,
   project/missing-ROM recall, real MIDI/audio regression and persistent LCD/header.

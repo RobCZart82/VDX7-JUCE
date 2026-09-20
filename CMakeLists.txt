@@ -65,6 +65,14 @@ target_compile_features(vdx7_voice_data PUBLIC cxx_std_20)
 set_target_properties(vdx7_voice_data PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 enable_testing()
+
+# USER-bank persistence can be exercised on CI without firmware or GUI startup.
+add_executable(vdx7_user_bank_tests Tests/VDX7UserBankTests.cpp Source/VDX7UserBank.cpp)
+target_include_directories(vdx7_user_bank_tests PRIVATE Source)
+target_link_libraries(vdx7_user_bank_tests PRIVATE juce::juce_core vdx7_voice_data)
+target_compile_definitions(vdx7_user_bank_tests PRIVATE JUCE_USE_CURL=0 JUCE_WEB_BROWSER=0)
+add_test(NAME vdx7_user_bank COMMAND vdx7_user_bank_tests)
+set_tests_properties(vdx7_user_bank PROPERTIES TIMEOUT 20)
 add_executable(vdx7_deferred_midi_tests Tests/VDX7DeferredMidiTests.cpp)
 target_include_directories(vdx7_deferred_midi_tests PRIVATE Source)
 add_test(NAME vdx7_deferred_midi COMMAND vdx7_deferred_midi_tests)
