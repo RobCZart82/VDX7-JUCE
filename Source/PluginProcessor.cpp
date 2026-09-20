@@ -12,6 +12,8 @@ constexpr const char* kParameterStateType = "PARAMETERS";
 // Suppress only callbacks caused by this thread's patch publication. Host
 // automation arriving on another thread must still enter the edit mailbox.
 thread_local const VDX7AudioProcessor* publishingVoice = nullptr;
+thread_local const juce::String* publishingParameterID = nullptr;
+thread_local float publishingParameterValue = 0;
 
 constexpr std::array<const char*, VDX7VoiceData::kParameterCount> kOperatorParameterSuffixes
 {
@@ -166,10 +168,12 @@ VDX7AudioProcessor::VDX7AudioProcessor(bool detectRom)
         juce::Decibels::decibelsToGain(masterVolumeParameter_->load()));
     detectRom_ = detectRom;
     if (detectRom_) autoDetectRom();
+    startTimerHz(30); // Processor-owned: publication does not require an editor.
 }
 
 VDX7AudioProcessor::~VDX7AudioProcessor()
 {
+    stopTimer();
     for (const auto& operatorIDs : operatorParameterIDs_)
         for (const auto& id : operatorIDs)
             parameters_.removeParameterListener(id, this);
@@ -379,7 +383,11 @@ void VDX7AudioProcessor::applyPendingCommands()
                                                     command.value);
                 break;
         }
-        if (changed) { markVoiceModified(); edited = true; }
+        if (changed)
+        {
+            markVoiceModified(); edited = true;
+            voicePublicationNeeded_.store(true, std::memory_order_release);
+        }
     }
     if (edited) engine_.reloadCurrentProgram();
     if (selectionChanged)
@@ -474,7 +482,7 @@ void VDX7AudioProcessor::updateEngineSnapshot() noexcept
     for (std::size_t i = 0; i < patchNameSnapshot_.size(); ++i)
         patchNameSnapshot_[i].store(name[i], std::memory_order_relaxed);
     patchNameRevision_.fetch_add(1, std::memory_order_release);
-    synchroniseVoiceParametersLocked();
+    voicePublicationNeeded_.store(true, std::memory_order_release);
     operatorVoiceRevision_.fetch_add(1, std::memory_order_release);
 }
 
@@ -512,24 +520,28 @@ uint32_t VDX7AudioProcessor::getOperatorVoiceRevision() const noexcept
 
 bool VDX7AudioProcessor::synchroniseOperatorParametersFromEngine()
 {
-    std::scoped_lock lock(engineMutex_);
-    if (!engine_.isLoaded())
+    // Non-RT only: never wait for another publisher or recurse when a host
+    // notification synchronously asks for project state.
+    if (publishingParameters_.exchange(true, std::memory_order_acq_rel))
         return false;
-    if (applyOperatorParameters() | applyVoiceParameters())
-        engine_.reloadCurrentProgram();
-    applyPendingCommands();
-    synchroniseVoiceParametersLocked();
-    return true;
-}
-
-void VDX7AudioProcessor::synchroniseVoiceParametersLocked()
-{
-    if (!engine_.isLoaded())
-        return;
-    const juce::ScopedValueSetter<const VDX7AudioProcessor*> publishing(publishingVoice, this);
+    struct EndPublication
+    {
+        std::atomic<bool>& active;
+        std::atomic<uint32_t>& revision;
+        bool changed = false;
+        ~EndPublication()
+        {
+            if (changed) revision.fetch_add(1, std::memory_order_release);
+            active.store(false, std::memory_order_release);
+        }
+    } endPublication {publishingParameters_, operatorVoiceRevision_};
     std::array<int, VDX7VoiceData::kOperatorCount * VDX7VoiceData::kParameterCount> values {};
     std::array<int, VDX7VoiceData::kVoiceParameterCount> voiceValues {};
     {
+        std::scoped_lock lock(engineMutex_);
+        if (!engine_.isLoaded()) return false;
+        flushVoiceEditsLocked();
+        voicePublicationNeeded_.store(false, std::memory_order_release);
         for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
             for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
                 values[static_cast<std::size_t>(op * VDX7VoiceData::kParameterCount + p)] =
@@ -540,19 +552,29 @@ void VDX7AudioProcessor::synchroniseVoiceParametersLocked()
                 static_cast<VDX7VoiceData::VoiceParameter>(p));
     }
 
+    // No engine lock is held while calling the host.
+    const juce::ScopedValueSetter<const VDX7AudioProcessor*> publishing(publishingVoice, this);
     for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
     {
         for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
         {
             const auto& id = operatorParameterIDs_[static_cast<std::size_t>(op)]
                                                   [static_cast<std::size_t>(p)];
+            if (voicePublicationNeeded_.load(std::memory_order_acquire) || editQueue_.pending())
+                return false; // Retry the newer state on the next non-RT poll.
             if (auto* parameter = parameters_.getParameter(id))
             {
                 const float normalised = parameter->convertTo0to1(
                     static_cast<float>(values[static_cast<std::size_t>(
                         op * VDX7VoiceData::kParameterCount + p)]));
                 if (std::abs(parameter->getValue() - normalised) > 0.0001f)
+                {
+                    const juce::ScopedValueSetter<const juce::String*> ownParameter(publishingParameterID, &id);
+                    const juce::ScopedValueSetter<float> ownValue(publishingParameterValue,
+                        parameter->convertFrom0to1(normalised));
                     parameter->setValueNotifyingHost(normalised);
+                    endPublication.changed = true;
+                }
             }
         }
     }
@@ -561,17 +583,35 @@ void VDX7AudioProcessor::synchroniseVoiceParametersLocked()
         if (auto* parameter = parameters_.getParameter(
                 voiceParameterIDs_[static_cast<std::size_t>(p)]))
         {
+            if (voicePublicationNeeded_.load(std::memory_order_acquire) || editQueue_.pending())
+                return false;
             const float normalised = parameter->convertTo0to1(
                 static_cast<float>(voiceValues[static_cast<std::size_t>(p)]));
             if (std::abs(parameter->getValue() - normalised) > 0.0001f)
+            {
+                const auto& id = voiceParameterIDs_[static_cast<std::size_t>(p)];
+                const juce::ScopedValueSetter<const juce::String*> ownParameter(publishingParameterID, &id);
+                const juce::ScopedValueSetter<float> ownValue(publishingParameterValue,
+                    parameter->convertFrom0to1(normalised));
                 parameter->setValueNotifyingHost(normalised);
+                endPublication.changed = true;
+            }
         }
     }
+    return true;
+}
+
+void VDX7AudioProcessor::timerCallback()
+{
+    if (voicePublicationNeeded_.load(std::memory_order_acquire) || editQueue_.pending())
+        synchroniseOperatorParametersFromEngine();
 }
 
 void VDX7AudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
 {
-    if (publishingVoice == this)
+    if (publishingVoice == this
+        && (publishingParameterID == nullptr
+            || (*publishingParameterID == parameterID && newValue == publishingParameterValue)))
         return;
 
     for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
@@ -586,6 +626,7 @@ void VDX7AudioProcessor::parameterChanged(const juce::String& parameterID, float
             if (engineLoaded_.load(std::memory_order_acquire))
             {
                 editQueue_.push({VDX7EditQueue::Kind::op, index, juce::roundToInt(newValue)});
+                voicePublicationNeeded_.store(true, std::memory_order_release);
                 return;
             }
             pendingOperatorValues_[static_cast<std::size_t>(op)][static_cast<std::size_t>(p)]
@@ -604,6 +645,7 @@ void VDX7AudioProcessor::parameterChanged(const juce::String& parameterID, float
         if (engineLoaded_.load(std::memory_order_acquire))
         {
             editQueue_.push({VDX7EditQueue::Kind::voice, p, juce::roundToInt(newValue)});
+            voicePublicationNeeded_.store(true, std::memory_order_release);
             return;
         }
         pendingVoiceValues_[static_cast<std::size_t>(p)].store(newValue, std::memory_order_relaxed);
@@ -646,7 +688,11 @@ const juce::String VDX7AudioProcessor::getProgramName(int index)
 
 void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
+    synchroniseOperatorParametersFromEngine();
     juce::ValueTree state { juce::Identifier(kStateType) };
+    std::array<int, VDX7VoiceData::kOperatorCount * VDX7VoiceData::kParameterCount> operatorValues {};
+    std::array<int, VDX7VoiceData::kVoiceParameterCount> voiceValues {};
+    bool loaded = false;
 
     {
         std::scoped_lock lock(engineMutex_);
@@ -663,8 +709,8 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         if (applyOperatorParameters() | applyVoiceParameters())
             engine_.reloadCurrentProgram();
         applyPendingCommands();
-        state.setProperty("bank", currentBankSnapshot_.load(std::memory_order_acquire), nullptr);
-        state.setProperty("program", currentProgramSnapshot_.load(std::memory_order_acquire), nullptr);
+        state.setProperty("bank", engine_.currentBank(), nullptr);
+        state.setProperty("program", engine_.currentProgram(), nullptr);
         state.setProperty("modifiedVoices", static_cast<juce::int64>(modifiedVoices_.load()), nullptr);
 
         std::vector<uint8_t> ram;
@@ -673,6 +719,16 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
             juce::MemoryBlock block(ram.data(), ram.size());
             state.setProperty("ram", block.toBase64Encoding(), nullptr);
         }
+        loaded = engine_.isLoaded();
+        if (loaded)
+        {
+            for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
+                for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
+                    operatorValues[op * VDX7VoiceData::kParameterCount + p] =
+                        engine_.getOperatorParameter(op, static_cast<VDX7VoiceData::Parameter>(p));
+            for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
+                voiceValues[p] = engine_.getVoiceParameter(static_cast<VDX7VoiceData::VoiceParameter>(p));
+        }
     }
 
     {
@@ -680,7 +736,22 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         state.setProperty("romPath", romFile_.getFullPathName(), nullptr);
     }
 
-    state.addChild(parameters_.copyState(), -1, nullptr);
+    auto parameterState = parameters_.copyState();
+    // A headless/reentrant save must not serialize a half-published host view.
+    // Patch this detached copy from the same engine snapshot as the saved RAM.
+    if (loaded)
+    {
+        auto setSavedValue = [&](const juce::String& id, int value) {
+            auto child = parameterState.getChildWithProperty("id", id);
+            if (child.isValid()) child.setProperty("value", static_cast<float>(value), nullptr);
+        };
+        for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
+            for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
+                setSavedValue(operatorParameterIDs_[op][p], operatorValues[op * VDX7VoiceData::kParameterCount + p]);
+        for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
+            setSavedValue(voiceParameterIDs_[p], voiceValues[p]);
+    }
+    state.addChild(parameterState, -1, nullptr);
 
     if (auto xml = state.createXml())
         copyXmlToBinary(*xml, destData);
@@ -717,6 +788,7 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
         // Packed RAM is authoritative for voice settings, including older states
         // which did not expose every field as a host parameter.
         const juce::ScopedValueSetter<const VDX7AudioProcessor*> publishing(publishingVoice, this);
+        const juce::ScopedValueSetter<const juce::String*> allParameters(publishingParameterID, nullptr);
         parameters_.replaceState(parameterState);
     }
 
@@ -739,6 +811,7 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
         std::scoped_lock lock(metadataMutex_);
         statusText_ = "Project preserved: load compatible ROM to restore its sound";
     }
+    synchroniseOperatorParametersFromEngine();
 }
 
 void VDX7AudioProcessor::capturePendingRestoreEditsLocked()
@@ -903,6 +976,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         if (ignoredCompanion)
             statusText_ = "DX7 firmware loaded; invalid or unreadable optional factory voice image ignored";
     }
+    synchroniseOperatorParametersFromEngine();
     return true;
 }
 
@@ -963,6 +1037,7 @@ bool VDX7AudioProcessor::loadSyxFromFile(const juce::File& file, juce::String* e
         std::scoped_lock lock(metadataMutex_);
         statusText_ = "Loaded SysEx: " + file.getFileName();
     }
+    synchroniseOperatorParametersFromEngine();
     updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
     return true;
 }
@@ -1017,6 +1092,7 @@ bool VDX7AudioProcessor::renameVoice(const juce::String& name)
     }
     lock.unlock();
     if (changed) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    synchroniseOperatorParametersFromEngine();
     return true;
 }
 
@@ -1050,6 +1126,7 @@ bool VDX7AudioProcessor::pasteOperator(int op)
     updateEngineSnapshot();
     lock.unlock();
     updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    synchroniseOperatorParametersFromEngine();
     return true;
 }
 

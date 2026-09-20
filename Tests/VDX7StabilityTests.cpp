@@ -11,6 +11,7 @@ static void require(bool ok, const char* message)
 
 struct VDX7RegressionAccess
 {
+    static void publishWithoutEditor(VDX7AudioProcessor& p) { p.timerCallback(); }
     static bool invalidRom(VDX7AudioProcessor& p)
     { return p.loadRomData(juce::File(), std::vector<uint8_t>(7), nullptr); }
     static void checkControllers(VDX7Engine& e)
@@ -160,6 +161,103 @@ static void checkEditOrdering(const juce::File& romFile)
             "32 successive program/edit pairs are not coalesced or misdirected");
 }
 
+static void checkAudioPublication(const juce::File& romFile)
+{
+    VDX7AudioProcessor p(false);
+    require(p.loadRomFromFile(romFile), "publication ROM");
+    struct Listener final : juce::AudioProcessorParameter::Listener
+    {
+        int calls = 0;
+        VDX7AudioProcessor* reenter = nullptr;
+        bool saved = false;
+        bool coherent = true;
+        juce::RangedAudioParameter* editOnNotify = nullptr;
+        float editValue = 0;
+        bool edited = false;
+        void parameterValueChanged(int index, float) override
+        {
+            ++calls;
+            if (editOnNotify != nullptr && !edited && index != editOnNotify->getParameterIndex())
+            {
+                edited = true;
+                editOnNotify->setValueNotifyingHost(editValue);
+            }
+            if (reenter != nullptr)
+            {
+                juce::MemoryBlock state;
+                reenter->getStateInformation(state);
+                saved = state.getSize() > 0;
+                const auto decoded = decode(state);
+                juce::MemoryBlock ram;
+                coherent &= ram.fromBase64Encoding(decoded["ram"].toString());
+                if (ram.getSize() == VDX7Engine::kRamStateSize)
+                {
+                    const auto* voice = static_cast<const uint8_t*>(ram.getData())
+                        + static_cast<int>(decoded["program"])*128;
+                    for (int n = 0; n < VDX7VoiceData::kVoiceParameterCount; ++n)
+                    {
+                        const auto field = static_cast<VDX7VoiceData::VoiceParameter>(n);
+                        const auto child = decoded.getChildWithName("PARAMETERS").getChildWithProperty(
+                            "id", VDX7ParameterIDs::voiceParameter(field));
+                        coherent &= static_cast<int>(child["value"]) ==
+                            VDX7VoiceData::getVoiceParameter(voice, 128, field);
+                    }
+                }
+                else coherent = false;
+            }
+        }
+        void parameterGestureChanged(int, bool) override {}
+    } listener;
+    for (auto* parameter : p.getParameters()) parameter->addListener(&listener);
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer events;
+    int audioCalls = 0;
+    bool nonRealtimePublication = true;
+    for (int kind = 0; kind < 3; ++kind)
+    {
+        listener.reenter = nullptr;
+        events.clear();
+        if (kind == 0) events.addEvent(juce::MidiMessage::programChange(1, 4), 0);
+        else if (kind == 1) events.addEvent(juce::MidiMessage::controllerEvent(1, 32, 1), 0);
+        else
+        {
+            juce::MemoryBlock ram;
+            require(ram.fromBase64Encoding(decode(save(p))["ram"].toString()), "publication SysEx RAM");
+            auto* bytes = static_cast<uint8_t*>(ram.getData());
+            auto* voice = bytes + p.getCurrentProgram()*128;
+            const auto field = VDX7VoiceData::VoiceParameter::algorithm;
+            VDX7VoiceData::setVoiceParameter(voice, 128, field,
+                (VDX7VoiceData::getVoiceParameter(voice, 128, field) + 1) % 32);
+            auto sysex = VDX7Sysex::encode(std::vector<uint8_t>(bytes, bytes + 4096));
+            events.addEvent(sysex.data(), static_cast<int>(sysex.size()), 0);
+        }
+        listener.calls = 0;
+        listener.saved = false;
+        p.processBlock(audio, events);
+        audioCalls += listener.calls;
+        listener.reenter = &p;
+        if (kind == 1)
+        {
+            listener.editOnNotify = p.parameters().getParameter(VDX7ParameterIDs::voiceParameter(
+                VDX7VoiceData::VoiceParameter::algorithm));
+            const int oldValue = juce::roundToInt(listener.editOnNotify->convertFrom0to1(
+                listener.editOnNotify->getValue()));
+            listener.editValue = listener.editOnNotify->convertTo0to1((oldValue + 1) % 32);
+        }
+        VDX7RegressionAccess::publishWithoutEditor(p);
+        VDX7RegressionAccess::publishWithoutEditor(p); // Finish any reentrant edit's newer snapshot.
+        nonRealtimePublication &= listener.calls > 0 && listener.saved;
+        if (kind == 1)
+            nonRealtimePublication &= listener.edited
+                && listener.editOnNotify->getValue() == listener.editValue;
+        listener.editOnNotify = nullptr;
+    }
+    for (auto* parameter : p.getParameters()) parameter->removeListener(&listener);
+    require(audioCalls == 0, "audio callback must not publish host parameters");
+    require(nonRealtimePublication, "editorless publisher permits reentrant host state request");
+    require(listener.coherent, "reentrant saves contain voice parameters matching packed RAM");
+}
+
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -169,6 +267,7 @@ int main(int argc, char** argv)
         juce::File romFile(juce::String::fromUTF8(argv[1]));
         juce::MemoryBlock rom;
         require(romFile.loadFileAsData(rom), "read local ROM");
+        checkAudioPublication(romFile);
         checkEditOrdering(romFile);
         VDX7Engine engine;
         require(engine.loadRomImage(static_cast<const uint8_t*>(rom.getData()), rom.getSize()), "engine ROM");
@@ -318,6 +417,7 @@ int main(int argc, char** argv)
         restarted.processBlock(audio, events);
         require(restarted.getCurrentBank() == -1 && restarted.hasUnexportedEdits(), "live bank metadata");
         require(restarted.getCurrentPatchName().startsWith("L"), "live bank name refreshed");
+        VDX7RegressionAccess::publishWithoutEditor(restarted);
         require(restarted.parameters().getRawParameterValue(VDX7ParameterIDs::voiceParameter(
             VDX7VoiceData::VoiceParameter::algorithm))->load() == 31, "live bank host parameter refreshed");
         sysex[6] |= 0x80;

@@ -21,7 +21,8 @@ juce::String voiceParameter(VDX7VoiceData::VoiceParameter);
 }
 
 class VDX7AudioProcessor final : public juce::AudioProcessor,
-                                  private juce::AudioProcessorValueTreeState::Listener
+                                  private juce::AudioProcessorValueTreeState::Listener,
+                                  private juce::Timer
 {
 public:
     explicit VDX7AudioProcessor(bool detectRom = true);
@@ -76,6 +77,7 @@ public:
     float getOutputPeak(int channel) const noexcept;
     double getCpuUsagePercent() const;
     uint32_t getOperatorVoiceRevision() const noexcept;
+    // Non-realtime only: captures under engine lock, notifies after unlocking.
     bool synchroniseOperatorParametersFromEngine();
 
 private:
@@ -96,7 +98,9 @@ private:
     bool applyVoiceParameters();
     void applyPerformanceControls();
     void updateEngineSnapshot() noexcept;
-    void synchroniseVoiceParametersLocked();
+    void timerCallback() override;
+    std::atomic<bool> voicePublicationNeeded_ {false};
+    std::atomic<bool> publishingParameters_ {false};
     void clearMeters() noexcept;
     void updateMeters(const juce::AudioBuffer<float>& buffer) noexcept;
     void parameterChanged(const juce::String& parameterID, float newValue) override;

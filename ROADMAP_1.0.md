@@ -17,7 +17,9 @@ indices compatible with saved projects.
 - [x] Validated live bank SysEx with coherent GUI/host state (local tests).
 - [x] Remove 512-sample lookahead; measure onset and host-block invariance.
 - [ ] Physical MIDI timing, dense chords and automation acceptance in hosts.
-- [ ] Audio-thread ownership/notification audit and contention stress test.
+- [x] Move direct voice-parameter notifications outside the audio callback and
+  engine lock; editorless/reentrant state tests (see `VALIDATION_1.0_HOST_PUBLICATION.md`).
+- [ ] Complete remaining audio-thread allocation/locking audit and contention stress test.
 - [x] Full 0–127 note range and pitch/release regressions (local ROM).
 - [x] Configure PR ROM-free CI and opt-in local ROM integration CTest gate.
 - [x] Run the development CI configuration on GitHub: macOS and Windows passed
