@@ -245,7 +245,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout VDX7AudioProcessor::createPa
 void VDX7AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     processLoadMeasurer_.reset(sampleRate, samplesPerBlock);
-    std::scoped_lock lock(engineMutex_);
+    std::unique_lock lock(engineMutex_);
     currentSampleRate_ = sampleRate;
     deferredMidi_.clear();
     keyboardQueue_.discard();
@@ -257,6 +257,9 @@ void VDX7AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         juce::Decibels::decibelsToGain(masterVolumeParameter_->load()));
     lastPitchMsb_ = -1;
     lastModValue_ = -1;
+    const int latency = engine_.latencySamples();
+    lock.unlock(); // Host notification can re-enter state callbacks.
+    setLatencySamples(latency);
 }
 
 void VDX7AudioProcessor::releaseResources()

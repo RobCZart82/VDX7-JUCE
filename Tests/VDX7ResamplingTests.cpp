@@ -56,16 +56,38 @@ static double amplitude(const std::vector<float>& samples, int rate, double freq
     return 2 * std::hypot(real, imaginary) / double(samples.size());
 }
 
+static void checkImpulse(int rate)
+{
+    VDX7Resampler filter;
+    filter.prepare(rate);
+    int native = 0;
+    double sum = 0, moment = 0;
+    for (int i = 0; i < int(1000.0 * rate / VDX7Resampler::nativeRate) + filter.latency(); ++i)
+    {
+        const float sample = filter.sample([&] { return native++ == 512 ? 1.0f : 0.0f; });
+        sum += sample; moment += i * sample;
+    }
+    const double expected = 512.0 * rate / VDX7Resampler::nativeRate + filter.latency();
+    if (sum < 0.1 || std::abs(moment / sum - expected) > 0.02)
+        throw std::runtime_error("reported latency disagrees with impulse centroid");
+    filter.reset();
+    for (int i = 0; i < 1000; ++i)
+        if (filter.sample([] { return 0.0f; }) != 0) throw std::runtime_error("SRC reset retains audio");
+    std::cout << "rate=" << rate << " latencySamples=" << filter.latency()
+              << " impulseErrorSamples=" << moment / sum - expected << '\n';
+}
+
 int main()
 {
     try
     {
         for (int rate : {44100, 48000, 96000})
         {
+            checkImpulse(rate);
             const auto reference = VDX7RegressionAccess::sine(rate, 1000);
             const double referenceAmplitude = amplitude(reference, rate, 1000);
             if (referenceAmplitude < 0.5) throw std::runtime_error("invalid synthetic source gain");
-            for (int frequency : {1000, 10000, 20000, 23000})
+            for (int frequency : {1000, 10000, 20000, 22200, 22500, 23000, 24000, 24500})
             {
                 const auto samples = VDX7RegressionAccess::sine(rate, frequency);
                 const double measuredFrequency = frequency > rate / 2.0 ? rate - frequency : frequency;
@@ -73,16 +95,24 @@ int main()
                 std::cout << "rate=" << rate << " inputHz=" << frequency
                           << " measuredHz=" << measuredFrequency
                           << " relativeDb=" << 20 * std::log10(std::max(gain, 1.0e-12))
-                          << (frequency > rate / 2.0 ? " ALIAS" : " passband") << '\n';
+                          << (frequency > rate / 2.0 ? " ALIAS" : frequency <= 20000 ? " passband" : " transition/stopband") << '\n';
                 if (!std::isfinite(gain) || gain > 1.01)
                     throw std::runtime_error("unexpected SRC gain");
+                if (frequency <= 20000 && std::abs(20 * std::log10(gain)) > 0.15)
+                    throw std::runtime_error("SRC passband exceeds 0.15 dB tolerance");
+                if (frequency > rate / 2.0 && gain > std::pow(10.0, -70.0 / 20))
+                    throw std::runtime_error("SRC folded tone exceeds -70 dB limit");
                 if (rate == 96000 && frequency == 10000)
+                {
+                    const auto image = amplitude(samples, rate, 39096) / referenceAmplitude;
+                    if (image > std::pow(10.0, -80.0 / 20))
+                        throw std::runtime_error("SRC image exceeds -80 dB limit");
                     std::cout << "rate=96000 imageHz=39096 relativeDb="
-                              << 20 * std::log10(std::max(amplitude(samples, rate, 39096)
-                                  / referenceAmplitude, 1.0e-12)) << '\n';
+                              << 20 * std::log10(std::max(image, 1.0e-12)) << '\n';
+                }
             }
         }
-        std::cout << "PASS: finite production-SRC baseline; reported alias/image levels are NOT quality acceptance\n";
+        std::cout << "PASS: production SRC finite output, selected passband/alias/image limits, impulse latency and reset\n";
     }
     catch (const std::exception& e) { std::cerr << "FAIL: " << e.what() << '\n'; return 1; }
 }

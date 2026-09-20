@@ -44,8 +44,9 @@ publication remain outside this authorization.
       assignments, MIDI input channel and tuning, preserving state compatibility.
 - [ ] Decide mono/portamento scope from firmware capabilities and host tests.
 - [ ] Measure resampling/aliasing; quality implementation accepted against references.
-  Baseline measured in milestone 3A: linear SRC suppression is insufficient;
-  band-limited replacement and latency/CPU validation are the next quality gate.
+  Milestone 3B adds band-limited SRC, selected spectral limits, exact reported
+  latency and CPU diagnostics (`VALIDATION_1.0_BANDLIMITED_SRC.md`). Physical
+  reference/host listening and latency-compensation acceptance remain open.
 - [ ] Current documentation matches all shipping features and limitations.
 
 ## Agreed GUI direction — 2026-09-20 (not implemented)
