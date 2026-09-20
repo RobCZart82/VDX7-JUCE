@@ -360,8 +360,8 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     algorithm_.onChange = [this] { updateVoiceValueLabels(); };
     addAndMakeVisible(algorithm_);
     algorithmView_.onOperatorSelected = [this](int op) { selectOperator(op); };
-    settings_.setEnabled(false);
-    settings_.setTooltip("The settings page will be connected in the next GUI milestone.");
+    settings_.setTooltip("Global master tuning, stored in the DAW project. MIDI input remains omni.");
+    settings_.onClick = [this] { showSettings(); };
     addChildComponent(performancePanel_);
     editTab_.onClick = [this] { showPerformance(false); };
     performanceTab_.onClick = [this] { showPerformance(true); };
@@ -1388,6 +1388,35 @@ void VDX7AudioProcessorEditor::showUtilityMenu()
             }
             safe->refresh(true);
         });
+}
+
+void VDX7AudioProcessorEditor::showSettings()
+{
+    const int initial = processor_.getMasterTune();
+    auto* dialog = new juce::AlertWindow("SETTINGS",
+        "Master tuning: -256 to +255 firmware units (not cents). 0 = default tuning.\n"
+        "Saved in the DAW project, not voice/bank SysEx.\n"
+        "MIDI input: all channels (OMNI). Channel selection is not yet available.",
+        juce::MessageBoxIconType::NoIcon);
+    dialog->addTextEditor("tuning", juce::String(initial), "Master tuning:");
+    dialog->getTextEditor("tuning")->setInputRestrictions(4, "-0123456789");
+    dialog->addButton("Apply", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    dialog->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+    juce::Component::SafePointer<VDX7AudioProcessorEditor> safe(this);
+    dialog->enterModalState(true, juce::ModalCallbackFunction::create(
+        [safe, dialog, initial](int result)
+        {
+            if (safe == nullptr || result != 1) return;
+            const auto text = dialog->getTextEditorContents("tuning").trim();
+            const auto digits = text.startsWithChar('-') ? text.substring(1) : text;
+            if (digits.isEmpty() || !digits.containsOnly("0123456789")
+                || text.getIntValue() < -256 || text.getIntValue() > 255)
+            { safe->showError("Invalid tuning", "Enter an integer from -256 to 255."); return; }
+            if (safe->processor_.getMasterTune() != initial)
+            { safe->showError("Settings changed", "Tuning changed while this dialog was open. Reopen SETTINGS."); return; }
+            if (!safe->processor_.setMasterTuneFromUi(text.getIntValue()))
+                safe->showError("Tuning unavailable", "Load compatible firmware before applying tuning.");
+        }), true);
 }
 
 void VDX7AudioProcessorEditor::renameVoice()

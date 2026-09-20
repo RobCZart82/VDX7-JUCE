@@ -154,6 +154,13 @@ nélkül. Ez elfogadott tervezési irány, nem már elkészült GUI vagy jogi mi
 
 ## GUI/function integration chapters — approved 2026-09-20
 
+- [x] First SETTINGS slice: master tuning -256..255 using the core's existing
+  firmware RAM tuning API, project recall, bounds and measured pitch regression.
+  SETTINGS opens a functional Apply/Cancel dialog; these are native units, not
+  cents. MIDI input remains OMNI for compatibility. Channel filtering is the
+  next separate slice and must preserve legacy project behavior by default.
+  See `VALIDATION_1.0_MASTER_TUNE.md`; final skin/host acceptance remain open.
+
 The PERFORMANCE concept based on visual concept 3 is the agreed layout direction,
 not a specification of implemented functionality or controller default values.
 Implement real bindings, persistence and round-trip tests alongside each control.

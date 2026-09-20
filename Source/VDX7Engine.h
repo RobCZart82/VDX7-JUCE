@@ -69,6 +69,8 @@ public:
     int getControllerSetting(int controller, int field) const noexcept;
     int getPitchBendSetting(int field) const noexcept;
     int getPlaySetting(int field) const noexcept;
+    int masterTune() const noexcept;
+    bool setMasterTune(int value) noexcept;
     // UI-only: a play-mode change drains a bounded firmware reset and ends notes.
     bool setPlaySetting(int field, int value);
     bool setPitchBendSetting(int field, int value) noexcept;
