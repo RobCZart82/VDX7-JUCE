@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <memory>
 
 VDX7Engine::VDX7Engine()
     : dx7_(toSynth_, toGui_)
@@ -65,6 +66,7 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     if (!factoryVoices_.empty())
         dx7_.loadVoices(factoryVoices_.data(), factoryVoices_.size());
     activeMidiNotes_.fill(false);
+    sustainDown_ = false;
     midiExpression_ = 1.0f;
     currentBank_ = -1;
     currentProgram_ = 0;
@@ -119,6 +121,34 @@ void VDX7Engine::resetAudioState()
     resampleB_ = 0.0f;
     resamplerPrimed_ = false;
     dx7_.midiFilter.reset();
+}
+
+void VDX7Engine::resetMidiLifecycle()
+{
+    if (!loaded_) { resetAudioState(); return; }
+    dx7_.midiSerialRx.flush();
+    dx7_.midiSerialTx.flush();
+    dx7_.haveMsg = false;
+    dx7_.byte1Sent = false;
+    dx7Emu::Message discarded;
+    while (toSynth_->pop(discarded)) {}
+    allNotesOff();
+    toSynth_->porta(false);
+    // Let the unmodified firmware consume releases (up to 128*3 serial bytes)
+    // before resetting the sound generator. This is lifecycle work, NOT audio.
+    std::array<float, 256> scratchLeft {}, scratchRight {};
+    for (int remaining = static_cast<int>(hostSampleRate_ * 0.25); remaining > 0; remaining -= 256)
+        render(scratchLeft.data(), scratchRight.data(), std::min(256, remaining));
+    dx7_.midiSerialRx.flush();
+    dx7_.midiSerialTx.flush();
+    dx7_.haveMsg = false;
+    dx7_.byte1Sent = false;
+    // EGS owns envelopes, phases and analog filter history. Reconstruct it in
+    // its existing storage to stop old tails; firmware/RAM/factory data stay put.
+    std::destroy_at(&dx7_.egs);
+    std::construct_at(&dx7_.egs, dx7_.memory + 0x3000);
+    resetAudioState();
+    selectProgram(currentProgram_);
 }
 
 void VDX7Engine::render(float* left, float* right, int numSamples)
@@ -315,6 +345,7 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
                         selectFactoryBank(data[2] % 8);
                     return;
                 case 64:
+                    sustainDown_ = data[2] >= 64;
                     toSynth_->sustain(data[2] >= 64);
                     return;
                 case 65:
@@ -362,11 +393,12 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
     for (int i = 0; i < size; ++i)
         dx7_.midiSerialRx.write(i == 0 && data[0] < 0xf0
             ? static_cast<uint8_t>((data[0] & 0xf0) | (dx7_.getMidiRxChannel() & 0x0f))
-            : data[i]);
+            : (status == 0xc0 && i == 1 ? static_cast<uint8_t>(currentProgram_) : data[i]));
 }
 
 void VDX7Engine::allNotesOff()
 {
+    sustainDown_ = false;
     if (!loaded_) return;
     toSynth_->analog(dx7Emu::Message::CtrlID::sustain, 0);
     for (int i = 0; i < 128; ++i)
@@ -377,6 +409,12 @@ void VDX7Engine::allNotesOff()
             dx7_.midiSerialRx.write(0);
         }
     activeMidiNotes_.fill(false);
+}
+
+bool VDX7Engine::hasHeldMidiNotes() const noexcept
+{
+    return sustainDown_ || std::any_of(activeMidiNotes_.begin(), activeMidiNotes_.end(),
+                                     [](bool held) { return held; });
 }
 
 bool VDX7Engine::loadSyxBank(const uint8_t* data, std::size_t size)

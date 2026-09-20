@@ -7,6 +7,10 @@ indices compatible with saved projects.
 
 ## Stabilization
 
+- [x] Deferred multi-block MIDI timeline, restart cleanup and consistent program
+  normalization implemented; see `VALIDATION_1.0_MIDI_LIFECYCLE.md` for policy
+  and local tests. Actual host transport acceptance remains open.
+
 - [x] Ordered program/bank/voice/operator edit queue with local save/audio
   regressions; see `VALIDATION_1.0_EDIT_ORDER.md` for scope and overload policy.
 
@@ -27,6 +31,11 @@ indices compatible with saved projects.
   fresh checks; this does not constitute RC or host acceptance.
 
 ## Features and quality
+
+User decision (2026-09-20): milestones through 4 may be developed, with PR/CI
+gates between chapters. Milestone 4 uses firmware-faithful behavior as its base;
+modern extensions require a separate decision. GUI redesign and release
+publication remain outside this authorization.
 
 - [ ] PERFORMANCE/SETTINGS scope implemented and tested: pitch range, controller
       assignments, MIDI input channel and tuning, preserving state compatibility.
