@@ -352,6 +352,7 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     if (cursor < total)
         engine_.render(left + cursor, right + cursor, total - cursor);
     if (!engine_.hasHeldMidiNotes()) deferredMidi_.resetIfEmpty();
+    midiOverloadSnapshot_.store(engine_.midiOverloadCount(), std::memory_order_relaxed);
 
     outputGain_.setTargetValue(
         juce::Decibels::decibelsToGain(masterVolumeParameter_->load()));
@@ -377,6 +378,11 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
         return true;
     }
     engine_.handleMidi(data, size);
+    if (engine_.isMidiRecovering())
+    {
+        clearKeyboardSnapshot();
+        return false;
+    }
     if (size == 3 && data[1] < 128)
     {
         const auto mask = static_cast<uint16_t>(1u << (data[0] & 15));
@@ -512,6 +518,7 @@ void VDX7AudioProcessor::applyPerformanceControls()
 void VDX7AudioProcessor::updateEngineSnapshot() noexcept
 {
     engineLoaded_.store(engine_.isLoaded(), std::memory_order_release);
+    midiOverloadSnapshot_.store(engine_.midiOverloadCount(), std::memory_order_relaxed);
     factoryVoicesAvailable_.store(engine_.hasFactoryVoices(), std::memory_order_release);
     currentBankSnapshot_.store(engine_.currentBank(), std::memory_order_release);
     currentProgramSnapshot_.store(engine_.currentProgram(), std::memory_order_release);
@@ -1327,6 +1334,8 @@ juce::String VDX7AudioProcessor::getStatusText() const
 {
     if (editQueue_.overflowed())
         return "Edit queue full: further edits blocked; save/export accepted edits, then reload the project";
+    if (midiOverloadSnapshot_.load(std::memory_order_relaxed) != 0)
+        return "MIDI overload recovered: events dropped and notes released; reduce MIDI/automation density";
     std::scoped_lock lock(metadataMutex_);
     return statusText_;
 }
