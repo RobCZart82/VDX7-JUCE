@@ -91,6 +91,28 @@ static void checkKeyboard(const juce::File& rom)
     p.processBlock(audio, midi);
 }
 
+static void checkLatencyPublication()
+{
+    VDX7AudioProcessor p(false);
+    struct Listener final : juce::AudioProcessorListener
+    {
+        int calls = 0;
+        void audioProcessorParameterChanged(juce::AudioProcessor*, int, float) override {}
+        void audioProcessorChanged(juce::AudioProcessor* processor, const ChangeDetails& details) override
+        {
+            if (!details.latencyChanged) return;
+            juce::MemoryBlock state;
+            processor->getStateInformation(state); // Must not deadlock on engineMutex_.
+            require(state.getSize() != 0, "reentrant latency state capture");
+            ++calls;
+        }
+    } listener;
+    p.addListener(&listener);
+    for (int rate : {44100, 48000, 96000}) p.prepareToPlay(rate, 64);
+    p.removeListener(&listener);
+    require(listener.calls == 3, "latency change notification at each rate");
+}
+
 // Identical absolute MIDI/automation timeline at every host partition.
 // Timings are diagnostic wall times, NOT a realtime deadline assertion.
 static StressResult run(const juce::File& rom, int rate, int block)
@@ -98,6 +120,8 @@ static StressResult run(const juce::File& rom, int rate, int block)
     VDX7AudioProcessor p(false), independent(false);
     require(p.loadRomFromFile(rom) && independent.loadRomFromFile(rom), "load test ROM");
     p.prepareToPlay(rate, block);
+    require(p.getLatencySamples() == int(std::ceil(128.0 * rate / VDX7Engine::kNativeSampleRate)),
+            "host receives exact SRC latency");
     independent.prepareToPlay(rate, block);
     juce::AudioBuffer<float> audio(2, block), silent(2, block);
     juce::MidiBuffer midi, empty;
@@ -169,6 +193,7 @@ int main(int argc, char** argv)
     {
         const juce::File rom(argv[1]);
         checkKeyboard(rom);
+        checkLatencyPublication();
         for (int rate : {44100, 48000, 96000})
         {
             std::vector<float> reference;

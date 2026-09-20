@@ -108,7 +108,8 @@ void VDX7Engine::boot()
 
 void VDX7Engine::prepare(double hostSampleRate)
 {
-    hostSampleRate_ = hostSampleRate > 1000.0 ? hostSampleRate : 48000.0;
+    hostSampleRate_ = std::isfinite(hostSampleRate) && hostSampleRate > 1000.0 ? hostSampleRate : 48000.0;
+    resampler_.prepare(hostSampleRate_);
     resetAudioState();
 }
 
@@ -116,10 +117,7 @@ void VDX7Engine::resetAudioState()
 {
     nativePos_ = 0;
     nativeCount_ = 0;
-    resamplePhase_ = 0.0;
-    resampleA_ = 0.0f;
-    resampleB_ = 0.0f;
-    resamplerPrimed_ = false;
+    resampler_.reset();
     dx7_.midiFilter.reset();
 }
 
@@ -163,28 +161,12 @@ void VDX7Engine::render(float* left, float* right, int numSamples)
         return;
     }
 
-    if (!resamplerPrimed_)
-    {
-        resampleA_ = nextNativeSample();
-        resampleB_ = nextNativeSample();
-        resamplerPrimed_ = true;
-    }
-
-    const double step = kNativeSampleRate / hostSampleRate_;
-
     for (int i = 0; i < numSamples; ++i)
     {
-        const float out = resampleA_ + (resampleB_ - resampleA_) * static_cast<float>(resamplePhase_);
+        const float out = resampler_.sample([this] { return nextNativeSample(); });
         if (left != nullptr) left[i] = out;
         if (right != nullptr) right[i] = out;
 
-        resamplePhase_ += step;
-        while (resamplePhase_ >= 1.0)
-        {
-            resampleA_ = resampleB_;
-            resampleB_ = nextNativeSample();
-            resamplePhase_ -= 1.0;
-        }
     }
 }
 

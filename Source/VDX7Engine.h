@@ -8,11 +8,12 @@
 
 #include "dx7.h"
 #include "VDX7VoiceData.h"
+#include "VDX7Resampler.h"
 
 class VDX7Engine
 {
 public:
-    static constexpr double kNativeSampleRate = 49096.0;
+    static constexpr double kNativeSampleRate = VDX7Resampler::nativeRate;
     static constexpr std::size_t kFirmwareSize = 16384;
     static constexpr std::size_t kFactoryVoicesSize = 32768;
     static constexpr std::size_t kCombinedRomSize = kFirmwareSize + kFactoryVoicesSize;
@@ -29,6 +30,7 @@ public:
     bool hasFactoryVoices() const noexcept { return factoryVoices_.size() >= kFactoryVoicesSize; }
 
     void prepare(double hostSampleRate);
+    int latencySamples() const noexcept { return resampler_.latency(); }
     void resetAudioState();
     void resetMidiLifecycle(); // Non-RT; host has stopped processBlock.
     void render(float* left, float* right, int numSamples);
@@ -83,10 +85,7 @@ private:
     int nativeCount_ = 0;
 
     double hostSampleRate_ = 48000.0;
-    double resamplePhase_ = 0.0;
-    float resampleA_ = 0.0f;
-    float resampleB_ = 0.0f;
-    bool resamplerPrimed_ = false;
+    VDX7Resampler resampler_;
 
     float volume_ = 1.0f;
     float midiExpression_ = 1.0f;
