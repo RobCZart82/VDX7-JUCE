@@ -569,12 +569,22 @@ int main(int argc, char** argv)
                 juce::ComboBox* algorithmBox = nullptr;
                 juce::TextButton* previous = nullptr;
                 juce::TextButton* next = nullptr;
+                int headerButtons = 0;
+                int headerBottom = -1;
                 for (auto* child : editor->getChildren())
                 {
                     if (auto* box = dynamic_cast<juce::ComboBox*>(child))
                         if (box->getName() == "Algorithm") algorithmBox = box;
                     if (auto* button = dynamic_cast<juce::TextButton*>(child))
                     {
+                        if (bool(button->getProperties().getWithDefault("vdx7WideHeader", false)))
+                        {
+                            ++headerButtons;
+                            if (headerBottom < 0) headerBottom = button->getBottom();
+                            require(headerBottom == button->getBottom(), "header buttons share lower alignment");
+                            require(button->getX() >= 893 * scale,
+                                    "header actions leave branding area clear");
+                        }
                         if (button->getButtonText() == "<") previous = button;
                         if (button->getButtonText() == ">") next = button;
                         if (button->getButtonText() == "UTILITY")
@@ -588,6 +598,7 @@ int main(int argc, char** argv)
                 }
                 require(algorithmBox && algorithmBox->getNumItems() == 32,
                         "numbered 32-algorithm selector");
+                require(headerButtons == 5, "all five header actions remain available");
                 require(previous && next, "LCD navigation buttons present");
                 require(previous->getY() > int(180 * scale) && next->getY() > int(180 * scale),
                         "preset arrows moved out of header into LCD row");

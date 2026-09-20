@@ -123,6 +123,7 @@ juce_generate_juce_header(VDX7)
 # self-contained and does not depend on loose PNG files at runtime.
 file(GLOB_RECURSE VDX7_GUI_ASSETS CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/Resources/GUI/1x/*.png"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Resources/GUI/Vector/*.svg"
 )
 
 juce_add_binary_data(VDX7Assets

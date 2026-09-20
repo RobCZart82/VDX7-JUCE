@@ -181,6 +181,12 @@ These are recorded design requirements, not completed implementation.
 
 ### Header and LCD checklist
 
+Vector header implementation: embedded SVG `VDX7 Mk 1.` with a closer Mk 1.
+suffix, metal gradient and no font/bitmap dependency. Actual logo bottom and
+lower text ink edge align to the visible bottom edge of header buttons. Full
+separator below; OUTPUT top panel moved down 10 units to clear the separator.
+The accepted operator/keyboard layout is unchanged. About integration remains open.
+
 - [x] Narrow the LCD and its black frame horizontally by moving their left edge
   rightward while retaining the current height and right edge. Reserve a clear
   gap between the UTILITY button and the black frame; all three view buttons
