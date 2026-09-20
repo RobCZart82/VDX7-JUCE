@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "VDX7AboutPanel.h"
 #include "VDX7MechanicalDrawing.h"
 #include <iostream>
 #include <cmath>
@@ -100,20 +101,34 @@ static void checkUserLibrary(const juce::File& romFile, const juce::File& imageF
                 if (button->getButtonText() == "ABOUT") about = button;
         require(about != nullptr, "ABOUT button exists");
         about->onClick();
-        auto* credits = dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());
+        auto* credits = dynamic_cast<juce::DialogWindow*>(juce::Component::getCurrentlyModalComponent());
         require(credits != nullptr, "ABOUT opens");
-        bool foundLogo = false;
-        for (auto* child : credits->getChildren())
-            if (auto* logo = dynamic_cast<juce::ImageComponent*>(child))
-                foundLogo |= logo->getName() == "GYR logo" && logo->getImage().isValid();
-        require(foundLogo, "ABOUT embeds valid GYR logo");
+        auto* panel = dynamic_cast<VDX7AboutPanel*>(credits->getContentComponent());
+        require(panel && panel->hasVectorLogos(), "ABOUT embeds both vector logos");
+        juce::TextButton* closeAbout = nullptr;
+        bool sourceLink = false;
+        for (auto* child : panel->getChildren())
+        {
+            require(panel->getLocalBounds().contains(child->getBounds()), "ABOUT content bounds");
+            if (auto* link = dynamic_cast<juce::HyperlinkButton*>(child))
+                sourceLink = link->getURL().toString(false) == "https://github.com/RobCZart82/VDX7-JUCE";
+            if (auto* button = dynamic_cast<juce::TextButton*>(child)) closeAbout = button;
+        }
+        require(sourceLink && closeAbout, "ABOUT source link and close action present");
         if (imageFolder != juce::File())
         {
             juce::FileOutputStream stream(imageFolder.getChildFile("VDX7-about.png"));
             require(stream.openedOk() && juce::PNGImageFormat().writeImageToStream(
                 credits->createComponentSnapshot(credits->getLocalBounds()), stream), "about screenshot");
+            juce::FileOutputStream retina(imageFolder.getChildFile("VDX7-about-2x.png"));
+            require(retina.openedOk() && juce::PNGImageFormat().writeImageToStream(
+                panel->createComponentSnapshot(panel->getLocalBounds(), true, 2.0f), retina),
+                "ABOUT double-resolution vector render");
         }
-        credits->exitModalState(0);
+        editor.reset(); // About owns its assets/LAF and must not depend on the editor.
+        require(panel->hasVectorLogos(), "ABOUT survives editor destruction");
+        closeAbout->onClick();
+        require(!credits->isCurrentlyModal(), "ABOUT OK closes modal state");
     }
     require(p.captureUserPatch(captured, error), "capture queued voice");
     const auto before = ram(save(p));
