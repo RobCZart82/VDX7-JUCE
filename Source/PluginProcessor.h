@@ -64,6 +64,9 @@ public:
     bool hasCopiedOperator() const noexcept { return hasOperatorClipboard_.load(); }
     bool hasUnexportedEdits() const noexcept;
     bool isCurrentVoiceModified() const noexcept;
+    // Message-thread controls, saved in existing RAM state; not host automation.
+    std::array<int, 16> getControllerSettings() const;
+    bool setControllerSettingFromUi(int controller, int field, int value);
 
     bool isRomLoaded() const;
     bool hasFactoryVoices() const;

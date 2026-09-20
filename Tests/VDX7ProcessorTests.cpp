@@ -38,6 +38,144 @@ static juce::MemoryBlock ram(const juce::MemoryBlock& state)
     return result;
 }
 
+static void checkControllers(const juce::File& romFile)
+{
+    VDX7AudioProcessor p(false);
+    require(!p.setControllerSettingFromUi(0, 0, 50), "controller edit needs ROM");
+    require(p.loadRomFromFile(romFile), "controller test ROM");
+    const auto initial = ram(save(p));
+    constexpr int offsets[] { 0, 2, 4, 6 };
+    for (int c = 0; c < 4; ++c)
+    {
+        for (int v : { 0, 99, 37 + c })
+            require(p.setControllerSettingFromUi(c, 0, v), "valid controller range");
+        for (int mask = 0; mask < 8; ++mask)
+        {
+            for (int f = 1; f <= 3; ++f)
+                require(p.setControllerSettingFromUi(c, f, (mask >> (f - 1)) & 1), "assignment edit");
+            auto data = ram(save(p));
+            const auto* bytes = static_cast<const uint8_t*>(data.getData());
+            require((bytes[0x132e + offsets[c]] & 7) == mask, "exact firmware assignment bits");
+            require(bytes[0x1336 + offsets[c]] == 37 + c, "exact firmware range location");
+        }
+    }
+    const auto settings = p.getControllerSettings();
+    const auto state = save(p);
+    const auto changed = ram(state);
+    for (size_t i = 0; i < changed.getSize(); ++i)
+    {
+        bool controllerByte = false;
+        for (int offset : offsets)
+            controllerByte |= i == size_t(0x132e + offset) || i == size_t(0x1336 + offset);
+        if (!controllerByte)
+            require(static_cast<const uint8_t*>(initial.getData())[i]
+                        == static_cast<const uint8_t*>(changed.getData())[i], "controller edit isolates RAM fields");
+    }
+    require(!p.hasUnexportedEdits(), "global controls do not dirty voice bank");
+    require(!p.setControllerSettingFromUi(-1, 0, 0)
+            && !p.setControllerSettingFromUi(4, 0, 0)
+            && !p.setControllerSettingFromUi(0, 4, 0)
+            && !p.setControllerSettingFromUi(0, -1, 0)
+            && !p.setControllerSettingFromUi(0, 0, 100)
+            && !p.setControllerSettingFromUi(0, 0, -1)
+            && !p.setControllerSettingFromUi(0, 1, 2), "invalid settings rejected");
+    require(ram(save(p)) == changed, "invalid edits preserve RAM");
+    p.prepareToPlay(48000, 256);
+    juce::AudioBuffer<float> audio(2, 256);
+    juce::MidiBuffer midi;
+    for (int block = 0; block < 30; ++block) p.processBlock(audio, midi);
+    require(p.getControllerSettings() == settings, "firmware retains settings while running");
+    p.selectFactoryBank(1);
+    save(p);
+    require(p.getControllerSettings() == settings, "factory selection preserves globals");
+    juce::TemporaryFile exported;
+    juce::String error;
+    require(p.exportSyx(exported.getFile(), true, error), "controller test bank export");
+    p.setControllerSettingFromUi(0, 0, 12);
+    require(p.loadSyxFromFile(exported.getFile(), &error), "controller test bank import");
+    require(p.getControllerSettings()[0] == 12, "bank SysEx does not restore performance globals");
+
+    // Existing full-RAM project format carries settings, including missing-ROM resaves.
+    auto xml = juce::AudioProcessor::getXmlFromBinary(state.getData(), int(state.getSize()));
+    auto missingState = juce::ValueTree::fromXml(*xml);
+    missingState.setProperty("romPath", "", nullptr);
+    juce::MemoryBlock missingData;
+    juce::AudioProcessor::copyXmlToBinary(*missingState.createXml(), missingData);
+    VDX7AudioProcessor missing(false);
+    missing.setStateInformation(missingData.getData(), int(missingData.getSize()));
+    require(!missing.isRomLoaded(), "deliberate missing ROM");
+    require(!missing.setControllerSettingFromUi(0, 0, 1), "missing ROM preserves pending globals");
+    const auto resaved = save(missing);
+    VDX7AudioProcessor restored(false);
+    restored.setStateInformation(resaved.getData(), int(resaved.getSize()));
+    require(restored.loadRomFromFile(romFile), "restore global controller RAM");
+    require(restored.getControllerSettings() == settings, "missing-ROM round trip restores controllers");
+    require(p.getControllerSettings()[0] == 12, "instances have independent controllers");
+
+    // Each MIDI controller must actually reach firmware modulation, not just change UI/RAM.
+    bool allControllersAudible = true;
+    for (int c = 0; c < 4; ++c)
+    for (int assignment = 1; assignment <= 3; ++assignment)
+    {
+        std::array<std::vector<float>, 2> renders;
+        for (int enabled = 0; enabled <= 1; ++enabled)
+        {
+            VDX7AudioProcessor synth(false);
+            require(synth.loadRomFromFile(romFile), "controller audio ROM");
+            synth.prepareToPlay(48000, 256);
+            for (int source = 0; source < 4; ++source)
+                for (int f = 1; f <= 3; ++f) synth.setControllerSettingFromUi(source, f, 0);
+            for (int f = 1; f <= 3; ++f) synth.setControllerSettingFromUi(c, f, f == assignment ? 1 : 0);
+            synth.setControllerSettingFromUi(c, 0, 0);
+            set(synth, VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::pitchModSensitivity), 7);
+            set(synth, VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::lfoSpeed), 50);
+            for (int op = 0; op < 6; ++op)
+                set(synth, VDX7ParameterIDs::operatorParameter(op,
+                    VDX7VoiceData::Parameter::amplitudeModSensitivity), 3);
+            const int input = assignment == 3 ? 64 : 127;
+            for (int block = 0; block < 100; ++block)
+            {
+                // Change range after controller input and note-on. No fresh input
+                // arrives after block 4: cached firmware modulation must refresh.
+                if (block == 40)
+                {
+                    synth.setControllerSettingFromUi(c, 0, enabled ? 99 : 0);
+                    // Equal refresh handshakes in both renders: differences must
+                    // come from modulation, not from different CPU event schedules.
+                    synth.setControllerSettingFromUi(c, assignment, 0);
+                    synth.setControllerSettingFromUi(c, assignment, 1);
+                }
+                if (block == 4)
+                {
+                    midi.addEvent(juce::MidiMessage::noteOn(1, 60, uint8_t(100)), 0);
+                    constexpr int cc[] { 1, 4, 2 };
+                    midi.addEvent(c == 3 ? juce::MidiMessage::channelPressureChange(1, input)
+                        : juce::MidiMessage::controllerEvent(1, cc[c], input), 0);
+                }
+                synth.processBlock(audio, midi);
+                renders[enabled].insert(renders[enabled].end(), audio.getReadPointer(0),
+                                        audio.getReadPointer(0) + audio.getNumSamples());
+            }
+            const auto runtime = ram(save(synth));
+            require(static_cast<const uint8_t*>(runtime.getData())[0x1337 + 2 * c] == input * 2,
+                    "settings refresh preserves raw controller input");
+            const auto scaled = static_cast<const uint8_t*>(runtime.getData())[0x132f + 2 * c];
+            require(enabled ? scaled > 0 : scaled == 0, "held controller recalculates scaled firmware input");
+        }
+        double difference = 0;
+        for (size_t i = 0; i < renders[0].size(); ++i)
+        {
+            require(std::isfinite(renders[0][i]) && std::isfinite(renders[1][i]), "finite controller audio");
+            const double delta = renders[0][i] - renders[1][i];
+            difference += delta * delta;
+        }
+        std::cout << "Controller " << c << " assignment " << assignment
+                  << " audio difference: " << difference << '\n';
+        allControllersAudible &= difference > 0.00001;
+    }
+    require(allControllersAudible, "controller range changes rendered firmware audio");
+}
+
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -81,6 +219,7 @@ int main(int argc, char** argv)
         }
 
         original.prepareToPlay(48000, 256);
+        checkControllers(juce::File(original.getRomPath()));
         // Check patch/host coherence without creating an editor.
         original.selectProgramFromUi(3);
         auto state = save(original);
@@ -312,6 +451,70 @@ int main(int argc, char** argv)
                         "dropdown commits to firmware voice RAM");
                 }
                 set(restored,algoID,4);
+                juce::TextButton* performanceTab = nullptr;
+                juce::TextButton* editTab = nullptr;
+                VDX7PerformancePanel* performance = nullptr;
+                for (auto* child : editor->getChildren())
+                {
+                    if (auto* panel = dynamic_cast<VDX7PerformancePanel*>(child)) performance = panel;
+                    if (auto* button = dynamic_cast<juce::TextButton*>(child))
+                    {
+                        if (button->getButtonText() == "PERFORMANCE") performanceTab = button;
+                        if (button->getButtonText() == "EDIT") editTab = button;
+                    }
+                }
+                require(performanceTab && editTab && performance, "performance view exists");
+                require(!performance->isVisible(), "editor starts in edit view");
+                performanceTab->onClick();
+                require(performance->isVisible() && !modeSwitch->isVisible(), "performance replaces operator controls");
+                require(previous->isVisible() && next->isVisible() && algorithmBox->isVisible(),
+                        "performance keeps LCD navigation and algorithm");
+                int ranges = 0, assignments = 0;
+                const auto voiceBeforePerformance = ram(save(restored));
+                for (auto* child : performance->getChildren())
+                {
+                    require(performance->getLocalBounds().contains(child->getBounds())
+                            && !child->getBounds().isEmpty(), "performance control bounds");
+                    if (auto* slider = dynamic_cast<juce::Slider*>(child))
+                    {
+                        slider->setValue(25 + ranges, juce::sendNotificationSync);
+                        require(restored.getControllerSettings()[ranges * 4] == 25 + ranges,
+                                "performance range knob writes firmware setting");
+                        ++ranges;
+                    }
+                    if (auto* button = dynamic_cast<juce::ToggleButton*>(child))
+                    {
+                        const int c = assignments / 3, f = assignments % 3 + 1;
+                        for (bool enabled : { false, true })
+                        {
+                            button->setToggleState(enabled, juce::dontSendNotification);
+                            button->onClick();
+                            require(restored.getControllerSettings()[c * 4 + f] == int(enabled),
+                                    "performance assignment writes firmware setting");
+                        }
+                        ++assignments;
+                    }
+                }
+                require(ranges == 4 && assignments == 12, "complete four-controller matrix");
+                const auto afterPerformance = ram(save(restored));
+                require(std::memcmp(voiceBeforePerformance.getData(), afterPerformance.getData(), 4096) == 0,
+                        "performance UI preserves voice bank");
+                restored.setControllerSettingFromUi(0, 0, 61);
+                performance->refresh();
+                for (auto* child : performance->getChildren())
+                    if (auto* slider = dynamic_cast<juce::Slider*>(child))
+                        if (slider->getName() == "Controller 0 range")
+                            require(slider->getValue() == 61, "performance refresh reads firmware state");
+                if (argc > 1)
+                {
+                    const auto path = juce::File(argv[1]).getChildFile("VDX7-performance-" + juce::String(width) + ".png");
+                    auto stream = path.createOutputStream();
+                    require(stream && stream->setPosition(0) && stream->truncate().wasOk(), "performance snapshot file");
+                    require(juce::PNGImageFormat().writeImageToStream(
+                        editor->createComponentSnapshot(editor->getLocalBounds()), *stream), "performance render");
+                }
+                editTab->onClick();
+                require(!performance->isVisible() && modeSwitch->isVisible(), "return to edit view");
                 for (auto* child : editor->getChildren())
                     if (child->isVisible())
                         require(!child->getBounds().isEmpty()
