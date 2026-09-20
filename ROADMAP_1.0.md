@@ -87,6 +87,11 @@ fresh PR checks and user merge before the next chapter.
 
 ## Agreed GUI direction — 2026-09-20 (not implemented)
 
+First implementation pass: warm enclosure/panels, yellow-green LCD, matte knobs,
+restrained active buttons, ON/OFF performance switches, GYR mark in ABOUT and
+green/yellow/red meters. See `VALIDATION_1.0_WARM_GUI.md`. Remaining checklist
+items below still require final visual and host acceptance; this is not a final skin.
+
 The three GUI visual concepts remain layout references, not a finished skin.
 The approved hardware-inspired material/colour direction is specified below.
 The following functional/layout requirements were explicitly agreed with the

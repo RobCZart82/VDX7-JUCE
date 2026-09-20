@@ -16,10 +16,10 @@ constexpr int kCpuTextRefreshFrames = 15;
 
 void drawEnvelopeGrid(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
-    g.setColour(juce::Colour(0xff031b20));
+    g.setColour(juce::Colour(0xff242823));
     g.fillRoundedRectangle(bounds, 3.0f);
     const auto grid = bounds.reduced(1.0f);
-    g.setColour(juce::Colour(0xff0b3740));
+    g.setColour(juce::Colour(0xff40483a));
     for (int i = 1; i < 10; ++i)
     {
         const float x = grid.getX() + grid.getWidth() * i / 10.0f;
@@ -152,7 +152,7 @@ VDX7Keyboard::VDX7Keyboard(juce::MidiKeyboardState& state)
     setWantsKeyboardFocus(false);
     setColour(mouseOverKeyOverlayColourId, juce::Colour(0x2400e7e7));
     setColour(keyDownOverlayColourId, juce::Colours::transparentBlack);
-    setColour(whiteNoteColourId, juce::Colour(0xff071014));
+    setColour(whiteNoteColourId, juce::Colour(0xff24221f));
     setBlackNoteLengthProportion(84.0f / 132.0f);
     setBlackNoteWidthProportion(24.0f / 36.0f);
 }
@@ -238,7 +238,8 @@ void VDX7LevelMeter::paint(juce::Graphics& g)
 {
     constexpr int segmentCount = 12;
     const auto bounds = getLocalBounds().toFloat();
-    g.drawImage(rail_, bounds);
+    g.setColour(juce::Colour(0xff151612));
+    g.fillRoundedRectangle(bounds, 3.0f);
 
     const float db = juce::Decibels::gainToDecibels(level_, -60.0f);
     const int litSegments = juce::jlimit(0, segmentCount,
@@ -253,10 +254,11 @@ void VDX7LevelMeter::paint(juce::Graphics& g)
         const auto ledBounds = juce::Rectangle<float>(ledWidth, ledHeight)
                                    .withCentre({ bounds.getCentreX(), y + ledHeight * 0.5f });
 
-        const juce::Image* image = &ledOff_;
-        if (segment < litSegments)
-            image = segment >= 10 ? &ledRed_ : (segment >= 8 ? &ledYellow_ : &ledGreen_);
-        g.drawImage(*image, ledBounds);
+        auto colour = segment >= 10 ? juce::Colour(0xffed5b48)
+            : (segment >= 8 ? juce::Colour(0xffead55b) : juce::Colour(0xff64d653));
+        if (segment >= litSegments) colour = colour.withMultipliedBrightness(0.15f);
+        g.setColour(colour);
+        g.fillRoundedRectangle(ledBounds, 1.0f);
     }
 }
 
@@ -283,13 +285,13 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
 
     configureLabel(mkLabel_, 37.0f, juce::Justification::centredLeft);
     configureLabel(hardwareLabel_, 16.0f, juce::Justification::centredLeft);
-    configureLabel(firmwareLabel_, 13.0f, juce::Justification::centredLeft, juce::Colour(0xff91a5ac));
-    configureLabel(status_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xff91a5ac));
-    configureLabel(patch_, 29.0f, juce::Justification::centredLeft, juce::Colour(0xff06352e));
-    configureLabel(bankCaption_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xff06352e));
-    configureLabel(programCaption_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xff06352e));
+    configureLabel(firmwareLabel_, 13.0f, juce::Justification::centredLeft, juce::Colour(0xffbdb8ac));
+    configureLabel(status_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xffbdb8ac));
+    configureLabel(patch_, 29.0f, juce::Justification::centredLeft, juce::Colour(0xff273019));
+    configureLabel(bankCaption_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xff273019));
+    configureLabel(programCaption_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xff273019));
     configureLabel(masterCaption_, 14.0f, juce::Justification::centred);
-    configureLabel(masterValue_, 17.0f, juce::Justification::centred, juce::Colour(0xff00e7e7));
+    configureLabel(masterValue_, 17.0f, juce::Justification::centred, juce::Colour(0xff68c7bb));
     configureLabel(pitchCaption_, 14.0f, juce::Justification::centred);
     configureLabel(modCaption_, 14.0f, juce::Justification::centred);
     configureLabel(outputCaption_, 19.0f, juce::Justification::centred);
@@ -297,16 +299,16 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     configureLabel(rightCaption_, 12.0f, juce::Justification::centred);
     configureLabel(operatorTitle_, 20.0f, juce::Justification::centredLeft);
     configureLabel(frequencyValue_, 14.0f, juce::Justification::centredRight,
-                   juce::Colour(0xff00e7e7));
+                   juce::Colour(0xff68c7bb));
     configureLabel(envelopeTitle_, 13.0f, juce::Justification::centredLeft,
-                   juce::Colour(0xff91a5ac));
+                   juce::Colour(0xffbdb8ac));
     configureLabel(pitchEnvelopeTitle_, 12.0f, juce::Justification::centredLeft,
-                   juce::Colour(0xff91a5ac));
+                   juce::Colour(0xffbdb8ac));
     configureLabel(voiceLfoTitle_, 12.0f, juce::Justification::centredLeft,
-                   juce::Colour(0xff91a5ac));
+                   juce::Colour(0xffbdb8ac));
     configureLabel(footerLeft_, 15.0f, juce::Justification::centredLeft);
-    configureLabel(footerCentre_, 15.0f, juce::Justification::centred, juce::Colour(0xff62767d));
-    configureLabel(footerRight_, 12.0f, juce::Justification::centredRight, juce::Colour(0xff91a5ac));
+    configureLabel(footerCentre_, 15.0f, juce::Justification::centred, juce::Colour(0xffb0aa9d));
+    configureLabel(footerRight_, 12.0f, juce::Justification::centredRight, juce::Colour(0xffbdb8ac));
 
     mkLabel_.setText("Mk I.", juce::dontSendNotification);
     hardwareLabel_.setText("HARDWARE EMULATION", juce::dontSendNotification);
@@ -402,14 +404,14 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     {
         configureOperatorSlider(operatorKnobs_[i], false);
         configureLabel(operatorKnobCaptions_[i], 11.0f, juce::Justification::centred,
-                       juce::Colour(0xff91a5ac));
+                       juce::Colour(0xffbdb8ac));
         configureLabel(operatorKnobValues_[i], 12.0f, juce::Justification::centred,
-                       juce::Colour(0xff00e7e7));
+                       juce::Colour(0xff68c7bb));
         operatorKnobCaptions_[i].setText(kKnobCaptions[i], juce::dontSendNotification);
         operatorKnobValues_[i].setColour(juce::Label::backgroundColourId,
-                                         juce::Colour(0xff071014));
+                                         juce::Colour(0xff24221f));
         operatorKnobValues_[i].setColour(juce::Label::outlineColourId,
-                                         juce::Colour(0xff24444b));
+                                         juce::Colour(0xff575248));
         operatorKnobs_[i].onValueChange = [this] { updateOperatorValueLabels(); };
         addAndMakeVisible(operatorKnobs_[i]);
         addAndMakeVisible(operatorKnobCaptions_[i]);
@@ -420,14 +422,14 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     {
         configureOperatorSlider(envelopeFaders_[i], true);
         configureLabel(envelopeCaptions_[i], 11.0f, juce::Justification::centred,
-                       juce::Colour(0xff91a5ac));
+                       juce::Colour(0xffbdb8ac));
         configureLabel(envelopeValues_[i], 11.0f, juce::Justification::centred,
-                       juce::Colour(0xff00e7e7));
+                       juce::Colour(0xff68c7bb));
         envelopeCaptions_[i].setText(kEnvelopeCaptions[i], juce::dontSendNotification);
         envelopeValues_[i].setColour(juce::Label::backgroundColourId,
-                                     juce::Colour(0xff071014));
+                                     juce::Colour(0xff24221f));
         envelopeValues_[i].setColour(juce::Label::outlineColourId,
-                                     juce::Colour(0xff24444b));
+                                     juce::Colour(0xff575248));
         envelopeFaders_[i].onValueChange = [this]
         {
             updateOperatorValueLabels();
@@ -448,14 +450,14 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
             operatorScaleKnobs_[i].getProperties().set("vdx7ModeSwitch", true);
         }
         configureLabel(operatorScaleCaptions_[i], 9.0f, juce::Justification::centred,
-                       juce::Colour(0xff91a5ac));
+                       juce::Colour(0xffbdb8ac));
         configureLabel(operatorScaleValues_[i], 10.0f, juce::Justification::centred,
-                       juce::Colour(0xff00e7e7));
+                       juce::Colour(0xff68c7bb));
         operatorScaleCaptions_[i].setText(kScaleCaptions[i], juce::dontSendNotification);
         operatorScaleValues_[i].setColour(juce::Label::backgroundColourId,
-                                          juce::Colour(0xff071014));
+                                          juce::Colour(0xff24221f));
         operatorScaleValues_[i].setColour(juce::Label::outlineColourId,
-                                          juce::Colour(0xff24444b));
+                                          juce::Colour(0xff575248));
         operatorScaleKnobs_[i].onValueChange = [this] { updateOperatorValueLabels(); };
         addAndMakeVisible(operatorScaleKnobs_[i]);
         addAndMakeVisible(operatorScaleCaptions_[i]);
@@ -464,21 +466,21 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     operatorScaleValues_[0].setVisible(false);
     frequencyValue_.setJustificationType(juce::Justification::centred);
     frequencyValue_.setBorderSize(juce::BorderSize<int>(0));
-    frequencyValue_.setColour(juce::Label::backgroundColourId, juce::Colour(0xff071014));
-    frequencyValue_.setColour(juce::Label::outlineColourId, juce::Colour(0xff24444b));
+    frequencyValue_.setColour(juce::Label::backgroundColourId, juce::Colour(0xff24221f));
+    frequencyValue_.setColour(juce::Label::outlineColourId, juce::Colour(0xff575248));
 
     for (std::size_t i = 0; i < pitchEnvelopeFaders_.size(); ++i)
     {
         configureOperatorSlider(pitchEnvelopeFaders_[i], true);
         configureLabel(pitchEnvelopeCaptions_[i], 9.0f, juce::Justification::centred,
-                       juce::Colour(0xff91a5ac));
+                       juce::Colour(0xffbdb8ac));
         configureLabel(pitchEnvelopeValues_[i], 9.0f, juce::Justification::centred,
-                       juce::Colour(0xff00e7e7));
+                       juce::Colour(0xff68c7bb));
         pitchEnvelopeCaptions_[i].setText(kEnvelopeCaptions[i], juce::dontSendNotification);
         pitchEnvelopeValues_[i].setColour(juce::Label::backgroundColourId,
-                                          juce::Colour(0xff071014));
+                                          juce::Colour(0xff24221f));
         pitchEnvelopeValues_[i].setColour(juce::Label::outlineColourId,
-                                          juce::Colour(0xff24444b));
+                                          juce::Colour(0xff575248));
         pitchEnvelopeFaders_[i].onValueChange = [this]
         {
             updateVoiceValueLabels();
@@ -499,15 +501,15 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
             voiceKnobs_[i].getProperties().set("vdx7SyncSwitch", true);
         }
         configureLabel(voiceKnobCaptions_[i], 8.5f, juce::Justification::centred,
-                       juce::Colour(0xff91a5ac));
+                       juce::Colour(0xffbdb8ac));
         configureLabel(voiceKnobValues_[i], 9.0f, juce::Justification::centred,
-                       juce::Colour(0xff00e7e7));
+                       juce::Colour(0xff68c7bb));
         voiceKnobCaptions_[i].setText(kVoiceKnobCaptions[i], juce::dontSendNotification);
         voiceKnobCaptions_[i].setBorderSize(juce::BorderSize<int>(0));
         voiceKnobValues_[i].setColour(juce::Label::backgroundColourId,
-                                      juce::Colour(0xff071014));
+                                      juce::Colour(0xff24221f));
         voiceKnobValues_[i].setColour(juce::Label::outlineColourId,
-                                      juce::Colour(0xff24444b));
+                                      juce::Colour(0xff575248));
         voiceKnobs_[i].onValueChange = [this] { updateVoiceValueLabels(); };
         addAndMakeVisible(voiceKnobs_[i]);
         addAndMakeVisible(voiceKnobCaptions_[i]);
@@ -548,15 +550,22 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     next_.setTooltip("Next program in the current bank (wraps 01-32)");
     about_.onClick = [this]
     {
-        juce::AlertWindow::showMessageBoxAsync(
-            juce::MessageBoxIconType::InfoIcon,
-            "About VDX7 Mk I",
+        auto* dialog = new juce::AlertWindow("About VDX7 Mk I",
             "VDX7 Mk I v" VDX7_DISPLAY_VERSION "\nFull-range firmware MIDI input\n\n"
             "VDX7-JUCE: GNU AGPLv3, without warranty.\n"
             "DX7 core: chiaccona / Retromulator, GPLv3-or-later.\n"
             "JUCE: AGPLv3. Source and license notices:\n"
             "https://github.com/RobCZart82/VDX7-JUCE\n\n"
-            "No Yamaha logo or firmware is included. A user-supplied compatible ROM is required.");
+            "No Yamaha logo or firmware is included. A user-supplied compatible ROM is required.",
+            juce::MessageBoxIconType::NoIcon);
+        auto logo = std::make_shared<juce::ImageComponent>();
+        logo->setName("GYR logo");
+        logo->setImage(loadImage(VDX7Assets::gyrlogo_png, VDX7Assets::gyrlogo_pngSize));
+        logo->setSize(330, 140);
+        dialog->setColour(juce::AlertWindow::backgroundColourId, juce::Colour(0xff302d29));
+        dialog->addCustomComponent(logo.get());
+        dialog->addButton("Close", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+        dialog->enterModalState(true, juce::ModalCallbackFunction::create([logo](int) {}), true);
     };
 
     bankCaption_.setText("Bank:", juce::dontSendNotification);
@@ -565,9 +574,9 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     {
         box->getProperties().set("vdx7LcdCombo", true);
         box->setColour(juce::ComboBox::backgroundColourId, juce::Colours::transparentBlack);
-        box->setColour(juce::ComboBox::textColourId, juce::Colour(0xff06352e));
-        box->setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff06352e));
-        box->setColour(juce::ComboBox::arrowColourId, juce::Colour(0xff06352e));
+        box->setColour(juce::ComboBox::textColourId, juce::Colour(0xff273019));
+        box->setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff273019));
+        box->setColour(juce::ComboBox::arrowColourId, juce::Colour(0xff273019));
     }
     bank_.onChange = [this]
     {
@@ -830,7 +839,7 @@ void VDX7AudioProcessorEditor::drawOperatorEnvelope(juce::Graphics& g)
         dashedReleaseMarker, releaseMarker, dashLengths, 2);
     g.fillPath(dashedReleaseMarker);
 
-    g.setColour(juce::Colour(0xff00e7e7));
+    g.setColour(juce::Colour(0xff68c7bb));
     g.strokePath(envelope, juce::PathStrokeType(2.0f * scaleY,
                                                 juce::PathStrokeType::curved,
                                                 juce::PathStrokeType::rounded));
@@ -889,7 +898,7 @@ void VDX7AudioProcessorEditor::drawPitchEnvelope(juce::Graphics& g)
 
     g.setColour(juce::Colour(0x6614b7bd));
     g.drawHorizontalLine(juce::roundToInt(levelY(50.0f)), inner.getX(), inner.getRight());
-    g.setColour(juce::Colour(0xff00e7e7));
+    g.setColour(juce::Colour(0xff68c7bb));
     g.strokePath(envelope, juce::PathStrokeType(1.8f * scaleY,
                                                 juce::PathStrokeType::curved,
                                                 juce::PathStrokeType::rounded));
@@ -951,25 +960,22 @@ juce::Rectangle<int> VDX7AudioProcessorEditor::referenceRect(float x, float y,
 void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
 {
     const float scaleY = static_cast<float>(getHeight()) / kReferenceHeight;
-    g.fillAll(juce::Colour(0xff05090b));
+    g.fillAll(juce::Colour(0xff211f1c));
 
-    // The source chassis PNG deliberately contains 50 transparent pixels above
-    // its top edge. Compress only that upper chrome into a smaller 18 px inset,
-    // then keep the complete GUI area below y=135 pixel-aligned with the concept.
-    // This lifts the frame without moving any controls, panels or the footer.
-    const auto upperChassis = referenceRect(0, 18, 1440, 117).toFloat();
-    g.drawImage(chassis_, upperChassis.getX(), upperChassis.getY(),
-                upperChassis.getWidth(), upperChassis.getHeight(),
-                0, 50, 1440, 85);
-    // Extend background chrome only: controls retain their reference coordinates.
-    const auto lowerChassis = referenceRect(0, 135, 1440, 975).toFloat();
-    g.drawImage(chassis_, lowerChassis.getX(), lowerChassis.getY(),
-                lowerChassis.getWidth(), lowerChassis.getHeight(),
-                0, 135, 1440, 945);
+    const auto enclosure = getLocalBounds().toFloat().reduced(9.0f * scaleY);
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff474139), 0, 0,
+        juce::Colour(0xff292622), 0, float(getHeight()), false));
+    g.fillRoundedRectangle(enclosure, 7.0f * scaleY);
+    g.setColour(juce::Colour(0xff71685b));
+    g.drawRoundedRectangle(enclosure, 7.0f * scaleY, scaleY);
 
     const auto drawPanel = [this, &g](float x, float y, float width, float height)
     {
-        g.drawImage(panel_, referenceRect(x, y, width, height).toFloat());
+        const auto panel = referenceRect(x, y, width, height).toFloat();
+        g.setColour(juce::Colour(0xff292723));
+        g.fillRoundedRectangle(panel, 5.0f);
+        g.setColour(juce::Colour(0xff504b42));
+        g.drawRoundedRectangle(panel, 5.0f, 1.0f);
     };
 
     drawPanel(34, 135, 920, 190);
@@ -979,21 +985,29 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     drawPanel(34, 526, 1372, 270);
     drawPanel(34, 798, 1372, 180);
 
-    g.drawImage(wordmark_, referenceRect(44, 58, 300, 72).toFloat());
-    g.drawImage(lcdFrame_, referenceRect(392, 150, 543, 166).toFloat());
+    // Original typographic identity, not the hardware's striped product logo.
+    g.setColour(juce::Colour(0xffeee9dc));
+    g.setFont(juce::Font(juce::FontOptions(66.0f * scaleY, juce::Font::bold)));
+    g.drawText("VDX7", referenceRect(44, 58, 300, 72), juce::Justification::centredLeft);
+    g.setColour(juce::Colour(0xff141510));
+    g.fillRoundedRectangle(referenceRect(382, 180, 555, 112).toFloat(), 5.0f);
+    const auto lcd = referenceRect(392, 190, 535, 86).toFloat();
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xffc9d68e), lcd.getX(), lcd.getY(),
+        juce::Colour(0xffa5b76e), lcd.getX(), lcd.getBottom(), false));
+    g.fillRoundedRectangle(lcd, 3.0f);
     const auto footerBounds = referenceRect(18, 990, 1404, 44).toFloat();
-    juce::ColourGradient footerGradient(juce::Colour(0xff071014), footerBounds.getX(),
-                                        footerBounds.getCentreY(), juce::Colour(0xff071014),
+    juce::ColourGradient footerGradient(juce::Colour(0xff24221f), footerBounds.getX(),
+                                        footerBounds.getCentreY(), juce::Colour(0xff24221f),
                                         footerBounds.getRight(), footerBounds.getCentreY(), false);
-    footerGradient.addColour(0.5, juce::Colour(0xff0b181b));
+    footerGradient.addColour(0.5, juce::Colour(0xff302d29));
     g.setGradientFill(footerGradient);
     g.fillRoundedRectangle(footerBounds, 3.0f * scaleY);
-    g.setColour(juce::Colour(0xff25454c));
+    g.setColour(juce::Colour(0xff575248));
     g.fillRect(footerBounds.withHeight(juce::jmax(1.0f, scaleY)));
     g.drawImage(valueField_, referenceRect(1255, 467, 96, 32).toFloat());
 
     g.setFont(juce::Font(juce::FontOptions(20.0f * scaleY)));
-    g.setColour(juce::Colour(0xffe6eef0));
+    g.setColour(juce::Colour(0xffeee9dc));
     g.drawText("VOICE", referenceRect(52, 145, 250, 30), juce::Justification::centredLeft);
     g.drawText(performanceVisible_ ? "PERFORMANCE" : "GLOBAL",
                referenceRect(52, 350, 250, 30), juce::Justification::centredLeft);
@@ -1010,9 +1024,9 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     }
 
     g.setFont(juce::Font(juce::FontOptions(11.0f * scaleY)));
-    g.setColour(juce::Colour(0xff91a5ac));
+    g.setColour(juce::Colour(0xffbdb8ac));
 
-    g.setColour(juce::Colour(0xff24444b));
+    g.setColour(juce::Colour(0xff575248));
     g.fillRect(referenceRect(594, 390, 1, 116));
     drawPitchEnvelope(g);
     drawOperatorEnvelope(g);
