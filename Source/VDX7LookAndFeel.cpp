@@ -86,6 +86,19 @@ void VDX7LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& butt
                                             const juce::Colour&, bool highlighted, bool down)
 {
     juce::Graphics::ScopedSaveState state(g);
+    if (bool(button.getProperties().getWithDefault("vdx7LcdArrow", false)))
+    {
+        const auto bounds = button.getLocalBounds().toFloat().reduced(1.0f);
+        const auto ink = juce::Colour(0xff273019);
+        if (button.isEnabled() && (highlighted || down))
+        {
+            g.setColour(ink.withAlpha(down ? 0.22f : 0.10f));
+            g.fillRect(bounds);
+        }
+        g.setColour(ink.withAlpha(button.isEnabled() ? 1.0f : 0.35f));
+        g.drawRect(bounds, button.hasKeyboardFocus(true) ? 2.0f : 1.0f);
+        return;
+    }
     g.setOpacity(button.isEnabled() ? 1.0f : 0.35f);
     const auto bounds = button.getLocalBounds().toFloat().reduced(1.5f);
     auto colour = button.getToggleState() ? juce::Colour(0xff68c7bb) : juce::Colour(0xff454139);
@@ -101,6 +114,20 @@ void VDX7LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& butt
 void VDX7LookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button,
                                       bool, bool down)
 {
+    if (bool(button.getProperties().getWithDefault("vdx7LcdArrow", false)))
+    {
+        const float cx = button.getWidth() * 0.5f;
+        const float cy = button.getHeight() * 0.5f;
+        const float radius = button.getWidth() * 0.18f;
+        const float direction = button.getButtonText() == "<" ? -1.0f : 1.0f;
+        juce::Path arrow;
+        arrow.startNewSubPath(cx - direction * radius, cy - radius * 1.6f);
+        arrow.lineTo(cx + direction * radius, cy);
+        arrow.lineTo(cx - direction * radius, cy + radius * 1.6f);
+        g.setColour(juce::Colour(0xff273019).withAlpha(button.isEnabled() ? 1.0f : 0.35f));
+        g.strokePath(arrow, juce::PathStrokeType(juce::jmax(1.0f, button.getWidth() * 0.05f)));
+        return;
+    }
     const bool active = button.getToggleState();
     g.setColour(active ? juce::Colour(0xff031012) : juce::Colour(0xffeee9dc));
     g.setFont(getTextButtonFont(button, button.getHeight()));
