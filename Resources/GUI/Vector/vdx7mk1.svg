@@ -8,8 +8,12 @@
       <stop offset="0.52" stop-color="#a39e96"/>
       <stop offset="1" stop-color="#d0cbc2"/>
     </linearGradient>
+    <pattern id="metal-scanlines" width="1" height="5" patternUnits="userSpaceOnUse">
+      <rect width="1" height="3" fill="url(#metal)"/>
+      <rect y="3" width="1" height="1" fill="#716d66" opacity="0.42"/>
+    </pattern>
   </defs>
-  <g fill="url(#metal)">
+  <g fill="url(#metal-scanlines)">
     <path d="M10 11H34L62 53 90 11H114L74 72H50Z"/>
     <path d="M119 11H177L198 26H119Z M119 30H137V53H119Z M172 30H200L211 41 199 53H172L185 41Z M119 57H197L177 72H119Z"/>
     <path d="M199 11H224L242 29 260 11H285L255 41 286 72H261L242 53 223 72H198L229 41Z"/>

@@ -143,11 +143,13 @@ VDX7 interface with a restrained vintage hardware feel, not a replica front pane
   labels, position or shape, not colour alone.
 - [ ] Off-white, readable labels and simple panel-divider lines. Test typography
   and control states at supported small sizes as well as Retina/HiDPI scales.
-- [ ] Black ribbed wheels and slider caps, natural ivory-white keys, subtle
-  highlights and clear press/hover/focus states. No invented aged/grimy texture.
-- [ ] Original VDX7 wordmark, icons and newly drawn interface assets. Rework the
-  current striped wordmark toward a more independent identity; do not reuse
-  Yamaha logos, original product lettering or trace the original front panel.
+- [x] Black ribbed wheels and slider caps, natural ivory-white keys, subtle
+  highlights and clear press/hover/focus states. The wheel cylinder and its cyan
+  indicator now share the same value-driven movement; no aged/grimy texture.
+- [x] Original VDX7 wordmark, icons and newly drawn interface assets. The own
+  VDX7 Mk I. SVG uses a restrained metallic scanline treatment; no Yamaha logo,
+  original product lettering or traced front-panel artwork is used. See
+  `VALIDATION_1.0_WHEEL_LOGO_POLISH.md`.
 - [ ] Preserve the approved EDIT/PERFORMANCE structure and functional LCD,
   SAVE AS..., algorithm, output and keyboard controls across views. The colour
   redesign must not remove, duplicate or disconnect implemented functionality.
