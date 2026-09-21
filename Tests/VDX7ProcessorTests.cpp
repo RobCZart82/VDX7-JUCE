@@ -361,11 +361,33 @@ static void checkControllers(const juce::File& romFile)
     require(allControllersAudible, "controller range changes rendered firmware audio");
 }
 
+static void checkWhiteKeyHover()
+{
+    juce::MidiKeyboardState state;
+    VDX7Keyboard keyboard(state);
+    for (int factor : {1, 2}) {
+        juce::Image normal(juce::Image::ARGB, 40 * factor, 138 * factor, true);
+        juce::Image hover(juce::Image::ARGB, 40 * factor, 138 * factor, true);
+        for (bool over : {false, true}) {
+            juce::Graphics g(over ? hover : normal);
+            g.addTransform(juce::AffineTransform::scale(float(factor)));
+            keyboard.drawWhiteNote(60, g, {0, 0, 40, 138}, false, over, {}, {});
+        }
+        for (int y = 0; y < 138 * factor; ++y)
+            for (int x = 0; x < 40 * factor; ++x)
+                if (y < 11 * factor || y >= 127 * factor)
+                    require(normal.getPixelAt(x,y) == hover.getPixelAt(x,y), "white hover stays off key margins");
+        require(normal.getPixelAt(20*factor,70*factor) != hover.getPixelAt(20*factor,70*factor),
+                "white key retains visible hover feedback");
+    }
+}
+
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
     try
     {
+        checkWhiteKeyHover();
         VDX7AudioProcessor original;
         {
             VDX7AudioProcessor noRom(false);
@@ -564,6 +586,15 @@ int main(int argc, char** argv)
                                     "operator envelope leaves room for value and keyboard");
                         }
                 require(operatorEnvelopeControls == 8, "all eight expanded envelope controls");
+                int pitchControls = 0;
+                for (auto* child : editor->getChildren())
+                    if (auto* slider = dynamic_cast<juce::Slider*>(child))
+                        if (slider->getName().startsWith("Pitch envelope ")) {
+                            ++pitchControls;
+                            require(slider->getHeight() >= 73 * scale, "pitch faders taller");
+                            require(slider->getBottom() <= 490 * scale + 1, "pitch faders leave room for values");
+                        }
+                require(pitchControls == 8, "eight expanded pitch faders");
                 const juce::Rectangle<float> lcdArea(422 * scale, 190 * scale,
                                                       505 * scale, 86 * scale);
                 for (auto* child : editor->getChildren())
