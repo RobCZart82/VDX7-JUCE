@@ -16,6 +16,57 @@ int main(int argc, char** argv)
     std::ifstream f(argv[1], std::ios::binary);
     std::vector<uint8_t> rom((std::istreambuf_iterator<char>(f)), {});
     int failures = 0;
+    // Observe firmware ownership of repeated notes before imposing host-side
+    // reference counting. All accepted channels share one firmware receiver.
+    for (bool splitChannels : {false, true})
+    for (int repeats : {2, 16})
+    for (bool zeroVelocityOff : {false, true})
+    for (bool sustain : {false, true})
+    {
+        VDX7Engine e;
+        if (!e.loadRomImage(rom.data(), rom.size())) return 77;
+        e.prepare(44100);
+        using P = VDX7VoiceData::Parameter;
+        for (int op = 0; op < 6; ++op)
+        {
+            e.setOperatorParameter(op, P::outputLevel, op == 0 ? 99 : 0);
+            for (auto p : {P::rate1, P::rate2, P::rate3, P::rate4}) e.setOperatorParameter(op, p, 99);
+            for (auto p : {P::level1, P::level2, P::level3}) e.setOperatorParameter(op, p, 99);
+            e.setOperatorParameter(op, P::level4, 0);
+        }
+        e.setVoiceParameter(VDX7VoiceData::VoiceParameter::algorithm, 31);
+        e.reloadCurrentProgram();
+        float left[256], right[256];
+        auto settle = [&] {
+            float peak = 0;
+            for (int b = 0; b < 100; ++b) {
+                e.render(left, right, 256);
+                for (float v : left) {
+                    if (!std::isfinite(v)) ++failures;
+                    if (b >= 80) peak = std::max(peak, std::abs(v));
+                }
+            }
+            return peak;
+        };
+        settle();
+        uint8_t first[] {0x90, 60, 100};
+        uint8_t second[] {static_cast<uint8_t>(splitChannels ? 0x91 : 0x90), 60, 100};
+        uint8_t off[] {static_cast<uint8_t>(zeroVelocityOff ? 0x90 : 0x80), 60, 0};
+        uint8_t pedal[] {0xb0, 64, 127};
+        if (sustain) e.handleMidi(pedal, 3);
+        e.handleMidi(first, 3); settle();
+        for (int n = 1; n < repeats; ++n) { e.handleMidi(second, 3); settle(); }
+        const float held = settle();
+        e.handleMidi(off, 3); const float afterOneOff = settle();
+        const bool tracked = e.hasHeldMidiNotes();
+        e.allNotesOff(); const float afterPanic = settle();
+        std::cout << "Repeated note split=" << splitChannels << " repeats=" << repeats
+                  << " zeroOff=" << zeroVelocityOff << " sustain=" << sustain << " held=" << held
+                  << " one-off=" << afterOneOff << " tracked=" << tracked
+                  << " all-off=" << afterPanic << std::endl;
+        if (held < 0.00001f || afterOneOff < 0.00001f || !tracked
+            || afterPanic > 0.001f || e.hasHeldMidiNotes()) ++failures;
+    }
     for (int note = 0; note < 128; ++note)
     {
         VDX7Engine e;

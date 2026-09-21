@@ -66,7 +66,7 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     factoryVoices_ = std::move(newFactoryVoices);
     if (!factoryVoices_.empty())
         dx7_.loadVoices(factoryVoices_.data(), factoryVoices_.size());
-    activeMidiNotes_.fill(false);
+    activeMidiNotes_.fill(0);
     sustainDown_ = false;
     midiRecovering_ = false;
     midiOverloadCount_ = 0;
@@ -137,10 +137,10 @@ void VDX7Engine::resetMidiLifecycle()
     dx7Emu::Message discarded;
     while (toSynth_->pop(discarded)) {}
     midiRecovering_ = false;
-    activeMidiNotes_.fill(true); // Also release notes whose ownership was lost during overload.
+    for (auto& held : activeMidiNotes_) held = std::max<uint8_t>(held, 1);
     allNotesOff();
     toSynth_->porta(false);
-    // Let the unmodified firmware consume releases (up to 128*3 serial bytes)
+    // Let the unmodified firmware consume releases (up to 128*16*3 serial bytes)
     // before resetting the sound generator. This is lifecycle work, NOT audio.
     std::array<float, 256> scratchLeft {}, scratchRight {};
     for (int remaining = static_cast<int>(hostSampleRate_ * 0.25); remaining > 0; remaining -= 256)
@@ -212,12 +212,13 @@ void VDX7Engine::recoverMidiOverflow()
     // Release every pitch, not just wrapper ownership: some previous bytes
     // may already have reached the firmware, or a note may be sustained.
     for (int note = 0; note < 128; ++note)
+    for (int repeat = 0; repeat < std::max<int>(1, activeMidiNotes_[note]); ++repeat)
     {
         dx7_.midiSerialRx.write(static_cast<uint8_t>(0x80 | (dx7_.getMidiRxChannel() & 15)));
         dx7_.midiSerialRx.write(static_cast<uint8_t>(note));
         dx7_.midiSerialRx.write(0);
     }
-    activeMidiNotes_.fill(false);
+    activeMidiNotes_.fill(0);
 }
 
 float VDX7Engine::nextNativeSample()
@@ -389,7 +390,9 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
                     | (dx7_.getMidiRxChannel() & 0x0f)));
                 dx7_.midiSerialRx.write(data[1]);
                 dx7_.midiSerialRx.write(on ? mapVelocity(data[2]) : 0);
-                activeMidiNotes_[data[1]] = on;
+                auto& held = activeMidiNotes_[data[1]];
+                if (on) held = std::min<int>(kMaxRepeatedNotes, held + 1);
+                else if (held != 0) --held;
             }
             return;
 
@@ -469,22 +472,24 @@ void VDX7Engine::allNotesOff()
 {
     sustainDown_ = false;
     if (!loaded_) return;
-    if (!reserveMidi(128 * 3 + 3)) return; // Include a possible following CC123.
+    int releaseBytes = 3; // Include a possible following CC123.
+    for (auto held : activeMidiNotes_) releaseBytes += held * 3;
+    if (!reserveMidi(releaseBytes)) return;
     toSynth_->analog(dx7Emu::Message::CtrlID::sustain, 0);
     for (int i = 0; i < 128; ++i)
-        if (activeMidiNotes_[i])
+        for (int repeat = 0; repeat < activeMidiNotes_[i]; ++repeat)
         {
             dx7_.midiSerialRx.write(static_cast<uint8_t>(0x80 | (dx7_.getMidiRxChannel() & 0x0f)));
             dx7_.midiSerialRx.write(static_cast<uint8_t>(i));
             dx7_.midiSerialRx.write(0);
         }
-    activeMidiNotes_.fill(false);
+    activeMidiNotes_.fill(0);
 }
 
 bool VDX7Engine::hasHeldMidiNotes() const noexcept
 {
     return sustainDown_ || std::any_of(activeMidiNotes_.begin(), activeMidiNotes_.end(),
-                                     [](bool held) { return held; });
+                                     [](uint8_t held) { return held != 0; });
 }
 
 bool VDX7Engine::loadSyxBank(const uint8_t* data, std::size_t size)
@@ -686,7 +691,7 @@ bool VDX7Engine::setPlaySetting(int field, int value)
         {
             // Complete the reset after its mode byte is written.
             render(left.data(), right.data(), 64);
-            activeMidiNotes_.fill(false);
+            activeMidiNotes_.fill(0);
             resetAudioState();
             return true;
         }

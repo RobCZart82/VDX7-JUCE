@@ -111,7 +111,9 @@ private:
     float volume_ = 1.0f;
     float midiExpression_ = 1.0f;
     std::array<uint8_t, 128> velocityMap_{};
-    std::array<bool, 128> activeMidiNotes_{};
+    // Firmware has 16 voices and releases one matching voice per note-off.
+    static constexpr uint8_t kMaxRepeatedNotes = 16;
+    std::array<uint8_t, 128> activeMidiNotes_{};
     bool sustainDown_ = false;
     bool midiRecovering_ = false;
     uint64_t midiOverloadCount_ = 0;

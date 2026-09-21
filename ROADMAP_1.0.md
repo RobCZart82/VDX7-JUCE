@@ -333,8 +333,11 @@ Work in separate reviewed PRs; no final release/tag or firmware upload.
 - [x] Deterministic reserved-but-unpublished edit-queue transaction regression;
   reservation cutoff prevents stale edits crossing restore/import boundaries
   without waiting for a paused producer. See VALIDATION_1.0_EDIT_BOUNDARY.md.
-- [ ] Reproduce same-pitch/channel/retrigger ownership cases against firmware
-  semantics before changing note bookkeeping.
+- [x] Reproduce same-pitch/channel/retrigger ownership against local firmware:
+  repeated notes survive one Note Off. Replace pitch booleans with bounded
+  multiplicity and release every tracked repeat. See VALIDATION_1.0_REPEATED_NOTES.md.
+- [ ] Broader voice-stealing/mono and overflow-with-in-flight-note-off acceptance;
+  wrapper ownership is conservative bookkeeping, not a firmware voice allocator.
 - [ ] Measure engine-lock contention and POLY/MONO wall-clock duration. Rendered
   sample duration is not measured lock time; the processor timer is conditional.
 - [ ] Profile deferred-MIDI copying before claiming a performance defect.
