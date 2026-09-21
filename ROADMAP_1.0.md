@@ -55,14 +55,14 @@ bugs only with source evidence or reproduction; do not apply the rejected APVTS
   engine lock; editorless/reentrant state tests (see `VALIDATION_1.0_HOST_PUBLICATION.md`).
 - [x] Coalesce frequent non-disruptive PERFORMANCE/SETTINGS writes outside
   `engineMutex_`: controller range/assignments, pitch-bend range/step, master
-  tuning, portamento mode and glissando. A held-lock regression and a
+  tuning, portamento mode, glissando and bounded portamento time. A held-lock regression and a
   concurrent 1,000-write/audio test confirm prompt UI snapshots, save-time
   commit and zero measured contention from this path. See
   `VALIDATION_1.0_CONTENTION.md`.
-- [ ] Keep the deliberate POLY/MONO and portamento-time firmware transactions
-  in the real GUI/audio-overlap audit. POLY/MONO must retain its firmware reset
-  and note-release behavior; do not move it to the callback without a bounded
-  transaction design and host evidence.
+- [ ] Keep the deliberate POLY/MONO firmware transaction in the real
+  GUI/audio-overlap audit. It must retain its firmware reset and note-release
+  behavior; do not move it to the callback without a bounded transaction design
+  and host evidence.
 - [ ] Complete remaining audio-thread allocation/locking audit and contention stress test.
 - [x] Guard firmware serial/controller saturation; validate recovery with a
   60-second simulated load and callback ordinary-C++ heap probe
@@ -363,7 +363,7 @@ Work in separate reviewed PRs; no final release/tag or firmware upload.
   accessors, now decode one coherent lock-free display snapshot instead of
   acquiring engine locks (VALIDATION_1.0_PERFORMANCE_SNAPSHOT.md and
   VALIDATION_1.0_CONTENTION.md). Settings writes, voice publication and
-  ROM/state transactions remain separate contention paths; complete real-host
+  ROM/state transactions and the POLY/MONO reset remain separate contention paths; complete real-host
   continuity acceptance is still open.
   State serialization now encodes detached snapshots outside engineMutex_;
   see VALIDATION_1.0_STATE_LOCK_SCOPE.md. Capture and restore still require locks.

@@ -1403,15 +1403,14 @@ void VDX7AudioProcessor::publishPerformanceDisplay() noexcept
                            std::memory_order_relaxed)) & width) << shift);
         }
     }
-    for (int field = 0; field < 2; ++field)
+    for (int field = 1; field <= 3; ++field)
     {
-        const auto pendingBit = uint32_t {1} << (16 + field);
-        if ((pending & pendingBit) != 0)
-        {
-            const auto shift = 41 + field;
-            packed = (packed & ~(uint64_t {1} << shift))
-                   | ((uint64_t(pendingPlaySettings_[field].load(std::memory_order_relaxed)) & 1) << shift);
-        }
+        const auto pendingBit = uint32_t {1} << (15 + field);
+        if ((pending & pendingBit) == 0) continue;
+        const auto shift = 40 + field;
+        const auto width = field == 3 ? uint64_t {0x7f} : uint64_t {1};
+        packed = (packed & ~(width << shift))
+               | ((uint64_t(pendingPlaySettings_[field - 1].load(std::memory_order_relaxed)) & width) << shift);
     }
     for (int field = 0; field < 2; ++field)
     {
@@ -1460,9 +1459,20 @@ void VDX7AudioProcessor::applyPendingPerformanceSettings() noexcept
                 engine_.setControllerSetting(controller, field,
                     pendingControllerSettings_[controller * 4 + field].load(std::memory_order_relaxed));
 
-    for (int field = 0; field < 2; ++field)
-        if ((pending & (uint32_t {1} << (16 + field))) != 0)
-            engine_.setPlaySetting(field + 1, pendingPlaySettings_[field].load(std::memory_order_relaxed));
+    for (int field = 1; field <= 3; ++field)
+        if ((pending & (uint32_t {1} << (15 + field))) != 0)
+        {
+            const auto value = pendingPlaySettings_[field - 1].load(std::memory_order_relaxed);
+            if (!engine_.setPlaySetting(field, value) && field == 3)
+            {
+                // A saturated firmware serial FIFO begins its recovery on the
+                // audio thread. Keep the latest requested time dirty so it is
+                // retried after that recovery instead of leaving the display
+                // ahead of the firmware state.
+                pendingPerformanceDirty_.fetch_or(uint32_t {1} << (15 + field),
+                                                  std::memory_order_release);
+            }
+        }
 
     for (int field = 0; field < 2; ++field)
         if ((pending & (uint32_t {1} << (19 + field))) != 0)
@@ -1516,7 +1526,7 @@ bool VDX7AudioProcessor::setPlaySettingFromUi(int field, int value)
     // POLY/MONO is an intentional firmware transaction: it drains the native
     // serial path and ends active notes. Keep that explicit behavior out of
     // the ordinary coalesced UI-write path.
-    if (field == 0 || field == 3)
+    if (field == 0)
     {
         bool changed;
         {
@@ -1532,8 +1542,10 @@ bool VDX7AudioProcessor::setPlaySettingFromUi(int field, int value)
 
     const auto previous = getPerformanceDisplay().play[field];
     pendingPlaySettings_[field - 1].store(value, std::memory_order_relaxed);
-    pendingPerformanceDirty_.fetch_or(uint32_t {1} << (16 + field - 1), std::memory_order_release);
-    setPerformanceDisplayBits(uint64_t {1} << (40 + field), uint64_t(value) << (40 + field));
+    pendingPerformanceDirty_.fetch_or(uint32_t {1} << (15 + field), std::memory_order_release);
+    const auto shift = 40 + field;
+    const auto width = field == 3 ? uint64_t {0x7f} : uint64_t {1};
+    setPerformanceDisplayBits(width << shift, uint64_t(value) << shift);
     if (previous != value) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
     return true;
 }

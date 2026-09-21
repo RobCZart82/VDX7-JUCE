@@ -27,17 +27,23 @@ all four read paths complete while the engine mutex remains owned elsewhere.
 
 Frequent non-disruptive UI writes are now coalesced in atomics and applied by
 the next engine-owning audio/state path: controller ranges/assignments,
-pitch-bend range/step, master tuning, portamento mode and glissando. The
-editor receives the requested packed display value immediately; a project save
-commits it before RAM capture. A held-lock test proves these setters finish
-without acquiring `engineMutex_`; a concurrent 1,000-write/audio-callback test
-confirms zero contention counters and the final firmware values. The callback
-still performs no ordinary C++ allocation in this path.
+pitch-bend range/step, master tuning, portamento mode, glissando and
+portamento time. Portamento time is a bounded three-byte serial command; unlike
+POLY/MONO it neither drains the serial path nor resets voices, so committing it
+at the next engine-owning path preserves its firmware order without making the
+UI wait for `engineMutex_`. The editor receives the requested packed display
+value immediately; a project save commits it before RAM capture. A held-lock
+test proves these setters finish without acquiring `engineMutex_`; a concurrent
+1,000-write/audio-callback test confirms zero contention counters and the
+final firmware values, including the last portamento-time value. A forced
+serial-overflow regression additionally proves that the latest requested time
+is retained and retried after firmware recovery. The callback still performs no
+ordinary C++ allocation in this path.
 
-POLY/MONO and portamento time deliberately remain direct firmware transactions.
-They have serial/reset semantics (and POLY/MONO ends active notes), so moving
-them blindly to the audio callback would trade a controlled transaction for a
-long callback. They remain in the real GUI/host overlap acceptance scope.
+POLY/MONO deliberately remains a direct firmware transaction. It drains serial
+work and ends active notes, so moving it blindly to the audio callback would
+trade a controlled transaction for a long callback. It remains in the real
+GUI/host overlap acceptance scope.
 This chapter does not declare audio continuity accepted: host underruns,
 automation behavior, mode-change reset audibility and physical DAW timing still
 need separate checks.
@@ -47,7 +53,7 @@ are unchanged. No release/tag or firmware upload.
 
 Local validation for this slice: the stress and processor test binaries build,
 the ROM-backed stress executable passes, and the nine non-GUI CTest entries
-pass (61.12 s). In the current headless shell the existing SAVE AS dialog test
+pass (60.87 s). In the current headless shell the existing SAVE AS dialog test
 cannot obtain a desktop display, so its broader processor CTest remains a
 host/desktop check rather than a failure attributed to this change. The
 existing Xcode license warning remains, with no automatic license acceptance.
