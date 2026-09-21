@@ -114,6 +114,9 @@ private:
     // Firmware has 16 voices and releases one matching voice per note-off.
     static constexpr uint8_t kMaxRepeatedNotes = 16;
     std::array<uint8_t, 128> activeMidiNotes_{};
+    // Conservative release budget: queued offs may be flushed before firmware
+    // consumes them. Keep peak multiplicity since ROM load (bounded at 16).
+    std::array<uint8_t, 128> midiReleaseBudget_{};
     bool sustainDown_ = false;
     bool midiRecovering_ = false;
     uint64_t midiOverloadCount_ = 0;

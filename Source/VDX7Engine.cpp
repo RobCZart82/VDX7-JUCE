@@ -67,6 +67,7 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     if (!factoryVoices_.empty())
         dx7_.loadVoices(factoryVoices_.data(), factoryVoices_.size());
     activeMidiNotes_.fill(0);
+    midiReleaseBudget_.fill(0);
     sustainDown_ = false;
     midiRecovering_ = false;
     midiOverloadCount_ = 0;
@@ -137,7 +138,8 @@ void VDX7Engine::resetMidiLifecycle()
     dx7Emu::Message discarded;
     while (toSynth_->pop(discarded)) {}
     midiRecovering_ = false;
-    for (auto& held : activeMidiNotes_) held = std::max<uint8_t>(held, 1);
+    for (std::size_t note = 0; note < activeMidiNotes_.size(); ++note)
+        activeMidiNotes_[note] = std::max<uint8_t>(midiReleaseBudget_[note], 1);
     allNotesOff();
     toSynth_->porta(false);
     // Let the unmodified firmware consume releases (up to 128*16*3 serial bytes)
@@ -212,7 +214,7 @@ void VDX7Engine::recoverMidiOverflow()
     // Release every pitch, not just wrapper ownership: some previous bytes
     // may already have reached the firmware, or a note may be sustained.
     for (int note = 0; note < 128; ++note)
-    for (int repeat = 0; repeat < std::max<int>(1, activeMidiNotes_[note]); ++repeat)
+    for (int repeat = 0; repeat < std::max<int>(1, midiReleaseBudget_[note]); ++repeat)
     {
         dx7_.midiSerialRx.write(static_cast<uint8_t>(0x80 | (dx7_.getMidiRxChannel() & 15)));
         dx7_.midiSerialRx.write(static_cast<uint8_t>(note));
@@ -391,7 +393,10 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
                 dx7_.midiSerialRx.write(data[1]);
                 dx7_.midiSerialRx.write(on ? mapVelocity(data[2]) : 0);
                 auto& held = activeMidiNotes_[data[1]];
-                if (on) held = std::min<int>(kMaxRepeatedNotes, held + 1);
+                if (on) {
+                    held = std::min<int>(kMaxRepeatedNotes, held + 1);
+                    midiReleaseBudget_[data[1]] = std::max(midiReleaseBudget_[data[1]], held);
+                }
                 else if (held != 0) --held;
             }
             return;

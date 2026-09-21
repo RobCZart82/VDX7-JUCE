@@ -29,7 +29,77 @@ struct VDX7RegressionAccess
     static void mirror(VDX7AudioProcessor& p) { p.mirrorKeyboardOnMessageThread(); }
     static bool note(const VDX7AudioProcessor& p, int note) { return p.engine_.activeMidiNotes_[note]; }
     static uint64_t overloads(const VDX7AudioProcessor& p) { return p.engine_.midiOverloadCount(); }
+    static VDX7Engine& engine(VDX7AudioProcessor& p) { return p.engine_; }
 };
+
+static void checkCapacityAndPendingOff(const juce::File& rom)
+{
+    for (int mode : {0, 1})
+    for (bool samePitch : {false, true})
+    for (bool overload : {false, true})
+    {
+        VDX7AudioProcessor p(false);
+        require(p.loadRomFromFile(rom), "capacity ROM");
+        p.prepareToPlay(48000, 256);
+        auto& e = VDX7RegressionAccess::engine(p);
+        using P = VDX7VoiceData::Parameter;
+        using V = VDX7VoiceData::VoiceParameter;
+        e.setVoiceParameter(V::algorithm, 31);
+        e.setVoiceParameter(V::feedback, 0);
+        for (int op = 0; op < 6; ++op)
+        {
+            e.setOperatorParameter(op, P::outputLevel, op == 0 ? 99 : 0);
+            for (auto f : {P::rate1, P::rate2, P::rate3, P::rate4}) e.setOperatorParameter(op, f, 99);
+            for (auto f : {P::level1, P::level2, P::level3}) e.setOperatorParameter(op, f, 99);
+            e.setOperatorParameter(op, P::level4, 0);
+        }
+        e.reloadCurrentProgram();
+        juce::AudioBuffer<float> audio(2, 256);
+        juce::MidiBuffer midi;
+        auto render = [&](int blocks) {
+            float peak = 0;
+            for (int b = 0; b < blocks; ++b) {
+                processChecked(p, audio, midi);
+                const float level = audio.getMagnitude(0, 256);
+                require(std::isfinite(level), "capacity finite audio");
+                if (b >= blocks / 2) peak = std::max(peak, level);
+            }
+            return peak;
+        };
+        render(40);
+        require(e.setPlaySetting(0, mode), "capacity play mode");
+        // Let firmware allocate each voice; this is not merely a queued burst.
+        for (int n = 0; n < 32; ++n) {
+            uint8_t on[] {static_cast<uint8_t>(0x90 | (n % 16)),
+                          static_cast<uint8_t>(samePitch ? 60 : 48 + n), 100};
+            e.handleMidi(on, 3); render(8);
+        }
+        require(render(40) > 1e-5f, "capacity produces sustained audio");
+        uint8_t pedal[] {0xb0, 64, 127};
+        e.handleMidi(pedal, 3); render(8);
+        // Ownership changes immediately, but firmware has not consumed these
+        // offs when the following burst causes serial overflow and flushes RX.
+        for (int n = 0; n < 32; ++n) {
+            uint8_t off[] {static_cast<uint8_t>(0x80 | (n % 16)),
+                           static_cast<uint8_t>(samePitch ? 60 : 48 + n), 0};
+            e.handleMidi(off, 3);
+        }
+        if (overload) {
+            uint8_t bend[] {0xe0, 0, 64};
+            for (int n = 0; n < 3000; ++n) e.handleMidi(bend, 3);
+            require(e.midiOverloadCount() == 1, "pending-off overflow triggered");
+        } else e.allNotesOff();
+        require(render(800) < 1e-4f, "no stuck voice after capacity/pending-off recovery");
+        require(!e.hasHeldMidiNotes() && !e.isMidiRecovering(), "capacity ownership/recovery clear");
+        uint8_t fresh[] {0x90, 65, 100}, release[] {0x80, 65, 0};
+        e.handleMidi(fresh, 3);
+        require(render(100) > 1e-5f, "fresh note audible after capacity recovery");
+        e.handleMidi(release, 3);
+        require(render(400) < 1e-4f && !e.hasHeldMidiNotes(), "fresh note releases after recovery");
+        std::cout << "PASS: capacity mode=" << mode << " samePitch=" << samePitch
+                  << " pendingOffOverflow=" << overload << '\n';
+    }
+}
 
 struct StressResult { std::vector<float> audio; double maxMs = 0, totalMs = 0; };
 
@@ -262,6 +332,7 @@ int main(int argc, char** argv)
         require(VDX7AllocationProbe::allocations == 1 && VDX7AllocationProbe::deallocations == 1,
                 "allocation probe self-test");
         checkKeyboard(rom);
+        checkCapacityAndPendingOff(rom);
         checkLatencyPublication();
         checkLongRunAndOverload(rom);
         for (int rate : {44100, 48000, 96000})
