@@ -136,9 +136,9 @@ static void checkPerformanceDisplay(const juce::File& rom)
     std::cout << "PASS: lock-free coherent performance display, settings, restore and MIDI mode refresh\n";
 }
 
-// Frequent controller/tuning edits are coalesced in atomics and committed by
-// the next engine-owning path. POLY/MONO and portamento time remain explicit
-// firmware transactions and are deliberately outside this non-blocking probe.
+// Frequent controller/tuning edits and the bounded three-byte portamento-time
+// write are coalesced in atomics and committed by the next engine-owning path.
+// POLY/MONO remains an explicit firmware reset transaction outside this probe.
 static void checkCoalescedPerformanceWrites(const juce::File& rom)
 {
     VDX7AudioProcessor p(false);
@@ -150,6 +150,7 @@ static void checkCoalescedPerformanceWrites(const juce::File& rom)
             require(p.setControllerSettingFromUi(3, 3, 1), "coalesced assignment request");
             require(p.setPlaySettingFromUi(1, 1), "coalesced portamento mode request");
             require(p.setPlaySettingFromUi(2, 1), "coalesced glissando request");
+            require(p.setPlaySettingFromUi(3, 91), "coalesced portamento time request");
             require(p.setPitchBendSettingFromUi(0, 12), "coalesced bend request");
             require(p.setMasterTuneFromUi(-123), "coalesced tune request");
         });
@@ -159,7 +160,8 @@ static void checkCoalescedPerformanceWrites(const juce::File& rom)
     }
     require(p.getControllerSettings()[0] == 77 && p.getControllerSettings()[15] == 1,
             "coalesced controller display is immediate");
-    require(p.getPlaySettings()[1] == 1 && p.getPlaySettings()[2] == 1,
+    require(p.getPlaySettings()[1] == 1 && p.getPlaySettings()[2] == 1
+                && p.getPlaySettings()[3] == 91,
             "coalesced play display is immediate");
     require(p.getPitchBendSettings()[0] == 12 && p.getMasterTune() == -123,
             "coalesced bend/tune display is immediate");
@@ -168,7 +170,8 @@ static void checkCoalescedPerformanceWrites(const juce::File& rom)
     auto& engine = VDX7RegressionAccess::engine(p);
     require(engine.getControllerSetting(0, 0) == 77 && engine.getControllerSetting(3, 3) == 1,
             "state capture commits controller settings");
-    require(engine.getPlaySetting(1) == 1 && engine.getPlaySetting(2) == 1,
+    require(engine.getPlaySetting(1) == 1 && engine.getPlaySetting(2) == 1
+                && engine.getPlaySetting(3) == 91,
             "state capture commits play settings");
     require(engine.getPitchBendSetting(0) == 12 && engine.masterTune() == -123,
             "state capture commits bend and tuning");
@@ -186,6 +189,7 @@ static void checkCoalescedPerformanceWrites(const juce::File& rom)
             overlap.setControllerSettingFromUi(1, 1, n & 1);
             overlap.setPlaySettingFromUi(1, n & 1);
             overlap.setPlaySettingFromUi(2, (n >> 1) & 1);
+            overlap.setPlaySettingFromUi(3, n % 100);
             overlap.setPitchBendSettingFromUi(0, n % 13);
             overlap.setMasterTuneFromUi(-256 + (n % 512));
         }
@@ -204,9 +208,28 @@ static void checkCoalescedPerformanceWrites(const juce::File& rom)
             && overlapEngine.getControllerSetting(1, 1) == 1
             && overlapEngine.getPlaySetting(1) == 1
             && overlapEngine.getPlaySetting(2) == 1
+            && overlapEngine.getPlaySetting(3) == 99
             && overlapEngine.getPitchBendSetting(0) == 11
             && overlapEngine.masterTune() == 231,
             "coalesced overlap commits the latest values");
+
+    // A portamento-time write must survive a serial-overflow recovery. The
+    // first audio block retries while recovery owns the FIFO; a later block
+    // commits the latest requested value without asking the UI to retry.
+    VDX7AudioProcessor retry(false);
+    require(retry.loadRomFromFile(rom), "coalesced retry ROM");
+    retry.prepareToPlay(48000, 256);
+    auto& retryEngine = VDX7RegressionAccess::engine(retry);
+    const uint8_t bend[] {0xe0, 0, 64};
+    for (int n = 0; n < 3000; ++n) retryEngine.handleMidi(bend, 3);
+    require(retryEngine.isMidiRecovering(), "coalesced retry enters serial recovery");
+    require(retry.setPlaySettingFromUi(3, 73), "coalesced retry time request");
+    juce::AudioBuffer<float> retryAudio(2, 256);
+    juce::MidiBuffer retryMidi;
+    for (int block = 0; block < 1200 && retryEngine.getPlaySetting(3) != 73; ++block)
+        processChecked(retry, retryAudio, retryMidi);
+    require(!retryEngine.isMidiRecovering() && retryEngine.getPlaySetting(3) == 73,
+            "coalesced time retries after serial recovery");
     std::cout << "PASS: coalesced global UI writes avoid engine-lock audio contention\n";
 }
 
