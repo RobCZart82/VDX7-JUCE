@@ -330,8 +330,9 @@ Work in separate reviewed PRs; no final release/tag or firmware upload.
   be omitted by one workflow. Stress runner is compile-only without local ROM.
 - [x] Align candidate macOS architecture with Universal CI; update current HU/EN
   usage docs and label the original development snapshot as historical.
-- [ ] Deterministic reserved-but-unpublished edit-queue transaction regression;
-  fix stale edits crossing restore/import boundaries without blocking audio.
+- [x] Deterministic reserved-but-unpublished edit-queue transaction regression;
+  reservation cutoff prevents stale edits crossing restore/import boundaries
+  without waiting for a paused producer. See VALIDATION_1.0_EDIT_BOUNDARY.md.
 - [ ] Reproduce same-pitch/channel/retrigger ownership cases against firmware
   semantics before changing note bookkeeping.
 - [ ] Measure engine-lock contention and POLY/MONO wall-clock duration. Rendered

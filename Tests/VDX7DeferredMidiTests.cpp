@@ -11,6 +11,13 @@ static void checkEditQueue();
 static void checkMidiTimeline();
 static void checkKeyboardQueue();
 
+struct VDX7EditQueueTestAccess
+{
+    template<class Hook>
+    static bool pushPaused(VDX7EditQueue& q, VDX7EditQueue::Command c, Hook hook)
+    { return q.pushWithReservationHook(c, hook); }
+};
+
 void require(bool result) { if (!result) std::exit(1); }
 int main()
 {
@@ -154,6 +161,57 @@ static void checkEditQueue()
     VDX7EditQueue queue;
     using Kind = VDX7EditQueue::Kind;
     VDX7EditQueue::Command command;
+    // A producer reserves before restore/import but publishes afterwards.
+    // Edits accepted after the discard boundary must survive, old edits must not.
+    require(VDX7EditQueueTestAccess::pushPaused(queue, {Kind::voice, 0, 99}, [&] {
+        queue.discard();
+        require(queue.push({Kind::voice, 1, 42}));
+    }));
+    require(queue.pop(command));
+    if (command.index != 1 || command.value != 42)
+    {
+        std::cerr << "FAIL: pre-transaction edit escaped discard boundary\n";
+        std::exit(1);
+    }
+    require(!queue.pop(command) && !queue.pending() && !queue.hasEdits());
+    for (auto kind : {Kind::program, Kind::bank, Kind::op, Kind::voice})
+    {
+        require(VDX7EditQueueTestAccess::pushPaused(queue, {kind, 0, 99}, [&] {
+            require(queue.push({Kind::voice, 0, 88}));
+            queue.discard();
+            // Neither unpublished head nor ready stale successor may escape.
+            require(!queue.pop(command));
+            require(queue.push({Kind::program, 0, 7}));
+            require(queue.push({Kind::voice, 2, 43}));
+        }));
+        require(queue.pop(command) && command.kind == Kind::program && command.value == 7);
+        require(queue.pop(command) && command.kind == Kind::voice && command.value == 43);
+        require(!queue.pop(command) && !queue.pending() && !queue.hasEdits());
+    }
+    // Repeated state replacements while two earlier producers remain paused.
+    require(VDX7EditQueueTestAccess::pushPaused(queue, {Kind::voice, 0, 1}, [&] {
+        queue.discard();
+        require(VDX7EditQueueTestAccess::pushPaused(queue, {Kind::voice, 0, 2}, [&] {
+            queue.discard();
+            require(queue.push({Kind::voice, 0, 3}));
+        }));
+    }));
+    require(queue.pop(command) && command.value == 3);
+    require(!queue.pop(command) && !queue.hasEdits());
+    // Saturated queue cannot reuse an unpublished slot. After publication it
+    // drains obsolete entries and recovers, without delivering any old command.
+    require(VDX7EditQueueTestAccess::pushPaused(queue, {Kind::voice, 0, 1}, [&] {
+        for (std::size_t n = 1; n < queue.capacity; ++n)
+            require(queue.push({Kind::voice, 0, 2}));
+        require(!queue.push({Kind::bank, 0, 4}) && queue.overflowed());
+        queue.discard();
+        require(!queue.pop(command) && queue.overflowed());
+        require(!queue.push({Kind::voice, 0, 3}));
+    }));
+    require(!queue.pop(command) && !queue.pending() && !queue.hasEdits() && !queue.overflowed());
+    require(queue.push({Kind::voice, 0, 4}));
+    require(queue.pop(command) && command.value == 4);
+    std::cout << "PASS: transaction cutoff, late publishers, repeated discard and delayed overflow recovery\n";
     for (int round = 0; round < 3; ++round)
     {
         for (std::size_t n = 0; n < queue.capacity; ++n)
