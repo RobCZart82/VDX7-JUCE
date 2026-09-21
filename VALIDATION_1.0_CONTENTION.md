@@ -25,15 +25,30 @@ legacy-shaped controller, play and pitch-bend accessors decode that same
 snapshot instead of acquiring `engineMutex_`; a held-lock regression confirms
 all four read paths complete while the engine mutex remains owned elsewhere.
 
-Next: use the counters during real GUI/audio overlap and evaluate bounded
-settings transactions. Mode changes still perform firmware work under
-`engineMutex_`. This chapter does not fix that path or declare audio continuity
-accepted. Intentional voice reset on mode change must be distinguished from
-missing audio blocks.
+Frequent non-disruptive UI writes are now coalesced in atomics and applied by
+the next engine-owning audio/state path: controller ranges/assignments,
+pitch-bend range/step, master tuning, portamento mode and glissando. The
+editor receives the requested packed display value immediately; a project save
+commits it before RAM capture. A held-lock test proves these setters finish
+without acquiring `engineMutex_`; a concurrent 1,000-write/audio-callback test
+confirms zero contention counters and the final firmware values. The callback
+still performs no ordinary C++ allocation in this path.
+
+POLY/MONO and portamento time deliberately remain direct firmware transactions.
+They have serial/reset semantics (and POLY/MONO ends active notes), so moving
+them blindly to the audio callback would trade a controlled transaction for a
+long callback. They remain in the real GUI/host overlap acceptance scope.
+This chapter does not declare audio continuity accepted: host underruns,
+automation behavior, mode-change reset audibility and physical DAW timing still
+need separate checks.
 
 GUI layout, firmware routing, parameter IDs, state schema and installed plugin
 are unchanged. No release/tag or firmware upload.
 
-Local arm64 VST3/all-test build passed; full CTest 10/10 passed in 69.24s.
-Strict ad-hoc signature verification passed. The existing Xcode license warning
-remains, with no automatic license acceptance. Windows/Universal CI is separate.
+Local validation for this slice: the stress and processor test binaries build,
+the ROM-backed stress executable passes, and the nine non-GUI CTest entries
+pass (61.12 s). In the current headless shell the existing SAVE AS dialog test
+cannot obtain a desktop display, so its broader processor CTest remains a
+host/desktop check rather than a failure attributed to this change. The
+existing Xcode license warning remains, with no automatic license acceptance.
+Windows/Universal CI is separate.
