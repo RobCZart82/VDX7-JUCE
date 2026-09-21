@@ -77,8 +77,9 @@ public:
     void refresh()
     {
         setEnabled(processor_.isRomLoaded());
-        const auto settings = processor_.getControllerSettings();
-        const auto play = processor_.getPlaySettings();
+        const auto snapshot = processor_.getPerformanceDisplay();
+        const auto& settings = snapshot.controllers;
+        const auto& play = snapshot.play;
         if (lastMono_ != play[0])
         {
             lastMono_ = play[0];
@@ -87,7 +88,7 @@ public:
         }
         for (int field = 0; field < 4; ++field)
             play_[field].setSelectedId(play[field] + 1, juce::dontSendNotification);
-        const auto bend = processor_.getPitchBendSettings();
+        const auto& bend = snapshot.bend;
         for (int field = 0; field < 2; ++field)
             bend_[field].setSelectedId(bend[field] + 1, juce::dontSendNotification);
         for (int c = 0; c < 4; ++c)

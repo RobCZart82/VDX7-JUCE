@@ -379,6 +379,7 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     if (cursor < total)
         engine_.render(left + cursor, right + cursor, total - cursor);
     if (!engine_.hasHeldMidiNotes()) deferredMidi_.resetIfEmpty();
+    publishPerformanceDisplay();
     midiOverloadSnapshot_.store(engine_.midiOverloadCount(), std::memory_order_relaxed);
 
     outputGain_.setTargetValue(
@@ -546,6 +547,7 @@ void VDX7AudioProcessor::applyPerformanceControls()
 
 void VDX7AudioProcessor::updateEngineSnapshot() noexcept
 {
+    publishPerformanceDisplay();
     engineLoaded_.store(engine_.isLoaded(), std::memory_order_release);
     midiOverloadSnapshot_.store(engine_.midiOverloadCount(), std::memory_order_relaxed);
     factoryVoicesAvailable_.store(engine_.hasFactoryVoices(), std::memory_order_release);
@@ -1344,6 +1346,36 @@ bool VDX7AudioProcessor::exportSyx(const juce::File& file, bool entireBank, juce
     return true;
 }
 
+void VDX7AudioProcessor::publishPerformanceDisplay() noexcept
+{
+    // 4 * (7-bit range + 3 assignments), 3 play flags + 7-bit time,
+    // and two 4-bit bend values: one coherent 58-bit display frame.
+    uint64_t packed = 0;
+    for (int c = 0; c < 4; ++c) {
+        packed |= uint64_t(engine_.getControllerSetting(c, 0) & 127) << (c * 10);
+        for (int f = 1; f < 4; ++f)
+            packed |= uint64_t(engine_.getControllerSetting(c, f) & 1) << (c * 10 + 6 + f);
+    }
+    for (int f = 0; f < 3; ++f) packed |= uint64_t(engine_.getPlaySetting(f) & 1) << (40 + f);
+    packed |= uint64_t(engine_.getPlaySetting(3) & 127) << 43;
+    for (int f = 0; f < 2; ++f) packed |= uint64_t(engine_.getPitchBendSetting(f) & 15) << (50 + f * 4);
+    performanceDisplay_.store(packed, std::memory_order_release);
+}
+
+VDX7AudioProcessor::PerformanceDisplay VDX7AudioProcessor::getPerformanceDisplay() const noexcept
+{
+    const auto packed = performanceDisplay_.load(std::memory_order_acquire);
+    PerformanceDisplay result;
+    for (int c = 0; c < 4; ++c) {
+        result.controllers[c * 4] = int((packed >> (c * 10)) & 127);
+        for (int f = 1; f < 4; ++f) result.controllers[c * 4 + f] = int((packed >> (c * 10 + 6 + f)) & 1);
+    }
+    for (int f = 0; f < 3; ++f) result.play[f] = int((packed >> (40 + f)) & 1);
+    result.play[3] = int((packed >> 43) & 127);
+    for (int f = 0; f < 2; ++f) result.bend[f] = int((packed >> (50 + f * 4)) & 15);
+    return result;
+}
+
 std::array<int, 16> VDX7AudioProcessor::getControllerSettings() const
 {
     std::array<int, 16> result {};
@@ -1373,6 +1405,7 @@ bool VDX7AudioProcessor::setPlaySettingFromUi(int field, int value)
         std::scoped_lock lock(engineMutex_);
         const int previous = engine_.getPlaySetting(field);
         if (!engine_.setPlaySetting(field, value)) return false;
+        publishPerformanceDisplay();
         changed = previous != value;
     }
     if (changed) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
@@ -1412,6 +1445,7 @@ bool VDX7AudioProcessor::setPitchBendSettingFromUi(int field, int value)
         std::scoped_lock lock(engineMutex_);
         const int previous = engine_.getPitchBendSetting(field);
         if (!engine_.setPitchBendSetting(field, value)) return false;
+        publishPerformanceDisplay();
         changed = previous != value;
     }
     if (changed) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
@@ -1425,6 +1459,7 @@ bool VDX7AudioProcessor::setControllerSettingFromUi(int controller, int field, i
         std::scoped_lock lock(engineMutex_);
         const int previous = engine_.getControllerSetting(controller, field);
         if (!engine_.setControllerSetting(controller, field, value)) return false;
+        publishPerformanceDisplay();
         changed = previous != value;
     }
     // Do not mark a voice dirty: these globals are outside the packed voice bank.
