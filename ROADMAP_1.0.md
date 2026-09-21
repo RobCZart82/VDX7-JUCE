@@ -354,8 +354,10 @@ Work in separate reviewed PRs; no final release/tag or firmware upload.
   State serialization now encodes detached snapshots outside engineMutex_;
   see VALIDATION_1.0_STATE_LOCK_SCOPE.md. Capture and restore still require locks.
 - [ ] Profile deferred-MIDI copying before claiming a performance defect.
-- [ ] Increase GLOBAL pitch-envelope fader height within its existing section.
-- [ ] Clip white-key hover tint to the visible key body; add visual regression.
+- [x] Increase GLOBAL pitch-envelope fader height within its existing section;
+  see VALIDATION_1.0_GLOBAL_FADERS.md.
+- [x] Clip white-key hover tint to the visible key body and add visual regression;
+  see VALIDATION_1.0_GLOBAL_FADERS.md.
 - [ ] Final surface polish and real-host/HiDPI acceptance. Preserve the approved
   About and header alignment; their visual arrangement has owner approval.
 

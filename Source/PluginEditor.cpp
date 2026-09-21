@@ -172,13 +172,14 @@ void VDX7Keyboard::paintOverChildren(juce::Graphics& g)
 void VDX7Keyboard::drawWhiteNote(int, juce::Graphics& g, juce::Rectangle<float> area,
                                   bool isDown, bool isOver, juce::Colour, juce::Colour)
 {
+    const auto keyBody = area.reduced(1.0f, area.getHeight() * 0.09f);
     g.setColour(juce::Colour(0xffeeeae2));
-    g.fillRoundedRectangle(area.reduced(1.0f, area.getHeight() * 0.09f), 1.5f);
+    g.fillRoundedRectangle(keyBody, 1.5f);
     g.drawImage(isDown ? whitePressed_ : whiteNormal_, area);
     if (isOver && !isDown)
     {
         g.setColour(juce::Colour(0x2600e7e7));
-        g.fillRect(area.reduced(1.0f));
+        g.fillRoundedRectangle(keyBody, 1.5f);
     }
 }
 
@@ -469,6 +470,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     for (std::size_t i = 0; i < pitchEnvelopeFaders_.size(); ++i)
     {
         configureOperatorSlider(pitchEnvelopeFaders_[i], true);
+        pitchEnvelopeFaders_[i].setName("Pitch envelope " + juce::String(static_cast<int>(i)));
         configureLabel(pitchEnvelopeCaptions_[i], 9.0f, juce::Justification::centred,
                        juce::Colour(0xffbdb8ac));
         configureLabel(pitchEnvelopeValues_[i], 9.0f, juce::Justification::centred,
@@ -1089,9 +1091,9 @@ void VDX7AudioProcessorEditor::resized()
     for (std::size_t i = 0; i < pitchEnvelopeFaders_.size(); ++i)
     {
         const float x = 52.0f + static_cast<float>(i) * 33.0f;
-        pitchEnvelopeCaptions_[i].setBounds(referenceRect(x, 404, 28, 16));
-        pitchEnvelopeFaders_[i].setBounds(referenceRect(x, 422, 28, 62));
-        pitchEnvelopeValues_[i].setBounds(referenceRect(x, 486, 28, 18));
+        pitchEnvelopeCaptions_[i].setBounds(referenceRect(x, 404, 28, 12));
+        pitchEnvelopeFaders_[i].setBounds(referenceRect(x, 416, 28, 74));
+        pitchEnvelopeValues_[i].setBounds(referenceRect(x, 492, 28, 18));
     }
     for (std::size_t i = 0; i < voiceKnobs_.size(); ++i)
     {
