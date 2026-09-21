@@ -4,7 +4,7 @@ This branch builds **1.0.0-dev**, not the final release. See the
 [current development status](DEVELOPMENT_1.0_HU_EN.md) and
 [1.0 release gates](ROADMAP_1.0.md).
 
-The following documentation describes the previous v0.6.6 Pre-Beta 2 release.
+This documentation describes current 1.0.0-dev functionality. The image below is a historical v0.6.6 preview, not the current GUI.
 
 [Magyar dokumentáció](README_HU.md)
 
@@ -16,7 +16,7 @@ VDX7-JUCE is a six-operator FM instrument built around the VDX7 DX7 Mk I hardwar
 
 ## 1. Platform and package
 
-The prepared binary is **macOS Apple Silicon (arm64), VST3**. Run it in a native Apple Silicon host; it is not an Intel/Universal binary. AU and Standalone targets compile locally but are not the primary distribution package. Windows and Universal build scripts exist; they are not verified release binaries.
+CI and exact-commit candidates build **macOS Universal (arm64 + x86_64) VST3** and **Windows x64 VST3**. Local arm64 builds remain available. These are development artifacts, not accepted final release packages. Intel Mac and Windows host acceptance remain separate release gates. AU and Standalone are not the primary distribution formats.
 
 The binary is ad-hoc signed, not Developer ID signed or notarised. macOS may require approval. Do not disable system-wide security protections. macOS 11 is the build-script deployment target, not a claim that every supported OS/host combination has been tested.
 
@@ -72,11 +72,12 @@ The footer CPU percentage is a smoothed audio-callback load estimate, not total 
 
 UTILITY provides voice renaming (1–10 printable ASCII characters), single-voice export, bank export and operator copy/paste. Copy/paste includes all 21 operator fields. Its clipboard is local to the plug-in instance and is not stored in projects.
 
-The header SAVE AS... button also opens single-voice or 32-voice bank SysEx file
-export. This writes a separate file, never factory ROM. It does not yet create a
-USER library or choose a destination bank slot. Voice SysEx contains voice data,
-not the complete plug-in/project or global performance state. USER bank storage
-and the complete approved PERFORMANCE layout remain upcoming integration chapters.
+SAVE AS... defaults to saving a captured patch into one of 32 persistent USER bank
+slots, with overwrite confirmation and conflict protection. Select USER (load copy)
+on the LCD to copy that bank into the editable bank. Multiple named USER banks are
+not yet supported. The same dialog offers Export Patch (.syx) and Export Bank (.syx).
+Factory ROM is never overwritten. Back up the USER file as well as your projects.
+Voice SysEx contains voice data, not the complete project or global performance state.
 Previous/next program buttons now sit beside the LCD; the duplicated header
 preset display has been removed. Program navigation wraps within the current bank.
 
@@ -103,10 +104,14 @@ The v0.6 series adds clickable algorithm diagrams, mechanical wheel graphics, an
   These global settings are recalled by the DAW project, not voice/bank SysEx;
   they are not additional host automation parameters. Changes apply during
   rendering, including held controller input. Existing 148 parameters are unchanged.
-- Play mode, pitch-bend settings, portamento controls and SETTINGS remain pending.
-  This is the first functional PERFORMANCE panel, not the final hardware-style skin.
+- PERFORMANCE also exposes firmware-backed POLY/MONO, pitch-bend range/step and
+  portamento controls. Mode changes reset sounding voices. SETTINGS provides master
+  tuning (-256 to +255 firmware units, not cents) and OMNI/channel 1–16 input filtering.
+  These settings are stored in the project, not voice SysEx. Input filtering is a
+  wrapper feature, not multitimbral/MPE operation.
 - No live MIDI Out/SysEx transmission; SysEx file import/export is available.
-- Sample-rate conversion currently uses linear interpolation; quality improvements remain planned.
+- Sample-rate conversion uses a Blackman-windowed sinc filter with reported host latency.
+  Final host/audio-quality acceptance remains outstanding.
 - Voice edits reload the active program. Dense automation and held-note editing need further host testing.
 - Hardware/third-party SysEx interoperability is not comprehensively verified.
 - No claim of complete DX7 feature parity, calibrated envelope timing or universal host compatibility.
@@ -116,7 +121,7 @@ The v0.6 series adds clickable algorithm diagrams, mechanical wheel graphics, an
 
 Local Apple Silicon VST3/AU/Standalone builds and ad-hoc signature checks passed. Automated checks cover voice data, SysEx, state round trips, legacy parameter ordering, algorithm routing, switch bindings and editor bounds at three sizes. Offline rendering was finite and non-silent at 44.1/48/96 kHz with 64/128/256-sample buffers.
 
-Earlier iterations received user REAPER testing. These checks do not establish complete v0.6.6 host certification. Please test preset recall after restart, automation, held notes, switches and resizing.
+Earlier iterations received user REAPER testing. These historical checks do not establish current 1.0.0 host certification. Please test preset recall after restart, automation, held notes, switches and resizing.
 
 Report issues at [GitHub Issues](https://github.com/RobCZart82/VDX7-JUCE/issues), including version, OS, CPU architecture, host/version, sample rate/buffer, steps and expected/actual behaviour. Attach screenshots or a minimal project if useful; do not upload proprietary ROMs.
 
@@ -138,12 +143,16 @@ The convenience script `scripts/build-macos-arm64.command` builds, ad-hoc signs 
 Tests:
 
 ```sh
-cmake --build build-local --config Release --target vdx7_voice_data_tests vdx7_algorithm_tests vdx7_processor_tests
+cmake --build build-local --config Release --target vdx7_all_tests
 ctest --test-dir build-local -C Release --output-on-failure
-./build-local/Release/vdx7_processor_tests
 ```
 
-The processor runner needs a locally discoverable ROM (exit 77 if absent), opens no audio device and optionally accepts an existing absolute directory for PNG snapshots.
+By default CTest runs five ROM-free tests. The shared target also compile-checks
+stress coverage without running it. For the full local suite, configure with
+`-DVDX7_ENABLE_ROM_TESTS=ON -DVDX7_TEST_ROM_FILE=/absolute/path/to/your/dx7.bin`,
+then rebuild `vdx7_all_tests` and rerun CTest. Never upload the ROM. The processor
+runner opens no audio device and optionally accepts an existing absolute directory
+for PNG snapshots.
 
 ## 12. Licensing and release status
 
@@ -155,4 +164,5 @@ The release provides complete corresponding source including pinned JUCE and dx7
 
 Thanks to [VDX7/chiaccona](https://github.com/chiaccona/VDX7), [Retromulator/dx7Lib](https://github.com/reales/retromulator) and [JUCE](https://github.com/juce-framework/JUCE). Only the portable DX7 core is integrated, not the complete Retromulator application.
 
-Next priorities are wider host testing, Performance/Settings functionality, held-note editing behaviour and resampling/audio-quality evaluation.
+Next priorities are transaction/concurrency regression tests, held-note MIDI behaviour,
+GUI finishing, and real-host/platform acceptance. See ROADMAP_1.0.md.
