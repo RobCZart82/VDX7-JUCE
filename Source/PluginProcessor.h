@@ -121,11 +121,26 @@ private:
     void applyPendingCommands();
     bool applyOperatorParameters();
     bool applyVoiceParameters();
+    // Applies the coalesced, non-disruptive global settings on the engine/audio
+    // thread. POLY/MONO and portamento-time retain their firmware transactions.
+    void applyPendingPerformanceSettings() noexcept;
     void applyPerformanceControls();
     void updateEngineSnapshot() noexcept;
     void publishPerformanceDisplay() noexcept; // Caller owns engineMutex_.
+    void publishMasterTune() noexcept; // Caller owns engineMutex_.
+    void setPerformanceDisplayBits(uint64_t mask, uint64_t value) noexcept;
     static_assert(std::atomic<uint64_t>::is_always_lock_free);
     std::atomic<uint64_t> performanceDisplay_ {0};
+    // The UI can coalesce frequent global edits without taking engineMutex_.
+    // Bits 0-15: controller fields, 16-17: play fields 1-2, 19-20: bend,
+    // bit 21: master tuning. The audio thread owns their firmware application.
+    static constexpr uint32_t kMasterTunePerformanceMask = uint32_t {1} << 21;
+    std::atomic<uint32_t> pendingPerformanceDirty_ {0};
+    std::array<std::atomic<int>, 16> pendingControllerSettings_ {};
+    std::array<std::atomic<int>, 2> pendingPlaySettings_ {};
+    std::array<std::atomic<int>, 2> pendingPitchBendSettings_ {};
+    std::atomic<int> pendingMasterTune_ {0};
+    std::atomic<int> masterTuneSnapshot_ {0};
     void timerCallback() override;
     void handleNoteOn(juce::MidiKeyboardState*, int, int, float) override;
     void handleNoteOff(juce::MidiKeyboardState*, int, int, float) override;

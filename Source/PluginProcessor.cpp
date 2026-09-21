@@ -167,6 +167,9 @@ VDX7AudioProcessor::VDX7AudioProcessor(bool detectRom)
 
     outputGain_.setCurrentAndTargetValue(
         juce::Decibels::decibelsToGain(masterVolumeParameter_->load()));
+    for (auto& value : pendingControllerSettings_) value.store(0, std::memory_order_relaxed);
+    for (auto& value : pendingPlaySettings_) value.store(0, std::memory_order_relaxed);
+    for (auto& value : pendingPitchBendSettings_) value.store(0, std::memory_order_relaxed);
     detectRom_ = detectRom;
     keyboardState_.addListener(this);
     if (detectRom_) autoDetectRom();
@@ -342,6 +345,7 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     if (applyOperatorParameters() | applyVoiceParameters())
         engine_.reloadCurrentProgram();
     applyPendingCommands();
+    applyPendingPerformanceSettings();
     applyPerformanceControls();
 
     auto* left = buffer.getWritePointer(0);
@@ -548,6 +552,7 @@ void VDX7AudioProcessor::applyPerformanceControls()
 void VDX7AudioProcessor::updateEngineSnapshot() noexcept
 {
     publishPerformanceDisplay();
+    publishMasterTune();
     engineLoaded_.store(engine_.isLoaded(), std::memory_order_release);
     midiOverloadSnapshot_.store(engine_.midiOverloadCount(), std::memory_order_relaxed);
     factoryVoicesAvailable_.store(engine_.hasFactoryVoices(), std::memory_order_release);
@@ -837,6 +842,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
             if (applyOperatorParameters() | applyVoiceParameters())
                 engine_.reloadCurrentProgram();
             applyPendingCommands();
+            applyPendingPerformanceSettings();
             bank = engine_.currentBank();
             inputChannel = midiInputChannel_.load();
             program = engine_.currentProgram();
@@ -925,6 +931,7 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
         operatorParameterDirty_[0].store(0);
         operatorParameterDirty_[1].store(0);
         voiceParameterDirty_.store(0);
+        pendingPerformanceDirty_.store(0, std::memory_order_release);
     }
     const auto parameterState = state.getChildWithName(juce::Identifier(kParameterStateType));
     if (parameterState.isValid())
@@ -1041,6 +1048,7 @@ void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
         operatorParameterDirty_[0].store(0, std::memory_order_release);
         operatorParameterDirty_[1].store(0, std::memory_order_release);
         voiceParameterDirty_.store(0, std::memory_order_release);
+        pendingPerformanceDirty_.store(0, std::memory_order_release);
         editQueue_.discard();
         lastPitchMsb_ = -1;
         lastModValue_ = -1;
@@ -1099,6 +1107,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         operatorParameterDirty_[0].store(0, std::memory_order_release);
         operatorParameterDirty_[1].store(0, std::memory_order_release);
         voiceParameterDirty_.store(0, std::memory_order_release);
+        pendingPerformanceDirty_.store(0, std::memory_order_release);
         editQueue_.discard();
         lastPitchMsb_ = -1;
         lastModValue_ = -1;
@@ -1255,6 +1264,7 @@ void VDX7AudioProcessor::flushVoiceEditsLocked()
 {
     if (applyOperatorParameters() | applyVoiceParameters()) engine_.reloadCurrentProgram();
     applyPendingCommands();
+    applyPendingPerformanceSettings();
 }
 
 bool VDX7AudioProcessor::renameVoice(const juce::String& name)
@@ -1376,7 +1386,93 @@ void VDX7AudioProcessor::publishPerformanceDisplay() noexcept
     for (int f = 0; f < 3; ++f) packed |= uint64_t(engine_.getPlaySetting(f) & 1) << (40 + f);
     packed |= uint64_t(engine_.getPlaySetting(3) & 127) << 43;
     for (int f = 0; f < 2; ++f) packed |= uint64_t(engine_.getPitchBendSetting(f) & 15) << (50 + f * 4);
+    // A coalesced UI write is newer than the engine image until the audio
+    // thread consumes it. Overlay it so the editor never flickers back while
+    // waiting for the next callback.
+    const auto pending = pendingPerformanceDirty_.load(std::memory_order_acquire);
+    for (int controller = 0; controller < 4; ++controller)
+    {
+        for (int field = 0; field < 4; ++field)
+        {
+            const auto pendingBit = uint32_t {1} << (controller * 4 + field);
+            if ((pending & pendingBit) == 0) continue;
+            const auto shift = controller * 10 + (field == 0 ? 0 : 6 + field);
+            const auto width = field == 0 ? uint64_t {0x7f} : uint64_t {1};
+            packed = (packed & ~(width << shift))
+                   | ((uint64_t(pendingControllerSettings_[controller * 4 + field].load(
+                           std::memory_order_relaxed)) & width) << shift);
+        }
+    }
+    for (int field = 0; field < 2; ++field)
+    {
+        const auto pendingBit = uint32_t {1} << (16 + field);
+        if ((pending & pendingBit) != 0)
+        {
+            const auto shift = 41 + field;
+            packed = (packed & ~(uint64_t {1} << shift))
+                   | ((uint64_t(pendingPlaySettings_[field].load(std::memory_order_relaxed)) & 1) << shift);
+        }
+    }
+    for (int field = 0; field < 2; ++field)
+    {
+        const auto pendingBit = uint32_t {1} << (19 + field);
+        if ((pending & pendingBit) != 0)
+        {
+            const auto shift = 50 + field * 4;
+            packed = (packed & ~(uint64_t {0xf} << shift))
+                   | ((uint64_t(pendingPitchBendSettings_[field].load(std::memory_order_relaxed)) & 0xf) << shift);
+        }
+    }
     performanceDisplay_.store(packed, std::memory_order_release);
+}
+
+void VDX7AudioProcessor::publishMasterTune() noexcept
+{
+    const auto pending = pendingPerformanceDirty_.load(std::memory_order_acquire);
+    const auto value = (pending & kMasterTunePerformanceMask) != 0
+        ? pendingMasterTune_.load(std::memory_order_relaxed)
+        : engine_.masterTune();
+    masterTuneSnapshot_.store(value, std::memory_order_release);
+}
+
+void VDX7AudioProcessor::setPerformanceDisplayBits(uint64_t mask, uint64_t value) noexcept
+{
+    auto current = performanceDisplay_.load(std::memory_order_acquire);
+    do
+    {
+        const auto replacement = (current & ~mask) | (value & mask);
+        if (performanceDisplay_.compare_exchange_weak(current, replacement,
+                                                       std::memory_order_acq_rel,
+                                                       std::memory_order_acquire))
+            return;
+    }
+    while (true);
+}
+
+void VDX7AudioProcessor::applyPendingPerformanceSettings() noexcept
+{
+    const auto pending = pendingPerformanceDirty_.exchange(0, std::memory_order_acq_rel);
+    if (pending == 0) return;
+
+    for (int controller = 0; controller < 4; ++controller)
+        for (int field = 0; field < 4; ++field)
+            if ((pending & (uint32_t {1} << (controller * 4 + field))) != 0)
+                engine_.setControllerSetting(controller, field,
+                    pendingControllerSettings_[controller * 4 + field].load(std::memory_order_relaxed));
+
+    for (int field = 0; field < 2; ++field)
+        if ((pending & (uint32_t {1} << (16 + field))) != 0)
+            engine_.setPlaySetting(field + 1, pendingPlaySettings_[field].load(std::memory_order_relaxed));
+
+    for (int field = 0; field < 2; ++field)
+        if ((pending & (uint32_t {1} << (19 + field))) != 0)
+            engine_.setPitchBendSetting(field, pendingPitchBendSettings_[field].load(std::memory_order_relaxed));
+
+    if ((pending & kMasterTunePerformanceMask) != 0)
+        engine_.setMasterTune(pendingMasterTune_.load(std::memory_order_relaxed));
+
+    publishPerformanceDisplay();
+    publishMasterTune();
 }
 
 VDX7AudioProcessor::PerformanceDisplay VDX7AudioProcessor::getPerformanceDisplay() const noexcept
@@ -1413,22 +1509,38 @@ std::array<int, 4> VDX7AudioProcessor::getPlaySettings() const
 
 bool VDX7AudioProcessor::setPlaySettingFromUi(int field, int value)
 {
-    bool changed;
+    if (field < 0 || field > 3 || value < 0 || value > (field == 3 ? 99 : 1)
+        || !engineLoaded_.load(std::memory_order_acquire))
+        return false;
+
+    // POLY/MONO is an intentional firmware transaction: it drains the native
+    // serial path and ends active notes. Keep that explicit behavior out of
+    // the ordinary coalesced UI-write path.
+    if (field == 0 || field == 3)
     {
-        std::scoped_lock lock(engineMutex_);
-        const int previous = engine_.getPlaySetting(field);
-        if (!engine_.setPlaySetting(field, value)) return false;
-        publishPerformanceDisplay();
-        changed = previous != value;
+        bool changed;
+        {
+            std::scoped_lock lock(engineMutex_);
+            const int previous = engine_.getPlaySetting(field);
+            if (!engine_.setPlaySetting(field, value)) return false;
+            publishPerformanceDisplay();
+            changed = previous != value;
+        }
+        if (changed) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+        return true;
     }
-    if (changed) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+
+    const auto previous = getPerformanceDisplay().play[field];
+    pendingPlaySettings_[field - 1].store(value, std::memory_order_relaxed);
+    pendingPerformanceDirty_.fetch_or(uint32_t {1} << (16 + field - 1), std::memory_order_release);
+    setPerformanceDisplayBits(uint64_t {1} << (40 + field), uint64_t(value) << (40 + field));
+    if (previous != value) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
     return true;
 }
 
 int VDX7AudioProcessor::getMasterTune() const
 {
-    std::scoped_lock lock(engineMutex_);
-    return engine_.masterTune();
+    return masterTuneSnapshot_.load(std::memory_order_acquire);
 }
 
 bool VDX7AudioProcessor::setMidiInputChannelFromUi(int channel)
@@ -1441,43 +1553,44 @@ bool VDX7AudioProcessor::setMidiInputChannelFromUi(int channel)
 
 bool VDX7AudioProcessor::setMasterTuneFromUi(int value)
 {
-    bool changed;
-    {
-        std::scoped_lock lock(engineMutex_);
-        changed = engine_.masterTune() != value;
-        if (!engine_.setMasterTune(value)) return false;
-    }
-    if (changed) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    if (value < -256 || value > 255 || !engineLoaded_.load(std::memory_order_acquire))
+        return false;
+    const auto previous = masterTuneSnapshot_.exchange(value, std::memory_order_acq_rel);
+    pendingMasterTune_.store(value, std::memory_order_relaxed);
+    pendingPerformanceDirty_.fetch_or(kMasterTunePerformanceMask, std::memory_order_release);
+    if (previous != value) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
     return true;
 }
 
 bool VDX7AudioProcessor::setPitchBendSettingFromUi(int field, int value)
 {
-    bool changed;
-    {
-        std::scoped_lock lock(engineMutex_);
-        const int previous = engine_.getPitchBendSetting(field);
-        if (!engine_.setPitchBendSetting(field, value)) return false;
-        publishPerformanceDisplay();
-        changed = previous != value;
-    }
-    if (changed) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    if (field < 0 || field > 1 || value < 0 || value > 12
+        || !engineLoaded_.load(std::memory_order_acquire))
+        return false;
+    const auto previous = getPerformanceDisplay().bend[field];
+    pendingPitchBendSettings_[field].store(value, std::memory_order_relaxed);
+    pendingPerformanceDirty_.fetch_or(uint32_t {1} << (19 + field), std::memory_order_release);
+    const auto shift = 50 + field * 4;
+    setPerformanceDisplayBits(uint64_t {0xf} << shift, uint64_t(value) << shift);
+    if (previous != value) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
     return true;
 }
 
 bool VDX7AudioProcessor::setControllerSettingFromUi(int controller, int field, int value)
 {
-    bool changed = false;
-    {
-        std::scoped_lock lock(engineMutex_);
-        const int previous = engine_.getControllerSetting(controller, field);
-        if (!engine_.setControllerSetting(controller, field, value)) return false;
-        publishPerformanceDisplay();
-        changed = previous != value;
-    }
+    if (controller < 0 || controller >= 4 || field < 0 || field >= 4
+        || value < 0 || value > (field == 0 ? 99 : 1)
+        || !engineLoaded_.load(std::memory_order_acquire))
+        return false;
+    const auto index = controller * 4 + field;
+    const auto previous = getPerformanceDisplay().controllers[index];
+    pendingControllerSettings_[index].store(value, std::memory_order_relaxed);
+    pendingPerformanceDirty_.fetch_or(uint32_t {1} << index, std::memory_order_release);
+    const auto shift = controller * 10 + (field == 0 ? 0 : 6 + field);
+    const auto width = field == 0 ? uint64_t {0x7f} : uint64_t {1};
+    setPerformanceDisplayBits(width << shift, uint64_t(value) << shift);
     // Do not mark a voice dirty: these globals are outside the packed voice bank.
-    // Notification must remain outside engineMutex_ (host may re-enter state save).
-    if (changed) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    if (previous != value) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
     return true;
 }
 

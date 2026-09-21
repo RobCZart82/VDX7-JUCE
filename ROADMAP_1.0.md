@@ -53,6 +53,16 @@ bugs only with source evidence or reproduction; do not apply the rejected APVTS
 - [ ] Physical MIDI timing, dense chords and automation acceptance in hosts.
 - [x] Move direct voice-parameter notifications outside the audio callback and
   engine lock; editorless/reentrant state tests (see `VALIDATION_1.0_HOST_PUBLICATION.md`).
+- [x] Coalesce frequent non-disruptive PERFORMANCE/SETTINGS writes outside
+  `engineMutex_`: controller range/assignments, pitch-bend range/step, master
+  tuning, portamento mode and glissando. A held-lock regression and a
+  concurrent 1,000-write/audio test confirm prompt UI snapshots, save-time
+  commit and zero measured contention from this path. See
+  `VALIDATION_1.0_CONTENTION.md`.
+- [ ] Keep the deliberate POLY/MONO and portamento-time firmware transactions
+  in the real GUI/audio-overlap audit. POLY/MONO must retain its firmware reset
+  and note-release behavior; do not move it to the callback without a bounded
+  transaction design and host evidence.
 - [ ] Complete remaining audio-thread allocation/locking audit and contention stress test.
 - [x] Guard firmware serial/controller saturation; validate recovery with a
   60-second simulated load and callback ordinary-C++ heap probe
