@@ -351,6 +351,8 @@ Work in separate reviewed PRs; no final release/tag or firmware upload.
   instead of three engine locks (VALIDATION_1.0_PERFORMANCE_SNAPSHOT.md).
   Settings writes, voice publication and ROM/state transactions remain separate
   contention paths; complete real-host continuity acceptance is still open.
+  State serialization now encodes detached snapshots outside engineMutex_;
+  see VALIDATION_1.0_STATE_LOCK_SCOPE.md. Capture and restore still require locks.
 - [ ] Profile deferred-MIDI copying before claiming a performance defect.
 - [ ] Increase GLOBAL pitch-envelope fader height within its existing section.
 - [ ] Clip white-key hover tint to the visible key body; add visual regression.

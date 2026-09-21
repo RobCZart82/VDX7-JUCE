@@ -816,6 +816,10 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     std::array<int, VDX7VoiceData::kOperatorCount * VDX7VoiceData::kParameterCount> operatorValues {};
     std::array<int, VDX7VoiceData::kVoiceParameterCount> voiceValues {};
     bool loaded = false;
+    juce::ValueTree pendingCopy;
+    std::vector<uint8_t> ram;
+    int bank = -1, program = 0, inputChannel = 0;
+    uint32_t modified = 0;
 
     {
         std::scoped_lock lock(engineMutex_);
@@ -824,36 +828,48 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         {
             pendingRestore_.setProperty("midiInputChannel", midiInputChannel_.load(), nullptr);
             capturePendingRestoreEditsLocked();
-            if (auto xml = pendingRestore_.createXml())
-                copyXmlToBinary(*xml, destData);
-            return;
+            pendingCopy = pendingRestore_.createCopy();
         }
-        // Capture even the most recent GUI/automation edits if the host asks
-        // for state before another audio block has had a chance to run.
-        if (applyOperatorParameters() | applyVoiceParameters())
-            engine_.reloadCurrentProgram();
-        applyPendingCommands();
-        state.setProperty("bank", engine_.currentBank(), nullptr);
-        state.setProperty("midiInputChannel", midiInputChannel_.load(), nullptr);
-        state.setProperty("program", engine_.currentProgram(), nullptr);
-        state.setProperty("modifiedVoices", static_cast<juce::int64>(modifiedVoices_.load()), nullptr);
+        else
+        {
+            // Capture even the most recent GUI/automation edits if the host asks
+            // for state before another audio block has had a chance to run.
+            if (applyOperatorParameters() | applyVoiceParameters())
+                engine_.reloadCurrentProgram();
+            applyPendingCommands();
+            bank = engine_.currentBank();
+            inputChannel = midiInputChannel_.load();
+            program = engine_.currentProgram();
+            modified = modifiedVoices_.load();
+            if (!engine_.saveRam(ram)) ram.clear();
+            loaded = engine_.isLoaded();
+            if (loaded)
+            {
+                for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
+                    for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
+                        operatorValues[op * VDX7VoiceData::kParameterCount + p] =
+                            engine_.getOperatorParameter(op, static_cast<VDX7VoiceData::Parameter>(p));
+                for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
+                    voiceValues[p] = engine_.getVoiceParameter(static_cast<VDX7VoiceData::VoiceParameter>(p));
+            }
+        }
+    }
 
-        std::vector<uint8_t> ram;
-        if (engine_.saveRam(ram) && !ram.empty())
-        {
-            juce::MemoryBlock block(ram.data(), ram.size());
-            state.setProperty("ram", block.toBase64Encoding(), nullptr);
-        }
-        loaded = engine_.isLoaded();
-        if (loaded)
-        {
-            for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
-                for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
-                    operatorValues[op * VDX7VoiceData::kParameterCount + p] =
-                        engine_.getOperatorParameter(op, static_cast<VDX7VoiceData::Parameter>(p));
-            for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
-                voiceValues[p] = engine_.getVoiceParameter(static_cast<VDX7VoiceData::VoiceParameter>(p));
-        }
+    // Encode only detached data: XML/base64 work must not keep audio's engine
+    // mutex occupied. The RAM, selection and voice parameters share one capture.
+    if (pendingCopy.isValid())
+    {
+        if (auto xml = pendingCopy.createXml()) copyXmlToBinary(*xml, destData);
+        return;
+    }
+    state.setProperty("bank", bank, nullptr);
+    state.setProperty("midiInputChannel", inputChannel, nullptr);
+    state.setProperty("program", program, nullptr);
+    state.setProperty("modifiedVoices", static_cast<juce::int64>(modified), nullptr);
+    if (!ram.empty())
+    {
+        juce::MemoryBlock block(ram.data(), ram.size());
+        state.setProperty("ram", block.toBase64Encoding(), nullptr);
     }
 
     {
@@ -900,9 +916,10 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
             return; // Malformed state must not replace a usable/pending project.
     }
 
+    auto pendingCopy = state.createCopy();
     {
         std::scoped_lock lock(engineMutex_);
-        pendingRestore_ = state.createCopy();
+        pendingRestore_ = pendingCopy;
         const int channel = static_cast<int>(state.getProperty("midiInputChannel", 0));
         midiInputChannel_.store(channel >= 0 && channel <= 16 ? channel : 0);
         operatorParameterDirty_[0].store(0);
