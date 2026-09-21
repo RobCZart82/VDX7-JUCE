@@ -82,6 +82,55 @@ static void checkEngineContention(const juce::File& rom)
               << " (uncontended diagnostic, not a realtime guarantee)\n";
 }
 
+static void checkPerformanceDisplay(const juce::File& rom)
+{
+    VDX7AudioProcessor p(false);
+    require(p.loadRomFromFile(rom), "display ROM");
+    p.prepareToPlay(48000, 256);
+    auto compare = [&] {
+        const auto display = p.getPerformanceDisplay();
+        require(display.controllers == p.getControllerSettings(), "display controller values");
+        require(display.play == p.getPlaySettings(), "display play values");
+        require(display.bend == p.getPitchBendSettings(), "display bend values");
+    };
+    compare();
+    for (int value : {0, 99}) {
+        for (int c = 0; c < 4; ++c) {
+            require(p.setControllerSettingFromUi(c, 0, value), "display range update");
+            for (int f = 1; f < 4; ++f)
+                require(p.setControllerSettingFromUi(c, f, (c + f + value) % 2), "display assignment update");
+        }
+        require(p.setPlaySettingFromUi(3, value), "display portamento time");
+        for (int f = 0; f < 2; ++f)
+            require(p.setPitchBendSettingFromUi(f, value == 0 ? 0 : 12), "display bend update");
+        compare();
+    }
+    juce::MemoryBlock state;
+    p.getStateInformation(state);
+    p.setControllerSettingFromUi(0, 0, 1);
+    p.setStateInformation(state.getData(), static_cast<int>(state.getSize()));
+    compare();
+    // Display reads must finish even when another thread owns the engine lock.
+    {
+        std::unique_lock lock(VDX7RegressionAccess::mutex(p));
+        auto reader = std::async(std::launch::async, [&] {
+            for (int n = 0; n < 10000; ++n)
+                require(p.getPerformanceDisplay().controllers[0] == 99, "stable display frame");
+        });
+        const bool blocked = reader.wait_for(std::chrono::seconds(1)) == std::future_status::timeout;
+        lock.unlock(); reader.get();
+        require(!blocked, "performance display must not acquire engine lock");
+    }
+    juce::AudioBuffer<float> audio(2, 256);
+    juce::MidiBuffer midi;
+    for (int cc : {126, 127}) {
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, cc, 0), 0);
+        for (int n = 0; n < 100; ++n) processChecked(p, audio, midi);
+        compare(); // Firmware-driven mode changes publish after rendering too.
+    }
+    std::cout << "PASS: lock-free coherent performance display, settings, restore and MIDI mode refresh\n";
+}
+
 static void checkCapacityAndPendingOff(const juce::File& rom)
 {
     for (int mode : {0, 1})
@@ -383,6 +432,7 @@ int main(int argc, char** argv)
                 "allocation probe self-test");
         checkKeyboard(rom);
         checkEngineContention(rom);
+        checkPerformanceDisplay(rom);
         checkCapacityAndPendingOff(rom);
         checkLatencyPublication();
         checkLongRunAndOverload(rom);

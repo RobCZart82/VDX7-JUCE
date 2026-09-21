@@ -71,6 +71,8 @@ public:
     bool isCurrentVoiceModified() const noexcept;
     // Message-thread controls, saved in existing RAM state; not host automation.
     std::array<int, 16> getControllerSettings() const;
+    struct PerformanceDisplay { std::array<int,16> controllers{}; std::array<int,4> play{}; std::array<int,2> bend{}; };
+    PerformanceDisplay getPerformanceDisplay() const noexcept;
     std::array<int, 2> getPitchBendSettings() const;
     std::array<int, 4> getPlaySettings() const;
     int getMasterTune() const;
@@ -119,6 +121,9 @@ private:
     bool applyVoiceParameters();
     void applyPerformanceControls();
     void updateEngineSnapshot() noexcept;
+    void publishPerformanceDisplay() noexcept; // Caller owns engineMutex_.
+    static_assert(std::atomic<uint64_t>::is_always_lock_free);
+    std::atomic<uint64_t> performanceDisplay_ {0};
     void timerCallback() override;
     void handleNoteOn(juce::MidiKeyboardState*, int, int, float) override;
     void handleNoteOff(juce::MidiKeyboardState*, int, int, float) override;
