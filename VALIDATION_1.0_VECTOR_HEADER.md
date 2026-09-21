@@ -1,8 +1,10 @@
 # Vector header integration
 
-Embedded user-concept SVG wordmark replaces plain VDX7 text and detached Mk I.
-label. Mk 1. is part of the paths, shares the logo bottom and has a 15-unit gap
-from the 7. CMake embeds SVG alongside existing PNG resources.
+Embedded own SVG wordmark replaces plain VDX7 text and detached Mk I. label.
+Mk 1. is part of the paths, shares the logo bottom and has a 15-unit gap from
+the 7. The current SVG applies restrained metallic horizontal scanlines to the
+same original paths, retaining vector sharpness without a raster/glitch asset.
+CMake embeds SVG alongside existing PNG resources.
 
 Two separate text lines remain vector-rendered glyphs, not raster logo content.
 Logo bottom and lower text ink bottom use the header buttons' visible bottom

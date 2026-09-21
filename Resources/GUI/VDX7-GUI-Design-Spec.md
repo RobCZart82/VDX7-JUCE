@@ -8,7 +8,7 @@ Fő szabályok:
 
 - az alapsík közel fekete, enyhén kékeszöld antracit;
 - a fémes részletek finomak, karc és erős zaj nélkül;
-- a cián kizárólag identitás, fókusz, kiválasztás és érték-visszajelzés;
+- a fémes szójel a termékidentitás; a cián kizárólag fókusz, kiválasztás és érték-visszajelzés;
 - a zöld LCD külön anyag és külön információs réteg;
 - a piros/sárga/zöld kizárólag a kimeneti LED VU méréshez tartozik;
 - minden díszítésnek funkcionális oka legyen; a glow rövid és kontrollált;
@@ -95,7 +95,12 @@ Rögzített feliratkészlet:
 
 ### Header
 
-Balra a csíkozott cián `VDX7` szójel, mellette világos `Mk I.`. A termékleírás kisebb, két soros tömb. Középen a preset-léptetés: bal nyíl, széles sötét preset mező, jobb nyíl. Jobbra négy azonos menügomb. A header nem kap folyamatos cián fényt; az aktív preset és a hover használhat vékony kiemelést.
+Balra a saját, fémes ezüst `VDX7 Mk I.` szójel áll. A betűk finom, szabályos
+vízszintes scanline-kitöltést kapnak, de nem neon ciánt, zajt vagy széteső
+glitch-hatást. A termékleírás kisebb, két soros tömb. Középen a
+preset-léptetés: bal nyíl, széles sötét preset mező, jobb nyíl. Jobbra négy
+azonos menügomb. A header nem kap folyamatos cián fényt; az aktív preset és a
+hover használhat vékony kiemelést.
 
 ### Voice/LCD
 
@@ -127,6 +132,18 @@ A billentyűzet a fehér és fekete key assetek ismétléséből épül. Note-on
 - görgetés vagy drag közben a marker Y-pozíciója folyamatosan kövesse az értéket, ne csak az interakció végén frissüljön.
 
 A pitch skálája `+2 / 0 / -2`, a mod wheel címkéje egyszerű `MOD`.
+
+### Végleges asset-minőség
+
+- A szójel, keretek, LCD-nyilak, ikonok, vonalak és minden méretezett geometria
+  vektorosan vagy JUCE-rajzolással készül; 75%, 100% és 125% méreten is éles
+  marad Retina kijelzőn.
+- A fém, gumi és üveg anyaghatás több programból rajzolt gradient- és
+  árnyékrétegből áll. Raszteres textúra csak finom, ismételhető részlet lehet,
+  sosem egy teljes vezérlő felnagyított alapja.
+- A wheel bordázata és cián jelzője ugyanabból az értékből számolódik. Így drag
+  vagy görgetés közben a kerék felülete is mozog, a PITCH visszatér középre, a
+  MOD pedig megtartja a helyzetét.
 
 ### Footer
 
