@@ -336,8 +336,12 @@ Work in separate reviewed PRs; no final release/tag or firmware upload.
 - [x] Reproduce same-pitch/channel/retrigger ownership against local firmware:
   repeated notes survive one Note Off. Replace pitch booleans with bounded
   multiplicity and release every tracked repeat. See VALIDATION_1.0_REPEATED_NOTES.md.
-- [ ] Broader voice-stealing/mono and overflow-with-in-flight-note-off acceptance;
-  wrapper ownership is conservative bookkeeping, not a firmware voice allocator.
+- [x] Local POLY/MONO capacity and queued-off overflow regression: 32 notes,
+  repeated/distinct pitches, all host channels, sustain, silence after recovery
+  and an audible fresh note that can be released. Fixed recovery release budget
+  lost by flushed pending offs. See VALIDATION_1.0_MIDI_CAPACITY.md.
+  Wrapper bookkeeping remains conservative, not an exact firmware allocator;
+  real-host acceptance and lock-contention measurements remain open.
 - [ ] Measure engine-lock contention and POLY/MONO wall-clock duration. Rendered
   sample duration is not measured lock time; the processor timer is conditional.
 - [ ] Profile deferred-MIDI copying before claiming a performance defect.
