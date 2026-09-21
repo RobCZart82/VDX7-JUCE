@@ -114,12 +114,16 @@ static void checkPerformanceDisplay(const juce::File& rom)
     {
         std::unique_lock lock(VDX7RegressionAccess::mutex(p));
         auto reader = std::async(std::launch::async, [&] {
-            for (int n = 0; n < 10000; ++n)
+            for (int n = 0; n < 10000; ++n) {
                 require(p.getPerformanceDisplay().controllers[0] == 99, "stable display frame");
+                require(p.getControllerSettings()[0] == 99, "legacy controller read is snapshot-backed");
+                require(p.getPlaySettings()[3] == 99, "legacy play read is snapshot-backed");
+                require(p.getPitchBendSettings()[0] == 12, "legacy bend read is snapshot-backed");
+            }
         });
         const bool blocked = reader.wait_for(std::chrono::seconds(1)) == std::future_status::timeout;
         lock.unlock(); reader.get();
-        require(!blocked, "performance display must not acquire engine lock");
+        require(!blocked, "performance display reads must not acquire engine lock");
     }
     juce::AudioBuffer<float> audio(2, 256);
     juce::MidiBuffer midi;

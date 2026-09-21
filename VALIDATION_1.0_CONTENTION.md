@@ -20,12 +20,16 @@ These are wall times from this run, not maximums or promises; no timing threshol
 is asserted. Simulated firmware audio duration must not be confused with them.
 At a small buffer even a millisecond-scale transaction warrants investigation.
 
-Next: use the counters during real GUI/audio overlap; replace routine display
-reads with suitable snapshots and evaluate bounded settings transactions.
-The three PERFORMANCE getters still take engineMutex_, and mode changes still
-perform firmware work under that mutex. This chapter does not fix those paths
-or declare audio continuity accepted. Intentional voice reset on mode change
-must be distinguished from missing audio blocks.
+Routine PERFORMANCE display reads now use one coherent packed snapshot. The
+legacy-shaped controller, play and pitch-bend accessors decode that same
+snapshot instead of acquiring `engineMutex_`; a held-lock regression confirms
+all four read paths complete while the engine mutex remains owned elsewhere.
+
+Next: use the counters during real GUI/audio overlap and evaluate bounded
+settings transactions. Mode changes still perform firmware work under
+`engineMutex_`. This chapter does not fix that path or declare audio continuity
+accepted. Intentional voice reset on mode change must be distinguished from
+missing audio blocks.
 
 GUI layout, firmware routing, parameter IDs, state schema and installed plugin
 are unchanged. No release/tag or firmware upload.

@@ -70,6 +70,8 @@ public:
     bool hasUnexportedEdits() const noexcept;
     bool isCurrentVoiceModified() const noexcept;
     // Message-thread controls, saved in existing RAM state; not host automation.
+    // Legacy-shaped read accessors decode the coherent, lock-free display
+    // snapshot. They are safe for ordinary periodic editor refreshes.
     std::array<int, 16> getControllerSettings() const;
     struct PerformanceDisplay { std::array<int,16> controllers{}; std::array<int,4> play{}; std::array<int,2> bend{}; };
     PerformanceDisplay getPerformanceDisplay() const noexcept;
