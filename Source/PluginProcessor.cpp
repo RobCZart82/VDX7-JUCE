@@ -303,6 +303,11 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     const int total = buffer.getNumSamples();
     // A long transaction may silence a block, but never blocks audio.
     std::unique_lock lock(engineMutex_, std::try_to_lock);
+    if (!lock.owns_lock() && total > 0 && engineLoaded_.load(std::memory_order_acquire))
+    {
+        contendedAudioBlocks_.fetch_add(1, std::memory_order_relaxed);
+        contendedAudioSamples_.fetch_add(static_cast<uint64_t>(total), std::memory_order_relaxed);
+    }
     const bool useDeferred = deferredMidi_.active() || !lock.owns_lock();
     if (engineLoaded_.load(std::memory_order_acquire) && useDeferred)
     {
