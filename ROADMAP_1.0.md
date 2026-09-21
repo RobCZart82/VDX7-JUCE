@@ -322,6 +322,26 @@ The existing skin remains in use during the first functional integration chapter
   project/missing-ROM recall, real MIDI/audio regression and persistent LCD/header.
 - [ ] Final hardware-inspired visual treatment, original VDX7 identity and host usability acceptance.
 
+## Reviewed audit follow-up (2026-09-21)
+
+Work in separate reviewed PRs; no final release/tag or firmware upload.
+
+- [x] Share normal-CI/RC build targets so USER-bank and resampling tests cannot
+  be omitted by one workflow. Stress runner is compile-only without local ROM.
+- [x] Align candidate macOS architecture with Universal CI; update current HU/EN
+  usage docs and label the original development snapshot as historical.
+- [ ] Deterministic reserved-but-unpublished edit-queue transaction regression;
+  fix stale edits crossing restore/import boundaries without blocking audio.
+- [ ] Reproduce same-pitch/channel/retrigger ownership cases against firmware
+  semantics before changing note bookkeeping.
+- [ ] Measure engine-lock contention and POLY/MONO wall-clock duration. Rendered
+  sample duration is not measured lock time; the processor timer is conditional.
+- [ ] Profile deferred-MIDI copying before claiming a performance defect.
+- [ ] Increase GLOBAL pitch-envelope fader height within its existing section.
+- [ ] Clip white-key hover tint to the visible key body; add visual regression.
+- [ ] Final surface polish and real-host/HiDPI acceptance. Preserve the approved
+  About and header alignment; their visual arrangement has owner approval.
+
 ## Publication gate
 
 - [ ] M1 REAPER acceptance: multiple instances, automation, transport stop,

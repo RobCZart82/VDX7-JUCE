@@ -221,6 +221,17 @@ if(VDX7_ENABLE_ROM_TESTS)
         PROPERTIES SKIP_RETURN_CODE 77 LABELS "local-rom")
 endif()
 
+# Shared by normal CI and exact-commit candidates. Stress is compile-only on
+# ROM-free runners; its execution remains an opt-in local-ROM test.
+add_custom_target(vdx7_ci_checks DEPENDS
+    vdx7_user_bank_tests vdx7_deferred_midi_tests vdx7_voice_data_tests
+    vdx7_algorithm_tests vdx7_resampling_tests vdx7_stress_tests)
+add_custom_target(vdx7_all_tests DEPENDS vdx7_ci_checks)
+if(VDX7_ENABLE_ROM_TESTS)
+    add_dependencies(vdx7_all_tests vdx7_processor_tests vdx7_stability_tests
+        vdx7_midi_range_tests vdx7_timing_tests)
+endif()
+
 if(APPLE)
     # Ad-hoc signing is sufficient for a local REAPER test build.
     set_target_properties(VDX7 PROPERTIES

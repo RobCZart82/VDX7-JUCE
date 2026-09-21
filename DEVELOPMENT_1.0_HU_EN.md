@@ -1,5 +1,28 @@
 # VDX7 1.0.0-dev — development build / fejlesztői változat
 
+## Current status / Aktuális állapot (2026-09-21)
+
+Implemented since the initial snapshot below: persistent 32-slot USER bank and
+Save As, firmware-backed PERFORMANCE controls, SETTINGS tuning/channel filter,
+windowed-sinc resampling, warm GUI and vector-branded About. See README.md and
+README_HU.md for current usage. Normal CI and exact-commit candidates share
+`vdx7_ci_checks`: five ROM-free tests plus a compile-only stress runner.
+Candidates target macOS Universal and Windows x64; compilation is not host acceptance.
+
+Az alábbi induló állapot óta elkészült a 32 helyes USER-bank és Save As,
+a firmware-alapú PERFORMANCE, a SETTINGS hangolás/csatornaszűrés, a sinc resampling,
+a meleg tónusú GUI és a vektoros About. Aktuális használat: README_HU.md.
+A CI/kiadásjelölt közös tesztcélt használ; Universal és Windows x64 fordítás
+nem helyettesíti a hosttesztet. Nyitott: párhuzamossági/MIDI vizsgálatok,
+GUI-finomságok, teljes platformelfogadás és végső csomagolás. Nincs végleges release.
+
+## Historical initial stabilization snapshot / Történeti induló állapot
+
+The sections below describe the starting milestone only; their pending-feature
+list and commit IDs are historical, not the current main or acceptance evidence.
+Az alábbi hátralévő funkciók és commitok az induló mérföldkőhöz tartoznak,
+nem a jelenlegi main állapotát vagy annak elfogadottságát jelölik.
+
 ## Magyar
 
 Ez nem végleges 1.0.0 kiadás. A kiadott v0.6.6 változat és csomagjai változatlanok.

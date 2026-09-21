@@ -4,7 +4,7 @@ Ez az ág **1.0.0-dev** változatot készít, nem végleges kiadást. Lásd az
 [aktuális fejlesztői állapotot](DEVELOPMENT_1.0_HU_EN.md) és az
 [1.0 kiadás feltételeit](ROADMAP_1.0.md).
 
-Az alábbi dokumentáció a korábbi v0.6.6 Pre-Beta 2 kiadást írja le.
+Ez a leírás az aktuális 1.0.0-dev funkcióit ismerteti. Az alábbi kép történeti v0.6.6 előnézet, nem a jelenlegi GUI.
 
 [English documentation](README.md)
 
@@ -16,7 +16,7 @@ A VDX7-JUCE hatoperátoros FM hangszer, a VDX7 DX7 Mk I hardveremulációs magj�
 
 ## 1. Platform és csomag
 
-Az előkészített bináris **macOS Apple Silicon (arm64), VST3**. Natív Apple Silicon hostban használd; nem Intel/Universal bináris. Az AU és Standalone cél helyben lefordul, de nem ezek az elsődleges kiadási csomagok. Windows- és Universal-build scriptek vannak, ezek nem ellenőrzött kiadási binárisok.
+A CI és az adott commitból készülő kiadásjelölt **macOS Universal (arm64 + x86_64) VST3** és **Windows x64 VST3** változatot fordít. Helyi arm64 build is készíthető. Ezek fejlesztési artifactok, nem elfogadott végleges kiadások. Az Intel Mac és Windows hostteszt külön kiadási feltétel. Az AU és Standalone nem elsődleges terjesztési formátum.
 
 A bináris ad-hoc aláírt, nem Developer ID aláírt és nem notarizált. A macOS jóváhagyást kérhet. Ne kapcsold ki a rendszer egészére vonatkozó biztonsági védelmeket. A macOS 11 a build script célverziója, nem minden rendszer/host kombináció tesztelésének ígérete.
 
@@ -72,12 +72,12 @@ A footer CPU-százaléka simított audio-callback terhelésbecslés, nem a telje
 
 A UTILITY menüben hangszínátnevezés (1–10 nyomtatható ASCII karakter), egyhangszínes export, bankexport és operátormásolás/-beillesztés található. A másolás mind a 21 operátormezőt tartalmazza. Vágólapja a pluginpéldányhoz tartozik, a projekt nem tárolja.
 
-A fejléc SAVE AS... gombja is eléri az egyhangszínes és a 32 hangszínes bank
-SysEx-fájlexportját. Ez külön fájlt ment, a factory ROM-ot nem írja felül.
-Egyelőre nem hoz létre USER-könyvtárat, és nem választ célhelyet saját bankban.
-A hangszín-SysEx nem tartalmazza a teljes plugin-/projektállapotot vagy a globális
-PERFORMANCE-beállításokat. A USER-bank tárolás és a teljes elfogadott PERFORMANCE nézet
-bekötése következő fejlesztési szakasz.
+A SAVE AS... alapművelete egy rögzített hangszínmásolat mentése a tartós USER-bank
+32 helyének egyikére, felülírási jóváhagyással és ütközésvédelemmel. Az LCD
+USER (load copy) választása a USER-bankot a szerkeszthető bankba másolja.
+Több elnevezett USER-bank még nincs. Ugyanitt Export Patch (.syx) és Export Bank (.syx)
+is választható. A factory ROM változatlan marad. A USER-fájlról is készíts mentést.
+A hangszín-SysEx nem tárol teljes projektet vagy globális PERFORMANCE-beállításokat.
 A presetléptető nyilak az LCD mellé kerültek, a fejlécből a kettőzött presetkijelzés
 eltűnt. A léptetés az aktuális bankon belül körbefordul. Az algoritmus az ábra
 melletti 1–32-es listából választható, a korábbi automatizálható paraméterrel.
@@ -106,10 +106,14 @@ A v0.6 sorozat kattintható algoritmusábrát, mechanikus kerékgrafikát, OUTPU
   beállítások, nem kerülnek a hangszín-/bank-SysEx fájlba, és nem új automatizálható
   hostparaméterek. Kitartott vezérlőértéknél is érvényesülnek a hangfeldolgozás során.
   A meglévő 148 paraméter változatlan marad.
-- A játékmód, pitch bend beállítások, portamento kezelők és a SETTINGS még hátravannak.
-  Ez az első működő PERFORMANCE panel, még nem a végleges hardverhatású külső.
+- A PERFORMANCE firmware-alapú POLY/MONO, pitch-bend tartomány/lépés és portamento
+  vezérlőket is tartalmaz. A módváltás elengedi a szóló hangokat. A SETTINGS főhangolást
+  (-256…+255 firmware-egység, nem cent) és OMNI/1–16 bemeneti csatornaszűrést kínál.
+  Ezek a projektben tárolódnak, nem a hangszín-SysExben. A csatornaszűrés wrapperfunkció,
+  nem multitimbrális vagy MPE működés.
 - Élő MIDI Out/SysEx-küldés nincs; SysEx-fájlimport/-export van.
-- A mintavételi frekvencia átalakítása jelenleg lineáris interpolációt használ; minőségi fejlesztése tervben van.
+- A mintavétel-átalakítás Blackman-ablakos sinc szűrést használ, a hostnak jelzett
+  késleltetéssel. A végleges host- és hangminőségi elfogadás még hátravan.
 - A hangparaméterek módosítása újratölti az aktív programot. Sűrű automatizálás és tartott hang alatti szerkesztés további hosttesztet igényel.
 - A hardveres és más szoftverekkel való SysEx-együttműködés nincs átfogóan ellenőrizve.
 - Nem ígér teljes DX7-funkcióazonosságot, kalibrált envelope-időzítést vagy általános hostkompatibilitást.
@@ -119,7 +123,7 @@ A v0.6 sorozat kattintható algoritmusábrát, mechanikus kerékgrafikát, OUTPU
 
 A helyi Apple Silicon VST3/AU/Standalone fordítások és ad-hoc aláírás-ellenőrzések sikeresek. Az automatizált tesztek hangadatot, SysEx-et, állapot-visszatöltést, korábbi paramétersorrendet, algoritmuskapcsolásokat, kapcsolóbekötéseket és három méretben a vezérlők elhelyezését ellenőrzik. Az offline hang 44,1/48/96 kHz-en, 64/128/256 mintás pufferekkel véges és nem néma volt.
 
-Korábbi változatokat a felhasználó REAPERben tesztelt. Ezek az ellenőrzések nem jelentenek teljes v0.6.6 hostminősítést. Kérjük, próbáld ki az újraindítás utáni preset-visszaállítást, automatizálást, tartott hangokat, kapcsolókat és átméretezést.
+Korábbi változatokat a felhasználó REAPERben tesztelt. Ezek a korábbi ellenőrzések nem jelentenek aktuális 1.0.0 hostminősítést. Kérjük, próbáld ki az újraindítás utáni preset-visszaállítást, automatizálást, tartott hangokat, kapcsolókat és átméretezést.
 
 Hibát a [GitHub Issues](https://github.com/RobCZart82/VDX7-JUCE/issues) oldalon jelezz verzióval, operációs rendszerrel, CPU-architektúrával, host/verzióval, mintavétellel/pufferrel, lépésekkel és elvárt/tényleges eredménnyel. Szükség esetén mellékelj képet vagy minimális projektet; jogvédett ROM-ot ne tölts fel.
 
@@ -141,12 +145,16 @@ A kényelmi `scripts/build-macos-arm64.command` script fordít, ad-hoc aláír �
 Tesztek:
 
 ```sh
-cmake --build build-local --config Release --target vdx7_voice_data_tests vdx7_algorithm_tests vdx7_processor_tests
+cmake --build build-local --config Release --target vdx7_all_tests
 ctest --test-dir build-local -C Release --output-on-failure
-./build-local/Release/vdx7_processor_tests
 ```
 
-A processor teszt helyben felismerhető ROM-ot igényel (hiányában 77-es kilépés), nem nyit audioeszközt, és opcionálisan egy létező abszolút mappát fogad a PNG-előnézetekhez.
+Alapból öt ROM-mentes teszt fut. A közös cél a stressztesztet is lefordítja, de ROM
+nélkül nem futtatja. A teljes helyi tesztsorhoz konfigurálj
+`-DVDX7_ENABLE_ROM_TESTS=ON -DVDX7_TEST_ROM_FILE=/abszolut/utvonal/dx7.bin`
+opciókkal, majd fordítsd újra a `vdx7_all_tests` célt, és indítsd a CTestet.
+A ROM-ot ne töltsd fel. A processor teszt nem nyit audioeszközt, és opcionálisan
+létező abszolút mappát fogad a PNG-előnézetekhez.
 
 ## 12. Licenc és kiadási állapot
 
@@ -158,4 +166,5 @@ A kiadás a bináris mellett teljes forrást biztosít a rögzített JUCE- és d
 
 Köszönet a [VDX7/chiaccona](https://github.com/chiaccona/VDX7), [Retromulator/dx7Lib](https://github.com/reales/retromulator) és [JUCE](https://github.com/juce-framework/JUCE) fejlesztőinek. Csak a hordozható DX7-mag épül be, nem a teljes Retromulator alkalmazás.
 
-Következő prioritások: szélesebb hosttesztelés, Performance/Settings funkciók, tartott hangok alatti szerkesztés és a resampling/hangminőség vizsgálata.
+Következő prioritások: állapotváltási és párhuzamossági regressziók, tartott MIDI-hangok,
+GUI-véglegesítés és valódi host-/platformelfogadás. Lásd: ROADMAP_1.0.md.
