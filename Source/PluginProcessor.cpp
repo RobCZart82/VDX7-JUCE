@@ -1395,24 +1395,20 @@ VDX7AudioProcessor::PerformanceDisplay VDX7AudioProcessor::getPerformanceDisplay
 
 std::array<int, 16> VDX7AudioProcessor::getControllerSettings() const
 {
-    std::array<int, 16> result {};
-    std::scoped_lock lock(engineMutex_);
-    for (int controller = 0; controller < 4; ++controller)
-        for (int field = 0; field < 4; ++field)
-            result[controller * 4 + field] = engine_.getControllerSetting(controller, field);
-    return result;
+    // Preserve the public convenience accessor without making a periodic UI
+    // refresh contend with the audio callback. The packed display snapshot is
+    // published under engineMutex_ whenever these firmware settings change.
+    return getPerformanceDisplay().controllers;
 }
 
 std::array<int, 2> VDX7AudioProcessor::getPitchBendSettings() const
 {
-    std::scoped_lock lock(engineMutex_);
-    return {engine_.getPitchBendSetting(0), engine_.getPitchBendSetting(1)};
+    return getPerformanceDisplay().bend;
 }
 
 std::array<int, 4> VDX7AudioProcessor::getPlaySettings() const
 {
-    std::scoped_lock lock(engineMutex_);
-    return {engine_.getPlaySetting(0), engine_.getPlaySetting(1), engine_.getPlaySetting(2), engine_.getPlaySetting(3)};
+    return getPerformanceDisplay().play;
 }
 
 bool VDX7AudioProcessor::setPlaySettingFromUi(int field, int value)
