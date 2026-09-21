@@ -30,7 +30,57 @@ struct VDX7RegressionAccess
     static bool note(const VDX7AudioProcessor& p, int note) { return p.engine_.activeMidiNotes_[note]; }
     static uint64_t overloads(const VDX7AudioProcessor& p) { return p.engine_.midiOverloadCount(); }
     static VDX7Engine& engine(VDX7AudioProcessor& p) { return p.engine_; }
+    static std::mutex& mutex(VDX7AudioProcessor& p) { return p.engineMutex_; }
+    static uint64_t missed(const VDX7AudioProcessor& p) { return p.contendedAudioBlocks_.load(); }
+    static uint64_t samples(const VDX7AudioProcessor& p) { return p.contendedAudioSamples_.load(); }
 };
+
+static void checkEngineContention(const juce::File& rom)
+{
+    VDX7AudioProcessor p(false);
+    require(p.loadRomFromFile(rom), "contention ROM");
+    p.prepareToPlay(48000, 256);
+    juce::AudioBuffer<float> audio(2, 256);
+    juce::MidiBuffer midi;
+    midi.addEvent(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)), 0);
+    processChecked(p, audio, midi);
+    require(VDX7RegressionAccess::missed(p) == 0, "ordinary callback has no contention");
+    // A deterministic cross-thread transaction, not a scheduler-dependent race.
+    {
+        std::unique_lock lock(VDX7RegressionAccess::mutex(p));
+        auto callback = std::async(std::launch::async, [&] {
+            for (int n = 0; n < 3; ++n) {
+                processChecked(p, audio, midi);
+                require(audio.getMagnitude(0, 256) == 0, "contended callback is silent");
+            }
+        });
+        const bool blocked = callback.wait_for(std::chrono::seconds(1)) == std::future_status::timeout;
+        lock.unlock();
+        callback.get();
+        require(!blocked, "audio must not wait for engine lock");
+    }
+    require(VDX7RegressionAccess::missed(p) == 3 && VDX7RegressionAccess::samples(p) == 768,
+            "exact lost block/sample diagnostics");
+    processChecked(p, audio, midi);
+    require(VDX7RegressionAccess::missed(p) == 3, "successful callback does not increment loss");
+    std::cout << "Measured forced contention: 3 blocks, 768 samples = 16 ms at 48 kHz\n";
+
+    // Real wall-clock UI operations, deliberately no deadline assertions.
+    for (int mode : {1, 0}) {
+        const auto begin = std::chrono::steady_clock::now();
+        require(p.setPlaySettingFromUi(0, mode), "measured mode switch");
+        const auto ms = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - begin).count();
+        std::cout << "Mode switch " << mode << " wallMs=" << ms << '\n';
+    }
+    const auto begin = std::chrono::steady_clock::now();
+    for (int n = 0; n < 1000; ++n) {
+        (void)p.getControllerSettings(); (void)p.getPlaySettings(); (void)p.getPitchBendSettings();
+    }
+    std::cout << "1000 performance reads wallMs="
+              << std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count()
+              << " (uncontended diagnostic, not a realtime guarantee)\n";
+}
 
 static void checkCapacityAndPendingOff(const juce::File& rom)
 {
@@ -332,6 +382,7 @@ int main(int argc, char** argv)
         require(VDX7AllocationProbe::allocations == 1 && VDX7AllocationProbe::deallocations == 1,
                 "allocation probe self-test");
         checkKeyboard(rom);
+        checkEngineContention(rom);
         checkCapacityAndPendingOff(rom);
         checkLatencyPublication();
         checkLongRunAndOverload(rom);

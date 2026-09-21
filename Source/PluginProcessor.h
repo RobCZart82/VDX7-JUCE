@@ -137,6 +137,8 @@ private:
     void flushVoiceEditsLocked();
 
     mutable std::mutex engineMutex_;
+    // Instance-lifetime diagnostics; never persisted or reset by the GUI.
+    std::atomic<uint64_t> contendedAudioBlocks_ {0}, contendedAudioSamples_ {0};
     std::atomic<int> midiInputChannel_ {0}; // 0=legacy OMNI, 1-16=host input filter.
     int audioMidiInputChannel_ = 0; // Audio-thread owned.
     bool channelReleasePending_ = false; // Audio-thread owned across contention.

@@ -344,6 +344,9 @@ Work in separate reviewed PRs; no final release/tag or firmware upload.
   real-host acceptance and lock-contention measurements remain open.
 - [ ] Measure engine-lock contention and POLY/MONO wall-clock duration. Rendered
   sample duration is not measured lock time; the processor timer is conditional.
+  Initial instrumentation and deterministic lock probe are implemented; see
+  VALIDATION_1.0_CONTENTION.md. Real GUI/audio overlap measurement and mitigation
+  remain open. Do not treat diagnostics as a dropout fix.
 - [ ] Profile deferred-MIDI copying before claiming a performance defect.
 - [ ] Increase GLOBAL pitch-envelope fader height within its existing section.
 - [ ] Clip white-key hover tint to the visible key body; add visual regression.
