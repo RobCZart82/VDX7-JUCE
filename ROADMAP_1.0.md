@@ -55,6 +55,10 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
 - [x] CC64/65 thresholds and CC11 expression regression tests.
 - [x] Preserve MIDI note-offs during engine transactions; bounded overflow recovery tested.
 - [x] Validated live bank SysEx with coherent GUI/host state (local tests).
+- [x] Preserve master tuning across validated live 32-voice bank SysEx import.
+  The bank contains voice RAM only, so an import must retain the separate
+  project-level firmware tuning value. Engine regression covers -256, -1, 0,
+  +1 and +255; live-host bulk-SysEx acceptance remains open.
 - [x] Remove 512-sample lookahead; measure onset and host-block invariance.
 - [ ] Physical MIDI timing, dense chords and automation acceptance in hosts.
 - [x] Move direct voice-parameter notifications outside the audio callback and

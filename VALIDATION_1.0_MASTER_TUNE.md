@@ -13,6 +13,18 @@ unlock. No extra DSP pitch offset, firmware patch, host automation parameter or
 new project-state field is introduced. Voice-bank bytes/dirty markers are unchanged.
 Existing RAM project persistence carries tuning; voice/bank SysEx does not.
 
+## Live bank SysEx preservation
+
+A validated live 32-voice bulk bank replaces only voice RAM. Before copying its
+4096 bytes, the engine captures the existing firmware master-tuning value and
+reapplies it afterwards. A live bank import therefore cannot silently change a
+project-level SETTINGS value to zero.
+
+The engine regression imports a valid bank at -256, -1, 0, +1 and +255 and
+asserts the exact tuning value after every import. This covers the documented
+firmware range, including both endpoints; it does not claim calibrated cents or
+physical-hardware equivalence.
+
 MIDI input remains the existing all-channel/OMNI behavior. Channel selection is
 explicitly marked unavailable in the dialog and remains the next chapter. This
 is a functional development dialog, not the final hardware-inspired skin.
