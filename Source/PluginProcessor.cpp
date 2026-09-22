@@ -290,6 +290,18 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     if (buffer.getNumSamples() > 0)
         loadTimer.emplace(processLoadMeasurer_, buffer.getNumSamples());
     buffer.clear();
+    const auto midiTimelineEpoch = midiTimelineEpoch_.load(std::memory_order_acquire);
+    if (midiTimelineEpoch != audioMidiTimelineEpoch_)
+    {
+        // The state thread must never clear this audio-owned timeline directly.
+        // Discard events queued before the restored project state, including
+        // virtual-keyboard events waiting behind a contended engine transaction.
+        audioMidiTimelineEpoch_ = midiTimelineEpoch;
+        deferredMidi_.clear();
+        keyboardQueue_.discard();
+        clearKeyboardSnapshot();
+        stateRestoreReleasePending_ = true;
+    }
     const int inputChannel = midiInputChannel_.load();
     if (inputChannel != audioMidiInputChannel_)
     {
@@ -336,11 +348,12 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         return;
     }
 
-    if (channelReleasePending_)
+    if (channelReleasePending_ || stateRestoreReleasePending_)
     {
-        engine_.allNotesOff(); // Also releases sustain before new-channel notes.
+        engine_.allNotesOff(); // Also releases sustain before a new channel or project state.
         clearKeyboardSnapshot();
         channelReleasePending_ = false;
+        stateRestoreReleasePending_ = false;
     }
     if (applyOperatorParameters() | applyVoiceParameters())
         engine_.reloadCurrentProgram();
@@ -926,6 +939,9 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     {
         std::scoped_lock lock(engineMutex_);
         pendingRestore_ = pendingCopy;
+        // The audio callback owns deferredMidi_. Publishing an epoch lets it
+        // discard pre-restore events without racing this state-thread update.
+        midiTimelineEpoch_.fetch_add(1, std::memory_order_release);
         const int channel = static_cast<int>(state.getProperty("midiInputChannel", 0));
         midiInputChannel_.store(channel >= 0 && channel <= 16 ? channel : 0);
         operatorParameterDirty_[0].store(0);

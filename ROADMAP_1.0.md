@@ -51,6 +51,10 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
   regressions; see `VALIDATION_1.0_EDIT_ORDER.md` for scope and overload policy.
 
 - [x] Missing-ROM deferred project restore, including re-save/restart (local automated tests).
+- [x] Valid project-state restore creates an audio-owned MIDI timeline boundary:
+  it releases old notes and discards host/UI events deferred before the restore,
+  without the state thread mutating audio-owned storage. Local lock-contention
+  regression covers one sounding note plus one deferred Note On.
 - [x] Invalid-ROM rejection preserves RAM and pending UI edits; firmware-only reload tested.
 - [x] CC64/65 thresholds and CC11 expression regression tests.
 - [x] Preserve MIDI note-offs during engine transactions; bounded overflow recovery tested.

@@ -53,6 +53,29 @@ struct VDX7RegressionAccess
         p.processBlock(audio, midi);
         require(!p.engine_.hasHeldMidiNotes(), "return to OMNI releases notes");
     }
+    static void checkStateRestoreDropsDeferredMidi(VDX7AudioProcessor& p)
+    {
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        midi.addEvent(juce::MidiMessage::noteOn(1, 59, uint8_t(100)), 0);
+        p.processBlock(audio, midi);
+        require(p.engine_.activeMidiNotes_[59], "note sounds before state restore");
+
+        juce::MemoryBlock state;
+        p.getStateInformation(state);
+
+        midi.clear();
+        midi.addEvent(juce::MidiMessage::noteOn(1, 60, uint8_t(100)), 0);
+        contend(p, midi);
+        require(p.deferredMidi_.active(), "contention defers note before state restore");
+
+        p.setStateInformation(state.getData(), static_cast<int>(state.getSize()));
+        juce::MidiBuffer empty;
+        p.processBlock(audio, empty);
+        require(!p.engine_.activeMidiNotes_[59] && !p.engine_.activeMidiNotes_[60]
+                    && !p.engine_.hasHeldMidiNotes(),
+                "state restore releases old notes and drops pre-restore deferred MIDI");
+    }
     static void checkInvalidMidi(VDX7AudioProcessor& p)
     {
         const std::vector<std::vector<uint8_t>> invalid {
@@ -458,6 +481,7 @@ int main(int argc, char** argv)
             input.prepareToPlay(48000, 64);
             VDX7RegressionAccess::checkInvalidMidi(input);
             VDX7RegressionAccess::checkInputChannel(input);
+            VDX7RegressionAccess::checkStateRestoreDropsDeferredMidi(input);
         }
         VDX7Engine engine;
         require(engine.loadRomImage(static_cast<const uint8_t*>(rom.getData()), rom.getSize()), "engine ROM");

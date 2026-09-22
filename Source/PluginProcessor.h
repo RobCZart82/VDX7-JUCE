@@ -111,6 +111,11 @@ private:
     void capturePendingRestoreEditsLocked();
     juce::ValueTree pendingRestore_;
     bool detectRom_ = true;
+    // State restoration is initiated off the audio thread. The audio callback
+    // observes this epoch before touching its own deferred MIDI storage.
+    std::atomic<uint64_t> midiTimelineEpoch_ {0};
+    uint64_t audioMidiTimelineEpoch_ = 0; // Audio-thread owned.
+    bool stateRestoreReleasePending_ = false; // Audio-thread owned across contention.
     VDX7DeferredMidi deferredMidi_;
     bool handleMidiEventLocked(const uint8_t*, int);
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();

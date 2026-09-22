@@ -50,6 +50,22 @@ reapplied after prepare. Held notes/pedals, pending serial events and old audio
 tails deliberately do not survive restart. Actual REAPER transport/seek/loop
 acceptance is still a separate gate; a host stop is not always a device restart.
 
+## Project-state boundary
+
+A syntactically valid project state (including a valid packed-RAM payload when
+present) publishes a lock-free MIDI timeline epoch while its restore transaction
+is staged. The audio callback owns the delayed host/UI MIDI structures: on
+observing a new epoch, it discards their pre-restore contents, clears the
+keyboard mirror snapshot and schedules all-notes-off before delivering MIDI for
+the restored state. The state/message thread never clears audio-owned deferred
+storage directly, avoiding a cross-thread race.
+
+This deliberately defines project restore as a discontinuity for held notes and
+queued input. Input that arrives after the audio callback has observed the
+boundary may be processed for the restored state; the existing host-ordering
+limits at an exact cross-thread boundary are not presented as lossless MIDI
+continuity.
+
 ## Program Change
 
 VDX7 exposes 32 programs. The existing clamp-to-31 policy now applies to BOTH
@@ -65,6 +81,9 @@ depending on undocumented firmware behavior for out-of-range program numbers.
   64-sample recovery block; subsequent off delivered; note-off/overflow regressions.
 - Restart while one note sounds and another is deferred: no stale ownership,
   no deferred replay, silent old voices, unchanged packed bank/program.
+- Restore while one note sounds and a later Note On is deferred by engine-lock
+  contention: the old note is released and the queued Note On never reaches the
+  restored state.
 - Existing 148-parameter, state, all-note-range, timing and processor tests.
 
 New-source GitHub CI must pass before the next development chapter. Remaining
@@ -78,3 +97,7 @@ The development VST3 was ad-hoc signed and `codesign --verify --deep --strict`
 passed. No installed plugin was replaced. Firmware is not included in source,
 CI or the development bundle. Universal/Windows CI remains the PR gate;
 local arm64 tests are not a substitute for that gate or host acceptance.
+
+2026-09-22, macOS arm64 Release: `vdx7_stability_tests` and
+`vdx7_deferred_midi_tests` passed with a local user-supplied ROM; the VST3 target
+also rebuilt. This is a local regression result only, not host acceptance.
