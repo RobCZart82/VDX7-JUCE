@@ -1,6 +1,6 @@
 # Engine contention measurement foundation
 
-Base: main 3e2fe46dd9090216c44377879884531c1f441dd7 (PR31).
+Base: main 895ac5dd669d (PR42).
 
 Added instance-lifetime atomic counters for positive-length audio callbacks
 which fail the engine try-lock while ROM is loaded: blocks and samples. No
@@ -8,17 +8,25 @@ logging, allocation, persistence or GUI reset on the callback. These counters
 measure deliberate silence from engine contention, not every possible dropout,
 OS underrun, or normal silence. Exposed to the regression friend, not a new
 host parameter or user-interface control. Successful blocks do not increment.
+The processor also records the longest contiguous run of contended audio
+samples. This distinguishes a few scattered callbacks from one longer silent
+section; it is an instance-lifetime high-water mark, not a host underrun meter.
 
 Deterministic two-thread probe holds the engine mutex while three 256-sample
 callbacks finish. Exactly 3 blocks/768 samples are counted and confirmed silent
-(16 ms at 48 kHz). Callback completion timeout is a deadlock guard, not a realtime
-deadline. This forced schedule does NOT measure normal GUI dropout frequency.
+(16 ms at 48 kHz), and the longest contiguous run is exactly 768 samples.
+Callback completion timeout is a deadlock guard, not a realtime deadline. This
+forced schedule does NOT measure normal GUI dropout frequency.
 
-One local diagnostic run measured POLY->MONO at 2.48479 ms and MONO->POLY at
-0.739375 ms. 1000 uncontended PERFORMANCE getter triplets took 0.044166 ms.
-These are wall times from this run, not maximums or promises; no timing threshold
-is asserted. Simulated firmware audio duration must not be confused with them.
-At a small buffer even a millisecond-scale transaction warrants investigation.
+The direct POLY/MONO transaction now records the last and peak time spent after
+the caller has acquired `engineMutex_`, in microseconds. It intentionally
+excludes time spent waiting for the mutex, host scheduling and display
+notification; the stress test separately prints the complete caller wall time.
+The diagnostic clamps a sub-microsecond measurement to one microsecond so a
+completed transaction is observable on all supported clocks. There is no timing
+threshold: these are local measurements, not a maximum or promise. Simulated
+firmware audio duration must not be confused with either measurement. At a small
+buffer even a millisecond-scale transaction warrants investigation.
 
 Routine PERFORMANCE display reads now use one coherent packed snapshot. The
 legacy-shaped controller, play and pitch-bend accessors decode that same

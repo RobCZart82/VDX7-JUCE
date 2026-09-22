@@ -34,6 +34,9 @@ struct VDX7RegressionAccess
     static std::mutex& mutex(VDX7AudioProcessor& p) { return p.engineMutex_; }
     static uint64_t missed(const VDX7AudioProcessor& p) { return p.contendedAudioBlocks_.load(); }
     static uint64_t samples(const VDX7AudioProcessor& p) { return p.contendedAudioSamples_.load(); }
+    static uint64_t longestRun(const VDX7AudioProcessor& p) { return p.longestContendedAudioRunSamples_.load(); }
+    static uint64_t lastModeMicros(const VDX7AudioProcessor& p) { return p.lastModeTransactionMicros_.load(); }
+    static uint64_t peakModeMicros(const VDX7AudioProcessor& p) { return p.peakModeTransactionMicros_.load(); }
 };
 
 static void checkEngineContention(const juce::File& rom)
@@ -62,17 +65,24 @@ static void checkEngineContention(const juce::File& rom)
     }
     require(VDX7RegressionAccess::missed(p) == 3 && VDX7RegressionAccess::samples(p) == 768,
             "exact lost block/sample diagnostics");
+    require(VDX7RegressionAccess::longestRun(p) == 768,
+            "exact longest contiguous loss diagnostic");
     processChecked(p, audio, midi);
     require(VDX7RegressionAccess::missed(p) == 3, "successful callback does not increment loss");
     std::cout << "Measured forced contention: 3 blocks, 768 samples = 16 ms at 48 kHz\n";
 
-    // Real wall-clock UI operations, deliberately no deadline assertions.
+    // Real wall-clock UI operations, deliberately no deadline assertions. The
+    // processor also records only the work performed while it owns its lock.
     for (int mode : {1, 0}) {
         const auto begin = std::chrono::steady_clock::now();
         require(p.setPlaySettingFromUi(0, mode), "measured mode switch");
         const auto ms = std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - begin).count();
-        std::cout << "Mode switch " << mode << " wallMs=" << ms << '\n';
+        const auto lockMicros = VDX7RegressionAccess::lastModeMicros(p);
+        require(lockMicros > 0 && VDX7RegressionAccess::peakModeMicros(p) >= lockMicros,
+                "mode transaction diagnostics");
+        std::cout << "Mode switch " << mode << " callerWallMs=" << ms
+                  << " lockWorkMicros=" << lockMicros << '\n';
     }
     const auto begin = std::chrono::steady_clock::now();
     for (int n = 0; n < 1000; ++n) {

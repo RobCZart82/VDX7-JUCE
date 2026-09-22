@@ -3,6 +3,7 @@
 #include "VDX7MidiValidation.h"
 #include "PluginEditor.h"
 
+#include <chrono>
 #include <cstring>
 #include <optional>
 
@@ -322,7 +323,16 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     {
         contendedAudioBlocks_.fetch_add(1, std::memory_order_relaxed);
         contendedAudioSamples_.fetch_add(static_cast<uint64_t>(total), std::memory_order_relaxed);
+        const auto currentRun = audioContendedRunSamples_ += static_cast<uint64_t>(total);
+        auto longestRun = longestContendedAudioRunSamples_.load(std::memory_order_relaxed);
+        while (longestRun < currentRun
+               && !longestContendedAudioRunSamples_.compare_exchange_weak(
+                   longestRun, currentRun, std::memory_order_relaxed, std::memory_order_relaxed))
+        {
+        }
     }
+    else
+        audioContendedRunSamples_ = 0;
     const bool useDeferred = deferredMidi_.active() || !lock.owns_lock();
     if (engineLoaded_.load(std::memory_order_acquire) && useDeferred)
     {
@@ -1545,12 +1555,25 @@ bool VDX7AudioProcessor::setPlaySettingFromUi(int field, int value)
     if (field == 0)
     {
         bool changed;
+        uint64_t lockWorkMicros = 0;
         {
             std::scoped_lock lock(engineMutex_);
+            const auto begin = std::chrono::steady_clock::now();
             const int previous = engine_.getPlaySetting(field);
             if (!engine_.setPlaySetting(field, value)) return false;
             publishPerformanceDisplay();
             changed = previous != value;
+            lockWorkMicros = static_cast<uint64_t>(std::max<int64_t>(
+                1, std::chrono::duration_cast<std::chrono::microseconds>(
+                       std::chrono::steady_clock::now() - begin).count()));
+        }
+        lastModeTransactionMicros_.store(lockWorkMicros, std::memory_order_relaxed);
+        auto peakMicros = peakModeTransactionMicros_.load(std::memory_order_relaxed);
+        while (peakMicros < lockWorkMicros
+               && !peakModeTransactionMicros_.compare_exchange_weak(
+                   peakMicros, lockWorkMicros,
+                   std::memory_order_relaxed, std::memory_order_relaxed))
+        {
         }
         if (changed) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
         return true;
