@@ -370,9 +370,12 @@ Work in separate reviewed PRs; no final release/tag or firmware upload.
   real-host acceptance and lock-contention measurements remain open.
 - [ ] Measure engine-lock contention and POLY/MONO wall-clock duration. Rendered
   sample duration is not measured lock time; the processor timer is conditional.
-  Initial instrumentation and deterministic lock probe are implemented; see
-  VALIDATION_1.0_CONTENTION.md. Real GUI/audio overlap measurement and mitigation
-  remain open. Do not treat diagnostics as a dropout fix.
+  Initial instrumentation now reports total contended blocks/samples, the
+  longest contiguous contended sample run, and the last/peak lock-held duration
+  of direct POLY/MONO transactions; the deterministic lock probe verifies each
+  applicable diagnostic. See VALIDATION_1.0_CONTENTION.md. Real GUI/audio
+  overlap measurement and mitigation remain open. Do not treat diagnostics as
+  a dropout fix.
   PERFORMANCE periodic reads, including legacy-shaped controller/play/bend
   accessors, now decode one coherent lock-free display snapshot instead of
   acquiring engine locks (VALIDATION_1.0_PERFORMANCE_SNAPSHOT.md and

@@ -167,6 +167,9 @@ private:
     mutable std::mutex engineMutex_;
     // Instance-lifetime diagnostics; never persisted or reset by the GUI.
     std::atomic<uint64_t> contendedAudioBlocks_ {0}, contendedAudioSamples_ {0};
+    std::atomic<uint64_t> longestContendedAudioRunSamples_ {0};
+    std::atomic<uint64_t> lastModeTransactionMicros_ {0}, peakModeTransactionMicros_ {0};
+    uint64_t audioContendedRunSamples_ = 0; // Audio-thread owned.
     std::atomic<int> midiInputChannel_ {0}; // 0=legacy OMNI, 1-16=host input filter.
     int audioMidiInputChannel_ = 0; // Audio-thread owned.
     bool channelReleasePending_ = false; // Audio-thread owned across contention.
