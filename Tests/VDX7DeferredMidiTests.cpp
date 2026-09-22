@@ -10,6 +10,7 @@
 static void checkEditQueue();
 static void checkMidiTimeline();
 static void checkKeyboardQueue();
+static void checkSysExAdmission();
 
 struct VDX7EditQueueTestAccess
 {
@@ -52,6 +53,7 @@ int main()
     checkEditQueue();
     checkMidiTimeline();
     checkKeyboardQueue();
+    checkSysExAdmission();
     VDX7DeferredMidi queue;
     const uint8_t on[] {0x90, 60, 100}, off[] {0x80, 60, 0};
     require(queue.push(on, 3) && queue.push(off, 3));
@@ -73,6 +75,71 @@ int main()
     queue.clear();
     require(queue.push(off, 3));
     std::cout << "PASS: deferred event ordering, overflow panic, recovery and byte bounds\n";
+}
+
+static void checkSysExAdmission()
+{
+    const uint8_t note[] {0x90, 60, 100};
+    const uint8_t emptySysEx[] {0xf0, 0xf7};
+
+    std::vector<uint8_t> validBank(4104, 0);
+    validBank[0] = 0xf0;
+    validBank[1] = 0x43;
+    validBank[2] = 0x0f; // Device/channel IDs 0..15 are accepted.
+    validBank[3] = 0x09;
+    validBank[4] = 0x20;
+    validBank[5] = 0x00;
+    validBank[4103] = 0xf7;
+    // A zero payload has a zero checksum at byte 4102.
+    require(VDX7MidiValidation::isLiveBankSysex(validBank.data(), validBank.size()));
+    require(VDX7MidiValidation::acceptsHostEvent(validBank.data(), validBank.size(), 16));
+    require(!VDX7MidiValidation::isLiveBankSysex(nullptr, validBank.size()));
+    require(!VDX7MidiValidation::isLiveBankSysex(validBank.data(), validBank.size() - 1));
+
+    auto corruptBank = validBank;
+    corruptBank[4102] = 1;
+    require(!VDX7MidiValidation::isLiveBankSysex(corruptBank.data(), corruptBank.size()));
+    corruptBank = validBank;
+    corruptBank[128] = 0x80;
+    require(!VDX7MidiValidation::isLiveBankSysex(corruptBank.data(), corruptBank.size()));
+
+    const auto survivingNote = [&](const uint8_t* invalid, std::size_t invalidSize, int repetitions)
+    {
+        VDX7DeferredMidi queue;
+        for (int n = 0; n < repetitions; ++n)
+        {
+            require(!VDX7MidiValidation::acceptsHostEvent(invalid, invalidSize, 0));
+            // This mirrors processBlock: invalid input is never pushed, so it
+            // cannot consume event or byte capacity while rendering is delayed.
+        }
+        require(VDX7MidiValidation::acceptsHostEvent(note, sizeof(note), 0));
+        require(queue.push(note, sizeof(note), 24));
+        bool panic = false;
+        std::vector<int> statuses, positions;
+        queue.renderBlock(64, [&](const uint8_t* data, std::size_t size, int position) {
+            require(size == sizeof(note));
+            statuses.push_back(data[0]);
+            positions.push_back(position);
+        }, [&] { panic = true; });
+        require(!panic && statuses == std::vector<int>({0x90})
+                && positions == std::vector<int>({24}));
+    };
+
+    // These are the two capacity-pressure cases reported by the audit.
+    survivingNote(emptySysEx, sizeof(emptySysEx), 300);
+    corruptBank = validBank;
+    corruptBank[4102] = 1;
+    survivingNote(corruptBank.data(), corruptBank.size(), 16);
+
+    VDX7DeferredMidi accepted;
+    require(accepted.push(validBank.data(), validBank.size()));
+    require(accepted.push(note, sizeof(note), 24));
+    bool panic = false;
+    std::vector<std::size_t> sizes;
+    accepted.renderBlock(64, [&](const uint8_t*, std::size_t size, int) { sizes.push_back(size); },
+                         [&] { panic = true; });
+    require(!panic && sizes == std::vector<std::size_t>({4104, sizeof(note)}));
+    std::cout << "PASS: malformed SysEx is rejected before deferred capacity; valid bulk bank is retained\n";
 }
 
 static void checkKeyboardQueue()
