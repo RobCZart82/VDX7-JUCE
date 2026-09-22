@@ -12,8 +12,14 @@ policy; legal CC32 bank values retain the preceding chapter's mapping.
 System common and realtime messages have no supported host action and are now
 consistently ignored, including during engine contention. This explicitly drops
 F1/F2/F3/F6 rather than forwarding them to firmware. It does not claim MIDI clock
-sync, transport following, tune-request or active-sensing support. Full bank
-SysEx still uses the existing checked bank loader; arbitrary SysEx remains unsupported.
+sync, transport following, tune-request or active-sensing support.
+
+Live SysEx is restricted before deferred storage to a complete, checksum-valid
+32-voice bank: 4,104 bytes, `F0 43 0n 09 20 00`, 7-bit payload/checksum and
+terminal `F7`. The device ID may be 0–15. The engine uses this exact same
+bounded, allocation-free validator when importing the live bank. Arbitrary,
+truncated, corrupt and single-voice live SysEx is rejected; file import retains
+its separately documented single-voice support.
 
 The shared validator is also used before deferred storage, so ignored clock
 traffic cannot consume its limited event slots during an engine transaction.
@@ -28,6 +34,11 @@ licence/settings were changed. Fresh PR macOS/Windows CI is still required.
 
 - ROM-free existing deferred-MIDI CI target exhausts all 256 statuses, lengths
   0-4 and all 256 values at every data position, plus null input.
+- A ROM-free deferred-MIDI regression sends 300 empty SysEx messages and 16
+  checksum-corrupt 4,104-byte banks before a legal Note On. Both malformed
+  bursts are rejected before queue admission; the following note is delivered
+  at its original sample position without panic. A structurally valid bank is
+  retained by the same test.
 - Local engine/processor integration rejects truncated/overlong messages, bad
   data bytes, running-status fragments and system messages without program/bank,
   expression, serial write position, overload or keyboard-state side effects.
@@ -42,6 +53,9 @@ licence/settings were changed. Fresh PR macOS/Windows CI is still required.
   This disproves that specific reported sequence; it does not prove every GUI
   concurrency scenario safe. No blanket UI-held-state reset was introduced.
 
-Remaining acceptance: malformed SysEx stress, broader concurrent UI interaction,
-physical controllers and actual DAW MIDI/automation ordering. No firmware or
-factory data is committed. No installed plugin replacement or release publication.
+Remaining acceptance: live-host bulk-SysEx stress, broader concurrent UI
+interaction, physical controllers and actual DAW MIDI/automation ordering. The
+processor integration test now requires and uses `VDX7_TEST_ROM_PATH` for every
+rendering processor, rather than silently falling back to auto-detected local
+firmware. No firmware or factory data is committed. No installed plugin
+replacement or release publication.

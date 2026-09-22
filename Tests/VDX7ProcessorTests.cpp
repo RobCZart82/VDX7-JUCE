@@ -388,7 +388,7 @@ int main(int argc, char** argv)
     try
     {
         checkWhiteKeyHover();
-        VDX7AudioProcessor original;
+        VDX7AudioProcessor original(false);
         {
             VDX7AudioProcessor noRom(false);
             std::unique_ptr<juce::AudioProcessorEditor> editor(noRom.createEditor());
@@ -408,8 +408,13 @@ int main(int argc, char** argv)
             require(saveButtons == 1, "one persistent Save As button");
         }
         const auto explicitRom = juce::SystemStats::getEnvironmentVariable("VDX7_TEST_ROM_PATH", {});
-        if (explicitRom.isNotEmpty())
-            require(original.loadRomFromFile(juce::File(explicitRom)), "explicit local test ROM");
+        const juce::File testRomFile(explicitRom);
+        if (explicitRom.isEmpty() || !testRomFile.existsAsFile())
+        {
+            std::cout << "SKIP: explicit user ROM required for processor integration tests\n";
+            return 77;
+        }
+        require(original.loadRomFromFile(testRomFile), "explicit local test ROM");
         require(original.getParameters().size() == 148, "148 host parameters");
         for (int op = 0; op < 6; ++op)
             for (int p = 0; p < 15; ++p)
@@ -461,7 +466,7 @@ int main(int argc, char** argv)
                 float(lo + (p * 11) % (hi - lo + 1)));
         }
         state = save(original);
-        VDX7AudioProcessor restored;
+        VDX7AudioProcessor restored(false);
         restored.setStateInformation(state.getData(), int(state.getSize()));
         require(restored.getCurrentProgram() == 3, "program restore");
         require(ram(state) == ram(save(restored)), "RAM round trip before rendering");
@@ -895,7 +900,8 @@ int main(int argc, char** argv)
         require(ram(state) == ram(save(restored)), "RAM-only state restoration");
 
         // Run a factory voice through real firmware without opening an audio device.
-        VDX7AudioProcessor render;
+        VDX7AudioProcessor render(false);
+        require(render.loadRomFromFile(testRomFile), "explicit render test ROM");
         for (const double rate : { 44100.0, 48000.0, 96000.0 })
         for (const int size : { 64, 128, 256 })
         {

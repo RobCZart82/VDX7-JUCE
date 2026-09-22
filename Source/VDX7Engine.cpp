@@ -499,22 +499,12 @@ bool VDX7Engine::hasHeldMidiNotes() const noexcept
 
 bool VDX7Engine::loadSyxBank(const uint8_t* data, std::size_t size)
 {
-    if (!loaded_ || midiRecovering_ || data == nullptr || size != 4104)
+    if (!loaded_ || midiRecovering_)
         return false;
 
-    // Standard Yamaha DX7 32-voice bulk dump. Byte 2 contains the MIDI
-    // channel/device number, so accept any value there (0..15) rather than
-    // requiring channel 1. This matches the Retromulator VDX7 adapter.
-    if (data[0] != 0xF0 || data[1] != 0x43 || (data[2] & 0xF0) != 0x00 ||
-        data[3] != 0x09 || data[4] != 0x20 || data[5] != 0x00 || data[4103] != 0xF7)
-        return false;
-
-    for (std::size_t i = 6; i <= 4102; ++i)
-        if (data[i] >= 128) return false;
-    int checksum = data[4102];
-    for (int i = 0; i < 4096; ++i)
-        checksum += data[6 + i];
-    if ((checksum & 0x7F) != 0)
+    // Keep live admission and engine import on the same bounded validator.
+    // It accepts standard 32-voice bulk data, including device IDs 0..15.
+    if (!VDX7MidiValidation::isLiveBankSysex(data, size))
         return false;
 
     std::memcpy(dx7_.memory + 0x1000, data + 6, 4096);

@@ -14,8 +14,14 @@ indices compatible with saved projects.
   See `VALIDATION_1.0_BANK_SELECT.md` for implementation and local test scope.
   Existing CC0-ignore / immediate CC32 behavior remains unchanged; a different
   MSB/LSB policy needs an explicit compatibility decision and host acceptance.
-- [ ] Follow-up static-review validation: malformed MIDI status/length/data-byte
-  rejection, system-common handling, and keyboard UI-held state after overflow.
+- [x] Follow-up static-review validation: malformed MIDI status/length/data-byte
+  rejection, system-common handling, checksum-valid live bank SysEx admission,
+  and keyboard UI-held state after overflow. Malformed SysEx is rejected before
+  it can exhaust deferred event/byte storage; the engine shares the admission
+  validator. The processor integration renderer requires its explicit local ROM
+  fixture. See `VALIDATION_1.0_MIDI_INPUT.md`.
+  Remaining acceptance: live-host bulk-SysEx stress and broader UI contention.
+  Historical review note: keyboard UI-held state after overflow was reproduced.
   Reproduce before claiming stuck audio; mirroring suppresses MIDI feedback and
   UI note-off already clears held state before queue insertion. Keep mixed host
   MIDI/automation ordering and independent SRC/PDC acceptance in the test scope.
@@ -23,11 +29,11 @@ indices compatible with saved projects.
   APVTS ValueTree stores denormalised values, so do NOT apply its suggested
   XML normalisation. Existing ordered-edit and impulse tests must be retained.
 
-Next chapter order: verified CC32 fix -> malformed MIDI input validation and
-targeted overflow UI reproduction -> SETTINGS channel/tuning -> remaining GUI
-visual integration and host acceptance. Reclassify reported risks as confirmed
-bugs only with source evidence or reproduction; do not apply the rejected APVTS
-  normalisation or remove implemented play controls. PR/CI/user-merge gates remain.
+Next chapter order: verified CC32 fix -> complete host-MIDI and live-SysEx
+admission validation -> SETTINGS channel/tuning -> remaining GUI visual
+integration and host acceptance. Reclassify reported risks as confirmed bugs only
+with source evidence or reproduction; do not apply the rejected APVTS
+normalisation or remove implemented play controls. PR/CI/user-merge gates remain.
 
 - [x] Shared complete channel-message validation before engine/GUI mutation and
   deferred storage; ROM-free exhaustive status/length/data-byte tests and local
