@@ -168,6 +168,19 @@ struct VDX7RegressionAccess
         require(e.hasHeldMidiNotes(), "fresh note accepted after recovery");
         e.allNotesOff();
     }
+    static void checkLiveBankPreservesMasterTune(VDX7Engine& e)
+    {
+        std::vector<uint8_t> bank;
+        require(e.saveRam(bank), "capture bank for tuning-preservation SysEx");
+        bank.resize(4096);
+        const auto sysex = VDX7Sysex::encode(bank);
+        for (int tuning : {-256, -1, 0, 1, 255})
+        {
+            require(e.setMasterTune(tuning), "set tuning before live bank import");
+            require(e.handleSysex(sysex.data(), sysex.size()), "import valid live bank");
+            require(e.masterTune() == tuning, "live bank preserves master tuning");
+        }
+    }
     static void publishWithoutEditor(VDX7AudioProcessor& p) { p.timerCallback(); }
     static bool invalidRom(VDX7AudioProcessor& p)
     { return p.loadRomData(juce::File(), std::vector<uint8_t>(7), nullptr); }
@@ -450,6 +463,7 @@ int main(int argc, char** argv)
         require(engine.loadRomImage(static_cast<const uint8_t*>(rom.getData()), rom.getSize()), "engine ROM");
         VDX7RegressionAccess::checkControllers(engine);
         VDX7RegressionAccess::checkProgramBytes(engine);
+        VDX7RegressionAccess::checkLiveBankPreservesMasterTune(engine);
         VDX7RegressionAccess::checkSerialOverflow(engine);
         std::vector<uint8_t> before, after;
         engine.saveRam(before);

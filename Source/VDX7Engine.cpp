@@ -507,10 +507,14 @@ bool VDX7Engine::loadSyxBank(const uint8_t* data, std::size_t size)
     if (!VDX7MidiValidation::isLiveBankSysex(data, size))
         return false;
 
+    // Bulk bank SysEx supplies voice RAM only. Preserve the global firmware
+    // tuning that lives outside that range, so importing a bank cannot alter a
+    // project-level SETTINGS value.
+    const auto tuning = masterTune();
     std::memcpy(dx7_.memory + 0x1000, data + 6, 4096);
     // Preserve queued note-offs, including an overload recovery still draining
     // through firmware. A bank replacement must not silently erase releases.
-    dx7_.tune(0);
+    dx7_.tune(tuning);
     currentBank_ = -1;
     selectProgram(currentProgram_);
     return true;
