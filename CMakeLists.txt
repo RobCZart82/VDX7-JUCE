@@ -240,3 +240,19 @@ if(APPLE)
         XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
     )
 endif()
+
+# N1 regression: compile on ROM-free CI, execute the firmware test only when
+# the existing local-ROM suite is explicitly enabled.
+add_executable(vdx7_host_reset_tests EXCLUDE_FROM_ALL Tests/VDX7HostResetTests.cpp)
+target_link_libraries(vdx7_host_reset_tests PRIVATE VDX7)
+target_include_directories(vdx7_host_reset_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,INCLUDE_DIRECTORIES>)
+target_compile_definitions(vdx7_host_reset_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
+add_dependencies(vdx7_ci_checks vdx7_host_reset_tests)
+if(VDX7_ENABLE_ROM_TESTS)
+    add_test(NAME vdx7_host_reset
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}")
+    set_tests_properties(vdx7_host_reset PROPERTIES
+        TIMEOUT 180 LABELS "local-rom")
+endif()
