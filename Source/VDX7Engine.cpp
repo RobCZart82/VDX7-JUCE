@@ -79,6 +79,7 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     controllerRefreshMessages_ = 0;
     pitchBendRefresh_ = false;
     portamentoRefresh_ = false;
+    portamentoTimeSetting_ = -1;
     lastPitchBendInput_ = 64;
     midiExpression_ = 1.0f;
     currentBank_ = -1;
@@ -141,6 +142,9 @@ void VDX7Engine::beginHostReset()
 
 void VDX7Engine::beginMidiReset(bool releaseEveryPitch)
 {
+    // Keep accepted intent across the flush. With no time input yet, retain
+    // the boot-RAM fallback and the original background-refresh ordering.
+    portamentoRefresh_ = loaded_;
     hostResetInProgress_ = loaded_;
     hostResetMuted_ = true;
     resetAudioState();
@@ -203,9 +207,12 @@ void VDX7Engine::advanceHostReset(int sampleBudget)
         resetAudioState();
         controllerRefreshMessages_ = 2;
         pitchBendRefresh_ = true;
-        portamentoRefresh_ = true;
+        // Preserve the native reset/program ordering. Refresh after program
+        // admission (and before a later note), never inside the reset drain.
+        portamentoRefresh_ = false;
         hostResetInProgress_ = false;
         selectProgram(currentProgram_);
+        portamentoRefresh_ = true;
         return;
     }
 }
@@ -267,6 +274,7 @@ bool VDX7Engine::reserveMidi(int bytes)
 
 void VDX7Engine::recoverMidiOverflow()
 {
+    if (portamentoTimeSetting_ >= 0) portamentoRefresh_ = true;
     ++midiOverloadCount_;
     midiRecovering_ = true;
     dx7_.midiSerialRx.flush();
@@ -319,14 +327,9 @@ int VDX7Engine::generateNative(float* out)
     // sample is retained (including instruction-boundary overshoot).
     while (outCount == 0)
     {
-        if (portamentoRefresh_ && !midiRecovering_
+        if (portamentoRefresh_ && !midiRecovering_ && !hostResetInProgress_
             && dx7_.midiSerialRx.readIdx == dx7_.midiSerialRx.writeIdx)
-        {
-            portamentoRefresh_ = false;
-            dx7_.midiSerialRx.write(static_cast<uint8_t>(0xb0 | (dx7_.getMidiRxChannel() & 15)));
-            dx7_.midiSerialRx.write(5);
-            dx7_.midiSerialRx.write(static_cast<uint8_t>((getPlaySetting(3) * 128 + 99) / 100));
-        }
+            queuePortamentoRefresh();
         if (!dx7_.haveMsg)
         {
             if (toSynth_->pop(msg)) processQueuedMessage(msg);
@@ -490,7 +493,12 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
     // Unsupported bank requests must not trigger serial-overflow recovery.
     if ((data[0] & 0xf0) == 0xb0 && size == 3 && data[1] == 32
         && (data[2] >= 8 || !hasFactoryVoices())) return;
-    if (!reserveMidi(size)) return;
+    const bool timeRequest = (data[0] & 0xf0) == 0xb0 && data[1] == 5;
+    // After recovery, put the retained time BEFORE newly accepted notes.
+    // A newer accepted physical CC5 supersedes the old request instead.
+    const bool refreshTime = portamentoRefresh_ && portamentoTimeSetting_ >= 0 && !timeRequest;
+    if (!reserveMidi(size + (refreshTime ? 3 : 0))) return;
+    if (refreshTime) queuePortamentoRefresh();
 
     const uint8_t status = data[0] & 0xF0;
 
@@ -530,7 +538,10 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
                 case 2: toSynth_->analog(dx7Emu::Message::CtrlID::breath, data[2]); return;
                 case 4: toSynth_->analog(dx7Emu::Message::CtrlID::foot, data[2]); return;
                 case 6: toSynth_->analog(dx7Emu::Message::CtrlID::data, data[2]); return;
-                case 5: portamentoRefresh_ = false; break; // Native time/rate update.
+                case 5:
+                    portamentoTimeSetting_ = int(data[2]) * 100 / 128;
+                    portamentoRefresh_ = false;
+                    break; // Native time/rate update; last accepted input wins.
                 case 11:
                     midiExpression_ = static_cast<float>(data[2]) / 127.0f;
                     return;
@@ -741,11 +752,16 @@ bool VDX7Engine::saveRam(std::vector<uint8_t>& out) const
 {
     if (!loaded_)
         return false;
-    return dx7_.saveRAM(out);
+    if (!dx7_.saveRAM(out)) return false;
+    // Patch only the detached project snapshot, never the live firmware rate.
+    out[0x257d - 0x1000] = static_cast<uint8_t>(getPlaySetting(3));
+    return true;
 }
 
 int VDX7Engine::getPlaySetting(int field) const noexcept
 {
+    if (loaded_ && field == 3 && portamentoTimeSetting_ >= 0)
+        return portamentoTimeSetting_;
     constexpr int addresses[] {0x20a9, 0x20aa, 0x20ab, 0x257d};
     return loaded_ && field >= 0 && field < 4
         ? std::clamp(int(dx7_.memory[addresses[field]]), 0, field == 3 ? 99 : 1) : 0;
@@ -767,6 +783,17 @@ bool VDX7Engine::setMasterTune(int value) noexcept
 bool VDX7Engine::setPlaySetting(int field, int value)
 {
     if (!loaded_ || field < 0 || field > 3 || value < 0 || value > (field == 3 ? 99 : 1)) return false;
+    if (field == 3)
+    {
+        // Accept independently of serial availability. A recovery may flush
+        // the command, but not its intent. The engine retries before fresh MIDI
+        // (or when its serial FIFO drains); no extra render/wait is needed.
+        if (portamentoTimeSetting_ == value && !portamentoRefresh_) return true;
+        portamentoTimeSetting_ = value;
+        portamentoRefresh_ = true;
+        if (!hostResetInProgress_ && reserveMidi(3)) queuePortamentoRefresh();
+        return true;
+    }
     if (getPlaySetting(field) == value) return true;
     if (field == 1 || field == 2)
     {
@@ -792,20 +819,9 @@ bool VDX7Engine::setPlaySetting(int field, int value)
         if (pending() || midiRecovering_) return false;
     }
     if (!reserveMidi(3)) return false;
-    // Native CC5 computes the derived portamento rate. Its input maps to
-    // floor(CC * 100 / 128); ceil(value * 128 / 100) reaches every 0-99 value.
     const uint8_t message[] {static_cast<uint8_t>(0xb0 | (dx7_.getMidiRxChannel() & 15)),
-        static_cast<uint8_t>(field == 3 ? 5 : value ? 126 : 127),
-        static_cast<uint8_t>(field == 3 ? (value * 128 + 99) / 100 : value)};
+        static_cast<uint8_t>(value ? 126 : 127), static_cast<uint8_t>(value)};
     for (auto byte : message) dx7_.midiSerialRx.write(byte);
-    if (field == 3)
-    {
-        portamentoRefresh_ = false;
-        // Persist the requested setting immediately; firmware updates its rate
-        // through the queued CC before subsequent serial note events.
-        dx7_.memory[0x257d] = static_cast<uint8_t>(value);
-        return true;
-    }
     // Do not change mono/poly RAM before the native command: it would bypass
     // firmware's mode-change voice reset. This path is UI-only, never audio.
     std::array<float, 64> left {}, right {};
@@ -874,6 +890,7 @@ bool VDX7Engine::restoreRam(const std::vector<uint8_t>& in)
     const bool ok = dx7_.restoreRAM(in);
     if (ok)
     {
+        portamentoTimeSetting_ = std::clamp(int(in[0x257d - 0x1000]), 0, 99);
         controllerRefreshMessages_ = 2;
         pitchBendRefresh_ = true;
         portamentoRefresh_ = true;
@@ -883,16 +900,22 @@ bool VDX7Engine::restoreRam(const std::vector<uint8_t>& in)
         const auto& rx = dx7_.midiSerialRx;
         const int occupied = (rx.writeIdx - rx.readIdx) & (rx.size - 1);
         if (!midiRecovering_ && occupied <= rx.size - 4)
-        {
-            dx7_.midiSerialRx.write(static_cast<uint8_t>(0xb0 | (dx7_.getMidiRxChannel() & 15)));
-            dx7_.midiSerialRx.write(5);
-            dx7_.midiSerialRx.write(static_cast<uint8_t>((getPlaySetting(3) * 128 + 99) / 100));
-            portamentoRefresh_ = false;
-        }
+            queuePortamentoRefresh();
         lastPitchBendInput_ = static_cast<uint8_t>(dx7_.memory[0x232a] >> 1);
         selectProgram(currentProgram_);
     }
     return ok;
+}
+
+void VDX7Engine::queuePortamentoRefresh()
+{
+    // Native CC5 computes the rate: floor(CC * 100 / 128). This inverse reaches
+    // all 0..99 settings, and does not patch live time/rate RAM ahead of firmware.
+    const auto value = getPlaySetting(3);
+    dx7_.midiSerialRx.write(static_cast<uint8_t>(0xb0 | (dx7_.getMidiRxChannel() & 15)));
+    dx7_.midiSerialRx.write(5);
+    dx7_.midiSerialRx.write(static_cast<uint8_t>((value * 128 + 99) / 100));
+    portamentoRefresh_ = false;
 }
 
 uint8_t VDX7Engine::mapVelocity(uint8_t velocity) const

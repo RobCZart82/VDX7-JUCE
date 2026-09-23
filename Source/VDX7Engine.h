@@ -91,6 +91,7 @@ private:
     void processQueuedMessage(dx7Emu::Message msg);
     void parseMidiBytes(const uint8_t* data, int size);
     bool reserveMidi(int bytes);
+    void queuePortamentoRefresh(); // Caller has reserved three serial bytes.
     void recoverMidiOverflow();
     int generateNative(float* out);
     float nextNativeSample();
@@ -138,6 +139,11 @@ private:
     unsigned controllerRefreshMessages_ = 0;
     bool pitchBendRefresh_ = false;
     bool portamentoRefresh_ = false;
+    // Requested setting, not an acknowledgement or a derived firmware rate.
+    // Native CC5 may still be executing older requests. Every accepted UI/CC5
+    // input replaces this value; save/display must not read transient work RAM.
+    // -1 uses boot RAM until the first request/restore.
+    int portamentoTimeSetting_ = -1;
     uint8_t lastPitchBendInput_ = 64;
 
     bool hostResetInProgress_ = false;

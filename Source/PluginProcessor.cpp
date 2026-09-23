@@ -1556,15 +1556,9 @@ void VDX7AudioProcessor::applyPendingPerformanceSettings() noexcept
         if ((pending & (uint32_t {1} << (15 + field))) != 0)
         {
             const auto value = pendingPlaySettings_[field - 1].load(std::memory_order_relaxed);
-            if (!engine_.setPlaySetting(field, value) && field == 3)
-            {
-                // A saturated firmware serial FIFO begins its recovery on the
-                // audio thread. Keep the latest requested time dirty so it is
-                // retried after that recovery instead of leaving the display
-                // ahead of the firmware state.
-                pendingPerformanceDirty_.fetch_or(uint32_t {1} << (15 + field),
-                                                  std::memory_order_release);
-            }
+            // The engine retains accepted time requests across serial recovery;
+            // unlike firmware work RAM, that intent is immediately saveable.
+            engine_.setPlaySetting(field, value);
         }
 
     for (int field = 0; field < 2; ++field)

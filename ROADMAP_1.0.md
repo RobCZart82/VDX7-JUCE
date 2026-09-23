@@ -92,8 +92,13 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
 - [x] Q2 stale PERFORMANCE/tuning display publication: guard the commit against
   newer UI edits (including same-value/ABA) without audio waiting/retry. Real
   processor before/after reproduction and public-CI helper regression; see
-  `VALIDATION_PERFORMANCE_PUBLICATION.md`. Native portamento command/ack display
-  transients and restore/write epochs remain separate open work.
+  `VALIDATION_PERFORMANCE_PUBLICATION.md`. Restore/write epochs remain separate
+  open work; the portamento follow-up below is independently reproduced/tested.
+- [x] Retain the latest accepted portamento setting separately from transient
+  firmware work RAM. Immediate save during recovery, queued CC5 display rollback,
+  flushed-command replay and later accepted physical CC5 are covered by
+  `VALIDATION_PORTAMENTO_INTENT.md`. Native CC5 still computes the actual rate;
+  there is no synthetic acknowledgement or extra callback render budget.
 - [x] Full 0–127 note range and pitch/release regressions (local ROM).
   Scope correction (2026-09-23): this is not exhaustive POLY/MONO coverage.
   Native v1.8 MONO pitch 0 retains ownership after release in the raw emulator
@@ -107,8 +112,9 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
   diagnosis/test coverage, not a production fix or hardware confirmation; see
   `VALIDATION_MONO_INSTRUCTION_TRACE.md`.
   Native/corrected-path options and required acceptance are separated in
-  `DESIGN_MONO_NOTE_ZERO_POLICY.md`. No optional correction is approved or
-  implemented; default firmware fidelity is unchanged and MONO acceptance open.
+  `DESIGN_MONO_NOTE_ZERO_POLICY.md`. Targeted corrective development is now
+  approved, but no optional correction is implemented/validated; default
+  firmware fidelity is unchanged and MONO acceptance remains open.
 - [x] Configure PR ROM-free CI and opt-in local ROM integration CTest gate.
   All integration runners now compile through the shared CI target. Known-v1.8
   ownership groups have a separately labelled, required firmware prerequisite;

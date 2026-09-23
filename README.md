@@ -181,6 +181,11 @@ blocks, plus true-delay expiry under contention and reset. Its queue-only portio
 also executes in public ROM-free CI. See [Q1 validation](VALIDATION_DEFERRED_PARTITION.md).
 Native MONO compatibility choices remain a separate
 [design decision](DESIGN_MONO_NOTE_ZERO_POLICY.md), not a fix implied by green CI.
+The local `vdx7_portamento` (`vdx7_stress_tests <private-ROM> --portamento-only`)
+checks accepted time intent, immediate save during recovery, restore, physical
+CC5 precedence and actual native time/rate across six rate/block configurations.
+It requires the validated v1.8 firmware fixture; see `VALIDATION_PORTAMENTO_INTENT.md`.
+
 The ROM-free `vdx7_latest_display` and local stress runner's `--publication-only`
 cover stale PERFORMANCE/tuning publication versus newer UI edits, including
 same-value/ABA races. See [Q2 validation and limits](VALIDATION_PERFORMANCE_PUBLICATION.md).

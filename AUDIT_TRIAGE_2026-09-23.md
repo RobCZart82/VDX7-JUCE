@@ -8,13 +8,19 @@ or release until separately approved. Never upload ROMs.
 
 ## Active reset work
 
+- Portamento intent/O1 follow-up: reproduced display rollback 99 -> 37 and
+  immediate-save loss 73 -> 0 before fixing. Engine-owned latest accepted intent
+  now survives serial recovery/flush and supplies display/detached state capture;
+  native CC5 retains rate computation. Later accepted physical CC5 supersedes it,
+  rejected input does not. See VALIDATION_PORTAMENTO_INTENT.md for validation
+  and limits. MONO targeted corrective development is approved, not implemented.
 - Q2 publication follow-up: real processor capture/public setter interleaving
   reproduced display 0 after the newer request 99. Guarded single-attempt frame
   publication now preserves concurrent UI edits, including same-value/ABA, with
   no audio retry/lock. Covers PERFORMANCE and tuning; 88 targeted schedules pass.
   See VALIDATION_PERFORMANCE_PUBLICATION.md for scope and validation results.
-  Native CC5 pipeline can still transiently rewrite portamento-time RAM/display
-  before the newest serial command completes; tracked separately below.
+  Native CC5 pipeline still processes older time values in work RAM, but the
+  independent intent follow-up now prevents that from rolling back display/save.
 - Q1 follow-up: reproduced false age expiry in the real processor before fixing
   it (64/1024-sample recovery audible; one two-second recovery block silent).
   Successful deferred playback now credits its matching block when checking
@@ -22,7 +28,8 @@ or release until separately approved. Never upload ROMs.
   limit remains. New small/large/mixed partition, threshold and reset-expiry
   regressions pass; see VALIDATION_DEFERRED_PARTITION.md for full validation.
   MONO policy/design boundary is recorded in DESIGN_MONO_NOTE_ZERO_POLICY.md;
-  no compatibility mode or firmware workaround has been implemented/authorized.
+  corrective development is now authorized; no compatibility mode or firmware
+  workaround has yet been implemented or validated.
 - MONO instruction/continuation follow-up: the private known image's decoded
   instruction sites match the pinned annotation. Read-only execution observes
   active note-zero slot reuse at D591/D593/D59F, count increment D5A1, and
@@ -131,18 +138,21 @@ or release until separately approved. Never upload ROMs.
   deterministic production-path failure before guard, then 88 passing schedules
   and a public-CI ROM-free concurrency regression. Not a permanent-engine-data
   loss fix, state-epoch fix, or guarantee against every native firmware transient.
-- Portamento-time command/ack display: in the Q2 fixture, an older queued CC5
-  rewrites time RAM/display to 0 in the first 64-sample callback after request 99;
-  newest command later restores 99. Serial-settled Q2 assertions do not close
-  this separate transient. Reproduce/track together with (not instead of) O1.
+- Portamento-time display/save: independently reproduced after Q2 and addressed
+  by an accepted-intent model, not by guessing native acknowledgement from a
+  value match or waiting longer in the UI/audio callback. Actual firmware time
+  and derived rate are checked separately against direct native serial input.
+  See VALIDATION_PORTAMENTO_INTENT.md. Native serial latency still exists.
 - Bypass: missing explicit MIDI/lifecycle handling; reproduce release/sustain
   and controller state before implementing a shared muted processing path.
 - Restore: both staging-before-install and old-epoch-before-lock windows need
   deterministic production-path tests. A lone extra atomic load is insufficient.
 - Pitch/mod: rejected or subsequently flushed submission must not be cached as
   delivered. Preserve newer physical MIDI over stale GUI/automation snapshots.
-- O1 immediate save during recovery: preserve accepted pending portamento time.
-  This was omitted from the latest report, NOT demonstrated fixed.
+- O1 immediate save during recovery: reproduced 73 -> 0 loss, now addressed by
+  engine acceptance independent of FIFO availability and detached RAM snapshot
+  projection. Includes immediate restore/resave and missing-ROM preservation.
+  This does not close the separately tracked state-install/epoch races.
 - Dirty-bank text must not hide critical edit-overflow/recovery instructions.
 - Tail metadata: zero is not generally consistent with release/nonzero L4;
   measure actual host behavior, do not invent a fixed tail duration.

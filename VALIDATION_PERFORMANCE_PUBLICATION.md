@@ -88,6 +88,10 @@ runners. It does not contain or execute the private ROM.
 
 ## Separate portamento observation and limits
 
+Follow-up: `VALIDATION_PORTAMENTO_INTENT.md` independently reproduces and fixes
+the time-display and immediate-save cases below. This section records what was
+still open at the Q2 checkpoint; Q2 alone did not fix it.
+
 The first post-edit 64-sample callback in the time-field fixture could report
 engine/display 0 while the latest requested value was 99: an older in-flight
 native CC5 command rewrote RAM before the newer command was consumed. The final

@@ -184,10 +184,24 @@ struct VDX7RegressionAccess
         bank.resize(4096);
         const auto sysex = VDX7Sysex::encode(bank);
         const int beforeBank = (e.dx7_.midiSerialRx.writeIdx - e.dx7_.midiSerialRx.readIdx) & 8191;
+        std::vector<uint8_t> queuedBeforeBank;
+        for (int i = 0; i < beforeBank; ++i)
+            queuedBeforeBank.push_back(e.dx7_.midiSerialRx.buffer[(e.dx7_.midiSerialRx.readIdx + i) & 8191]);
         require(e.handleSysex(sysex.data(), sysex.size()), "live bank after recovery starts draining");
         const int afterBank = (e.dx7_.midiSerialRx.writeIdx - e.dx7_.midiSerialRx.readIdx) & 8191;
+        // No explicit time request in this fixture: keep the original +2
+        // program-only ordering. Check every old byte, not only queue length.
         require(beforeBank >= 384 && afterBank == beforeBank + 2,
                 "live bank must preserve queued recovery note-offs");
+        for (int i = 0; i < beforeBank; ++i)
+            require(e.dx7_.midiSerialRx.buffer[(e.dx7_.midiSerialRx.readIdx + i) & 8191] == queuedBeforeBank[i],
+                    "live bank must preserve every queued recovery byte");
+        const std::array<uint8_t, 2> appended {
+            static_cast<uint8_t>(0xc0 | (e.dx7_.getMidiRxChannel() & 15)),
+            static_cast<uint8_t>(e.currentProgram()) };
+        for (int i = 0; i < 2; ++i)
+            require(e.dx7_.midiSerialRx.buffer[(e.dx7_.midiSerialRx.readIdx + beforeBank + i) & 8191] == appended[i],
+                    "recovery must append only program without an explicit time request");
         e.resetMidiLifecycle();
         require(!e.isMidiRecovering(), "restart during recovery reconciles lifecycle");
         e.handleMidi(note, 3);

@@ -1,8 +1,15 @@
 # MONO note-zero: fidelity boundary and corrective-design decision
 
 2026-09-23. Design note, **not an implemented fix or permission to patch firmware**.
-The current requirement remains firmware-faithful operation. Keep Draft #47;
+The default remains firmware-faithful operation. Keep Draft #47;
 MONO note-zero acceptance and release approval are still open.
+
+User decision (2026-09-23 follow-up): targeted corrective development is approved,
+while preserving the original/default path. This approves investigation and a
+separately tested correction, not a particular implementation, automatic mode
+cycling, silent pitch substitution, arbitrary ROM/RAM patches, or publication.
+No corrected mode is implemented yet. The independent portamento request/save
+fix is developed first; it does not close MONO acceptance.
 
 ## What is established
 
@@ -25,8 +32,8 @@ must not be disguised as a CPU fix.
    pitch zero or convert MONO to POLY. This choice does not turn the failing
    note-zero test into a passing release test. Shipping with this limitation
    would require explicit release acceptance; none is granted here.
-2. **Optional corrected path (proposal only, requires a separate decision).**
-   If approved, define a clearly named, persisted compatibility option with
+2. **Optional corrected path (development direction approved; design pending).**
+   Define a clearly named, persisted compatibility option with
    native behavior as the legacy-project/default fallback. A corrective design
    must address allocation occupancy AND found/not-found release status, count
    consistency, legato priority and subsequent notes. It must be scoped to a
@@ -54,7 +61,7 @@ for native MONO ownership either.
 - No unbounded/allocating audio work; full local ROM regressions, platform CI
   and real-host validation. Independent hardware evidence stays distinct.
 
-## Safe development in parallel with the pending decision
+## Independent development alongside corrective design
 
 Fix independent, reproduced wrapper errors without changing firmware policy.
 The next such item, Q1 deferred-MIDI block-partition loss, is implemented and

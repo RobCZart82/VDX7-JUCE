@@ -32,6 +32,34 @@ struct VDX7RegressionAccess
     static bool note(const VDX7AudioProcessor& p, int note) { return p.engine_.activeMidiNotes_[note]; }
     static uint64_t overloads(const VDX7AudioProcessor& p) { return p.engine_.midiOverloadCount(); }
     static VDX7Engine& engine(VDX7AudioProcessor& p) { return p.engine_; }
+    static bool knownProfile(const VDX7AudioProcessor& p) { return p.engine_.releaseRetirementProfile_; }
+    static int nativePortamento(const VDX7AudioProcessor& p) { return p.engine_.dx7_.memory[0x257d]; }
+    static int nativePortamentoRate(const VDX7AudioProcessor& p) { return p.engine_.dx7_.memory[0xe0]; }
+    static bool nativePitchOwned(const VDX7AudioProcessor& p, int pitch)
+    {
+        for (int i = 0; i < 16; ++i)
+            if (p.engine_.dx7_.memory[0x2168 + i] == (0x80 | pitch)) return true;
+        return false;
+    }
+    static void rawCc5(VDX7AudioProcessor& p, int cc)
+    {
+        auto& core = p.engine_.dx7_;
+        core.midiSerialRx.write(static_cast<uint8_t>(0xb0 | (core.getMidiRxChannel() & 15)));
+        core.midiSerialRx.write(5);
+        core.midiSerialRx.write(static_cast<uint8_t>(cc));
+    }
+    static void fillSerial(VDX7AudioProcessor& p)
+    {
+        auto& q = p.engine_.dx7_.midiSerialRx;
+        while (((q.writeIdx + 1) & (q.size - 1)) != q.readIdx) q.write(0xf8);
+    }
+    static bool timePrecedesLastNote(const VDX7AudioProcessor& p, int value)
+    {
+        const auto& q = p.engine_.dx7_.midiSerialRx;
+        auto byte = [&](int back) { return q.buffer[(q.writeIdx - back) & (q.size - 1)]; };
+        return (byte(6) & 0xf0) == 0xb0 && byte(5) == 5
+            && byte(4) == (value * 128 + 99) / 100 && (byte(3) & 0xf0) == 0x90 && byte(2) == 72;
+    }
     static std::mutex& mutex(VDX7AudioProcessor& p) { return p.engineMutex_; }
     static uint64_t missed(const VDX7AudioProcessor& p) { return p.contendedAudioBlocks_.load(); }
     static uint64_t samples(const VDX7AudioProcessor& p) { return p.contendedAudioSamples_.load(); }
@@ -46,6 +74,217 @@ struct VDX7RegressionAccess
         else p.performanceDisplay_.publishWithHook([&] { return p.capturePerformanceDisplay(); }, hook);
     }
 };
+
+static juce::MemoryBlock savePortamento(VDX7AudioProcessor& p, int expected)
+{
+    juce::MemoryBlock state;
+    p.getStateInformation(state);
+    auto xml = juce::AudioProcessor::getXmlFromBinary(state.getData(), int(state.getSize()));
+    require(xml != nullptr, "portamento state XML");
+    const auto tree = juce::ValueTree::fromXml(*xml);
+    juce::MemoryBlock ram;
+    require(ram.fromBase64Encoding(tree.getProperty("ram").toString())
+                && ram.getSize() == VDX7Engine::kRamStateSize, "portamento state RAM");
+    const auto actual = static_cast<const uint8_t*>(ram.getData())[0x157d];
+    if (actual != expected)
+        std::cerr << "Portamento saved expected=" << expected << " actual=" << int(actual) << '\n';
+    require(actual == expected, "saved state lost the latest accepted portamento request");
+    return state;
+}
+
+static void checkPortamentoPending(const juce::File& rom, bool recovery)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    require(p.loadRomFromFile(rom), "portamento pending ROM");
+    require(VDX7RegressionAccess::knownProfile(p), "portamento test requires the validated v1.8 image");
+    p.prepareToPlay(48000, 64);
+    auto& engine = VDX7RegressionAccess::engine(p);
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    require(p.setPlaySettingFromUi(3, 0), "portamento baseline");
+    for (int n = 0; n < 100; ++n) processChecked(p, audio, midi);
+    if (recovery)
+    {
+        const uint8_t bend[] {0xe0, 0, 64};
+        for (int n = 0; n < 3000; ++n) engine.handleMidi(bend, 3);
+        require(engine.isMidiRecovering(), "portamento enters recovery");
+        require(p.setPlaySettingFromUi(3, 73), "portamento recovery request");
+        savePortamento(p, 73); // No callback, sleep, or firmware drain before saving.
+    }
+    else
+    {
+        require(engine.setPlaySetting(3, 37), "portamento older queued request");
+        require(engine.setPlaySetting(3, 0), "portamento older queued zero");
+        require(p.setPlaySettingFromUi(3, 99), "portamento newest request");
+        for (int n = 0; n < 100; ++n)
+        {
+            processChecked(p, audio, midi);
+            if (p.getPlaySettings()[3] != 99)
+                std::cerr << "Portamento callback=" << n << " display=" << p.getPlaySettings()[3]
+                          << " native=" << VDX7RegressionAccess::nativePortamento(p) << '\n';
+            require(p.getPlaySettings()[3] == 99, "older native CC5 rolled back the display");
+        }
+        require(VDX7RegressionAccess::nativePortamento(p) == 99, "native CC5 actually reached newest value");
+    }
+}
+
+static void checkPortamentoTransactions(const juce::File& rom)
+{
+    checkPortamentoPending(rom, false);
+    checkPortamentoPending(rom, true);
+    for (int rate : {44100, 48000, 96000})
+    for (int blockSize : {64, 256})
+    {
+        auto owner = std::make_unique<VDX7AudioProcessor>(false);
+        auto reference = std::make_unique<VDX7AudioProcessor>(false);
+        auto& p = *owner;
+        auto& e = VDX7RegressionAccess::engine(p);
+        require(p.loadRomFromFile(rom) && reference->loadRomFromFile(rom), "portamento matrix ROM");
+        require(VDX7RegressionAccess::knownProfile(p) && VDX7RegressionAccess::knownProfile(*reference),
+                "portamento matrix requires the validated v1.8 image");
+        p.prepareToPlay(rate, blockSize);
+        reference->prepareToPlay(rate, blockSize);
+        juce::AudioBuffer<float> audio(2, blockSize), refAudio(2, blockSize);
+        juce::MidiBuffer midi, refMidi;
+        auto settle = [&](int expected, int blocks = 160) {
+            float peak = 0;
+            for (int n = 0; n < blocks; ++n)
+            {
+                processChecked(p, audio, midi);
+                peak = std::max(peak, audio.getMagnitude(0, blockSize));
+                require(p.getPlaySettings()[3] == expected, "portamento display rollback during serial work");
+            }
+            require(VDX7RegressionAccess::nativePortamento(p) == expected,
+                    "native firmware time differs from accepted intent after settling");
+            return peak;
+        };
+        for (int n = 0; n < 160; ++n)
+        { processChecked(p, audio, midi); processChecked(*reference, refAudio, refMidi); }
+
+        // All 100 values: compare actual time AND derived rate with direct native
+        // serial input, not the wrapper's requested-setting getter. Includes
+        // rapid A/0/A replacement; assert every callback, not only the last one.
+        for (int value = 0; value < 100; ++value)
+        {
+            require(e.setPlaySetting(3, 99 - value) && e.setPlaySetting(3, 0), "older native time requests");
+            require(p.setPlaySettingFromUi(3, value), "latest matrix time request");
+            savePortamento(p, value);
+            VDX7RegressionAccess::rawCc5(*reference, (value * 128 + 99) / 100);
+            for (int n = 0; n < 40; ++n)
+            {
+                processChecked(p, audio, midi);
+                processChecked(*reference, refAudio, refMidi);
+                require(p.getPlaySettings()[3] == value, "100-value display must retain latest intent");
+            }
+            require(VDX7RegressionAccess::nativePortamento(p) == value
+                        && VDX7RegressionAccess::nativePortamento(*reference) == value,
+                    "100-value native time comparison");
+            require(VDX7RegressionAccess::nativePortamentoRate(p)
+                        == VDX7RegressionAccess::nativePortamentoRate(*reference),
+                    "100-value native derived rate comparison");
+        }
+        require(!p.setPlaySettingFromUi(3, 100) && !e.setPlaySetting(3, -1), "invalid time rejected");
+        savePortamento(p, 99);
+
+        // UI -> physical MIDI and physical MIDI -> UI, including a non-default
+        // input channel and both extremes. Accepted order, not stale cache, wins.
+        for (int cc : {0, 1, 64, 127})
+        {
+            require(p.setPlaySettingFromUi(3, 37), "UI before physical CC5");
+            midi.addEvent(juce::MidiMessage::controllerEvent(16, 5, cc), 0);
+            processChecked(p, audio, midi);
+            savePortamento(p, cc * 100 / 128);
+            settle(cc * 100 / 128);
+            require(p.setPlaySettingFromUi(3, 73), "UI after physical CC5");
+            savePortamento(p, 73);
+            settle(73);
+        }
+
+        // Existing recovery; previously queued command flushed; full FIFO at
+        // request acceptance; explicit host reset; and save during reset drain.
+        // Immediate save must work
+        // without a callback, sleep, retry by UI or hidden firmware warm-up.
+        for (int scenario = 0; scenario < 5; ++scenario)
+        {
+            require(p.setPlaySettingFromUi(3, 0), "recovery seed");
+            settle(0);
+            if (scenario == 1)
+            { require(p.setPlaySettingFromUi(3, 73), "time before flush"); savePortamento(p, 73); }
+            if (scenario < 3)
+            {
+                VDX7RegressionAccess::fillSerial(p);
+                if (scenario != 2)
+                {
+                    const uint8_t cc[] {0xb0, 7, 100};
+                    e.handleMidi(cc, 3); // Production reserve/recovery, no test flag.
+                    require(e.isMidiRecovering(), "forced serial recovery");
+                }
+            }
+            if (scenario == 4)
+            { e.beginHostReset(); require(e.isHostResetInProgress(), "save during reset precondition"); }
+            require(p.setPlaySettingFromUi(3, 73), "time during recovery");
+            const auto saved = savePortamento(p, 73);
+            if (scenario == 0 && rate == 44100 && blockSize == 64)
+            {
+                auto xml = juce::AudioProcessor::getXmlFromBinary(saved.getData(), int(saved.getSize()));
+                auto tree = juce::ValueTree::fromXml(*xml);
+                tree.setProperty("romPath", "", nullptr);
+                juce::MemoryBlock noRomState;
+                juce::AudioProcessor::copyXmlToBinary(*tree.createXml(), noRomState);
+                auto missing = std::make_unique<VDX7AudioProcessor>(false);
+                missing->setStateInformation(noRomState.getData(), int(noRomState.getSize()));
+                require(!missing->isRomLoaded(), "portamento missing-ROM precondition");
+                savePortamento(*missing, 73);
+                require(missing->loadRomFromFile(rom), "portamento delayed ROM load");
+                require(missing->getPlaySettings()[3] == 73, "delayed ROM load retains saved time");
+            }
+            if (scenario == 3) p.reset();
+            else if (scenario < 3)
+            {
+                const uint8_t rejected[] {0xb0, 5, 0};
+                e.handleMidi(rejected, 3);
+                savePortamento(p, 73); // Rejected CC5 must not replace accepted UI.
+            }
+            for (int n = 0; n < 1200; ++n)
+            {
+                processChecked(p, audio, midi);
+                require(p.getPlaySettings()[3] == 73, "recovery lost displayed request");
+            }
+            require(!e.isMidiRecovering() && !e.isHostResetInProgress()
+                        && VDX7RegressionAccess::nativePortamento(p) == 73, "recovered native time");
+            auto restored = std::make_unique<VDX7AudioProcessor>(false);
+            restored->setStateInformation(saved.getData(), int(saved.getSize()));
+            require(restored->isRomLoaded() && restored->getPlaySettings()[3] == 73, "immediate-save restore");
+            savePortamento(*restored, 73);
+            restored->prepareToPlay(rate, blockSize);
+            for (int n = 0; n < 160; ++n) processChecked(*restored, refAudio, refMidi);
+            require(VDX7RegressionAccess::nativePortamento(*restored) == 73
+                        && VDX7RegressionAccess::nativePortamentoRate(*restored)
+                            == VDX7RegressionAccess::nativePortamentoRate(p), "restored native rate");
+        }
+
+        // The pending time must be inserted before a fresh note, not delayed
+        // until after that note by the recovery release backlog.
+        VDX7RegressionAccess::fillSerial(p);
+        require(e.setPlaySetting(3, 37) && e.isMidiRecovering(), "accepted intent triggers recovery");
+        processChecked(p, audio, midi);
+        require(!e.isMidiRecovering(), "serial recovery can admit fresh input");
+        const uint8_t note[] {0x90, 72, 100};
+        e.handleMidi(note, 3);
+        require(VDX7RegressionAccess::timePrecedesLastNote(p, 37), "retained CC5 must precede fresh note");
+        const auto peak = settle(37, 1200);
+        require(peak > 1e-5f && VDX7RegressionAccess::nativePitchOwned(p, 72),
+                "fresh note after retained CC5 must reach firmware and produce audio");
+        const uint8_t off[] {0x80, 72, 0};
+        e.handleMidi(off, 3);
+        settle(37, 1200);
+        require(!e.hasHeldMidiNotes() && !VDX7RegressionAccess::nativePitchOwned(p, 72)
+                    && audio.getMagnitude(0, blockSize) < 1e-4f, "portamento recovery retains native note off");
+        std::cout << "PASS: portamento intent/native-rate/save/restore/recovery rate=" << rate
+                  << " block=" << blockSize << '\n';
+    }
+}
 
 static bool writePerformanceField(VDX7AudioProcessor& p, int field, int value)
 {
@@ -630,11 +869,17 @@ int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
     const bool publicationOnly = argc == 3 && juce::String(argv[2]) == "--publication-only";
-    if (argc != 2 && !publicationOnly) return 77;
+    const bool portamentoDisplayOnly = argc == 3 && juce::String(argv[2]) == "--portamento-display-only";
+    const bool portamentoSaveOnly = argc == 3 && juce::String(argv[2]) == "--portamento-save-only";
+    const bool portamentoOnly = argc == 3 && juce::String(argv[2]) == "--portamento-only";
+    if (argc != 2 && !publicationOnly && !portamentoDisplayOnly && !portamentoSaveOnly && !portamentoOnly) return 77;
     try
     {
         const juce::File rom(argv[1]);
         if (publicationOnly) { checkPerformancePublication(rom); return 0; }
+        if (portamentoDisplayOnly || portamentoSaveOnly)
+        { checkPortamentoPending(rom, portamentoSaveOnly); return 0; }
+        if (portamentoOnly) { checkPortamentoTransactions(rom); return 0; }
         VDX7AllocationProbe::enabled = true;
         auto* allocation = ::operator new(16);
         ::operator delete(allocation);
