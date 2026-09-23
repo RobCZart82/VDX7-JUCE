@@ -33,6 +33,7 @@ public:
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
+    void reset() override;
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
@@ -111,6 +112,11 @@ private:
     void capturePendingRestoreEditsLocked();
     juce::ValueTree pendingRestore_;
     bool detectRom_ = true;
+    // The host may request a reset from a processing thread. Only publish a
+    // request here; processBlock owns the MIDI queues and the engine cleanup.
+    static_assert(std::atomic<bool>::is_always_lock_free);
+    std::atomic<bool> hostResetRequested_ {false};
+    bool hostResetPending_ = false; // Audio-thread owned across contention.
     // State restoration is initiated off the audio thread. The audio callback
     // observes this epoch before touching its own deferred MIDI storage.
     std::atomic<uint64_t> midiTimelineEpoch_ {0};

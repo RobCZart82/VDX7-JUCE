@@ -66,6 +66,8 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     factoryVoices_ = std::move(newFactoryVoices);
     if (!factoryVoices_.empty())
         dx7_.loadVoices(factoryVoices_.data(), factoryVoices_.size());
+    hostResetInProgress_ = false;
+    hostResetMuted_ = false;
     activeMidiNotes_.fill(0);
     midiReleaseBudget_.fill(0);
     sustainDown_ = false;
@@ -129,8 +131,76 @@ void VDX7Engine::resetAudioState()
     dx7_.midiFilter.reset();
 }
 
+void VDX7Engine::beginHostReset()
+{
+    hostResetInProgress_ = loaded_;
+    hostResetMuted_ = true;
+    resetAudioState();
+    if (!loaded_) return;
+
+    // Drop old adapter input, but let an already-started sub-CPU handshake
+    // finish. Its second byte must not be mistaken for a new message.
+    dx7_.midiSerialRx.flush();
+    dx7_.midiSerialTx.flush();
+    dx7Emu::Message ignored;
+    for (int n = 0; n < 1024 && toSynth_->pop(ignored); ++n) {}
+    midiRecovering_ = false;
+    dx7_.sustain(false);
+    dx7_.porta(false);
+    sustainDown_ = false;
+
+    // Include earlier, already-released notes whose firmware Note Off could
+    // have been discarded from the adapter FIFO. At most 128*16*3 bytes.
+    // Pitches never received by this instance do not require release traffic.
+    activeMidiNotes_ = midiReleaseBudget_;
+    allNotesOff();
+    toSynth_->porta(false);
+}
+
+void VDX7Engine::advanceHostReset(int sampleBudget)
+{
+    if (!hostResetInProgress_ || sampleBudget <= 0) return;
+    if (!loaded_) { hostResetInProgress_ = false; return; }
+
+    std::array<float, 64> left {}, right {};
+    for (int remaining = sampleBudget; remaining > 0;)
+    {
+        const int count = std::min(remaining, static_cast<int>(left.size()));
+        render(left.data(), right.data(), count);
+        remaining -= count;
+
+        // These firmware-ring locations are the same ones used by the existing
+        // mode transaction. Also include the SCI receive register and the
+        // sub-CPU handshake: adapter-empty alone is not a completed reset.
+        const bool pending = dx7_.midiSerialRx.readIdx != dx7_.midiSerialRx.writeIdx
+            || (dx7_.TRCSR & (1u << dx7Emu::HD6303R::RDRF)) != 0
+            || dx7_.memory[0xee] != dx7_.memory[0xf0]
+            || dx7_.memory[0xef] != dx7_.memory[0xf1]
+            || dx7_.memory[0xf6] != 0
+            || dx7_.haveMsg || !appToSynth_.lfq.wasEmpty();
+        if (pending) continue;
+
+        // Releases have reached the firmware. Now discard DSP tails without
+        // changing the packed voice bank or global battery-RAM settings.
+        dx7_.sustain(false);
+        dx7_.porta(false);
+        sustainDown_ = false;
+        activeMidiNotes_.fill(0);
+        std::destroy_at(&dx7_.egs);
+        std::construct_at(&dx7_.egs, dx7_.memory + 0x3000);
+        resetAudioState();
+        controllerRefreshMessages_ = 2;
+        pitchBendRefresh_ = true;
+        portamentoRefresh_ = true;
+        hostResetInProgress_ = false;
+        selectProgram(currentProgram_);
+        return;
+    }
+}
+
 void VDX7Engine::resetMidiLifecycle()
 {
+    hostResetInProgress_ = false;
     if (!loaded_) { resetAudioState(); return; }
     dx7_.midiSerialRx.flush();
     dx7_.midiSerialTx.flush();
@@ -174,8 +244,11 @@ void VDX7Engine::render(float* left, float* right, int numSamples)
     for (int i = 0; i < numSamples; ++i)
     {
         const float out = resampler_.sample([this] { return nextNativeSample(); });
-        if (left != nullptr) left[i] = out;
-        if (right != nullptr) right[i] = out;
+        // A nonzero envelope L4 can otherwise become audible again after
+        // program reload. Only a fresh accepted Note On opens the reset gate.
+        const float audible = hostResetMuted_ ? 0.0f : out;
+        if (left != nullptr) left[i] = audible;
+        if (right != nullptr) right[i] = audible;
 
     }
     if (midiRecovering_)
@@ -385,6 +458,7 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
             if (size == 3 && data[1] < 128 && data[2] < 128)
             {
                 const bool on = status == 0x90 && data[2] != 0;
+                if (on) hostResetMuted_ = false;
                 // The sub-CPU keyboard protocol only supports 61 keys. Use the
                 // firmware MIDI receiver for all pitches, preserving legacy omni
                 // input by normalising host channels to its receive channel.
