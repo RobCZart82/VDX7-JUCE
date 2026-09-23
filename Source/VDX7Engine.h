@@ -33,6 +33,11 @@ public:
     int latencySamples() const noexcept { return resampler_.latency(); }
     void resetAudioState();
     void resetMidiLifecycle(); // Non-RT; host has stopped processBlock.
+    // Engine-owner-only host reset. No allocation or extra warm-up render.
+    // The processor mutes output and defers incoming MIDI while this drains.
+    void beginHostReset();
+    void advanceHostReset(int sampleBudget);
+    bool isHostResetInProgress() const noexcept { return hostResetInProgress_; }
     void render(float* left, float* right, int numSamples);
 
     void handleMidi(const uint8_t* data, int size);
@@ -125,6 +130,8 @@ private:
     bool portamentoRefresh_ = false;
     uint8_t lastPitchBendInput_ = 64;
 
+    bool hostResetInProgress_ = false;
+    bool hostResetMuted_ = false; // Runtime-only; cleared by an accepted fresh Note On.
     bool loaded_ = false;
     int currentBank_ = -1;
     int currentProgram_ = 0;

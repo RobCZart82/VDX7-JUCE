@@ -2,9 +2,12 @@
 #include "VDX7AboutPanel.h"
 #include "VDX7MechanicalDrawing.h"
 #include <iostream>
+#include <memory>
 #include <cmath>
 #include <stdexcept>
 
+// Processor fixtures are heap-owned: several live instances (including nested
+// helpers) exceed the default Windows stack. References keep assertions intact.
 static void require(bool ok, const char* message)
 {
     if (!ok) throw std::runtime_error(message);
@@ -43,7 +46,8 @@ static void checkUserLibrary(const juce::File& romFile, const juce::File& imageF
 {
     juce::TemporaryFile temporary;
     const auto file = temporary.getFile();
-    VDX7AudioProcessor p(false);
+    auto pStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *pStorage;
     VDX7UserBank::Voice captured {};
     juce::String error;
     require(!p.captureUserPatch(captured, error), "capture requires ROM");
@@ -149,7 +153,8 @@ static void checkUserLibrary(const juce::File& romFile, const juce::File& imageF
     require(p.captureUserPatch(loaded, error), "capture loaded USER");
     require(std::equal(captured.begin(), captured.begin() + 118, loaded.begin()), "saved voice bytes unchanged");
     auto state = save(p);
-    VDX7AudioProcessor restored(false);
+    auto restoredStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& restored = *restoredStorage;
     require(restored.loadRomFromFile(romFile), "restore USER ROM");
     restored.setStateInformation(state.getData(), int(state.getSize()));
     require(restored.getCurrentPatchName() == "USER ONE", "USER copy restores in project");
@@ -165,7 +170,8 @@ static void checkUserLibrary(const juce::File& romFile, const juce::File& imageF
 
 static void checkControllers(const juce::File& romFile)
 {
-    VDX7AudioProcessor p(false);
+    auto pStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *pStorage;
     require(!p.setControllerSettingFromUi(0, 0, 50), "controller edit needs ROM");
     require(p.loadRomFromFile(romFile), "controller test ROM");
     require(!p.setMasterTuneFromUi(-257) && !p.setMasterTuneFromUi(256), "tuning bounds");
@@ -180,7 +186,8 @@ static void checkControllers(const juce::File& romFile)
     {
         require(p.setMidiInputChannelFromUi(16), "select stored MIDI channel");
         const auto state = save(p);
-        VDX7AudioProcessor restored(false);
+        auto restoredStorage = std::make_unique<VDX7AudioProcessor>(false);
+        auto& restored = *restoredStorage;
         require(!restored.setMasterTuneFromUi(1), "tuning requires ROM");
         require(restored.loadRomFromFile(romFile), "tuning restore ROM");
         restored.setStateInformation(state.getData(), int(state.getSize()));
@@ -205,7 +212,8 @@ static void checkControllers(const juce::File& romFile)
     }
     {
         const auto state = save(p);
-        VDX7AudioProcessor restored(false);
+        auto restoredStorage = std::make_unique<VDX7AudioProcessor>(false);
+        auto& restored = *restoredStorage;
         require(restored.loadRomFromFile(romFile), "play restore ROM");
         restored.setStateInformation(state.getData(), int(state.getSize()));
         require(restored.getPlaySettings() == p.getPlaySettings(), "play settings restore");
@@ -219,7 +227,8 @@ static void checkControllers(const juce::File& romFile)
     require(!p.hasUnexportedEdits(), "bend globals do not dirty voice");
     {
         auto state = save(p);
-        VDX7AudioProcessor other(false);
+        auto otherStorage = std::make_unique<VDX7AudioProcessor>(false);
+        auto& other = *otherStorage;
         require(other.loadRomFromFile(romFile), "bend restore ROM");
         other.setStateInformation(state.getData(), int(state.getSize()));
         require(other.getPitchBendSettings() == p.getPitchBendSettings(), "bend project restore");
@@ -283,14 +292,16 @@ static void checkControllers(const juce::File& romFile)
     missingState.setProperty("midiInputChannel", 12, nullptr);
     juce::MemoryBlock missingData;
     juce::AudioProcessor::copyXmlToBinary(*missingState.createXml(), missingData);
-    VDX7AudioProcessor missing(false);
+    auto missingStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& missing = *missingStorage;
     missing.setStateInformation(missingData.getData(), int(missingData.getSize()));
     require(!missing.isRomLoaded(), "deliberate missing ROM");
     require(missing.getMidiInputChannel() == 12, "missing-ROM channel recall");
     require(missing.setMidiInputChannelFromUi(9), "edit channel while ROM missing");
     require(!missing.setControllerSettingFromUi(0, 0, 1), "missing ROM preserves pending globals");
     const auto resaved = save(missing);
-    VDX7AudioProcessor restored(false);
+    auto restoredStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& restored = *restoredStorage;
     restored.setStateInformation(resaved.getData(), int(resaved.getSize()));
     require(restored.loadRomFromFile(romFile), "restore global controller RAM");
     require(restored.getControllerSettings() == settings, "missing-ROM round trip restores controllers");
@@ -305,7 +316,8 @@ static void checkControllers(const juce::File& romFile)
         std::array<std::vector<float>, 2> renders;
         for (int enabled = 0; enabled <= 1; ++enabled)
         {
-            VDX7AudioProcessor synth(false);
+            auto synthStorage = std::make_unique<VDX7AudioProcessor>(false);
+            auto& synth = *synthStorage;
             require(synth.loadRomFromFile(romFile), "controller audio ROM");
             synth.prepareToPlay(48000, 256);
             for (int source = 0; source < 4; ++source)
@@ -388,9 +400,11 @@ int main(int argc, char** argv)
     try
     {
         checkWhiteKeyHover();
-        VDX7AudioProcessor original(false);
+        auto originalStorage = std::make_unique<VDX7AudioProcessor>(false);
+        auto& original = *originalStorage;
         {
-            VDX7AudioProcessor noRom(false);
+            auto noRomStorage = std::make_unique<VDX7AudioProcessor>(false);
+            auto& noRom = *noRomStorage;
             std::unique_ptr<juce::AudioProcessorEditor> editor(noRom.createEditor());
             int saveButtons = 0;
             for (auto* child : editor->getChildren())
@@ -466,7 +480,8 @@ int main(int argc, char** argv)
                 float(lo + (p * 11) % (hi - lo + 1)));
         }
         state = save(original);
-        VDX7AudioProcessor restored(false);
+        auto restoredStorage = std::make_unique<VDX7AudioProcessor>(false);
+        auto& restored = *restoredStorage;
         restored.setStateInformation(state.getData(), int(state.getSize()));
         require(restored.getCurrentProgram() == 3, "program restore");
         require(ram(state) == ram(save(restored)), "RAM round trip before rendering");
@@ -900,7 +915,8 @@ int main(int argc, char** argv)
         require(ram(state) == ram(save(restored)), "RAM-only state restoration");
 
         // Run a factory voice through real firmware without opening an audio device.
-        VDX7AudioProcessor render(false);
+        auto renderStorage = std::make_unique<VDX7AudioProcessor>(false);
+        auto& render = *renderStorage;
         require(render.loadRomFromFile(testRomFile), "explicit render test ROM");
         for (const double rate : { 44100.0, 48000.0, 96000.0 })
         for (const int size : { 64, 128, 256 })

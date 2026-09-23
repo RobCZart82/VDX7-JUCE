@@ -267,6 +267,14 @@ void VDX7AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     setLatencySamples(latency);
 }
 
+void VDX7AudioProcessor::reset()
+{
+    // No engine lock, file access, host notification, or firmware warm-up.
+    // No callback means no emitted audio; cleanup precedes resumed rendering.
+    hostResetRequested_.store(true, std::memory_order_release);
+    clearMeters();
+}
+
 void VDX7AudioProcessor::releaseResources()
 {
     processLoadMeasurer_.reset();
@@ -291,6 +299,19 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     if (buffer.getNumSamples() > 0)
         loadTimer.emplace(processLoadMeasurer_, buffer.getNumSamples());
     buffer.clear();
+    const auto observeHostReset = [this]()
+    {
+        if (!hostResetRequested_.exchange(false, std::memory_order_acq_rel))
+            return false;
+        // Queued virtual-keyboard input is discarded at observation. A GUI
+        // key physically held across reset must be released and pressed again.
+        deferredMidi_.clear();
+        keyboardQueue_.discard();
+        clearKeyboardSnapshot();
+        hostResetPending_ = true;
+        return true;
+    };
+    (void) observeHostReset();
     const auto midiTimelineEpoch = midiTimelineEpoch_.load(std::memory_order_acquire);
     if (midiTimelineEpoch != audioMidiTimelineEpoch_)
     {
@@ -319,6 +340,13 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     const int total = buffer.getNumSamples();
     // A long transaction may silence a block, but never blocks audio.
     std::unique_lock lock(engineMutex_, std::try_to_lock);
+    if (lock.owns_lock() && observeHostReset())
+    {
+        // A reset overlapping the pre-lock section invalidates that callback's
+        // already-collected input. Do not apply it to the reset engine.
+        keyboardCount = 0;
+        midi.clear();
+    }
     if (!lock.owns_lock() && total > 0 && engineLoaded_.load(std::memory_order_acquire))
     {
         contendedAudioBlocks_.fetch_add(1, std::memory_order_relaxed);
@@ -333,7 +361,9 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     }
     else
         audioContendedRunSamples_ = 0;
-    const bool useDeferred = deferredMidi_.active() || !lock.owns_lock();
+    const bool useDeferred = deferredMidi_.active() || !lock.owns_lock()
+        || hostResetPending_
+        || (lock.owns_lock() && engine_.isHostResetInProgress());
     if (engineLoaded_.load(std::memory_order_acquire) && useDeferred)
     {
         for (std::size_t i = 0; i < keyboardCount; ++i)
@@ -353,6 +383,27 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     else if (!engineLoaded_.load(std::memory_order_acquire)) deferredMidi_.clear();
     if (!lock.owns_lock() || !engine_.isLoaded())
     {
+        midi.clear();
+        clearMeters();
+        return;
+    }
+
+    if (hostResetPending_)
+    {
+        engine_.beginHostReset();
+        hostResetPending_ = false;
+        // The reset release batch supersedes these softer note-release jobs.
+        channelReleasePending_ = false;
+        stateRestoreReleasePending_ = false;
+        lastPitchMsb_ = -1;
+        lastModValue_ = -1;
+    }
+    if (engine_.isHostResetInProgress())
+    {
+        // Advance at most this callback's sample budget, not a quarter-second
+        // lifecycle render. Output remains zero and post-reset MIDI stays on
+        // the bounded deferred timeline until the firmware input has drained.
+        engine_.advanceHostReset(total);
         midi.clear();
         clearMeters();
         return;

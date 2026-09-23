@@ -3,9 +3,12 @@
 #include <cmath>
 #include <future>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <thread>
 
+// Processor/engine fixtures are heap-owned so nested, multi-instance tests fit
+// the default Windows stack without changing object lifetimes or assertions.
 static void require(bool ok, const char* message)
 { if (!ok) throw std::runtime_error(message); }
 
@@ -290,7 +293,8 @@ static void checkEditOrdering(const juce::File& romFile)
             for (bool audioFlush : {false, true})
             for (bool operatorEdit : {false, true})
             {
-                VDX7AudioProcessor p(false);
+                auto pStorage = std::make_unique<VDX7AudioProcessor>(false);
+                auto& p = *pStorage;
                 require(p.loadRomFromFile(romFile), "ordering ROM");
                 p.selectProgramFromUi(3);
                 const auto before = decode(save(p));
@@ -325,7 +329,8 @@ static void checkEditOrdering(const juce::File& romFile)
                 require(actual.fromBase64Encoding(decode(save(p))["ram"].toString()), "ordering final RAM");
                 if (bankSwitch)
                 {
-                    VDX7AudioProcessor reference(false);
+                    auto referenceStorage = std::make_unique<VDX7AudioProcessor>(false);
+                    auto& reference = *referenceStorage;
                     require(reference.loadRomFromFile(romFile), "reference ROM");
                     reference.selectProgramFromUi(3);
                     reference.selectFactoryBank(1);
@@ -346,7 +351,8 @@ static void checkEditOrdering(const juce::File& romFile)
                 }
             }
 
-    VDX7AudioProcessor rapid(false);
+    auto rapidStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& rapid = *rapidStorage;
     require(rapid.loadRomFromFile(romFile), "rapid selection ROM");
     juce::MemoryBlock expected;
     require(expected.fromBase64Encoding(decode(save(rapid))["ram"].toString()), "rapid original RAM");
@@ -369,7 +375,8 @@ static void checkEditOrdering(const juce::File& romFile)
 
 static void checkAudioPublication(const juce::File& romFile)
 {
-    VDX7AudioProcessor p(false);
+    auto pStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *pStorage;
     require(p.loadRomFromFile(romFile), "publication ROM");
     struct Listener final : juce::AudioProcessorParameter::Listener
     {
@@ -476,14 +483,16 @@ int main(int argc, char** argv)
         checkAudioPublication(romFile);
         checkEditOrdering(romFile);
         {
-            VDX7AudioProcessor input(false);
+            auto inputStorage = std::make_unique<VDX7AudioProcessor>(false);
+            auto& input = *inputStorage;
             require(input.loadRomFromFile(romFile), "MIDI validation ROM");
             input.prepareToPlay(48000, 64);
             VDX7RegressionAccess::checkInvalidMidi(input);
             VDX7RegressionAccess::checkInputChannel(input);
             VDX7RegressionAccess::checkStateRestoreDropsDeferredMidi(input);
         }
-        VDX7Engine engine;
+        auto engineStorage = std::make_unique<VDX7Engine>();
+        auto& engine = *engineStorage;
         require(engine.loadRomImage(static_cast<const uint8_t*>(rom.getData()), rom.getSize()), "engine ROM");
         VDX7RegressionAccess::checkControllers(engine);
         VDX7RegressionAccess::checkProgramBytes(engine);
@@ -513,7 +522,8 @@ int main(int argc, char** argv)
         require(firmwareFile.replaceWithData(rom.getData(), 16384), "write temporary firmware");
         require(temporaryDirectory.getChildFile("dx7_factory_voices_32KB.bin")
                     .replaceWithData(invalid, sizeof(invalid)), "write invalid companion");
-        VDX7AudioProcessor companion(false);
+        auto companionStorage = std::make_unique<VDX7AudioProcessor>(false);
+        auto& companion = *companionStorage;
         require(companion.loadRomFromFile(firmwareFile), "invalid optional companion permits firmware load");
         require(companion.isRomLoaded() && !companion.hasFactoryVoices(), "firmware-only companion fallback");
         require(companion.getStatusText().containsIgnoreCase("ignored"), "companion warning status");
@@ -526,7 +536,8 @@ int main(int argc, char** argv)
         require(companion.loadRomFromFile(firmwareFile) && !companion.hasFactoryVoices(),
                 "absent companion loads firmware only");
 
-        VDX7AudioProcessor original(false);
+        auto originalStorage = std::make_unique<VDX7AudioProcessor>(false);
+        auto& original = *originalStorage;
         require(original.loadRomFromFile(romFile), "processor ROM");
         original.selectProgramFromUi(5);
         save(original);
@@ -540,7 +551,8 @@ int main(int argc, char** argv)
         auto saved = decode(save(original));
         saved.setProperty("romPath", "/vdx7-regression-missing/firmware.bin", nullptr);
         auto missing = encode(saved);
-        VDX7AudioProcessor waiting(false);
+        auto waitingStorage = std::make_unique<VDX7AudioProcessor>(false);
+        auto& waiting = *waitingStorage;
         waiting.setStateInformation(missing.getData(), static_cast<int>(missing.getSize()));
         require(!waiting.isRomLoaded(), "missing ROM remains unloaded");
         require(decode(save(waiting)).isEquivalentTo(saved), "save preserves pending state");
@@ -553,7 +565,8 @@ int main(int argc, char** argv)
         require(editedPending["ram"] == saved["ram"]
                 && editedPending["bank"] == saved["bank"]
                 && editedPending["program"] == saved["program"], "missing-ROM edit preserves sound data");
-        VDX7AudioProcessor restarted(false);
+        auto restartedStorage = std::make_unique<VDX7AudioProcessor>(false);
+        auto& restarted = *restartedStorage;
         auto pending = save(waiting);
         restarted.setStateInformation(pending.getData(), static_cast<int>(pending.getSize()));
         require(std::abs(restarted.parameters().getParameter("masterVolume")->getValue() - editedMasterValue)
@@ -567,7 +580,8 @@ int main(int argc, char** argv)
         require(restarted.getCurrentPatchName() == "RESTORE1", "restored name");
         for (bool saveBeforeLoad : {false, true})
         {
-            VDX7AudioProcessor edited(false);
+            auto editedStorage = std::make_unique<VDX7AudioProcessor>(false);
+            auto& edited = *editedStorage;
             edited.setStateInformation(missing.getData(), static_cast<int>(missing.getSize()));
             auto* editedFeedback = edited.parameters().getParameter(VDX7ParameterIDs::voiceParameter(
                 VDX7VoiceData::VoiceParameter::feedback));
