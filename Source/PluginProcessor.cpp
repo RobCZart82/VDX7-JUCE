@@ -251,6 +251,11 @@ void VDX7AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     processLoadMeasurer_.reset(sampleRate, samplesPerBlock);
     std::unique_lock lock(engineMutex_);
+    // Stopped-device lifecycle supersedes requests already present at entry.
+    // Consume before cleanup, never afterwards: a concurrent newer reset must
+    // remain visible to the next callback. The host must stop processing here.
+    hostResetRequested_.exchange(false, std::memory_order_acq_rel);
+    hostResetPending_ = false;
     currentSampleRate_ = sampleRate;
     deferredMidi_.clear();
     keyboardQueue_.discard();
@@ -279,6 +284,10 @@ void VDX7AudioProcessor::releaseResources()
 {
     processLoadMeasurer_.reset();
     std::scoped_lock lock(engineMutex_);
+    // Retire the old request before lifecycle cleanup; do not erase a reset
+    // arriving during that cleanup with an unconditional store at the end.
+    hostResetRequested_.exchange(false, std::memory_order_acq_rel);
+    hostResetPending_ = false;
     deferredMidi_.clear();
     keyboardQueue_.discard();
     clearKeyboardSnapshot();

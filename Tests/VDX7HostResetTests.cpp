@@ -23,6 +23,8 @@ struct VDX7RegressionAccess
     static std::mutex& mutex(VDX7AudioProcessor& p) { return p.engineMutex_; }
     static bool deferred(const VDX7AudioProcessor& p) { return p.deferredMidi_.active(); }
     static uint32_t dirty(const VDX7AudioProcessor& p) { return p.modifiedVoices_.load(); }
+    static bool resetWaiting(const VDX7AudioProcessor& p)
+    { return p.hostResetRequested_.load() || p.hostResetPending_; }
     static bool fullReleaseHistory(const VDX7AudioProcessor& p, int repeats)
     {
         return std::all_of(p.engine_.midiReleaseBudget_.begin(), p.engine_.midiReleaseBudget_.end(),
@@ -233,6 +235,64 @@ static void testFreshNoteRelease(const juce::File& rom, int rate, int block)
               << (1000.0 * firstAudibleBlock * block / rate) << ")\n";
 }
 
+static void testReactivation(const juce::File& rom, bool observeRequest, bool releaseFirst = true)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    midi.addEvent(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)), 0);
+    for (int n = 0; n < 100; ++n) processChecked(p, audio, midi);
+    require(VDX7RegressionAccess::engine(p).hasHeldMidiNotes(), "reactivation fixture needs a note");
+    const auto before = capture(p);
+    resetChecked(p);
+    if (observeRequest)
+    {
+        // Observe the atomic request without allowing the engine lock. This
+        // leaves the audio-owned pending flag for the lifecycle to retire.
+        std::unique_lock lock(VDX7RegressionAccess::mutex(p));
+        auto callback = std::async(std::launch::async, [&] { processChecked(p, audio, midi); });
+        const bool timely = callback.wait_for(std::chrono::seconds(1)) == std::future_status::ready;
+        if (!timely) { lock.unlock(); callback.get(); }
+        require(timely, "reactivation fixture callback blocked on engine mutex");
+        callback.get();
+    }
+    require(VDX7RegressionAccess::resetWaiting(p), "fixture did not retain reset request");
+    if (releaseFirst)
+    {
+        p.releaseResources();
+        require(!VDX7RegressionAccess::resetWaiting(p), "release did not retire old reset");
+    }
+    p.prepareToPlay(48000, 64);
+    require(!VDX7RegressionAccess::resetWaiting(p), "stale host reset survived release/prepare");
+    unchanged(before, capture(p));
+    midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+    float peak = 0;
+    for (int n = 0; n < 375; ++n)
+    {
+        processChecked(p, audio, midi);
+        require(!VDX7RegressionAccess::engine(p).isHostResetInProgress(),
+                "reactivation started a redundant host reset");
+        peak = std::max(peak, audio.getMagnitude(0, 64));
+    }
+    require(peak > 1e-4f, "fresh reactivation note did not sound");
+    midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+    processChecked(p, audio, midi);
+    require(!VDX7RegressionAccess::engine(p).hasHeldMidiNotes(), "reactivation note did not release");
+    // A genuinely new request after prepare must still be observed.
+    resetChecked(p);
+    require(VDX7RegressionAccess::resetWaiting(p), "new post-prepare reset was lost");
+    for (int n = 0; n < 750; ++n)
+    {
+        processChecked(p, audio, midi);
+        require(audio.getMagnitude(0, 64) < 1e-5f, "new reset did not silence reactivation tail");
+    }
+    std::cout << "PASS: " << (releaseFirst ? "release/prepare" : "prepare alone")
+              << " retires " << (observeRequest ? "pending" : "unobserved")
+              << " reset; fresh input and later reset work\n";
+}
+
 static void testExpandedHistory(const juce::File& rom, int repeats)
 {
     constexpr int rate = 48000, block = 64;
@@ -348,8 +408,16 @@ int main(int argc, char** argv)
     juce::ScopedJuceInitialiser_GUI gui;
     try
     {
-        if (argc != 2 || !juce::File(argv[1]).existsAsFile())
+        const bool reactivationOnly = argc == 3 && juce::String(argv[2]) == "--reactivation-only";
+        if ((argc != 2 && !reactivationOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
+        if (reactivationOnly)
+        {
+            for (bool releaseFirst : {false, true})
+                for (bool observed : {false, true})
+                    testReactivation(juce::File(argv[1]), observed, releaseFirst);
+            return 0;
+        }
         auto noRomOwner = std::make_unique<VDX7AudioProcessor>(false);
         auto& noRom = *noRomOwner;
         resetChecked(noRom);
@@ -365,6 +433,8 @@ int main(int argc, char** argv)
             }
         testHeldAndTail(juce::File(argv[1]), 48000, 64, true);
         testContentionAndDeferred(juce::File(argv[1]));
+        testReactivation(juce::File(argv[1]), false);
+        testReactivation(juce::File(argv[1]), true);
         testExpandedHistory(juce::File(argv[1]), 1);
         testExpandedHistory(juce::File(argv[1]), 16);
     }

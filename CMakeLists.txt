@@ -255,4 +255,9 @@ if(VDX7_ENABLE_ROM_TESTS)
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}")
     set_tests_properties(vdx7_host_reset PROPERTIES
         TIMEOUT 180 LABELS "local-rom")
+    # Keep this independently observable while expanded-history acceptance
+    # in the full reset runner remains a known failure (#46).
+    add_test(NAME vdx7_reactivation
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --reactivation-only)
+    set_tests_properties(vdx7_reactivation PROPERTIES TIMEOUT 180 LABELS "local-rom")
 endif()
