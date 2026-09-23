@@ -63,8 +63,9 @@ baseline. The earlier reconstructed local draft is not the published patch.
 | Baseline host-reset reproduction | PASS | Test-only commit 7ad444628e2f1db639f2c1024c8d2a66630e6f57: expected CTest FAIL in 0.39 s, `host reset left held audio or a release tail` |
 | New host-reset integration test | PASS | Implementation commit 90b2c840cc2ab62690f1f3fe54b474e60c582b60: 8.28 s; 44100/48000/96000 Hz at 64/256 samples, nonzero L4, contention, stale/fresh input and state preservation |
 | Local ROM-free regression subset | PASS | Five tests passed |
-| Full local-ROM suite | FAIL | Combined result: 9/11 pass; existing vdx7_stability and vdx7_processor runners overflow Windows stack (0xC00000FD); both reproduced on the test-only baseline as well |
-| MIDI range, timing and stress regressions | PASS | 257.30 s, 5.66 s and 29.93 s respectively |
+| Full local-ROM suite after fixture fix | PASS | 11/11 tests, zero failures, 327.12 s at 3523d089724f40c1d6377bb1af107ebb0c64cade; host reset 8.49 s |
+| Stability and processor after fixture fix | PASS | 4.24 s and 20.36 s respectively |
+| MIDI range, timing and stress regressions | PASS | 257.13 s, 5.46 s and 29.19 s respectively |
 | GitHub Windows/macOS build and ROM-free tests | PASS | Implementation commit: Windows run 35848462256; macOS run 35848462314 |
 | REAPER/VST3 reset acceptance and fresh-note latency | NOT RUN | Requires local host and compatible ROM |
 | Ordinary C++ allocation probe | PASS | Included in the passing host-reset integration test |
@@ -72,9 +73,28 @@ baseline. The earlier reconstructed local draft is not the published patch.
 
 The old-source failure and fixed-source pass establish the targeted regression
 using the user's local combined ROM; no firmware was uploaded. The full suite
-is not green, and the direct-API test does not replace real-host acceptance,
+now passes, but the direct-API test does not replace real-host acceptance,
 long-lived-instance latency measurements or exhaustive firmware/race testing.
-No unrelated test or engine edits were made to conceal the existing stack overflow.
+Initial full-suite result: FAIL, 9/11 passed before the test-fixture follow-up.
+
+## Windows test-fixture follow-up
+
+Published test-fix commit: `6fc14a35932e972edf15c3d41b95a28ae8e70f02`.
+Its tree `5c4263fbcc6d3df963627b1c5549eddcdb49797e` exactly matches locally tested
+commit `3523d089724f40c1d6377bb1af107ebb0c64cade`.
+Both original runners terminated with `0xC00000FD` on the baseline and N1 code.
+Their multiple processor/engine fixtures exhausted the default Windows stack.
+The follow-up moves these large fixtures to `std::unique_ptr` ownership while
+retaining references, construction points, scope lifetimes and all assertions.
+No plugin source, linker stack limit, test threshold or skip condition changed.
+The processor executable still reserves the default 1 MiB stack.
+
+Targeted rerun: PASS, stability 4.19 s and processor 20.49 s. Reversing only
+the fixture-ownership edits, added include and explanatory comments reproduces
+both previous test sources exactly (apart from line endings).
+The final full-suite rerun at this commit is PASS: 11/11 in 327.12 s. Windows
+Release VST3 and all test targets also build successfully. GitHub CI results in
+the table refer to the original implementation commit; newer PR checks are separate.
 
 Reproduction: configure separate clean worktrees at the two commits above with
 VDX7_ENABLE_ROM_TESTS=ON and VDX7_TEST_ROM_FILE pointing to a private local ROM.
