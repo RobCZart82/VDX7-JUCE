@@ -120,8 +120,14 @@ private:
     static constexpr uint8_t kMaxRepeatedNotes = 16;
     std::array<uint8_t, 128> activeMidiNotes_{};
     // Conservative release budget: queued offs may be flushed before firmware
-    // consumes them. Keep peak multiplicity since ROM load (bounded at 16).
+    // consumes them. Keep peak multiplicity (bounded at 16) until a verified
+    // normal-playback idle boundary; unknown ROMs retain it since ROM load.
     std::array<uint8_t, 128> midiReleaseBudget_{};
+    // Only the locally validated v1.8 image has a known dispatch/RAM profile.
+    bool releaseRetirementProfile_ = false;
+    bool releaseHistoryDirty_ = false;
+    static bool isReleaseRetirementFirmware(const uint8_t* data, std::size_t size);
+    void retireCompletedReleaseHistory();
     bool sustainDown_ = false;
     bool midiRecovering_ = false;
     uint64_t midiOverloadCount_ = 0;

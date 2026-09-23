@@ -61,6 +61,9 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     if (!dx7_.loadFirmware(firmware, kFirmwareSize))
         return false;
 
+    releaseRetirementProfile_ = isReleaseRetirementFirmware(firmware, kFirmwareSize);
+    releaseHistoryDirty_ = false;
+
     // loadVoices(nullptr, 0) does NOT clear the core's previous pointer.
     dx7_.loadVoices(emptyFactoryBank_.data(), emptyFactoryBank_.size());
     factoryVoices_ = std::move(newFactoryVoices);
@@ -356,6 +359,7 @@ int VDX7Engine::generateNative(float* out)
             }
         }
 
+        retireCompletedReleaseHistory();
         dx7_.run();
         const int cycles = (dx7_.inst != nullptr && dx7_.inst->cycles > 0) ? dx7_.inst->cycles : 1;
 
@@ -363,6 +367,37 @@ int VDX7Engine::generateNative(float* out)
     }
 
     return outCount;
+}
+
+bool VDX7Engine::isReleaseRetirementFirmware(const uint8_t* data, std::size_t size)
+{
+    // Compatibility fingerprint, not a security hash. Unknown/modified ROMs
+    // retain conservative history. No firmware bytes are embedded here.
+    if (data == nullptr || size != kFirmwareSize) return false;
+    uint64_t fingerprint = UINT64_C(14695981039346656037);
+    for (std::size_t i = 0; i < size; ++i)
+        fingerprint = (fingerprint ^ data[i]) * UINT64_C(1099511628211);
+    return fingerprint == UINT64_C(0x20dd25e47a496ba0);
+}
+
+void VDX7Engine::retireCompletedReleaseHistory()
+{
+    // Observe BEFORE the next CPU instruction, at the v1.8 main-loop entry.
+    // The preceding MIDI/pedal dispatch has returned; never inspect a partially
+    // completed ownership update. POLY only until MONO/legato is validated.
+    if (!releaseHistoryDirty_ || !releaseRetirementProfile_ || dx7_.PC != 0xc708
+        || hostResetInProgress_ || midiRecovering_ || hasHeldMidiNotes()) return;
+    const auto& m = dx7_.memory;
+    if (m[0x20a9] != 0 || m[0xe7] != 0 || m[0xe8] != 0 || m[0xf6] != 0
+        || (m[0x83] & 1) != 0 || (m[0x20a7] & 1) != 0
+        || dx7_.midiSerialRx.readIdx != dx7_.midiSerialRx.writeIdx
+        || (dx7_.TRCSR & (1u << dx7Emu::HD6303R::RDRF)) != 0
+        || m[0xee] != m[0xf0] || m[0xef] != m[0xf1]
+        || dx7_.haveMsg || dx7_.byte1Sent || !appToSynth_.lfq.wasEmpty()) return;
+    for (int i = 0; i < 16; ++i)
+        if ((m[0x2168 + i] & 0x80) != 0 || (m[0x20b1 + 2 * i] & 3) != 0) return;
+    midiReleaseBudget_.fill(0);
+    releaseHistoryDirty_ = false;
 }
 
 void VDX7Engine::processQueuedMessage(dx7Emu::Message msg)
@@ -469,6 +504,7 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
                 dx7_.midiSerialRx.write(on ? mapVelocity(data[2]) : 0);
                 auto& held = activeMidiNotes_[data[1]];
                 if (on) {
+                    releaseHistoryDirty_ = true;
                     held = std::min<int>(kMaxRepeatedNotes, held + 1);
                     midiReleaseBudget_[data[1]] = std::max(midiReleaseBudget_[data[1]], held);
                 }

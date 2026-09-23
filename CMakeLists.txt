@@ -265,4 +265,7 @@ if(VDX7_ENABLE_ROM_TESTS)
     add_test(NAME vdx7_firmware_ownership
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --ownership-only)
     set_tests_properties(vdx7_firmware_ownership PROPERTIES TIMEOUT 180 LABELS "local-rom")
+    add_test(NAME vdx7_history_retirement
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --retirement-only)
+    set_tests_properties(vdx7_history_retirement PROPERTIES TIMEOUT 180 LABELS "local-rom")
 endif()

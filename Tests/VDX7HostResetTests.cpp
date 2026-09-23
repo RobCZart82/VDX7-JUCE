@@ -46,6 +46,26 @@ struct VDX7RegressionAccess
                 || d.memory[0xf6] != 0 ? 4u : 0u);
     }
     static VDX7Engine& engine(VDX7AudioProcessor& p) { return p.engine_; }
+    static void keepConservativeHistory(VDX7AudioProcessor& p)
+    { p.engine_.releaseRetirementProfile_ = false; }
+    static bool knownRetirementProfile(const VDX7AudioProcessor& p)
+    { return p.engine_.releaseRetirementProfile_; }
+    static int releaseBudget(const VDX7AudioProcessor& p, int note)
+    { return p.engine_.midiReleaseBudget_[note]; }
+    static void checkFirmwareProfile(const VDX7AudioProcessor& p)
+    {
+        std::array<uint8_t, VDX7Engine::kFirmwareSize> copy{};
+        std::copy_n(p.engine_.dx7_.memory + 0xc000, copy.size(), copy.begin());
+        require(VDX7Engine::isReleaseRetirementFirmware(copy.data(), copy.size()), "known image not recognized");
+        require(!VDX7Engine::isReleaseRetirementFirmware(nullptr, copy.size())
+                && !VDX7Engine::isReleaseRetirementFirmware(copy.data(), copy.size() - 1), "invalid profile accepted");
+        for (std::size_t i : {std::size_t(0), copy.size() / 2, copy.size() - 1})
+        {
+            copy[i] ^= 1;
+            require(!VDX7Engine::isReleaseRetirementFirmware(copy.data(), copy.size()), "modified image accepted");
+            copy[i] ^= 1;
+        }
+    }
     static std::mutex& mutex(VDX7AudioProcessor& p) { return p.engineMutex_; }
     static bool deferred(const VDX7AudioProcessor& p) { return p.deferredMidi_.active(); }
     static uint32_t dirty(const VDX7AudioProcessor& p) { return p.modifiedVoices_.load(); }
@@ -373,11 +393,19 @@ static void testRunningStatusRelease(const juce::File& rom, bool compact, int re
 }
 
 static SavedSettings testExpandedHistory(const juce::File& rom, int repeats, int rate = 48000,
-                                        int block = 64, bool measurePair = false)
+                                        int block = 64, bool measurePair = false,
+                                        bool conservative = true, std::array<int, 2>* timing = nullptr)
 {
     auto owner = std::make_unique<VDX7AudioProcessor>(false);
     auto& p = *owner;
     initialise(p, rom, rate, block);
+    // Preserve the original maximum-history regression for the fallback path.
+    if (conservative) VDX7RegressionAccess::keepConservativeHistory(p);
+    else
+    {
+        require(VDX7RegressionAccess::knownRetirementProfile(p), "retirement fixture needs validated ROM");
+        VDX7RegressionAccess::checkFirmwareProfile(p);
+    }
     auto& e = VDX7RegressionAccess::engine(p);
     e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
     e.reloadCurrentProgram();
@@ -399,7 +427,8 @@ static SavedSettings testExpandedHistory(const juce::File& rom, int repeats, int
     }
     require(!e.hasHeldMidiNotes(), "history fixture left held notes");
     require(e.midiOverloadCount() == overloads, "history fixture overflowed input");
-    require(VDX7RegressionAccess::fullReleaseHistory(p, repeats), "history fixture did not reach requested budget");
+    if (conservative)
+        require(VDX7RegressionAccess::fullReleaseHistory(p, repeats), "history fixture did not reach requested budget");
     if (measurePair)
     {
         // Match observable idle input/ownership and silence, not arbitrary CPU
@@ -412,6 +441,8 @@ static SavedSettings testExpandedHistory(const juce::File& rom, int repeats, int
                   << ", sustained=" << ownership.sustained << '\n';
         require(ownership.midi == 0 && ownership.held == 0 && ownership.sustained == 0,
                 "paired fixture retains firmware ownership");
+        if (!conservative)
+            require(VDX7RegressionAccess::fullReleaseHistory(p, 0), "completed history was not retired during normal playback");
     }
     const auto before = capture(p);
     resetChecked(p);
@@ -423,7 +454,7 @@ static SavedSettings testExpandedHistory(const juce::File& rom, int repeats, int
         // Observe the actual queued bytes before any audio-time drain. This
         // zero-sample observation is separate from the immediate-input matrix.
         const auto bytes = VDX7RegressionAccess::serialBytes(p);
-        const size_t releases = static_cast<size_t>(128 * repeats);
+        const size_t releases = conservative ? static_cast<size_t>(128 * repeats) : 0;
         require(bytes.size() == (releases == 0 ? 0 : 1 + 2 * releases), "unexpected reset serial byte count");
         if (!bytes.empty()) require(bytes[0] == 0x80, "unexpected reset status");
         size_t decoded = 0;
@@ -451,6 +482,7 @@ static SavedSettings testExpandedHistory(const juce::File& rom, int repeats, int
               << " (block-end ms=" << (1000.0 * (audibleBlock + 1) * block / rate)
               << "); max observed callback us=" << maxCallbackUs << std::endl;
     require(drainBlock >= 0, "expanded-history reset did not complete in observation window");
+    if (timing != nullptr) *timing = {drainBlock, audibleBlock};
     require(audibleBlock >= 0 && e.hasHeldMidiNotes(), "expanded-history reset lost fresh note");
     midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
     float finalPeak = 0;
@@ -493,12 +525,14 @@ static void testFirmwareOwnership(const juce::File& rom, int note, int repeats, 
         send(juce::MidiMessage::noteOn(1, note, juce::uint8(100)));
     settle();
     check(repeats, repeats, 0);
+    require(VDX7RegressionAccess::releaseBudget(p, note) == repeats, "held-note history retired prematurely");
     require(VDX7RegressionAccess::inputIdle(p), "held fixture input did not settle");
     for (int i = 0; i < repeats; ++i) send(juce::MidiMessage::noteOff(1, note));
     // The adapter has already decremented every note; the firmware still owns
     // all voices until the queued releases actually execute. Never retire here.
     check(repeats, repeats, 0);
     require(!VDX7RegressionAccess::inputIdle(p), "queued release was not observable");
+    require(VDX7RegressionAccess::releaseBudget(p, note) == repeats, "queued-release history retired prematurely");
     if (!sustain) require(!e.hasHeldMidiNotes(), "adapter did not accept releases");
     unsigned stages = VDX7RegressionAccess::pendingStages(p);
     juce::AudioBuffer<float> single(2, 1);
@@ -512,11 +546,13 @@ static void testFirmwareOwnership(const juce::File& rom, int note, int repeats, 
     check(0, 0, sustain ? repeats : 0);
     if (sustain)
     {
+        require(VDX7RegressionAccess::releaseBudget(p, note) == repeats, "sustained history retired prematurely");
         // Empty MIDI ownership and empty queues do NOT mean all voices are off.
         send(juce::MidiMessage::controllerEvent(1, 64, 0));
         settle();
         check(0, 0, 0);
     }
+    require(VDX7RegressionAccess::releaseBudget(p, note) == 0, "normal-playback release history not retired");
     // No reset, mute-gate opening/closing or EGS reconstruction in this test.
     require(!e.isHostResetInProgress(), "ownership test unexpectedly reset");
     std::cout << "PASS: firmware ownership transitions note=" << note << ", repeats=" << repeats
@@ -552,6 +588,7 @@ static void testResetAtReleaseStage(const juce::File& rom, unsigned stage, bool 
     while (!atStage() && steps++ < 12000)
         processChecked(p, single, midi);
     require(atStage(), "requested release stage not reached");
+    require(VDX7RegressionAccess::releaseBudget(p, 60) == 16, "in-flight release history retired prematurely");
     const auto before = capture(p);
     resetChecked(p);
     midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
@@ -576,6 +613,27 @@ static void testResetAtReleaseStage(const juce::File& rom, unsigned stage, bool 
             "stage reset fresh voice did not release");
     unchanged(before, capture(p));
     std::cout << "PASS: reset at release stage=" << stage << ", sustain=" << sustain << '\n';
+}
+
+static void testMonoRetirementFallback(const juce::File& rom)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+    auto& e = VDX7RegressionAccess::engine(p);
+    require(e.setPlaySetting(0, 1), "MONO fixture could not change mode");
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    for (bool on : {true, false})
+    {
+        const auto message = on ? juce::MidiMessage::noteOn(1, 60, juce::uint8(100))
+                                : juce::MidiMessage::noteOff(1, 60);
+        e.handleMidi(message.getRawData(), message.getRawDataSize());
+        for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+    }
+    require(e.getPlaySetting(0) == 1 && VDX7RegressionAccess::releaseBudget(p, 60) == 1,
+            "unvalidated MONO path retired its conservative history");
+    std::cout << "PASS: MONO keeps conservative release history\n";
 }
 
 static void testContentionAndDeferred(const juce::File& rom)
@@ -637,8 +695,24 @@ int main(int argc, char** argv)
         const bool reactivationOnly = argc == 3 && juce::String(argv[2]) == "--reactivation-only";
         const bool historyPairOnly = argc == 3 && juce::String(argv[2]) == "--history-pair-only";
         const bool ownershipOnly = argc == 3 && juce::String(argv[2]) == "--ownership-only";
-        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly) || !juce::File(argv[1]).existsAsFile())
+        const bool retirementOnly = argc == 3 && juce::String(argv[2]) == "--retirement-only";
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
+        if (retirementOnly)
+        {
+            testMonoRetirementFallback(juce::File(argv[1]));
+            for (int rate : {44100, 48000, 96000})
+                for (int block : {64, 256})
+                {
+                    std::array<int, 2> fresh{}, history{};
+                    const auto a = testExpandedHistory(juce::File(argv[1]), 0, rate, block, true, false, &fresh);
+                    const auto b = testExpandedHistory(juce::File(argv[1]), 16, rate, block, true, false, &history);
+                    unchanged(a, b);
+                    require(history[0] <= fresh[0] + 2 && history[1] <= fresh[1] + 2,
+                            "completed history still adds more than two blocks of reset/onset delay");
+                }
+            return 0;
+        }
         if (ownershipOnly)
         {
             for (int note : {0, 60, 127})
