@@ -8,6 +8,7 @@
 #include <chrono>
 #include <future>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <vector>
 
@@ -133,7 +134,8 @@ static void unchanged(const SavedSettings& a, const SavedSettings& b)
 
 static void testHeldAndTail(const juce::File& rom, int rate, int block, bool nonzeroReleaseFloor = false)
 {
-    VDX7AudioProcessor p(false);
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
     initialise(p, rom, rate, block);
     if (nonzeroReleaseFloor)
     {
@@ -168,13 +170,68 @@ static void testHeldAndTail(const juce::File& rom, int rate, int block, bool non
     for (int n = 0; n < rate / block / 4; ++n)
     { processChecked(p, audio, midi); peak = std::max(peak, audio.getMagnitude(0, block)); }
     require(peak > 1e-4f, "new note does not play after reset");
+    midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+    processChecked(p, audio, midi);
+    require(!VDX7RegressionAccess::engine(p).hasHeldMidiNotes(),
+            "post-reset Note Off left held ownership");
+    // This fixture deliberately has a slow (or nonzero-floor) release, so
+    // ownership release must not be confused with immediate audio silence.
     std::cout << "PASS: reset held note, sustain, tail, repeated/zero-block requests, state and fresh note at "
               << rate << '/' << block << '\n';
 }
 
+static void testFreshNoteRelease(const juce::File& rom, int rate, int block)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, rate, block);
+    auto& e = VDX7RegressionAccess::engine(p);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    juce::AudioBuffer<float> audio(2, block);
+    juce::MidiBuffer midi;
+    midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
+    midi.addEvent(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)), 1);
+    float peak = 0;
+    for (int n = 0; n < rate / block / 4; ++n)
+    { processChecked(p, audio, midi); peak = std::max(peak, audio.getMagnitude(0, block)); }
+    require(peak > 1e-4f && e.hasHeldMidiNotes(), "release fixture must sound before reset");
+    const auto before = capture(p);
+    resetChecked(p);
+    // Submit the new note immediately, while reset may still be draining.
+    // Do not send sustain-off: reset itself must reconcile the old pedal.
+    midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+    int firstAudibleBlock = -1;
+    for (int n = 0; n < (rate * 2 + block - 1) / block; ++n)
+    {
+        processChecked(p, audio, midi);
+        if (firstAudibleBlock < 0 && audio.getMagnitude(0, block) > 1e-4f)
+            firstAudibleBlock = n;
+    }
+    require(firstAudibleBlock >= 0 && e.hasHeldMidiNotes(), "immediate post-reset note did not sound");
+    midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+    float finalPeak = 0;
+    const int releaseBlocks = (rate + block - 1) / block;
+    for (int n = 0; n < releaseBlocks; ++n)
+    {
+        processChecked(p, audio, midi);
+        if (n >= releaseBlocks / 2)
+            finalPeak = std::max(finalPeak, audio.getMagnitude(0, block));
+    }
+    require(!e.hasHeldMidiNotes(), "fresh Note Off left ownership after reset");
+    require(finalPeak < 1e-5f, "fresh Note Off left audible sound after fast release");
+    unchanged(before, capture(p));
+    std::cout << "PASS: fresh note releases without another reset or pedal-off at "
+              << rate << '/' << block << "; first audible block=" << firstAudibleBlock
+              << " (block-start audio timeline ms="
+              << (1000.0 * firstAudibleBlock * block / rate) << ")\n";
+}
+
 static void testContentionAndDeferred(const juce::File& rom)
 {
-    VDX7AudioProcessor p(false);
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
     initialise(p, rom, 48000, 64);
     const auto before = capture(p);
     juce::AudioBuffer<float> audio(2, 64);
@@ -229,14 +286,19 @@ int main(int argc, char** argv)
     {
         if (argc != 2 || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
-        VDX7AudioProcessor noRom(false);
+        auto noRomOwner = std::make_unique<VDX7AudioProcessor>(false);
+        auto& noRom = *noRomOwner;
         resetChecked(noRom);
         juce::AudioBuffer<float> silent(2, 64);
         juce::MidiBuffer empty;
         processChecked(noRom, silent, empty);
         require(silent.getMagnitude(0, 64) == 0, "no-ROM reset output");
         for (int rate : {44100, 48000, 96000})
-            for (int block : {64, 256}) testHeldAndTail(juce::File(argv[1]), rate, block);
+            for (int block : {64, 256})
+            {
+                testHeldAndTail(juce::File(argv[1]), rate, block);
+                testFreshNoteRelease(juce::File(argv[1]), rate, block);
+            }
         testHeldAndTail(juce::File(argv[1]), 48000, 64, true);
         testContentionAndDeferred(juce::File(argv[1]));
     }
