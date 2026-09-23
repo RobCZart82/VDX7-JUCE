@@ -147,7 +147,7 @@ cmake --build build-local --config Release --target vdx7_all_tests
 ctest --test-dir build-local -C Release --output-on-failure
 ```
 
-By default CTest runs five ROM-free tests. Both `vdx7_ci_checks` and
+By default CTest runs six ROM-free tests. Both `vdx7_ci_checks` and
 `vdx7_all_tests` also compile all six integration runners (processor, stability,
 MIDI range, timing, stress and host reset) without executing them or needing a
 ROM. For the full local suite, configure with
@@ -181,6 +181,9 @@ blocks, plus true-delay expiry under contention and reset. Its queue-only portio
 also executes in public ROM-free CI. See [Q1 validation](VALIDATION_DEFERRED_PARTITION.md).
 Native MONO compatibility choices remain a separate
 [design decision](DESIGN_MONO_NOTE_ZERO_POLICY.md), not a fix implied by green CI.
+The ROM-free `vdx7_latest_display` and local stress runner's `--publication-only`
+cover stale PERFORMANCE/tuning publication versus newer UI edits, including
+same-value/ABA races. See [Q2 validation and limits](VALIDATION_PERFORMANCE_PUBLICATION.md).
 
 ## 12. Licensing and release status
 

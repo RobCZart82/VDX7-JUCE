@@ -1467,6 +1467,11 @@ bool VDX7AudioProcessor::exportSyx(const juce::File& file, bool entireBank, juce
 
 void VDX7AudioProcessor::publishPerformanceDisplay() noexcept
 {
+    performanceDisplay_.publish([this] { return capturePerformanceDisplay(); });
+}
+
+uint64_t VDX7AudioProcessor::capturePerformanceDisplay() const noexcept
+{
     // 4 * (7-bit range + 3 assignments), 3 play flags + 7-bit time,
     // and two 4-bit bend values: one coherent 58-bit display frame.
     uint64_t packed = 0;
@@ -1514,30 +1519,26 @@ void VDX7AudioProcessor::publishPerformanceDisplay() noexcept
                    | ((uint64_t(pendingPitchBendSettings_[field].load(std::memory_order_relaxed)) & 0xf) << shift);
         }
     }
-    performanceDisplay_.store(packed, std::memory_order_release);
+    return packed;
 }
 
 void VDX7AudioProcessor::publishMasterTune() noexcept
+{
+    masterTuneSnapshot_.publish([this] { return captureMasterTuneDisplay(); });
+}
+
+uint64_t VDX7AudioProcessor::captureMasterTuneDisplay() const noexcept
 {
     const auto pending = pendingPerformanceDirty_.load(std::memory_order_acquire);
     const auto value = (pending & kMasterTunePerformanceMask) != 0
         ? pendingMasterTune_.load(std::memory_order_relaxed)
         : engine_.masterTune();
-    masterTuneSnapshot_.store(value, std::memory_order_release);
+    return static_cast<uint64_t>(value + 256);
 }
 
 void VDX7AudioProcessor::setPerformanceDisplayBits(uint64_t mask, uint64_t value) noexcept
 {
-    auto current = performanceDisplay_.load(std::memory_order_acquire);
-    do
-    {
-        const auto replacement = (current & ~mask) | (value & mask);
-        if (performanceDisplay_.compare_exchange_weak(current, replacement,
-                                                       std::memory_order_acq_rel,
-                                                       std::memory_order_acquire))
-            return;
-    }
-    while (true);
+    performanceDisplay_.update(mask, value);
 }
 
 void VDX7AudioProcessor::applyPendingPerformanceSettings() noexcept
@@ -1579,7 +1580,7 @@ void VDX7AudioProcessor::applyPendingPerformanceSettings() noexcept
 
 VDX7AudioProcessor::PerformanceDisplay VDX7AudioProcessor::getPerformanceDisplay() const noexcept
 {
-    const auto packed = performanceDisplay_.load(std::memory_order_acquire);
+    const auto packed = performanceDisplay_.read();
     PerformanceDisplay result;
     for (int c = 0; c < 4; ++c) {
         result.controllers[c * 4] = int((packed >> (c * 10)) & 127);
@@ -1657,7 +1658,7 @@ bool VDX7AudioProcessor::setPlaySettingFromUi(int field, int value)
 
 int VDX7AudioProcessor::getMasterTune() const
 {
-    return masterTuneSnapshot_.load(std::memory_order_acquire);
+    return static_cast<int>(masterTuneSnapshot_.read()) - 256;
 }
 
 bool VDX7AudioProcessor::setMidiInputChannelFromUi(int channel)
@@ -1672,9 +1673,11 @@ bool VDX7AudioProcessor::setMasterTuneFromUi(int value)
 {
     if (value < -256 || value > 255 || !engineLoaded_.load(std::memory_order_acquire))
         return false;
-    const auto previous = masterTuneSnapshot_.exchange(value, std::memory_order_acq_rel);
     pendingMasterTune_.store(value, std::memory_order_relaxed);
     pendingPerformanceDirty_.fetch_or(kMasterTunePerformanceMask, std::memory_order_release);
+    // Publish the display edit last, like the other coalesced settings. An
+    // engine publisher observing it must also observe the pending request.
+    const auto previous = static_cast<int>(masterTuneSnapshot_.update(0x1ff, uint64_t(value + 256))) - 256;
     if (previous != value) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
     return true;
 }

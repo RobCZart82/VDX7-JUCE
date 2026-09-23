@@ -89,6 +89,11 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
 - [x] Remove keyboard-state locking/listeners from audio; bounded UI MIDI handoff
   and 12-configuration local stress grid (see `VALIDATION_1.0_REALTIME_BASELINE.md`).
   Full allocation/overload audit and host acceptance are still open.
+- [x] Q2 stale PERFORMANCE/tuning display publication: guard the commit against
+  newer UI edits (including same-value/ABA) without audio waiting/retry. Real
+  processor before/after reproduction and public-CI helper regression; see
+  `VALIDATION_PERFORMANCE_PUBLICATION.md`. Native portamento command/ack display
+  transients and restore/write epochs remain separate open work.
 - [x] Full 0–127 note range and pitch/release regressions (local ROM).
   Scope correction (2026-09-23): this is not exhaustive POLY/MONO coverage.
   Native v1.8 MONO pitch 0 retains ownership after release in the raw emulator
@@ -107,7 +112,7 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
 - [x] Configure PR ROM-free CI and opt-in local ROM integration CTest gate.
   All integration runners now compile through the shared CI target. Known-v1.8
   ownership groups have a separately labelled, required firmware prerequisite;
-  public CI still executes only the five ROM-free tests.
+  public CI executes six ROM-free tests, including the Q2 publication helper.
 - [x] Run the development CI configuration on GitHub: macOS and Windows passed
   on `5164fabd36c8fdd745e272fc1f493c0c352c1ced`. Every subsequent change needs
   fresh checks; this does not constitute RC or host acceptance.

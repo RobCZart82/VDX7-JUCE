@@ -5,6 +5,7 @@
 #include <atomic>
 #include <cstdint>
 #include <mutex>
+#include "VDX7LatestDisplay.h"
 #include <vector>
 
 #include "VDX7Engine.h"
@@ -140,9 +141,11 @@ private:
     void updateEngineSnapshot() noexcept;
     void publishPerformanceDisplay() noexcept; // Caller owns engineMutex_.
     void publishMasterTune() noexcept; // Caller owns engineMutex_.
+    uint64_t capturePerformanceDisplay() const noexcept;
+    uint64_t captureMasterTuneDisplay() const noexcept;
     void setPerformanceDisplayBits(uint64_t mask, uint64_t value) noexcept;
     static_assert(std::atomic<uint64_t>::is_always_lock_free);
-    std::atomic<uint64_t> performanceDisplay_ {0};
+    VDX7LatestDisplay performanceDisplay_;
     // The UI can coalesce frequent global edits without taking engineMutex_.
     // Bits 0-15: controller fields, 16-18: play fields 1-3, 19-20: bend,
     // bit 21: master tuning. The audio thread owns their firmware application.
@@ -152,7 +155,7 @@ private:
     std::array<std::atomic<int>, 3> pendingPlaySettings_ {};
     std::array<std::atomic<int>, 2> pendingPitchBendSettings_ {};
     std::atomic<int> pendingMasterTune_ {0};
-    std::atomic<int> masterTuneSnapshot_ {0};
+    VDX7LatestDisplay masterTuneSnapshot_ {256}; // Nine-bit offset encoding: -256..255.
     void timerCallback() override;
     void handleNoteOn(juce::MidiKeyboardState*, int, int, float) override;
     void handleNoteOff(juce::MidiKeyboardState*, int, int, float) override;

@@ -8,6 +8,13 @@ or release until separately approved. Never upload ROMs.
 
 ## Active reset work
 
+- Q2 publication follow-up: real processor capture/public setter interleaving
+  reproduced display 0 after the newer request 99. Guarded single-attempt frame
+  publication now preserves concurrent UI edits, including same-value/ABA, with
+  no audio retry/lock. Covers PERFORMANCE and tuning; 88 targeted schedules pass.
+  See VALIDATION_PERFORMANCE_PUBLICATION.md for scope and validation results.
+  Native CC5 pipeline can still transiently rewrite portamento-time RAM/display
+  before the newest serial command completes; tracked separately below.
 - Q1 follow-up: reproduced false age expiry in the real processor before fixing
   it (64/1024-sample recovery audible; one two-second recovery block silent).
   Successful deferred playback now credits its matching block when checking
@@ -120,10 +127,14 @@ or release until separately approved. Never upload ROMs.
   (64 prior lag, 1500x64 deliver vs one 96000 dropping both) is retained as
   historical evidence. Actual DAW offline acceptance and separate event-capacity
   limits remain; not a full-plugin sanitizer or general partition-invariance claim.
-- Q2: old PERFORMANCE snapshot can overwrite a newer pending UI value until
-  the next publication. Source/model evidence, not permanent engine data loss.
-  Add a deterministic production publication interleaving test. Existing tests
-  are not all self-referential getters: some check explicit final engine values.
+- Q2 addressed for stale pre-captured display publication over newer UI edits:
+  deterministic production-path failure before guard, then 88 passing schedules
+  and a public-CI ROM-free concurrency regression. Not a permanent-engine-data
+  loss fix, state-epoch fix, or guarantee against every native firmware transient.
+- Portamento-time command/ack display: in the Q2 fixture, an older queued CC5
+  rewrites time RAM/display to 0 in the first 64-sample callback after request 99;
+  newest command later restores 99. Serial-settled Q2 assertions do not close
+  this separate transient. Reproduce/track together with (not instead of) O1.
 - Bypass: missing explicit MIDI/lifecycle handling; reproduce release/sustain
   and controller state before implementing a shared muted processing path.
 - Restore: both staging-before-install and old-epoch-before-lock windows need

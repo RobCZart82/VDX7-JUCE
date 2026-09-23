@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <iostream>
+#include <memory>
 #include <future>
 #include <stdexcept>
 #include <thread>
@@ -37,7 +38,103 @@ struct VDX7RegressionAccess
     static uint64_t longestRun(const VDX7AudioProcessor& p) { return p.longestContendedAudioRunSamples_.load(); }
     static uint64_t lastModeMicros(const VDX7AudioProcessor& p) { return p.lastModeTransactionMicros_.load(); }
     static uint64_t peakModeMicros(const VDX7AudioProcessor& p) { return p.peakModeTransactionMicros_.load(); }
+    template<class Hook>
+    static void publishPaused(VDX7AudioProcessor& p, bool tuning, Hook hook)
+    {
+        std::scoped_lock lock(p.engineMutex_);
+        if (tuning) p.masterTuneSnapshot_.publishWithHook([&] { return p.captureMasterTuneDisplay(); }, hook);
+        else p.performanceDisplay_.publishWithHook([&] { return p.capturePerformanceDisplay(); }, hook);
+    }
 };
+
+static bool writePerformanceField(VDX7AudioProcessor& p, int field, int value)
+{
+    if (field < 16) return p.setControllerSettingFromUi(field / 4, field % 4, value);
+    if (field < 19) return p.setPlaySettingFromUi(field - 15, value);
+    if (field < 21) return p.setPitchBendSettingFromUi(field - 19, value);
+    return p.setMasterTuneFromUi(value);
+}
+
+static int readPerformanceField(const VDX7AudioProcessor& p, int field)
+{
+    if (field < 16) return p.getControllerSettings()[field];
+    if (field < 19) return p.getPlaySettings()[field - 15];
+    if (field < 21) return p.getPitchBendSettings()[field - 19];
+    return p.getMasterTune();
+}
+
+static int enginePerformanceField(VDX7AudioProcessor& p, int field)
+{
+    auto& e = VDX7RegressionAccess::engine(p);
+    if (field < 16) return e.getControllerSetting(field / 4, field % 4);
+    if (field < 19) return e.getPlaySetting(field - 15);
+    if (field < 21) return e.getPitchBendSetting(field - 19);
+    return e.masterTune();
+}
+
+static void setEnginePerformanceField(VDX7AudioProcessor& p, int field, int value)
+{
+    auto& e = VDX7RegressionAccess::engine(p);
+    if (field < 16) e.setControllerSetting(field / 4, field % 4, value);
+    else if (field < 19) e.setPlaySetting(field - 15, value);
+    else if (field < 21) e.setPitchBendSetting(field - 19, value);
+    else e.setMasterTune(value);
+}
+
+static void checkPerformancePublication(const juce::File& rom)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    require(p.loadRomFromFile(rom), "publication ROM");
+    p.prepareToPlay(48000, 64);
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    for (int field = 0; field < 22; ++field)
+    {
+        const bool flag = (field < 16 && field % 4 != 0) || field == 16 || field == 17;
+        const int a = flag ? 1 : field < 19 ? 37 : field < 21 ? 3 : -256;
+        const int b = flag ? 0 : field < 19 ? 99 : field < 21 ? 12 : 255;
+        for (int scenario = 0; scenario < 4; ++scenario)
+        {
+            require(writePerformanceField(p, field, scenario >= 2 ? a : 0), "publication seed");
+            // Portamento time travels through native serial MIDI. Let the
+            // preceding fixture command settle before the next schedule.
+            for (int block = 0; block < 100; ++block) processChecked(p, audio, midi);
+            require(enginePerformanceField(p, field) == (scenario >= 2 ? a : 0), "seed committed");
+            if (scenario == 1) require(writePerformanceField(p, field, a), "older pending edit");
+            if (scenario >= 2)
+            {
+                // A newer engine image is about to publish over the still-old
+                // display. Test same-value requests and a full value ABA cycle.
+                std::scoped_lock lock(VDX7RegressionAccess::mutex(p));
+                setEnginePerformanceField(p, field, 0);
+            }
+            const int expected = scenario >= 2 ? a : b;
+            bool accepted = true;
+            VDX7RegressionAccess::publishPaused(p, field == 21, [&] {
+                // Real public setters after real frame capture, before commit.
+                // Keep throwing assertions outside the noexcept publisher.
+                if (scenario == 2) accepted &= writePerformanceField(p, field, b);
+                accepted &= writePerformanceField(p, field, expected);
+            });
+            require(accepted, "publication hook public setter rejected a valid edit");
+            if (readPerformanceField(p, field) != expected)
+                std::cerr << "Publication field=" << field << ", scenario=" << scenario
+                          << ", expected=" << expected << ", actual=" << readPerformanceField(p, field) << '\n';
+            require(readPerformanceField(p, field) == expected, "stale publication overwrote a newer UI display");
+            // Eventual firmware commit is separate from the immediate display
+            // assertion above: old in-flight CC5 can transiently rewrite RAM.
+            for (int block = 0; block < 100; ++block) processChecked(p, audio, midi);
+            if (enginePerformanceField(p, field) != expected || readPerformanceField(p, field) != expected)
+                std::cerr << "Commit field=" << field << ", scenario=" << scenario << ", expected=" << expected
+                          << ", engine=" << enginePerformanceField(p, field)
+                          << ", display=" << readPerformanceField(p, field) << '\n';
+            require(enginePerformanceField(p, field) == expected && readPerformanceField(p, field) == expected,
+                    "latest UI value failed to commit to engine/display");
+        }
+    }
+    std::cout << "PASS: 88 deterministic real-processor publication interleavings, all 22 coalesced fields\n";
+}
 
 static void checkEngineContention(const juce::File& rom)
 {
@@ -532,10 +629,12 @@ static void checkLongRunAndOverload(const juce::File& rom)
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
-    if (argc != 2) return 77;
+    const bool publicationOnly = argc == 3 && juce::String(argv[2]) == "--publication-only";
+    if (argc != 2 && !publicationOnly) return 77;
     try
     {
         const juce::File rom(argv[1]);
+        if (publicationOnly) { checkPerformancePublication(rom); return 0; }
         VDX7AllocationProbe::enabled = true;
         auto* allocation = ::operator new(16);
         ::operator delete(allocation);
@@ -545,6 +644,7 @@ int main(int argc, char** argv)
         checkKeyboard(rom);
         checkEngineContention(rom);
         checkPerformanceDisplay(rom);
+        checkPerformancePublication(rom);
         checkCoalescedPerformanceWrites(rom);
         checkCapacityAndPendingOff(rom);
         checkLatencyPublication();
