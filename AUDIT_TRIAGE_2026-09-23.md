@@ -7,6 +7,15 @@ or release until separately approved. Never upload ROMs.
 
 ## Active reset work
 
+- New paired diagnostic: no-history vs maximum-history instances have matched
+  persistent settings, idle input and no adapter ownership; measured reset
+  1.333 vs 1512 ms and fresh onset 50.667 vs 1561.333 ms at 48 kHz/64.
+  Actual serial queue decoded: 0 vs 2048 Note Offs, 0 vs 4097 bytes. This is
+  NOT a proof of identical firmware voice ownership. See
+  VALIDATION_RESET_HISTORY_PAIR.md for callback wall timings and limitations.
+  P1 remains open: prove retirement during normal processing, then add
+  queue-stage/sustain/repeat/overload counterexamples and a numeric latency
+  acceptance target independent of the two-second fail-safe.
 - #46: expanded lifetime release history demonstrably exceeds the 2-second
   deferred age limit. At 48 kHz/64, 128 pitches x16 yields 2092 ms cleanup and
   loses an immediate fresh note. Originally a Draft failing regression, merged

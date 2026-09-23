@@ -30,6 +30,24 @@ struct VDX7RegressionAccess
         return std::all_of(p.engine_.midiReleaseBudget_.begin(), p.engine_.midiReleaseBudget_.end(),
                            [repeats](uint8_t value) { return value == repeats; });
     }
+    static bool inputIdle(VDX7AudioProcessor& p)
+    {
+        auto& e = p.engine_;
+        auto& d = e.dx7_;
+        return d.midiSerialRx.readIdx == d.midiSerialRx.writeIdx
+            && (d.TRCSR & (1u << dx7Emu::HD6303R::RDRF)) == 0
+            && d.memory[0xee] == d.memory[0xf0] && d.memory[0xef] == d.memory[0xf1]
+            && d.memory[0xf6] == 0 && !d.haveMsg && e.appToSynth_.lfq.wasEmpty()
+            && !p.deferredMidi_.active();
+    }
+    static std::vector<uint8_t> serialBytes(const VDX7AudioProcessor& p)
+    {
+        const auto& q = p.engine_.dx7_.midiSerialRx;
+        std::vector<uint8_t> bytes;
+        for (int i = q.readIdx; i != q.writeIdx; i = (i + 1) & (q.size - 1))
+            bytes.push_back(q.buffer[i]);
+        return bytes;
+    }
 };
 
 static void resetChecked(VDX7AudioProcessor& p)
@@ -42,19 +60,22 @@ static void resetChecked(VDX7AudioProcessor& p)
     require(allocations == 0 && deallocations == 0, "reset allocates/deallocates ordinary C++ storage");
 }
 
-static void processChecked(VDX7AudioProcessor& p, juce::AudioBuffer<float>& audio,
+static double processChecked(VDX7AudioProcessor& p, juce::AudioBuffer<float>& audio,
                            juce::MidiBuffer& midi)
 {
     using namespace VDX7AllocationProbe;
     allocations = deallocations = 0;
     enabled = true;
+    const auto start = std::chrono::steady_clock::now();
     p.processBlock(audio, midi);
+    const auto finish = std::chrono::steady_clock::now();
     enabled = false;
     require(allocations == 0 && deallocations == 0, "reset callback allocates/deallocates ordinary C++ storage");
     for (int ch = 0; ch < audio.getNumChannels(); ++ch)
         for (int i = 0; i < audio.getNumSamples(); ++i)
             require(std::isfinite(audio.getSample(ch, i)), "non-finite reset output");
     require(midi.isEmpty(), "instrument must consume MIDI");
+    return std::chrono::duration<double, std::micro>(finish - start).count();
 }
 
 static void initialise(VDX7AudioProcessor& p, const juce::File& rom, int rate, int block)
@@ -325,7 +346,8 @@ static void testRunningStatusRelease(const juce::File& rom, bool compact, int re
               << ", repeated notes=" << repeats << '\n';
 }
 
-static void testExpandedHistory(const juce::File& rom, int repeats, int rate = 48000, int block = 64)
+static SavedSettings testExpandedHistory(const juce::File& rom, int repeats, int rate = 48000,
+                                        int block = 64, bool measurePair = false)
 {
     auto owner = std::make_unique<VDX7AudioProcessor>(false);
     auto& p = *owner;
@@ -352,20 +374,51 @@ static void testExpandedHistory(const juce::File& rom, int repeats, int rate = 4
     require(!e.hasHeldMidiNotes(), "history fixture left held notes");
     require(e.midiOverloadCount() == overloads, "history fixture overflowed input");
     require(VDX7RegressionAccess::fullReleaseHistory(p, repeats), "history fixture did not reach requested budget");
+    if (measurePair)
+    {
+        // Match observable idle input/ownership and silence, not arbitrary CPU
+        // RAM, oscillator phases or undocumented firmware voice-slot contents.
+        for (int n = 0; n < rate / block; ++n) processChecked(p, audio, midi);
+        require(VDX7RegressionAccess::inputIdle(p), "paired fixture has pending input");
+        require(audio.getMagnitude(0, block) < 1e-5f, "paired fixture has audible tail");
+    }
     const auto before = capture(p);
     resetChecked(p);
+    double maxCallbackUs = 0;
+    if (measurePair)
+    {
+        juce::AudioBuffer<float> zero(2, 0);
+        const auto setupUs = processChecked(p, zero, midi);
+        // Observe the actual queued bytes before any audio-time drain. This
+        // zero-sample observation is separate from the immediate-input matrix.
+        const auto bytes = VDX7RegressionAccess::serialBytes(p);
+        const size_t releases = static_cast<size_t>(128 * repeats);
+        require(bytes.size() == (releases == 0 ? 0 : 1 + 2 * releases), "unexpected reset serial byte count");
+        if (!bytes.empty()) require(bytes[0] == 0x80, "unexpected reset status");
+        size_t decoded = 0;
+        for (size_t i = 1; i + 1 < bytes.size(); i += 2)
+        {
+            require(bytes[i] == decoded / repeats && bytes[i + 1] == 0, "unexpected reset Note Off payload");
+            ++decoded;
+        }
+        require(decoded == releases, "unexpected decoded reset release count");
+        std::cout << "PAIR: history=" << repeats << ", decoded Note Off=" << decoded
+                  << ", queued serial bytes=" << bytes.size() << ", setup callback us=" << setupUs << '\n';
+    }
     midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
     int drainBlock = -1, audibleBlock = -1;
     for (int n = 0; n < rate * 10 / block; ++n)
     {
-        processChecked(p, audio, midi);
+        maxCallbackUs = std::max(maxCallbackUs, processChecked(p, audio, midi));
         if (drainBlock < 0 && !e.isHostResetInProgress()) drainBlock = n;
         if (audibleBlock < 0 && audio.getMagnitude(0, block) > 1e-4f) audibleBlock = n;
     }
     std::cout << "HISTORY: " << rate << '/' << block << ", 128 pitches x" << repeats
               << "; reset completion block=" << drainBlock
               << " (block-end ms=" << (1000.0 * (drainBlock + 1) * block / rate)
-              << "); first audible block=" << audibleBlock << std::endl;
+              << "); first audible block=" << audibleBlock
+              << " (block-end ms=" << (1000.0 * (audibleBlock + 1) * block / rate)
+              << "); max observed callback us=" << maxCallbackUs << std::endl;
     require(drainBlock >= 0, "expanded-history reset did not complete in observation window");
     require(audibleBlock >= 0 && e.hasHeldMidiNotes(), "expanded-history reset lost fresh note");
     midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
@@ -382,6 +435,7 @@ static void testExpandedHistory(const juce::File& rom, int repeats, int rate = 4
     }
     require(!e.hasHeldMidiNotes() && finalPeak < 1e-5f, "history fresh note did not release");
     unchanged(before, capture(p));
+    return before;
 }
 
 static void testContentionAndDeferred(const juce::File& rom)
@@ -441,8 +495,17 @@ int main(int argc, char** argv)
     try
     {
         const bool reactivationOnly = argc == 3 && juce::String(argv[2]) == "--reactivation-only";
-        if ((argc != 2 && !reactivationOnly) || !juce::File(argv[1]).existsAsFile())
+        const bool historyPairOnly = argc == 3 && juce::String(argv[2]) == "--history-pair-only";
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
+        if (historyPairOnly)
+        {
+            const auto fresh = testExpandedHistory(juce::File(argv[1]), 0, 48000, 64, true);
+            const auto history = testExpandedHistory(juce::File(argv[1]), 16, 48000, 64, true);
+            unchanged(fresh, history);
+            std::cout << "PASS: matched persistent settings, idle input and adapter ownership; latency acceptance remains open\n";
+            return 0;
+        }
         if (reactivationOnly)
         {
             for (bool releaseFirst : {false, true})
