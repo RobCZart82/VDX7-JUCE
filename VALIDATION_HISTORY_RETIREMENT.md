@@ -1,5 +1,10 @@
 # Guarded normal-playback history retirement
 
+Historical first implementation/results. The subsequent per-pitch extension
+and its separate overlap/overflow evidence are in
+`VALIDATION_OVERLAP_RETIREMENT.md`; the idle-only limitation below describes
+this original step, not the current implementation.
+
 Scope: known local v1.8 firmware, POLY, fully released input/ownership. This is
 a bounded production improvement, not closure of all reset-latency acceptance.
 

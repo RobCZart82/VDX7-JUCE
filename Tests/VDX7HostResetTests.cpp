@@ -37,6 +37,13 @@ struct VDX7RegressionAccess
         }
         return result;
     }
+    static int firmwareMidiOwnershipFor(const VDX7AudioProcessor& p, int note)
+    {
+        int count = 0;
+        for (int i = 0; i < 16; ++i)
+            count += p.engine_.dx7_.memory[0x2168 + i] == (0x80 | note);
+        return count;
+    }
     static unsigned pendingStages(const VDX7AudioProcessor& p)
     {
         const auto& d = p.engine_.dx7_;
@@ -615,6 +622,149 @@ static void testResetAtReleaseStage(const juce::File& rom, unsigned stage, bool 
     std::cout << "PASS: reset at release stage=" << stage << ", sustain=" << sustain << '\n';
 }
 
+static std::array<int, 2> testOverlappingHistory(const juce::File& rom, int repeats,
+                                               int rate, int block)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, rate, block);
+    auto& e = VDX7RegressionAccess::engine(p);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    require(VDX7RegressionAccess::knownRetirementProfile(p), "overlap fixture needs validated ROM");
+    juce::AudioBuffer<float> audio(2, block);
+    juce::MidiBuffer midi;
+    const auto pump = [&](int count)
+    { for (int i = 0; i < count; ++i) processChecked(p, audio, midi); };
+    midi.addEvent(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)), 0);
+    pump(rate / block / 4);
+    const auto overloads = e.midiOverloadCount();
+    // Never release this anchor while playing/releasing every OTHER pitch.
+    // The adapter and firmware therefore never have globally idle ownership.
+    for (int note = 0; note < 128; ++note)
+    {
+        if (note == 60) continue;
+        for (bool on : {true, false})
+            for (int i = 0; i < repeats; ++i)
+            {
+                midi.addEvent(on ? juce::MidiMessage::noteOn(1, note, juce::uint8(100))
+                                 : juce::MidiMessage::noteOff(1, note), 0);
+                pump(4);
+            }
+        require(VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 60) == 1,
+                "overlap fixture lost the anchor");
+    }
+    pump(rate / block);
+    require(e.midiOverloadCount() == overloads, "overlap history fixture overflowed");
+    const auto owned = VDX7RegressionAccess::firmwareOwnership(p);
+    require(owned.midi == 1 && owned.held == 1 && owned.sustained == 0,
+            "overlap fixture has unexpected firmware ownership");
+    for (int note = 0; note < 128; ++note)
+        require(VDX7RegressionAccess::releaseBudget(p, note) == (note == 60 ? 1 : 0),
+                "released neighboring pitches retain history while anchor is held");
+    const auto before = capture(p);
+    resetChecked(p);
+    juce::AudioBuffer<float> zero(2, 0);
+    processChecked(p, zero, midi);
+    require(VDX7RegressionAccess::serialBytes(p) == std::vector<uint8_t>({0x80, 60, 0}),
+            "overlap reset must release only the anchor");
+    midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+    int drain = -1, onset = -1;
+    for (int i = 0; i < rate * 2 / block; ++i)
+    {
+        processChecked(p, audio, midi);
+        if (drain < 0 && !e.isHostResetInProgress()) drain = i;
+        if (onset < 0 && audio.getMagnitude(0, block) > 1e-4f) onset = i;
+    }
+    require(drain >= 0 && onset >= 0 && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 72) == 1
+            && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 60) == 0,
+            "overlap reset lost fresh pitch or retained the anchor");
+    midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+    pump(rate / block);
+    const auto released = VDX7RegressionAccess::firmwareOwnership(p);
+    require(released.midi == 0 && released.held == 0 && released.sustained == 0
+            && audio.getMagnitude(0, block) < 1e-5f, "overlap fresh note failed to release");
+    unchanged(before, capture(p));
+    std::cout << "OVERLAP: " << rate << '/' << block << ", neighboring repeats=" << repeats
+              << ", reset ms=" << 1000.0 * (drain + 1) * block / rate
+              << ", onset ms=" << 1000.0 * (onset + 1) * block / rate << '\n';
+    return {drain, onset};
+}
+
+static void testRetiredHistoryOverflow(const juce::File& rom, unsigned stage, bool sustain)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+    auto& e = VDX7RegressionAccess::engine(p);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    juce::AudioBuffer<float> audio(2, 64), single(2, 1);
+    juce::MidiBuffer midi;
+    const auto send = [&e](const juce::MidiMessage& message)
+    { e.handleMidi(message.getRawData(), message.getRawDataSize()); };
+    const auto pump = [&](int count)
+    {
+        float tail = 0;
+        for (int i = 0; i < count; ++i)
+        {
+            processChecked(p, audio, midi);
+            if (i >= count / 2) tail = std::max(tail, audio.getMagnitude(0, 64));
+        }
+        return tail;
+    };
+    // Retire a full repeated neighboring pitch while keeping the anchor held.
+    send(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)));
+    pump(100);
+    for (bool on : {true, false})
+        for (int i = 0; i < 16; ++i)
+        {
+            send(on ? juce::MidiMessage::noteOn(1, 62, juce::uint8(100))
+                    : juce::MidiMessage::noteOff(1, 62));
+            pump(4);
+        }
+    pump(100);
+    require(VDX7RegressionAccess::releaseBudget(p, 62) == 0
+            && VDX7RegressionAccess::releaseBudget(p, 60) == 1,
+            "overflow fixture needs retired neighbor and protected anchor");
+    if (sustain) { send(juce::MidiMessage::controllerEvent(1, 64, 127)); pump(100); }
+    const auto before = capture(p);
+    const auto overloads = e.midiOverloadCount();
+    send(juce::MidiMessage::noteOff(1, 60));
+    const auto atStage = [&]
+    {
+        const unsigned flags = VDX7RegressionAccess::pendingStages(p);
+        return (flags & stage) != 0 && (flags & (stage - 1)) == 0;
+    };
+    int steps = 0;
+    while (!atStage() && steps++ < 12000) processChecked(p, single, midi);
+    require(atStage(), "overlap overflow release stage not reached");
+    require(VDX7RegressionAccess::releaseBudget(p, 60) == 1,
+            "pending anchor release retired before overflow");
+    for (int i = 0; i < 3000; ++i) send(juce::MidiMessage::pitchWheel(1, 8192));
+    require(e.midiOverloadCount() == overloads + 1 && e.isMidiRecovering()
+            && VDX7RegressionAccess::releaseBudget(p, 60) == 1,
+            "overflow did not preserve pending anchor release history");
+    const float tail = pump(1500);
+    const auto cleared = VDX7RegressionAccess::firmwareOwnership(p);
+    require(cleared.midi == 0 && cleared.held == 0 && cleared.sustained == 0
+            && !e.hasHeldMidiNotes() && !e.isMidiRecovering() && tail < 1e-5f,
+            "overlap overflow retained ownership or audible stuck voice");
+    send(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)));
+    require(pump(375) > 1e-4f && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 72) == 1,
+            "fresh note lost after overlap overflow");
+    send(juce::MidiMessage::noteOff(1, 72));
+    const float freshTail = pump(750);
+    const auto released = VDX7RegressionAccess::firmwareOwnership(p);
+    require(freshTail < 1e-5f && released.midi == 0 && released.held == 0 && released.sustained == 0,
+            "fresh note stuck after overlap overflow");
+    require(!e.isHostResetInProgress(), "overflow test unexpectedly reset");
+    unchanged(before, capture(p));
+    std::cout << "PASS: retired-neighbor overflow at stage=" << stage << ", sustain=" << sustain << '\n';
+}
+
 static void testMonoRetirementFallback(const juce::File& rom)
 {
     auto owner = std::make_unique<VDX7AudioProcessor>(false);
@@ -696,8 +846,24 @@ int main(int argc, char** argv)
         const bool historyPairOnly = argc == 3 && juce::String(argv[2]) == "--history-pair-only";
         const bool ownershipOnly = argc == 3 && juce::String(argv[2]) == "--ownership-only";
         const bool retirementOnly = argc == 3 && juce::String(argv[2]) == "--retirement-only";
-        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly) || !juce::File(argv[1]).existsAsFile())
+        const bool overlapOnly = argc == 3 && juce::String(argv[2]) == "--overlap-only";
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
+        if (overlapOnly)
+        {
+            for (int rate : {44100, 48000, 96000})
+                for (int block : {64, 256})
+                {
+                    const auto fresh = testOverlappingHistory(juce::File(argv[1]), 0, rate, block);
+                    const auto history = testOverlappingHistory(juce::File(argv[1]), 16, rate, block);
+                    require(history[0] <= fresh[0] + 2 && history[1] <= fresh[1] + 2,
+                            "overlapping history adds more than two blocks of reset/onset delay");
+                }
+            for (unsigned stage : {1u, 2u, 4u})
+                for (bool sustain : {false, true})
+                    testRetiredHistoryOverflow(juce::File(argv[1]), stage, sustain);
+            return 0;
+        }
         if (retirementOnly)
         {
             testMonoRetirementFallback(juce::File(argv[1]));

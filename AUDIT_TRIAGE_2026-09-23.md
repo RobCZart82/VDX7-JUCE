@@ -7,12 +7,20 @@ or release until separately approved. Never upload ROMs.
 
 ## Active reset work
 
+- Per-pitch overlap follow-up: reproduced the global-idle implementation's
+  failure with one continuously held anchor and released neighboring history.
+  Known-image POLY now protects both firmware ownership tables per pitch and
+  retires only completed pitches when all input-stage guards pass. See
+  VALIDATION_OVERLAP_RETIREMENT.md for fresh/history pairs and pending-release
+  overflow tests. Full rebuilt local suite: 16/16 PASS in 220.72 s. This
+  supersedes the idle-only limitation below, not the
+  remaining MONO/unknown-ROM/continuous-input/real-host acceptance work.
 - Guarded production follow-up: known-image POLY can retire fully completed
   history at the main dispatch boundary during normal playback. Matched idle
   history reset drops from 1512 to 1.333 ms at 48 kHz/64; fresh onset 50.667 ms.
   See VALIDATION_HISTORY_RETIREMENT.md. Original maximum-history tests remain
   on forced conservative fallback. Continuous held ownership, MONO, unknown
-  ROMs, overload combinations and real-host latency acceptance remain OPEN.
+  ROMs, broader overload combinations and real-host latency acceptance remain OPEN.
 - Firmware ownership follow-up: read-only MIDI/voice table observations and
   queue-stage reset tests added; see VALIDATION_FIRMWARE_OWNERSHIP.md. Adapter
   count zero can precede firmware release; empty MIDI ownership/input under

@@ -386,7 +386,7 @@ void VDX7Engine::retireCompletedReleaseHistory()
     // The preceding MIDI/pedal dispatch has returned; never inspect a partially
     // completed ownership update. POLY only until MONO/legato is validated.
     if (!releaseHistoryDirty_ || !releaseRetirementProfile_ || dx7_.PC != 0xc708
-        || hostResetInProgress_ || midiRecovering_ || hasHeldMidiNotes()) return;
+        || hostResetInProgress_ || midiRecovering_ || sustainDown_) return;
     const auto& m = dx7_.memory;
     if (m[0x20a9] != 0 || m[0xe7] != 0 || m[0xe8] != 0 || m[0xf6] != 0
         || (m[0x83] & 1) != 0 || (m[0x20a7] & 1) != 0
@@ -394,10 +394,28 @@ void VDX7Engine::retireCompletedReleaseHistory()
         || (dx7_.TRCSR & (1u << dx7Emu::HD6303R::RDRF)) != 0
         || m[0xee] != m[0xf0] || m[0xef] != m[0xf1]
         || dx7_.haveMsg || dx7_.byte1Sent || !appToSynth_.lfq.wasEmpty()) return;
+    // A held neighboring pitch must not keep completed release history alive.
+    // Both tables matter: MIDI ownership and actual held/sustained voices can
+    // disagree. Keep the entire high-water budget for any still-owned pitch.
+    std::array<bool, 128> firmwareOwned{};
     for (int i = 0; i < 16; ++i)
-        if ((m[0x2168 + i] & 0x80) != 0 || (m[0x20b1 + 2 * i] & 3) != 0) return;
-    midiReleaseBudget_.fill(0);
+    {
+        if ((m[0x2168 + i] & 0x80) != 0)
+            firmwareOwned[m[0x2168 + i] & 0x7f] = true;
+        if ((m[0x20b1 + 2 * i] & 3) != 0)
+        {
+            const auto note = m[0x20b0 + 2 * i];
+            if (note >= firmwareOwned.size()) return; // Unexpected RAM: stay conservative.
+            firmwareOwned[note] = true;
+        }
+    }
     releaseHistoryDirty_ = false;
+    for (std::size_t note = 0; note < midiReleaseBudget_.size(); ++note)
+    {
+        if (activeMidiNotes_[note] == 0 && !firmwareOwned[note])
+            midiReleaseBudget_[note] = 0;
+        releaseHistoryDirty_ |= midiReleaseBudget_[note] != 0;
+    }
 }
 
 void VDX7Engine::processQueuedMessage(dx7Emu::Message msg)

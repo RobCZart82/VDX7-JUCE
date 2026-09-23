@@ -121,7 +121,8 @@ private:
     std::array<uint8_t, 128> activeMidiNotes_{};
     // Conservative release budget: queued offs may be flushed before firmware
     // consumes them. Keep peak multiplicity (bounded at 16) until a verified
-    // normal-playback idle boundary; unknown ROMs retain it since ROM load.
+    // normal-playback per-pitch release boundary; unknown ROMs retain it
+    // since ROM load. Input queues must be idle even if other pitches are held.
     std::array<uint8_t, 128> midiReleaseBudget_{};
     // Only the locally validated v1.8 image has a known dispatch/RAM profile.
     bool releaseRetirementProfile_ = false;
