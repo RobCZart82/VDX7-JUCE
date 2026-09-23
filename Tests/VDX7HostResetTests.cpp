@@ -23,6 +23,11 @@ struct VDX7RegressionAccess
     static std::mutex& mutex(VDX7AudioProcessor& p) { return p.engineMutex_; }
     static bool deferred(const VDX7AudioProcessor& p) { return p.deferredMidi_.active(); }
     static uint32_t dirty(const VDX7AudioProcessor& p) { return p.modifiedVoices_.load(); }
+    static bool fullReleaseHistory(const VDX7AudioProcessor& p, int repeats)
+    {
+        return std::all_of(p.engine_.midiReleaseBudget_.begin(), p.engine_.midiReleaseBudget_.end(),
+                           [repeats](uint8_t value) { return value == repeats; });
+    }
 };
 
 static void resetChecked(VDX7AudioProcessor& p)
@@ -228,6 +233,65 @@ static void testFreshNoteRelease(const juce::File& rom, int rate, int block)
               << (1000.0 * firstAudibleBlock * block / rate) << ")\n";
 }
 
+static void testExpandedHistory(const juce::File& rom, int repeats)
+{
+    constexpr int rate = 48000, block = 64;
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, rate, block);
+    auto& e = VDX7RegressionAccess::engine(p);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    juce::AudioBuffer<float> audio(2, block);
+    juce::MidiBuffer midi;
+    const auto overloads = e.midiOverloadCount();
+    // Public MIDI input, not a fabricated private budget. Pace each event so
+    // this fixture grows lifetime ownership history without overflowing input.
+    for (int note = 0; note < 128; ++note)
+    {
+        for (bool on : {true, false})
+            for (int repeat = 0; repeat < repeats; ++repeat)
+            {
+                midi.addEvent(on ? juce::MidiMessage::noteOn(1, note, juce::uint8(100))
+                                 : juce::MidiMessage::noteOff(1, note), 0);
+                for (int n = 0; n < 4; ++n) processChecked(p, audio, midi);
+            }
+    }
+    require(!e.hasHeldMidiNotes(), "history fixture left held notes");
+    require(e.midiOverloadCount() == overloads, "history fixture overflowed input");
+    require(VDX7RegressionAccess::fullReleaseHistory(p, repeats), "history fixture did not reach requested budget");
+    const auto before = capture(p);
+    resetChecked(p);
+    midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+    int drainBlock = -1, audibleBlock = -1;
+    for (int n = 0; n < rate * 10 / block; ++n)
+    {
+        processChecked(p, audio, midi);
+        if (drainBlock < 0 && !e.isHostResetInProgress()) drainBlock = n;
+        if (audibleBlock < 0 && audio.getMagnitude(0, block) > 1e-4f) audibleBlock = n;
+    }
+    std::cout << "HISTORY: 128 pitches x" << repeats << "; reset completion block=" << drainBlock
+              << " (block-end ms=" << (1000.0 * (drainBlock + 1) * block / rate)
+              << "); first audible block=" << audibleBlock << std::endl;
+    require(drainBlock >= 0, "expanded-history reset did not complete in observation window");
+    require(audibleBlock >= 0 && e.hasHeldMidiNotes(), "expanded-history reset lost fresh note");
+    midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+    float finalPeak = 0;
+    // The existing queue shifts subsequent Note Off by the same reset delay.
+    // Observe that measured delay plus a second; do not mistake delayed release
+    // for lost release. The large onset/release latency is reported separately.
+    const int releaseBlocks = drainBlock + 1 + rate / block;
+    for (int n = 0; n < releaseBlocks; ++n)
+    {
+        processChecked(p, audio, midi);
+        if (n >= releaseBlocks - rate / block / 2)
+            finalPeak = std::max(finalPeak, audio.getMagnitude(0, block));
+    }
+    require(!e.hasHeldMidiNotes() && finalPeak < 1e-5f, "history fresh note did not release");
+    unchanged(before, capture(p));
+}
+
 static void testContentionAndDeferred(const juce::File& rom)
 {
     auto owner = std::make_unique<VDX7AudioProcessor>(false);
@@ -301,6 +365,8 @@ int main(int argc, char** argv)
             }
         testHeldAndTail(juce::File(argv[1]), 48000, 64, true);
         testContentionAndDeferred(juce::File(argv[1]));
+        testExpandedHistory(juce::File(argv[1]), 1);
+        testExpandedHistory(juce::File(argv[1]), 16);
     }
     catch (const std::exception& e)
     {
