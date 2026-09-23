@@ -38,8 +38,7 @@ This can add reset-related onset delay; it is not a lossless/unlimited queue.
 - Confirm the firmware completion predicate is sufficient on the supported ROM.
   The predicate reuses the existing mode-transaction ring locations, but a source
   review alone does not establish completion of every firmware handler.
-- Run the new integration test against the old source first (it uses only APIs
-  already present there), then against the proposed implementation.
+- The old-source/new-source integration comparison is complete; see results below.
 - Measure reset drain duration and fresh-note latency, including a long-lived
   instance whose conservative repeated-note release budget has grown.
 - Test notes already in the SCI register/internal firmware queue, sustained notes,
@@ -60,17 +59,33 @@ baseline. The earlier reconstructed local draft is not the published patch.
 | Current main matches package baseline | PASS | GitHub compare reports identical, zero commits ahead/behind |
 | Original package anchors apply uniquely | PASS | All replacement anchors matched once |
 | Source whitespace check | PASS | git diff --check |
-| Local full build | NOT RUN | CMake and C++ compiler not available in the local environment |
-| Baseline host-reset reproduction | NOT RUN | Requires compiler and explicit user-supplied ROM |
-| New host-reset integration test | NOT RUN | Requires compiler and explicit user-supplied ROM |
-| Local ROM-free regression suite | NOT RUN | Build toolchain unavailable |
-| Full local-ROM suite | NOT RUN | No ROM supplied for this task |
-| GitHub Windows/macOS build and ROM-free tests | NOT RUN | Pending Draft PR CI; consult PR checks |
+| Local Windows Release VST3 and all test targets build | PASS | VS Build Tools 2022 17.14.41, MSVC 19.44.35229, SDK 10.0.26100.0, CMake 3.31.6-msvc6 |
+| Baseline host-reset reproduction | PASS | Test-only commit 7ad444628e2f1db639f2c1024c8d2a66630e6f57: expected CTest FAIL in 0.39 s, `host reset left held audio or a release tail` |
+| New host-reset integration test | PASS | Implementation commit 90b2c840cc2ab62690f1f3fe54b474e60c582b60: 8.28 s; 44100/48000/96000 Hz at 64/256 samples, nonzero L4, contention, stale/fresh input and state preservation |
+| Local ROM-free regression subset | PASS | Five tests passed |
+| Full local-ROM suite | FAIL | Combined result: 9/11 pass; existing vdx7_stability and vdx7_processor runners overflow Windows stack (0xC00000FD); both reproduced on the test-only baseline as well |
+| MIDI range, timing and stress regressions | PASS | 257.30 s, 5.66 s and 29.93 s respectively |
+| GitHub Windows/macOS build and ROM-free tests | PASS | Implementation commit: Windows run 35848462256; macOS run 35848462314 |
 | REAPER/VST3 reset acceptance and fresh-note latency | NOT RUN | Requires local host and compatible ROM |
-| Ordinary C++ allocation probe | NOT RUN | Included in the new integration test; not executed |
+| Ordinary C++ allocation probe | PASS | Included in the passing host-reset integration test |
+| Sanitizers and macOS local-ROM runtime | NOT RUN | Not executed |
 
-A static review and clean diff do not establish that N1 is fixed. Firmware drain
-completion, repeated/dense notes, long tails and runtime acceptance remain open.
+The old-source failure and fixed-source pass establish the targeted regression
+using the user's local combined ROM; no firmware was uploaded. The full suite
+is not green, and the direct-API test does not replace real-host acceptance,
+long-lived-instance latency measurements or exhaustive firmware/race testing.
+No unrelated test or engine edits were made to conceal the existing stack overflow.
+
+Reproduction: configure separate clean worktrees at the two commits above with
+VDX7_ENABLE_ROM_TESTS=ON and VDX7_TEST_ROM_FILE pointing to a private local ROM.
+Build Release target vdx7_host_reset_tests and run:
+
+```text
+ctest --test-dir <build> -C Release --output-on-failure --no-tests=error -R ^vdx7_host_reset$
+```
+
+On the fixed tree also build VDX7_VST3 and vdx7_all_tests, then run the remaining
+tests with `-E ^vdx7_host_reset$`. The ROM path is deliberately not recorded here.
 
 No tag, release, firmware, installed plugin, or dependency source is changed by
 this proposal. Bypass handling and the other audit findings are outside this PR.
