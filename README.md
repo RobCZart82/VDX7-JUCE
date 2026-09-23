@@ -175,6 +175,12 @@ the loaded image's relevant instructions, observes the actual failing branches,
 and tests subsequent notes **without** recovery. It documents retained output
 and rejected native allocation, rather than declaring them fixed. See
 [instruction trace and continuation](VALIDATION_MONO_INSTRUCTION_TRACE.md).
+The separate `vdx7_deferred_partition` (`--deferred-partition-only`) regression
+checks real-processor note playback/release across small and oversized successful
+blocks, plus true-delay expiry under contention and reset. Its queue-only portion
+also executes in public ROM-free CI. See [Q1 validation](VALIDATION_DEFERRED_PARTITION.md).
+Native MONO compatibility choices remain a separate
+[design decision](DESIGN_MONO_NOTE_ZERO_POLICY.md), not a fix implied by green CI.
 
 ## 12. Licensing and release status
 

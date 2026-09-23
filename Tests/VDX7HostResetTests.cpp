@@ -1356,6 +1356,142 @@ static void testMonoRetirementFallback(const juce::File& rom)
     std::cout << "PASS: MONO keeps conservative release history\n";
 }
 
+static std::vector<float> renderDeferredPartition(const juce::File& rom, int rate,
+                                                 const std::vector<int>& partitions)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, rate, 64);
+    auto& e = VDX7RegressionAccess::engine(p);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    juce::AudioBuffer<float> blocked(2, 64);
+    juce::MidiBuffer midi;
+    for (int i = 0; i < 100; ++i) processChecked(p, blocked, midi);
+    const auto before = capture(p);
+    // Create actual processor contention, not an injected queue/counter state.
+    midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 16);
+    {
+        std::unique_lock lock(VDX7RegressionAccess::mutex(p));
+        auto callback = std::async(std::launch::async, [&] { processChecked(p, blocked, midi); });
+        const bool timely = callback.wait_for(std::chrono::seconds(1)) == std::future_status::ready;
+        if (!timely) { lock.unlock(); callback.get(); }
+        require(timely, "partition fixture callback blocked on mutex");
+        callback.get();
+    }
+    require(blocked.getMagnitude(0, 64) == 0 && VDX7RegressionAccess::deferred(p),
+            "partition fixture did not defer the note");
+    const int total = rate * 3, offTime = rate / 2;
+    std::vector<float> output(static_cast<std::size_t>(total) * 2);
+    int start = 0;
+    std::size_t part = 0;
+    while (start < total)
+    {
+        const int size = std::min(partitions[part++ % partitions.size()], total - start);
+        juce::AudioBuffer<float> audio(2, size);
+        // A future host Off must stay on the same 64-sample-delayed timeline.
+        if (offTime >= start && offTime < start + size)
+            midi.addEvent(juce::MidiMessage::noteOff(1, 72), offTime - start);
+        processChecked(p, audio, midi);
+        for (int ch = 0; ch < 2; ++ch)
+            std::copy_n(audio.getReadPointer(ch), size, output.data() + ch * total + start);
+        start += size;
+    }
+    float peak = 0, tail = 0;
+    for (int i = 0; i < total; ++i)
+    {
+        peak = std::max(peak, std::abs(output[i]));
+        if (i >= total - rate / 4) tail = std::max(tail, std::abs(output[i]));
+    }
+    const auto owned = VDX7RegressionAccess::firmwareOwnership(p);
+    std::cout << "Deferred partition rate=" << rate << ", first block=" << partitions[0]
+              << ", peak=" << peak << ", tail=" << tail << '\n';
+    require(peak > 1e-4f, "large successful block lost deferred Note On");
+    require(tail < 1e-5f && owned.midi == 0 && owned.held == 0 && owned.sustained == 0
+            && !e.hasHeldMidiNotes() && !VDX7RegressionAccess::deferred(p),
+            "partitioned deferred note failed to release");
+    unchanged(before, capture(p));
+    return output;
+}
+
+static void testDeferredPartitions(const juce::File& rom)
+{
+    for (int rate : {44100, 48000, 96000})
+    {
+        const auto reference = renderDeferredPartition(rom, rate, {64});
+        for (const auto& partitions : {std::vector<int>{1024}, std::vector<int>{rate * 2},
+                                      std::vector<int>{rate * 3}, std::vector<int>{17, 63, 4096, 1, 255}})
+        {
+            const auto output = renderDeferredPartition(rom, rate, partitions);
+            float difference = 0;
+            for (std::size_t i = 0; i < reference.size(); ++i)
+                difference = std::max(difference, std::abs(reference[i] - output[i]));
+            require(difference < 1e-6f, "deferred audio depends on successful host-block partition");
+        }
+    }
+    std::cout << "PASS: deferred note onset/release and stereo samples invariant across successful block partitions\n";
+}
+
+static void testDeferredExpiry(const juce::File& rom, int resetPath, int skippedSamples)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+    auto& e = VDX7RegressionAccess::engine(p);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    juce::AudioBuffer<float> small(2, 64), skipped(2, skippedSamples), zero(2, 0);
+    juce::MidiBuffer midi;
+    midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
+    midi.addEvent(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)), 1);
+    for (int i = 0; i < 500; ++i) processChecked(p, small, midi);
+    require(small.getMagnitude(0, 64) > 1e-4f, "expiry fixture lacks a sounding held note");
+    const auto before = capture(p);
+    if (resetPath != 0) resetChecked(p);
+    if (resetPath == 2)
+    {
+        // Enter the actual reset-drain branch without completing it. Next
+        // callback must not receive playback credit merely for owning the lock.
+        processChecked(p, zero, midi);
+        require(e.isHostResetInProgress(), "expiry fixture reset did not remain in progress");
+    }
+    midi.addEvent(juce::MidiMessage::noteOff(1, 60), 0);
+    midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 1);
+    if (resetPath == 0)
+    {
+        std::unique_lock lock(VDX7RegressionAccess::mutex(p));
+        auto callback = std::async(std::launch::async, [&] { processChecked(p, skipped, midi); });
+        const bool timely = callback.wait_for(std::chrono::seconds(1)) == std::future_status::ready;
+        if (!timely) { lock.unlock(); callback.get(); }
+        require(timely, "expiry callback blocked on mutex");
+        callback.get();
+    }
+    else processChecked(p, skipped, midi);
+    require(skipped.getMagnitude(0, skippedSamples) == 0, "skipped expiry block was not silent");
+    processChecked(p, zero, midi);
+    // Drain the panic and all firmware releases. The expired fresh note must
+    // never be accepted, even though the recovery block itself is large.
+    juce::AudioBuffer<float> recovered(2, 144000);
+    processChecked(p, recovered, midi);
+    const auto owned = VDX7RegressionAccess::firmwareOwnership(p);
+    require(!e.hasHeldMidiNotes() && owned.midi == 0 && owned.held == 0 && owned.sustained == 0
+            && recovered.getMagnitude(0, 132000, 12000) < 1e-5f,
+            "expired deferred input replayed or lost held-note/sustain reconciliation");
+    midi.addEvent(juce::MidiMessage::noteOn(1, 74, juce::uint8(100)), 0);
+    for (int i = 0; i < 500; ++i) processChecked(p, small, midi);
+    require(VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 74) == 1
+            && small.getMagnitude(0, 64) > 1e-4f, "valid note after expiry did not sound");
+    midi.addEvent(juce::MidiMessage::noteOff(1, 74), 0);
+    for (int i = 0; i < 1000; ++i) processChecked(p, small, midi);
+    require(!e.hasHeldMidiNotes() && small.getMagnitude(0, 64) < 1e-5f,
+            "fresh note after expiry did not release");
+    unchanged(before, capture(p));
+    std::cout << "PASS: true delay expiry reset path=" << resetPath << ", skipped=" << skippedSamples
+              << "; sustain/held release and fresh input recover\n";
+}
+
 static void testContentionAndDeferred(const juce::File& rom)
 {
     auto owner = std::make_unique<VDX7AudioProcessor>(false);
@@ -1423,12 +1559,21 @@ int main(int argc, char** argv)
         const bool monoBoundaryOnly = argc == 3 && juce::String(argv[2]) == "--mono-boundary-only";
         const bool monoTraceOnly = argc == 3 && juce::String(argv[2]) == "--mono-trace-only";
         const bool profileCheckOnly = argc == 3 && juce::String(argv[2]) == "--profile-check-only";
-        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !monoNoteZeroOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly) || !juce::File(argv[1]).existsAsFile())
+        const bool deferredPartitionOnly = argc == 3 && juce::String(argv[2]) == "--deferred-partition-only";
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !monoNoteZeroOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly && !deferredPartitionOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
         juce::MemoryBlock image;
         require(juce::File(argv[1]).loadFileAsData(image), "read explicit local ROM fixture");
         require(VDX7RegressionAccess::knownFirmwareImage(image),
                 "These ownership tests require the validated v1.8 firmware (FNV1a64 20dd25e47a496ba0); other images are not validated by this suite");
+        if (deferredPartitionOnly)
+        {
+            testDeferredPartitions(juce::File(argv[1]));
+            for (int path : {0, 1, 2})
+                for (int skipped : {96001, 144000})
+                    testDeferredExpiry(juce::File(argv[1]), path, skipped);
+            return 0;
+        }
         if (profileCheckOnly)
         {
             juce::MemoryBlock firmware(image.getData(), VDX7Engine::kFirmwareSize);

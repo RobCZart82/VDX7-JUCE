@@ -2,6 +2,7 @@
 #include "VDX7EditQueue.h"
 #include "VDX7KeyboardQueue.h"
 #include "VDX7MidiValidation.h"
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -9,6 +10,7 @@
 
 static void checkEditQueue();
 static void checkMidiTimeline();
+static void checkMidiLagAccounting();
 static void checkKeyboardQueue();
 static void checkSysExAdmission();
 
@@ -52,6 +54,7 @@ int main()
             }
     checkEditQueue();
     checkMidiTimeline();
+    checkMidiLagAccounting();
     checkKeyboardQueue();
     checkSysExAdmission();
     VDX7DeferredMidi queue;
@@ -221,6 +224,76 @@ static void checkMidiTimeline()
     q.renderBlock(64, [](const uint8_t*, std::size_t, int) { require(false); }, [&] { panic = true; });
     require(panic);
     std::cout << "PASS: deferred sample positions, multiblock ordering, short notes, future offs and lag bound\n";
+}
+
+static void checkMidiLagAccounting()
+{
+    using Playback = VDX7DeferredMidi::Playback;
+    const uint8_t on[] {0x90, 72, 100}, off[] {0x80, 72, 0};
+    // Same absolute input timeline, differently partitioned successful output.
+    // Include same-offset ordering, zero-length callbacks and a future Off.
+    for (int rate : {44100, 48000, 96000})
+        for (const auto& parts : {std::vector<int>{64}, std::vector<int>{rate * 2},
+                                 std::vector<int>{rate * 3}, std::vector<int>{0, 17, 63, 4096, 1, 255}})
+        {
+            VDX7DeferredMidi q;
+            require(q.push(on, 3, 16));
+            q.advanceInputBlock(64, rate * 2);
+            std::vector<int> times, values;
+            int start = 0;
+            std::size_t part = 0;
+            const int offTime = rate / 2;
+            while (start < rate * 3)
+            {
+                const int n = std::min(parts[part++ % parts.size()], rate * 3 - start);
+                if (offTime >= start && offTime < start + n)
+                {
+                    const uint8_t pedal[] {0xb0, 64, 0};
+                    require(q.push(pedal, 3, offTime - start));
+                    require(q.push(off, 3, offTime - start));
+                }
+                q.advanceInputBlock(n, rate * 2, Playback::rendering);
+                q.renderBlock(n, [&](const uint8_t* data, std::size_t size, int pos) {
+                    require(size == 3 && pos >= 0 && pos <= n);
+                    times.push_back(start + pos); values.push_back(data[0]);
+                }, [] { require(false); });
+                start += n;
+            }
+            require(times == std::vector<int>({16, offTime + 64, offTime + 64}));
+            require(values == std::vector<int>({0x90, 0xb0, 0x80}));
+            q.resetIfEmpty(); require(!q.active());
+        }
+    // Strict boundary: exactly the limit is accepted; one skipped sample more
+    // expires it. Neither a zero callback nor a later huge render hides expiry.
+    for (int lag : {95999, 96000, 96001, 144000})
+        for (int skippedPart : {64, 144000})
+        {
+            VDX7DeferredMidi q;
+            require(q.push(on, 3));
+            for (int start = 0; start < lag;)
+            {
+                const int n = std::min(skippedPart, lag - start);
+                q.advanceInputBlock(n, 96000);
+                start += n;
+            }
+            q.advanceInputBlock(0, 96000);
+            q.advanceInputBlock(144000, 96000, Playback::rendering);
+            int events = 0, panics = 0;
+            q.renderBlock(144000, [&](const uint8_t* data, std::size_t size, int pos) {
+                require(size == 3 && data[0] == 0x90 && pos == 0); ++events;
+            }, [&] { ++panics; });
+            require(events == (lag <= 96000 ? 1 : 0) && panics == (lag > 96000 ? 1 : 0));
+            if (panics)
+            {
+                require(q.push(off, 3));
+                q.advanceInputBlock(64, 96000, Playback::rendering);
+                q.renderBlock(64, [&](const uint8_t* data, std::size_t, int pos) {
+                    require(data[0] == 0x80 && pos == 0); ++events;
+                }, [] { require(false); });
+                require(events == 1);
+            }
+        }
+    std::cout << "PASS: lag bound counts skipped time, not successful block size; boundary/panic recovery preserved\n";
 }
 
 static void checkEditQueue()

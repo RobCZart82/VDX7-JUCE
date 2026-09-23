@@ -8,6 +8,14 @@ or release until separately approved. Never upload ROMs.
 
 ## Active reset work
 
+- Q1 follow-up: reproduced false age expiry in the real processor before fixing
+  it (64/1024-sample recovery audible; one two-second recovery block silent).
+  Successful deferred playback now credits its matching block when checking
+  lag; contention/reset-drain callbacks do not. Actual two-second skipped-time
+  limit remains. New small/large/mixed partition, threshold and reset-expiry
+  regressions pass; see VALIDATION_DEFERRED_PARTITION.md for full validation.
+  MONO policy/design boundary is recorded in DESIGN_MONO_NOTE_ZERO_POLICY.md;
+  no compatibility mode or firmware workaround has been implemented/authorized.
 - MONO instruction/continuation follow-up: the private known image's decoded
   instruction sites match the pinned annotation. Read-only execution observes
   active note-zero slot reuse at D591/D593/D59F, count increment D5A1, and
@@ -107,11 +115,11 @@ or release until separately approved. Never upload ROMs.
 
 ## Other retained work (do not duplicate or silently drop)
 
-- Q1: actual deferred-timeline header reproduces block-partition dependence:
-  with 64 samples of prior lag, 1500x64 successful samples deliver two events;
-  one 96000-sample block drops both. O2 and ASan/UBSan component probes agree.
-  Add a processor-level regression and fix separately; not a proven ordinary
-  REAPER playback fault or a full-plugin sanitizer result.
+- Q1 addressed for false age expiry within fixed queue capacity: real-processor
+  reproduction and production fix above. The original component evidence
+  (64 prior lag, 1500x64 deliver vs one 96000 dropping both) is retained as
+  historical evidence. Actual DAW offline acceptance and separate event-capacity
+  limits remain; not a full-plugin sanitizer or general partition-invariance claim.
 - Q2: old PERFORMANCE snapshot can overwrite a newer pending UI value until
   the next publication. Source/model evidence, not permanent engine data loss.
   Add a deterministic production publication interleaving test. Existing tests

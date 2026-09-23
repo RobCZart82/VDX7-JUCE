@@ -46,6 +46,10 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
 - [x] Deferred multi-block MIDI timeline, restart cleanup and consistent program
   normalization implemented; see `VALIDATION_1.0_MIDI_LIFECYCLE.md` for policy
   and local tests. Actual host transport acceptance remains open.
+  Q1 follow-up corrects false age expiry in large successful callbacks, with
+  real-processor before/after reproduction, waveform comparison and true-delay
+  expiry tests. The two-second actual-lag limit remains; see
+  `VALIDATION_DEFERRED_PARTITION.md`. Queue-capacity and real-host limits remain.
 
 - [x] Ordered program/bank/voice/operator edit queue with local save/audio
   regressions; see `VALIDATION_1.0_EDIT_ORDER.md` for scope and overload policy.
@@ -97,6 +101,9 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
   reproduced, including sequential On/Off pairs and both Off encodings. This is
   diagnosis/test coverage, not a production fix or hardware confirmation; see
   `VALIDATION_MONO_INSTRUCTION_TRACE.md`.
+  Native/corrected-path options and required acceptance are separated in
+  `DESIGN_MONO_NOTE_ZERO_POLICY.md`. No optional correction is approved or
+  implemented; default firmware fidelity is unchanged and MONO acceptance open.
 - [x] Configure PR ROM-free CI and opt-in local ROM integration CTest gate.
   All integration runners now compile through the shared CI target. Known-v1.8
   ownership groups have a separately labelled, required firmware prerequisite;

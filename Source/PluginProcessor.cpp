@@ -385,9 +385,15 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
             deferredMidi_.push(event.data, static_cast<std::size_t>(event.numBytes),
                                juce::jlimit(0, total, event.samplePosition));
         }
-        // Do not replay an arbitrarily old performance after a long transaction.
+        // Only a callback that reaches renderBlock can advance this timeline.
+        // Reset drain renders muted firmware time, NOT deferred MIDI playback.
+        const bool rendersDeferred = lock.owns_lock() && engine_.isLoaded()
+            && !hostResetPending_ && !engine_.isHostResetInProgress();
+        // Keep the two-second limit on actual accumulated delay. A successful
+        // block (including a large offline block) adds no new delay of its own.
         deferredMidi_.advanceInputBlock(total,
-            static_cast<uint64_t>(std::max(currentSampleRate_ * 2.0, static_cast<double>(total))));
+            static_cast<uint64_t>(currentSampleRate_ * 2.0),
+            rendersDeferred ? VDX7DeferredMidi::Playback::rendering : VDX7DeferredMidi::Playback::paused);
     }
     else if (!engineLoaded_.load(std::memory_order_acquire)) deferredMidi_.clear();
     if (!lock.owns_lock() || !engine_.isLoaded())
