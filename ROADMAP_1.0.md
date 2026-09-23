@@ -86,7 +86,16 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
   and 12-configuration local stress grid (see `VALIDATION_1.0_REALTIME_BASELINE.md`).
   Full allocation/overload audit and host acceptance are still open.
 - [x] Full 0–127 note range and pitch/release regressions (local ROM).
+  Scope correction (2026-09-23): this is not exhaustive POLY/MONO coverage.
+  Native v1.8 MONO pitch 0 retains ownership after release in the raw emulator
+  and processor. The new 32-case boundary characterization documents it; the
+  original failing diagnostic is preserved, not counted as a passing release
+  test. Firmware-fidelity policy and broader MONO/reset acceptance remain open.
+  See `VALIDATION_MONO_BOUNDARY_AND_CI.md` and `AUDIT_TRIAGE_2026-09-23.md`.
 - [x] Configure PR ROM-free CI and opt-in local ROM integration CTest gate.
+  All integration runners now compile through the shared CI target. Known-v1.8
+  ownership groups have a separately labelled, required firmware prerequisite;
+  public CI still executes only the five ROM-free tests.
 - [x] Run the development CI configuration on GitHub: macOS and Windows passed
   on `5164fabd36c8fdd745e272fc1f493c0c352c1ced`. Every subsequent change needs
   fresh checks; this does not constitute RC or host acceptance.

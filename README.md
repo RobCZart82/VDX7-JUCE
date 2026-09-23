@@ -147,12 +147,29 @@ cmake --build build-local --config Release --target vdx7_all_tests
 ctest --test-dir build-local -C Release --output-on-failure
 ```
 
-By default CTest runs five ROM-free tests. The shared target also compile-checks
-stress coverage without running it. For the full local suite, configure with
+By default CTest runs five ROM-free tests. Both `vdx7_ci_checks` and
+`vdx7_all_tests` also compile all six integration runners (processor, stability,
+MIDI range, timing, stress and host reset) without executing them or needing a
+ROM. For the full local suite, configure with
 `-DVDX7_ENABLE_ROM_TESTS=ON -DVDX7_TEST_ROM_FILE=/absolute/path/to/your/dx7.bin`,
 then rebuild `vdx7_all_tests` and rerun CTest. Never upload the ROM. The processor
 runner opens no audio device and optionally accepts an existing absolute directory
 for PNG snapshots.
+
+The host-reset/ownership groups inspect the validated v1.8 firmware memory map.
+They are labelled `local-rom;firmware-v1_8` and require the `vdx7_v18_profile`
+CTest fixture. It verifies the firmware identity before running those groups;
+an incompatible image fails the prerequisite, rather than silently passing or
+being interpreted as a broken unknown-ROM fallback. Other-ROM runtime coverage
+remains separate acceptance work. Select these groups with
+`ctest --test-dir build-local -C Release -L firmware-v1_8 --output-on-failure`.
+
+`vdx7_mono_boundary_characterization` documents a known native MONO pitch-zero
+edge by comparing the raw emulator with the processor. Its PASS means the
+documented behavior and explicit mode-cycle recovery were reproduced, **not
+that the edge is fixed**. The original `vdx7_host_reset_tests /path/to/dx7.bin
+--mono-note-zero-only` diagnostic remains intentionally failing and outside the
+passing CTest set. See [validation scope](VALIDATION_MONO_BOUNDARY_AND_CI.md).
 
 ## 12. Licensing and release status
 

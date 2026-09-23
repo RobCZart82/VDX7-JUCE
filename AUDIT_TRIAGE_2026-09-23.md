@@ -8,6 +8,17 @@ or release until separately approved. Never upload ROMs.
 
 ## Active reset work
 
+- MONO boundary follow-up: 32 raw-core/processor combinations isolate native
+  pitch-zero behavior from wrapper reset and release retirement. Both ordinary
+  Note Off and velocity-zero Note On reproduce it; pitches 1/60/127 and POLY
+  controls release normally, with 1/16 repetitions. An explicit normal
+  POLY-to-MONO mode cycle recovers ownership and allows a fresh audible note
+  to release. This is characterization, NOT a production fix or an automatic
+  workaround. The original failing diagnostic remains intact. See
+  VALIDATION_MONO_BOUNDARY_AND_CI.md; firmware policy, physical-hardware
+  confirmation and broader MONO/reset combinations remain open.
+  Full rebuilt registered suite 20/20 PASS (239.83 s), fresh ROM-free 5/5 PASS
+  (3.05 s); separate original MONO-zero acceptance diagnostic still FAIL.
 - R3 lifecycle drain: reproduced on the preceding #47 tree. Maximum release
   history followed by prepare left 16 old firmware MIDI/held entries and the
   immediate fresh note had zero ownership/audio. Lifecycle now shares the
@@ -27,8 +38,9 @@ or release until separately approved. Never upload ROMs.
   firmware entry and MONO active count 16. Explicit `--mono-note-zero-only`
   diagnostic fails; it is not included in the passing CTest set and must not
   be called fixed. The annotated native routine uses key zero as an empty-slot
-  sentinel. Firmware-faithfulness/product-policy decision and broader boundary
-  tests are needed before changing native behavior. Lifecycle MONO fixtures
+  sentinel. The boundary follow-up above now covers 32 cases; a
+  firmware-faithfulness/product-policy decision is still needed before changing
+  native behavior. Lifecycle MONO fixtures
   seed pitch-zero history in POLY, switch normally, then exercise 1..127 in MONO;
   retain the full 128*16 budget and assert empty firmware ownership before holds.
 - Per-pitch overlap follow-up: reproduced the global-idle implementation's
@@ -103,12 +115,14 @@ or release until separately approved. Never upload ROMs.
 - Tail metadata: zero is not generally consistent with release/nonzero L4;
   measure actual host behavior, do not invent a fixed tail duration.
 - POLY/MONO: include unsuccessful lock-held transactions in timing statistics.
-- Public CI: compile all integration executables without distributing firmware.
-  Four excluded integration targets still need CI aggregation: processor,
-  stability, MIDI-range and timing. This round builds them explicitly locally.
-- Label known-image retirement/ownership tests separately from generic ROM
-  behavior. Unknown-ROM conservative fallback is intentional, not an automatic
-  test failure; missing required known-image runtime must not become silent PASS.
+- T1 addressed: the shared public-CI target now compiles all six integration
+  executables, including the four previously omitted runners (processor,
+  stability, MIDI-range and timing). Execution still requires explicit local
+  ROM opt-in; public CI does not distribute or execute firmware.
+- T2 addressed for the host-reset/ownership suite: `firmware-v1_8` label and
+  required profile fixture distinguish its known-image assumptions. Wrong-image
+  prerequisites fail explicitly, not silent PASS/SKIP. Unknown-ROM conservative
+  fallback remains intentional; actual unknown-ROM runtime is still unvalidated.
 - Allocation probes cover ordinary C++ allocation on the observed thread, not
   every allocator or a complete hard-realtime proof.
 - Exact-SHA RC workflow, full local-ROM and actual macOS/Windows host acceptance

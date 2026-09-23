@@ -59,6 +59,13 @@ struct VDX7RegressionAccess
     { p.engine_.releaseRetirementProfile_ = false; }
     static bool knownRetirementProfile(const VDX7AudioProcessor& p)
     { return p.engine_.releaseRetirementProfile_; }
+    static bool knownFirmwareImage(const juce::MemoryBlock& image)
+    {
+        return (image.getSize() == VDX7Engine::kFirmwareSize
+                || image.getSize() == VDX7Engine::kCombinedRomSize)
+            && VDX7Engine::isReleaseRetirementFirmware(
+                static_cast<const uint8_t*>(image.getData()), VDX7Engine::kFirmwareSize);
+    }
     static void startShortLifecycleDrain(VDX7AudioProcessor& p)
     {
         // Force the same lifecycle drain to exhaust a one-block budget. This
@@ -473,6 +480,167 @@ static void diagnoseMonoNoteZero(const juce::File& rom)
               << VDX7RegressionAccess::monoActiveCount(p) << '\n';
     require(fw.midi == 0 && fw.held == 0 && VDX7RegressionAccess::monoActiveCount(p) == 0,
             "MONO pitch-zero native release edge (separate from lifecycle drain)");
+}
+
+// Independent of VDX7Engine/processor MIDI, reset, retirement and resampling.
+// Only the pinned unmodified dx7Lib core executes the user's original firmware.
+class BareFirmware
+{
+public:
+    explicit BareFirmware(const juce::File& rom) : machine(toSynth, toGui)
+    {
+        require(rom.loadFileAsData(image), "raw-core ROM read");
+        require(VDX7RegressionAccess::knownFirmwareImage(image), "raw-core known ROM fixture");
+        auto* bytes = static_cast<const uint8_t*>(image.getData());
+        require(machine.loadFirmware(bytes, VDX7Engine::kFirmwareSize), "raw-core firmware load");
+        if (image.getSize() == VDX7Engine::kCombinedRomSize)
+            require(machine.loadVoices(bytes + VDX7Engine::kFirmwareSize,
+                                       VDX7Engine::kFactoryVoicesSize), "raw-core factory load");
+        else
+            require(machine.loadVoices(blankBank.data(), blankBank.size()), "raw-core blank bank");
+        machine.start();
+        for (int i = 0; i < 3000000; ++i) machine.run();
+        machine.initControllers();
+        dx7Emu::Message discarded;
+        while (queue.pop(discarded)) {}
+        machine.sustain(false);
+        machine.porta(false);
+        machine.setBank(0, false);
+        send(0xc0, 3);
+        pump();
+    }
+
+    void setMode(int mode)
+    {
+        send(0xb0, mode ? 126 : 127, mode ? 1 : 0);
+        pump();
+        require(machine.memory[0x20a9] == mode, "raw-core mode change");
+    }
+    void notes(int note, int repeats, bool on, bool zeroVelocityOff)
+    {
+        for (int i = 0; i < repeats; ++i)
+            send(on || zeroVelocityOff ? 0x90 : 0x80, note, on ? 100 : 0);
+        pump();
+    }
+    // Counts are read only after all staged input has drained, not used to
+    // mutate firmware state or to tell the production reset when to finish.
+    std::array<int, 4> counts() const
+    {
+        std::array<int, 4> result {0, 0, 0, machine.memory[0x8e]};
+        for (int i = 0; i < 16; ++i)
+        {
+            result[0] += (machine.memory[0x2168 + i] & 0x80) != 0;
+            result[1] += (machine.memory[0x20b1 + 2 * i] & 2) != 0;
+            result[2] += (machine.memory[0x20b1 + 2 * i] & 1) != 0;
+        }
+        return result;
+    }
+private:
+    void send(int status, int data1, int data2 = -1)
+    {
+        machine.midiSerialRx.write(static_cast<uint8_t>(status | (machine.getMidiRxChannel() & 15)));
+        machine.midiSerialRx.write(static_cast<uint8_t>(data1));
+        if (data2 >= 0) machine.midiSerialRx.write(static_cast<uint8_t>(data2));
+    }
+    void pump()
+    {
+        for (int samples = 0; samples < 24000;)
+        {
+            machine.run();
+            std::array<float, 16> discarded {};
+            int emitted = 0;
+            const int cycles = machine.inst != nullptr && machine.inst->cycles > 0
+                ? machine.inst->cycles : 1;
+            machine.egs.clock(discarded.data(), emitted, cycles * 4);
+            samples += emitted;
+        }
+        require(machine.midiSerialRx.empty()
+                && (machine.TRCSR & (1u << dx7Emu::HD6303R::RDRF)) == 0
+                && machine.memory[0xee] == machine.memory[0xf0]
+                && machine.memory[0xef] == machine.memory[0xf1]
+                && machine.memory[0xe7] == 0 && machine.memory[0xf6] == 0,
+                "raw-core input still pending");
+    }
+    dx7Emu::App_ToSynth queue;
+    dx7Emu::NullToGui gui;
+    dx7Emu::ToSynth* toSynth = &queue;
+    dx7Emu::ToGui* toGui = &gui;
+    juce::MemoryBlock image;
+    std::array<uint8_t, 4096> blankBank {};
+    dx7Emu::DX7 machine;
+};
+
+static void characterizeMonoBoundary(const juce::File& rom, int mode, int note,
+                                     int repeats, bool zeroVelocityOff)
+{
+    auto raw = std::make_unique<BareFirmware>(rom);
+    raw->setMode(mode);
+    require(raw->counts() == std::array<int, 4>{}, "raw-core empty starting ownership");
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+    auto& e = VDX7RegressionAccess::engine(p);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    require(e.setPlaySetting(0, mode), "boundary mode fixture");
+    const auto before = capture(p);
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    const auto pump = [&]
+    { for (int i = 0; i < 375; ++i) processChecked(p, audio, midi); };
+    for (bool on : {true, false})
+    {
+        raw->notes(note, repeats, on, zeroVelocityOff);
+        for (int i = 0; i < repeats; ++i)
+            midi.addEvent(on || zeroVelocityOff
+                ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
+                : juce::MidiMessage::noteOff(1, note), 0);
+        pump();
+        const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
+        const std::array<int, 4> actual {fw.midi, fw.held, fw.sustained,
+                                       VDX7RegressionAccess::monoActiveCount(p)};
+        const bool nativeZeroEdge = mode == 1 && note == 0;
+        const std::array<int, 4> expected {
+            on ? repeats : 0,
+            nativeZeroEdge ? 1 : on ? repeats : 0,
+            0,
+            mode == 1 && (on || nativeZeroEdge) ? repeats : 0};
+        require(raw->counts() == expected, "raw-core boundary differs from explicit native expectation");
+        require(actual == expected, "processor boundary differs from explicit native expectation");
+    }
+    unchanged(before, capture(p));
+    std::cout << "CHARACTERIZATION (not a fix): mode=" << mode << ", pitch=" << note
+              << ", repeats=" << repeats << ", velocity-zero-off=" << zeroVelocityOff
+              << ", raw/processor match; native zero edge=" << (mode == 1 && note == 0) << '\n';
+
+    // Prove a firmware-driven recovery route, without patching its RAM or
+    // introducing an automatic mode change into ordinary plugin playback.
+    if (mode == 1 && note == 0)
+    {
+        raw->setMode(0);
+        raw->setMode(1);
+        require(raw->counts() == std::array<int, 4>{}, "raw native mode-cycle recovery");
+        require(e.setPlaySetting(0, 0) && e.setPlaySetting(0, 1), "processor native mode-cycle recovery");
+    }
+    midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+    float peak = 0;
+    for (int i = 0; i < 375; ++i)
+    {
+        processChecked(p, audio, midi);
+        peak = std::max(peak, audio.getMagnitude(0, 64));
+    }
+    const auto fresh = VDX7RegressionAccess::firmwareOwnership(p);
+    require(peak > 1e-4f && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 72) == 1
+            && fresh.midi == 1 && fresh.held == 1 && fresh.sustained == 0,
+            "boundary control/recovery fresh note");
+    midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+    pump();
+    const auto released = VDX7RegressionAccess::firmwareOwnership(p);
+    require(released.midi == 0 && released.held == 0 && released.sustained == 0
+            && VDX7RegressionAccess::monoActiveCount(p) == 0
+            && audio.getMagnitude(0, 64) < 1e-5f, "boundary control/recovery fresh release");
+    unchanged(before, capture(p));
 }
 
 static void testFreshNoteRelease(const juce::File& rom, int rate, int block)
@@ -1064,8 +1232,35 @@ int main(int argc, char** argv)
         const bool gateOverflowOnly = argc == 3 && juce::String(argv[2]) == "--gate-overflow-only";
         const bool expandedLifecycleOnly = argc == 3 && juce::String(argv[2]) == "--expanded-lifecycle-only";
         const bool monoNoteZeroOnly = argc == 3 && juce::String(argv[2]) == "--mono-note-zero-only";
-        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !monoNoteZeroOnly) || !juce::File(argv[1]).existsAsFile())
+        const bool monoBoundaryOnly = argc == 3 && juce::String(argv[2]) == "--mono-boundary-only";
+        const bool profileCheckOnly = argc == 3 && juce::String(argv[2]) == "--profile-check-only";
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !monoNoteZeroOnly && !monoBoundaryOnly && !profileCheckOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
+        juce::MemoryBlock image;
+        require(juce::File(argv[1]).loadFileAsData(image), "read explicit local ROM fixture");
+        require(VDX7RegressionAccess::knownFirmwareImage(image),
+                "These ownership tests require the validated v1.8 firmware (FNV1a64 20dd25e47a496ba0); other images are not validated by this suite");
+        if (profileCheckOnly)
+        {
+            juce::MemoryBlock firmware(image.getData(), VDX7Engine::kFirmwareSize);
+            require(VDX7RegressionAccess::knownFirmwareImage(firmware), "firmware-only profile");
+            auto changed = firmware;
+            static_cast<uint8_t*>(changed.getData())[0] ^= 1;
+            require(!VDX7RegressionAccess::knownFirmwareImage(changed), "changed-image rejection");
+            firmware.setSize(VDX7Engine::kFirmwareSize - 1);
+            require(!VDX7RegressionAccess::knownFirmwareImage(firmware), "truncated-image rejection");
+            std::cout << "PASS: required v1.8 ROM profile and rejection controls; runtime assertions are image-specific\n";
+            return 0;
+        }
+        if (monoBoundaryOnly)
+        {
+            for (int mode : {0, 1})
+                for (int note : {0, 1, 60, 127})
+                    for (int repeats : {1, 16})
+                        for (bool zeroVelocityOff : {false, true})
+                            characterizeMonoBoundary(juce::File(argv[1]), mode, note, repeats, zeroVelocityOff);
+            return 0;
+        }
         if (monoNoteZeroOnly)
         {
             // Explicit diagnostic, not a passing release-acceptance test.

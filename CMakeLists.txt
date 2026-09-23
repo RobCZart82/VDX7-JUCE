@@ -221,16 +221,13 @@ if(VDX7_ENABLE_ROM_TESTS)
         PROPERTIES SKIP_RETURN_CODE 77 LABELS "local-rom")
 endif()
 
-# Shared by normal CI and exact-commit candidates. Stress is compile-only on
-# ROM-free runners; its execution remains an opt-in local-ROM test.
+# Shared by normal CI and exact-commit candidates. Every integration runner
+# must compile even without a ROM; execution stays opt-in and local only.
 add_custom_target(vdx7_ci_checks DEPENDS
     vdx7_user_bank_tests vdx7_deferred_midi_tests vdx7_voice_data_tests
-    vdx7_algorithm_tests vdx7_resampling_tests vdx7_stress_tests)
+    vdx7_algorithm_tests vdx7_resampling_tests vdx7_stress_tests
+    vdx7_processor_tests vdx7_stability_tests vdx7_midi_range_tests vdx7_timing_tests)
 add_custom_target(vdx7_all_tests DEPENDS vdx7_ci_checks)
-if(VDX7_ENABLE_ROM_TESTS)
-    add_dependencies(vdx7_all_tests vdx7_processor_tests vdx7_stability_tests
-        vdx7_midi_range_tests vdx7_timing_tests)
-endif()
 
 if(APPLE)
     # Ad-hoc signing is sufficient for a local REAPER test build.
@@ -251,6 +248,12 @@ target_compile_definitions(vdx7_host_reset_tests PRIVATE
     $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
 add_dependencies(vdx7_ci_checks vdx7_host_reset_tests)
 if(VDX7_ENABLE_ROM_TESTS)
+    # These regressions inspect the locally validated v1.8 ownership map.
+    # A wrong image is a failed precondition, never silent SKIP or success.
+    add_test(NAME vdx7_v18_profile
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --profile-check-only)
+    set_tests_properties(vdx7_v18_profile PROPERTIES
+        FIXTURES_SETUP vdx7_v18_rom TIMEOUT 20 LABELS "local-rom;firmware-v1_8")
     add_test(NAME vdx7_host_reset
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}")
     set_tests_properties(vdx7_host_reset PROPERTIES
@@ -277,4 +280,13 @@ if(VDX7_ENABLE_ROM_TESTS)
     add_test(NAME vdx7_expanded_lifecycle
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --expanded-lifecycle-only)
     set_tests_properties(vdx7_expanded_lifecycle PROPERTIES TIMEOUT 180 LABELS "local-rom")
+    add_test(NAME vdx7_mono_boundary_characterization
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --mono-boundary-only)
+    set_tests_properties(vdx7_mono_boundary_characterization PROPERTIES TIMEOUT 180)
+    set_tests_properties(vdx7_host_reset vdx7_reactivation vdx7_reset_history_pair
+        vdx7_firmware_ownership vdx7_history_retirement vdx7_overlap_retirement
+        vdx7_reset_gate_overflow vdx7_expanded_lifecycle vdx7_mono_boundary_characterization
+        PROPERTIES FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8")
+    set_property(TEST vdx7_mono_boundary_characterization APPEND PROPERTY
+        LABELS "known-firmware-characterization")
 endif()
