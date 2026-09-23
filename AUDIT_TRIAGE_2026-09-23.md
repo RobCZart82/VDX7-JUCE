@@ -8,6 +8,17 @@ or release until separately approved. Never upload ROMs.
 
 ## Active reset work
 
+- MONO candidate / gate follow-up: separate test-only branch-decision experiment
+  exposes incomplete two-decision and lookup-only proposals; common occupancy
+  rules must cover allocation, lookup, release and first/minimum/maximum legato
+  scans. Note 0 playback is checked against native POLY pitch/audio and a +12
+  patch control that distinguishes zero from one. No product correction exists.
+  The original unchanged failing production diagnostic is now registered in
+  local CTest as `vdx7_mono_note_zero_acceptance` / `release-blocker`, so the
+  combined local result no longer hides it behind passing characterization.
+  Earlier all-PASS counts below are historical and excluded that gate.
+  See VALIDATION_MONO_CANDIDATE.md. Native default/installed plugin unchanged;
+  no ROM patch, upload, main merge or release acceptance.
 - Portamento intent/O1 follow-up: reproduced display rollback 99 -> 37 and
   immediate-save loss 73 -> 0 before fixing. Engine-owned latest accepted intent
   now survives serial recovery/flush and supplies display/detached state capture;
@@ -71,11 +82,11 @@ or release until separately approved. Never upload ROMs.
 - Separate newly isolated compatibility edge: v1.8 MONO, 16 repeated MIDI
   pitch-zero On/Off pairs, WITHOUT reset, leave MIDI count 0 but one held
   firmware entry and MONO active count 16. Explicit `--mono-note-zero-only`
-  diagnostic fails; it is not included in the passing CTest set and must not
-  be called fixed. The annotated native routine uses key zero as an empty-slot
+  diagnostic fails and is now registered as an explicit local release blocker;
+  it must not be called fixed. The annotated native routine uses key zero as an empty-slot
   sentinel. The boundary follow-up above now covers 32 cases; a
-  firmware-faithfulness/product-policy decision is still needed before changing
-  native behavior. Lifecycle MONO fixtures
+  targeted corrective development is approved with native/default preserved,
+  but a product implementation remains pending. Lifecycle MONO fixtures
   seed pitch-zero history in POLY, switch normally, then exercise 1..127 in MONO;
   retain the full 128*16 budget and assert empty firmware ownership before holds.
 - Per-pitch overlap follow-up: reproduced the global-idle implementation's

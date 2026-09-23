@@ -149,8 +149,8 @@ ctest --test-dir build-local -C Release --output-on-failure
 
 By default CTest runs six ROM-free tests. Both `vdx7_ci_checks` and
 `vdx7_all_tests` also compile all six integration runners (processor, stability,
-MIDI range, timing, stress and host reset) without executing them or needing a
-ROM. For the full local suite, configure with
+MIDI range, timing, stress and host reset), plus the isolated MONO candidate
+experiment, without executing them or needing a ROM. For the full local suite, configure with
 `-DVDX7_ENABLE_ROM_TESTS=ON -DVDX7_TEST_ROM_FILE=/absolute/path/to/your/dx7.bin`,
 then rebuild `vdx7_all_tests` and rerun CTest. Never upload the ROM. The processor
 runner opens no audio device and optionally accepts an existing absolute directory
@@ -167,14 +167,22 @@ remains separate acceptance work. Select these groups with
 `vdx7_mono_boundary_characterization` documents a known native MONO pitch-zero
 edge by comparing the raw emulator with the processor. Its PASS means the
 documented behavior and explicit mode-cycle recovery were reproduced, **not
-that the edge is fixed**. The original `vdx7_host_reset_tests /path/to/dx7.bin
---mono-note-zero-only` diagnostic remains intentionally failing and outside the
-passing CTest set. See [validation scope](VALIDATION_MONO_BOUNDARY_AND_CI.md).
+that the edge is fixed**. The unchanged original `vdx7_host_reset_tests /path/to/dx7.bin
+--mono-note-zero-only` diagnostic is now registered as
+`vdx7_mono_note_zero_acceptance` (`release-blocker`). It still FAILS: **the full
+local CTest result is therefore failing, not release-ready**, even when the other
+tests pass. It is neither skipped nor inverted with WILL_FAIL. Historical passing
+counts predating this registration excluded this gate. See
+[validation scope](VALIDATION_MONO_BOUNDARY_AND_CI.md).
 The follow-up `vdx7_mono_trace_characterization` (`--mono-trace-only`) verifies
 the loaded image's relevant instructions, observes the actual failing branches,
 and tests subsequent notes **without** recovery. It documents retained output
 and rejected native allocation, rather than declaring them fixed. See
 [instruction trace and continuation](VALIDATION_MONO_INSTRUCTION_TRACE.md).
+`vdx7_mono_candidate_experiment` evaluates explicitly changed branch decisions
+in a separate raw-core test machine. It checks real Note 0 playback as well as
+lookup, cleanup and legato; **it is not linked into the plugin**. Its PASS cannot
+close production acceptance. See [experiment and remaining work](VALIDATION_MONO_CANDIDATE.md).
 The separate `vdx7_deferred_partition` (`--deferred-partition-only`) regression
 checks real-processor note playback/release across small and oversized successful
 blocks, plus true-delay expiry under contention and reset. Its queue-only portion

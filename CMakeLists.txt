@@ -251,6 +251,11 @@ target_include_directories(vdx7_host_reset_tests PRIVATE
 target_compile_definitions(vdx7_host_reset_tests PRIVATE
     $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
 add_dependencies(vdx7_ci_checks vdx7_host_reset_tests)
+# Compile the isolated counterfactual experiment on public CI; execute only
+# locally with the verified private firmware. Never link it into VDX7.
+add_executable(vdx7_mono_candidate_tests EXCLUDE_FROM_ALL Tests/VDX7MonoCandidateTests.cpp)
+target_link_libraries(vdx7_mono_candidate_tests PRIVATE vdx7_core vdx7_voice_data)
+add_dependencies(vdx7_ci_checks vdx7_mono_candidate_tests)
 if(VDX7_ENABLE_ROM_TESTS)
     # These regressions inspect the locally validated v1.8 ownership map.
     # A wrong image is a failed precondition, never silent SKIP or success.
@@ -303,4 +308,14 @@ if(VDX7_ENABLE_ROM_TESTS)
         PROPERTIES FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8")
     set_property(TEST vdx7_mono_boundary_characterization vdx7_mono_trace_characterization APPEND PROPERTY
         LABELS "known-firmware-characterization")
+    add_test(NAME vdx7_mono_candidate_experiment
+        COMMAND vdx7_mono_candidate_tests "${VDX7_TEST_ROM_FILE}")
+    set_tests_properties(vdx7_mono_candidate_experiment PROPERTIES
+        TIMEOUT 180 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;experiment-not-product-fix")
+    # This intentionally exposes the unresolved production P1 in the combined
+    # local result. Do NOT use WILL_FAIL, SKIP or a characterization expectation.
+    add_test(NAME vdx7_mono_note_zero_acceptance
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --mono-note-zero-only)
+    set_tests_properties(vdx7_mono_note_zero_acceptance PROPERTIES
+        TIMEOUT 60 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;release-blocker")
 endif()

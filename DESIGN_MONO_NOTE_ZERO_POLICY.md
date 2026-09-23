@@ -8,8 +8,10 @@ User decision (2026-09-23 follow-up): targeted corrective development is approve
 while preserving the original/default path. This approves investigation and a
 separately tested correction, not a particular implementation, automatic mode
 cycling, silent pitch substitution, arbitrary ROM/RAM patches, or publication.
-No corrected mode is implemented yet. The independent portamento request/save
-fix is developed first; it does not close MONO acceptance.
+No corrected product mode is implemented yet. The independent portamento
+request/save fix is complete within its documented test scope; it does not close
+MONO acceptance. The isolated branch-decision experiment described in
+`VALIDATION_MONO_CANDIDATE.md` is the next design evidence, NOT a product fix.
 
 ## What is established
 
@@ -51,6 +53,11 @@ for native MONO ownership either.
 
 - Preserve the native failing diagnostic and read-only characterization as
   references; add separate corrected-path tests, never weaken their assertions.
+- Note 0 must genuinely sound with its original key identity and the target
+  pitch/audio of a native reference, not merely clean up successfully. Use an
+  additional +12-transposed patch control to distinguish Note 0 from Note 1:
+  their neutral-transpose targets coincide at the bottom of this firmware's
+  pitch table. This is a patch fixture, never input-event transposition.
 - Notes 0/1/60/127, normal Off and velocity-zero On, sequential and stacked
   repeats, 1/16 and over-capacity histories; inspect actual ownership and counts.
 - Mixed-note legato, release order, voice replacement, sustain and portamento;
@@ -60,6 +67,33 @@ for native MONO ownership either.
   incompatible ROM; no state/parameter compatibility regression.
 - No unbounded/allocating audio work; full local ROM regressions, platform CI
   and real-host validation. Independent hardware evidence stays distinct.
+
+## Experimental scope and visible acceptance gate
+
+`Tests/VDX7MonoCandidateTests.cpp` is a separately compiled test executable, not
+linked into VDX7. With explicit known-image preflight it overrides only the Z
+condition immediately before selected native branches. It never rewrites ROM
+bytes, note values, occupancy entries or counters. This is intentionally changed
+execution in a disposable machine, NOT native CPU semantics or a deployable fix.
+
+The two originally highlighted decisions are insufficient: clearing the first
+zero slot makes the next lookup stop at that empty slot, ignoring a later active
+zero. Correcting that lookup still leaves legato's first/minimum/maximum searches
+using zero pitch as emptiness. All these consumers need one occupancy contract.
+See the experiment's negative controls before its complete candidate tests.
+
+The existing unchanged `--mono-note-zero-only` production diagnostic is now
+registered as `vdx7_mono_note_zero_acceptance`, labelled `release-blocker`.
+No WILL_FAIL, skip or expected-bug conversion: the full local CTest invocation
+must report failure while this product P1 remains unresolved. Public ROM-free
+CI still cannot run it. A passing experiment cannot substitute for this gate.
+When a corrected product mode exists, test its explicit activation and native
+fallback independently; never silently flip the expected defect into acceptance.
+
+Before selecting this method for production, resolve optional-mode persistence,
+safe changes with held notes, known/unknown-image guards, every CPU stepping path,
+actual processor/save/restore/reset tests and callback overhead. A test-only
+condition intervention is not authorization for an undisclosed production hook.
 
 ## Independent development alongside corrective design
 
