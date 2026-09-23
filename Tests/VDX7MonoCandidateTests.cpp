@@ -209,6 +209,69 @@ private:
     Candidate candidate;
 };
 
+struct PitchMismatch : std::runtime_error
+{
+    PitchMismatch() : std::runtime_error("rendered audio pitch does not match the expected note") {}
+};
+
+// Shared positive/negative oracle, deliberately independent of held-key and
+// firmware-target metadata. A key-identity failure must not masquerade as proof
+// that the rendered-audio measurement rejects the wrong pitch.
+static void requireAudioPitch(const Experiment::Sound& actual, const Experiment::Sound& reference)
+{
+    require(std::isfinite(reference.peak) && reference.peak > 1e-4f
+            && std::isfinite(reference.hz) && reference.hz > 1, "invalid native pitch reference");
+    if (!std::isfinite(actual.peak) || actual.peak <= 1e-4f || !std::isfinite(actual.hz)
+        || std::abs(actual.hz / reference.hz - 1) >= 0.002)
+        throw PitchMismatch();
+}
+
+static void checkNoteZeroPitch(const std::vector<uint8_t>& image, bool substituteNoteOne)
+{
+    auto reference = std::make_unique<Experiment>(image, Candidate::native, 12);
+    reference->mode(false);
+    const auto expectedSound = reference->note(0, true, false, 1, 98192);
+    const auto expectedTarget = reference->activePolyTarget();
+    auto candidate = std::make_unique<Experiment>(image, Candidate::withLegato, 12);
+    // The ONLY mutation is this test input. Expected pitch, fixture, rendering
+    // duration and the oracle/tolerance remain identical to the positive case.
+    const int input = substituteNoteOne ? 1 : 0;
+    const auto actualSound = candidate->note(input, true, false, 1, 98192);
+    require(std::isfinite(actualSound.peak) && actualSound.peak > 1e-4f
+            && std::isfinite(actualSound.hz) && actualSound.hz > 1,
+            "pitch control requires a genuinely sounding, measurable input");
+    std::cout << "PITCH ORACLE expectedNote=0 inputNote=" << input
+              << " transpose=12 referenceHz=" << expectedSound.hz
+              << " actualHz=" << actualSound.hz
+              << " relativeError=" << std::abs(actualSound.hz / expectedSound.hz - 1) << '\n';
+    requireAudioPitch(actualSound, expectedSound); // Must fail first for the mutant.
+    if (substituteNoteOne)
+    {
+        // No metadata assertion may hide a broken audio oracle in this mode:
+        // accepting the mutant must return normally (and fail the sensitivity
+        // control, or return exit 0 from the standalone mutant command).
+        std::cout << "UNEXPECTED: Note 1 mutant accepted by the Note 0 audio oracle\n";
+        return;
+    }
+    require(candidate->heldKey(0) == 0 && candidate->target() == expectedTarget
+            && candidate->counts() == std::array<int, 3>{1, 1, 1}, "positive Note 0 identity/ownership");
+    require(candidate->note(input, false).peak < 1e-5f
+            && candidate->counts() == std::array<int, 3>{}, "positive Note 0 oracle cleanup");
+    std::cout << "PASS: unchanged Note 0 accepted by audio pitch oracle\n";
+}
+
+static void testPitchOracleControls(const std::vector<uint8_t>& image)
+{
+    checkNoteZeroPitch(image, false);
+    bool pitchRejected = false;
+    try { checkNoteZeroPitch(image, true); }
+    catch (const PitchMismatch&) { pitchRejected = true; }
+    // Do not catch preflight, input, ownership or other errors as evidence of
+    // pitch discrimination. A mutant accepted by the oracle FAILS this test.
+    require(pitchRejected, "Note 1 substitute escaped the Note 0 audio pitch oracle");
+    std::cout << "PASS: oracle sensitivity control; Note 1 mutant REJECTED by the same audio check\n";
+}
+
 static void incompleteCandidates(const std::vector<uint8_t>& image)
 {
     auto two = std::make_unique<Experiment>(image, Candidate::twoDecisions);
@@ -278,9 +341,9 @@ static void candidateAcceptance(const std::vector<uint8_t>& image)
         shiftedHz[key] = ref.hz;
         auto corrected = std::make_unique<Experiment>(image, Candidate::withLegato, 12);
         const auto sound = corrected->note(key, true, false, 1, 98192);
-        require(corrected->heldKey(0) == key && corrected->target() == shiftedTargets[key]
-                && sound.peak > 1e-4f && ref.hz > 1 && std::abs(sound.hz / ref.hz - 1) < 0.002,
-                "candidate shifted-patch pitch reference");
+        requireAudioPitch(sound, ref);
+        require(corrected->heldKey(0) == key && corrected->target() == shiftedTargets[key],
+                "candidate shifted-patch pitch identity");
         std::cout << "EXPERIMENT transpose=12 key=" << key << " referenceHz=" << ref.hz
                   << " candidateHz=" << sound.hz << '\n';
         require(corrected->note(key, false).peak < 1e-5f
@@ -393,7 +456,9 @@ int main(int argc, char** argv)
 {
     try
     {
-        require(argc == 2, "supply explicit private v1.8 ROM path");
+        const bool oracleOnly = argc == 3 && std::string(argv[2]) == "--pitch-oracle-only";
+        const bool mutantOnly = argc == 3 && std::string(argv[2]) == "--pitch-oracle-note-one-mutant";
+        require(argc == 2 || oracleOnly || mutantOnly, "supply explicit private v1.8 ROM path and optional oracle selector");
         std::ifstream file(argv[1], std::ios::binary);
         const std::vector<uint8_t> image((std::istreambuf_iterator<char>(file)), {});
         // Check rejection controls without executing altered/unknown firmware.
@@ -408,6 +473,15 @@ int main(int argc, char** argv)
             { rejected = std::string(error.what()) == "experiment requires verified v1.8 image"; }
             require(rejected, "changed-image candidate must fail before boot");
         }
+        if (mutantOnly)
+        {
+            // Deliberately uncaught here: the normal top-level failure handler
+            // returns exit 1. This is not a WILL_FAIL/skip production test.
+            checkNoteZeroPitch(image, true);
+            return 0; // A broken oracle incorrectly accepts the mutant.
+        }
+        testPitchOracleControls(image);
+        if (oracleOnly) return 0;
         incompleteCandidates(image);
         candidateAcceptance(image);
         return 0;

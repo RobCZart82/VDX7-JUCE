@@ -10,6 +10,15 @@ The supplied review usefully requires Note 0 itself to sound, not only that
 ownership eventually disappears, and requires failing acceptance to be visible
 in the combined test result. Both are implemented here.
 
+```text
+Normal plugin MONO acceptance: FAIL — known, not yet repaired defect
+Isolated correction:         separately tested experimental execution
+Integrated plugin fix:       not implemented
+```
+
+The first line is the pre-existing failure becoming visible, not a new regression
+caused by the unlinked experiment. It must remain a real failing test.
+
 ## Experiment boundaries
 
 `Tests/VDX7MonoCandidateTests.cpp` is a standalone executable linked only to the
@@ -31,6 +40,9 @@ evidence for a deployable correction.
 The candidate uses the active flag in the second slot byte, not the pitch byte,
 to define MONO occupancy. Release additionally requires a valid occupied matching
 slot and a successful search. The shared search intervention is MONO-only.
+One common invariant applies throughout: an empty slot and an occupied slot
+containing MIDI key zero are different states, including allocation, empty-slot
+skipping, matching-key lookup, release/counting and legato return selection.
 
 ## Incomplete proposals reproduced
 
@@ -56,7 +68,8 @@ independent confirmation of physical hardware or every emulator instruction.
   final fast-release output and ownership are zero. Candidate-enabled POLY
   makes zero interventions and matches reference peak/frequency exactly.
 - Neutral-transpose Note 0 and Note 1 both yield approximately 8.483 Hz in this
-  firmware fixture. An initial requirement that they differ was invalid for
+  specific firmware/patch fixture, not necessarily all patches or original
+  hardware. An initial requirement that they differ was invalid for
   that reference, not proof of correction. A **+12 patch-transpose control**
   additionally distinguishes them (~16.3525 versus ~17.3356 Hz), with incoming
   and held keys still 0/1. This prevents a pitch-one substitute from being accepted
@@ -74,6 +87,54 @@ independent confirmation of physical hardware or every emulator instruction.
 - 16 mixed zero/60 scenarios: both arrival/release orders, portamento off/on,
   sustain off/on. Verify remaining target, intentional sustain versus unwanted
   held output and final pedal release. This is not all portamento modes/timings.
+
+## Follow-up (2026-09-24): deliberate Note 1 substitution checks the audio oracle
+
+Baseline local `4951d0d3a6d0b3bcbfd08e0c2bb6c57afa302cf6`, remote
+`7f23761e9312919d9f88c3b7000b3b3f2a4a1783`. Only test code/documentation changes.
+
+The SAME `requireAudioPitch` function is now used for positive shifted-patch
+references and the negative control. Reference is unmodified native POLY Note 0
+with the +12 patch. Candidate fixture, rendering duration and 0.2% relative
+frequency tolerance stay unchanged. Only the negative control's input is Note 1;
+the expected key/pitch remains Note 0. No production input is changed.
+
+| Input to candidate | Expected/reference Hz | Actual Hz | Relative error | Audio oracle |
+|---|---:|---:|---:|---|
+| Note 0, unchanged | ~16.3525 | ~16.3525 | 0.000356% | PASS |
+| Note 1, deliberate test mutation | ~16.3525 | ~17.3358 | 6.01296% | FAIL |
+
+Both inputs must first produce finite, non-silent, measurable sound, so absence
+of audio cannot masquerade as pitch discrimination. Audio frequency is then
+checked BEFORE held-key/target metadata. The sensitivity test
+accepts only the dedicated `PitchMismatch` failure as evidence; invalid ROM,
+setup/input errors or metadata failures cannot count as a successful negative
+control. If the mutant passes the audio oracle, no metadata check masks it:
+the sensitivity test fails. The normal experiment includes this positive/negative
+pair automatically, while a standalone mutant invocation returns a real exit 1:
+
+```sh
+vdx7_mono_candidate_tests /absolute/path/to/private/dx7.bin --pitch-oracle-only
+vdx7_mono_candidate_tests /absolute/path/to/private/dx7.bin --pitch-oracle-note-one-mutant
+```
+
+First command: positive PASS + negative explicitly REJECTED, exit 0.
+Second command: `FAIL: rendered audio pitch does not match the expected note`,
+exit 1. This is a deliberate input-mutation diagnostic, not a WILL_FAIL test and
+not the normal plugin's separate known MONO failure. Neither native acceptance
+nor production behavior is modified.
+
+Follow-up validation after the final oracle changes:
+
+- Rebuilt the ROM-enabled candidate and ROM-free `vdx7_ci_checks` targets.
+- Fixture + complete candidate + native acceptance: candidate **PASS 30.63 s**,
+  native acceptance **FAIL 0.14 s**, still MIDI/held/MONO **0/1/16**.
+  The three-test invocation returns **CTest exit 8** (30.79 s).
+- Standalone Note 1 mutant: the measured 6.01296% mismatch produces the dedicated
+  audio-pitch failure and real **exit 1**. ROM-free runtime: **6/6 PASS, 0.93 s**.
+- The full 26-test suite was not rerun for this test/documentation-only change;
+  its earlier result is recorded separately below. No production source, CMake,
+  ROM or installed plugin was changed. P1 remains OPEN.
 
 ## Product gate — not a green characterization substitute
 

@@ -22,6 +22,11 @@ pair, the next note can fail to release; after sixteen, its native allocation
 can be rejected. These are not merely stale GUI values or reset bookkeeping.
 Physical DX7 hardware / an independent CPU implementation have not confirmed it.
 
+Required invariant: **an empty slot and an occupied slot whose MIDI key is zero
+are different states**. Allocation, skipping empty slots, matching-key lookup,
+release/counting and legato selection must use the same occupancy rule, not
+infer it independently from a zero/nonzero pitch value.
+
 Changing how this verified execution handles a zero key would be a compatibility
 change, not an established correction to CPU instruction semantics. Investigating
 independent CPU/peripheral accuracy remains valid, but a note-specific exception
@@ -57,7 +62,13 @@ for native MONO ownership either.
   pitch/audio of a native reference, not merely clean up successfully. Use an
   additional +12-transposed patch control to distinguish Note 0 from Note 1:
   their neutral-transpose targets coincide at the bottom of this firmware's
-  pitch table. This is a patch fixture, never input-event transposition.
+  pitch table in this specific test fixture, not a claim for every voice/hardware.
+  This is a patch fixture, never corrective input-event transposition.
+- Prove the pitch oracle is sensitive: with that +12 patch, unchanged Note 0
+  must pass; only the test input changed to Note 1, while still expecting Note 0,
+  must fail the SAME rendered-audio comparison and tolerance. Key/target metadata
+  mismatch or a setup failure cannot substitute for frequency rejection. This
+  negative control is test-only and never rewrites production MIDI.
 - Notes 0/1/60/127, normal Off and velocity-zero On, sequential and stacked
   repeats, 1/16 and over-capacity histories; inspect actual ownership and counts.
 - Mixed-note legato, release order, voice replacement, sustain and portamento;
@@ -87,6 +98,9 @@ registered as `vdx7_mono_note_zero_acceptance`, labelled `release-blocker`.
 No WILL_FAIL, skip or expected-bug conversion: the full local CTest invocation
 must report failure while this product P1 remains unresolved. Public ROM-free
 CI still cannot run it. A passing experiment cannot substitute for this gate.
+The native FAIL exposes the pre-existing defect; it is not a regression caused
+by the unlinked experiment. An expected rejection in an oracle-sensitivity test
+is a different result and must never convert that native failure to PASS.
 When a corrected product mode exists, test its explicit activation and native
 fallback independently; never silently flip the expected defect into acceptance.
 

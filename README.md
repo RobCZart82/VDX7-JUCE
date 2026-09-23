@@ -183,6 +183,11 @@ and rejected native allocation, rather than declaring them fixed. See
 in a separate raw-core test machine. It checks real Note 0 playback as well as
 lookup, cleanup and legato; **it is not linked into the plugin**. Its PASS cannot
 close production acceptance. See [experiment and remaining work](VALIDATION_MONO_CANDIDATE.md).
+The experiment includes a pitch-oracle sensitivity control: unchanged Note 0
+passes; deliberate test-only Note 1 input while expecting Note 0 fails the same
+audio-frequency check. `--pitch-oracle-only` runs the pair;
+`--pitch-oracle-note-one-mutant` exposes the mutant's failure directly (exit 1).
+This expected negative control does not invert the real plugin acceptance gate.
 The separate `vdx7_deferred_partition` (`--deferred-partition-only`) regression
 checks real-processor note playback/release across small and oversized successful
 blocks, plus true-delay expiry under contention and reset. Its queue-only portion
