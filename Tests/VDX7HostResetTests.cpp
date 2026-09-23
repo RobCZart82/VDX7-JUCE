@@ -19,6 +19,32 @@ static void require(bool ok, const char* message)
 
 struct VDX7RegressionAccess
 {
+    struct FirmwareOwnership
+    {
+        int midi = 0, held = 0, sustained = 0;
+    };
+    // Read-only diagnostic for the documented v1.8 RAM map. This is not a
+    // production retirement predicate or proof that every ROM shares this map.
+    static FirmwareOwnership firmwareOwnership(const VDX7AudioProcessor& p)
+    {
+        FirmwareOwnership result;
+        const auto& memory = p.engine_.dx7_.memory;
+        for (int i = 0; i < 16; ++i)
+        {
+            result.midi += (memory[0x2168 + i] & 0x80) != 0;
+            result.held += (memory[0x20b1 + 2 * i] & 2) != 0;
+            result.sustained += (memory[0x20b1 + 2 * i] & 1) != 0;
+        }
+        return result;
+    }
+    static unsigned pendingStages(const VDX7AudioProcessor& p)
+    {
+        const auto& d = p.engine_.dx7_;
+        return (d.midiSerialRx.readIdx != d.midiSerialRx.writeIdx ? 1u : 0u)
+            | ((d.TRCSR & (1u << dx7Emu::HD6303R::RDRF)) != 0 ? 2u : 0u)
+            | (d.memory[0xee] != d.memory[0xf0] || d.memory[0xef] != d.memory[0xf1]
+                || d.memory[0xf6] != 0 ? 4u : 0u);
+    }
     static VDX7Engine& engine(VDX7AudioProcessor& p) { return p.engine_; }
     static std::mutex& mutex(VDX7AudioProcessor& p) { return p.engineMutex_; }
     static bool deferred(const VDX7AudioProcessor& p) { return p.deferredMidi_.active(); }
@@ -381,6 +407,11 @@ static SavedSettings testExpandedHistory(const juce::File& rom, int repeats, int
         for (int n = 0; n < rate / block; ++n) processChecked(p, audio, midi);
         require(VDX7RegressionAccess::inputIdle(p), "paired fixture has pending input");
         require(audio.getMagnitude(0, block) < 1e-5f, "paired fixture has audible tail");
+        const auto ownership = VDX7RegressionAccess::firmwareOwnership(p);
+        std::cout << "FIRMWARE pair: MIDI=" << ownership.midi << ", held=" << ownership.held
+                  << ", sustained=" << ownership.sustained << '\n';
+        require(ownership.midi == 0 && ownership.held == 0 && ownership.sustained == 0,
+                "paired fixture retains firmware ownership");
     }
     const auto before = capture(p);
     resetChecked(p);
@@ -436,6 +467,115 @@ static SavedSettings testExpandedHistory(const juce::File& rom, int repeats, int
     require(!e.hasHeldMidiNotes() && finalPeak < 1e-5f, "history fresh note did not release");
     unchanged(before, capture(p));
     return before;
+}
+
+static void testFirmwareOwnership(const juce::File& rom, int note, int repeats, bool sustain)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+    auto& e = VDX7RegressionAccess::engine(p);
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    const auto send = [&e](const juce::MidiMessage& message)
+    { e.handleMidi(message.getRawData(), message.getRawDataSize()); };
+    const auto settle = [&]
+    { for (int i = 0; i < 375; ++i) processChecked(p, audio, midi); };
+    const auto check = [&](int expectedMidi, int expectedHeld, int expectedSustained)
+    {
+        const auto s = VDX7RegressionAccess::firmwareOwnership(p);
+        require(s.midi == expectedMidi && s.held == expectedHeld && s.sustained == expectedSustained,
+                "firmware ownership transition differs from documented map");
+    };
+    check(0, 0, 0);
+    if (sustain) send(juce::MidiMessage::controllerEvent(1, 64, 127));
+    for (int i = 0; i < repeats; ++i)
+        send(juce::MidiMessage::noteOn(1, note, juce::uint8(100)));
+    settle();
+    check(repeats, repeats, 0);
+    require(VDX7RegressionAccess::inputIdle(p), "held fixture input did not settle");
+    for (int i = 0; i < repeats; ++i) send(juce::MidiMessage::noteOff(1, note));
+    // The adapter has already decremented every note; the firmware still owns
+    // all voices until the queued releases actually execute. Never retire here.
+    check(repeats, repeats, 0);
+    require(!VDX7RegressionAccess::inputIdle(p), "queued release was not observable");
+    if (!sustain) require(!e.hasHeldMidiNotes(), "adapter did not accept releases");
+    unsigned stages = VDX7RegressionAccess::pendingStages(p);
+    juce::AudioBuffer<float> single(2, 1);
+    for (int i = 0; i < 12000; ++i)
+    {
+        processChecked(p, single, midi);
+        stages |= VDX7RegressionAccess::pendingStages(p);
+    }
+    require(VDX7RegressionAccess::inputIdle(p), "released fixture input did not settle");
+    require(stages == 7, "release was not observed at every input stage");
+    check(0, 0, sustain ? repeats : 0);
+    if (sustain)
+    {
+        // Empty MIDI ownership and empty queues do NOT mean all voices are off.
+        send(juce::MidiMessage::controllerEvent(1, 64, 0));
+        settle();
+        check(0, 0, 0);
+    }
+    // No reset, mute-gate opening/closing or EGS reconstruction in this test.
+    require(!e.isHostResetInProgress(), "ownership test unexpectedly reset");
+    std::cout << "PASS: firmware ownership transitions note=" << note << ", repeats=" << repeats
+              << ", sustain=" << sustain << ", observed release stages=" << stages << '\n';
+}
+
+static void testResetAtReleaseStage(const juce::File& rom, unsigned stage, bool sustain)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+    auto& e = VDX7RegressionAccess::engine(p);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    juce::AudioBuffer<float> audio(2, 64), single(2, 1);
+    juce::MidiBuffer midi;
+    const auto send = [&e](const juce::MidiMessage& message)
+    { e.handleMidi(message.getRawData(), message.getRawDataSize()); };
+    if (sustain) send(juce::MidiMessage::controllerEvent(1, 64, 127));
+    for (int i = 0; i < 16; ++i) send(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)));
+    for (int i = 0; i < 375; ++i) processChecked(p, audio, midi);
+    require(VDX7RegressionAccess::firmwareOwnership(p).midi == 16, "stage fixture needs 16 voices");
+    for (int i = 0; i < 16; ++i) send(juce::MidiMessage::noteOff(1, 60));
+    const auto atStage = [&]
+    {
+        const unsigned flags = VDX7RegressionAccess::pendingStages(p);
+        // SCI after adapter drain; internal processing after adapter AND SCI
+        // drain. Do not mislabel an early batch with all three stages pending.
+        return (flags & stage) != 0 && (flags & (stage - 1)) == 0;
+    };
+    int steps = 0;
+    while (!atStage() && steps++ < 12000)
+        processChecked(p, single, midi);
+    require(atStage(), "requested release stage not reached");
+    const auto before = capture(p);
+    resetChecked(p);
+    midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+    float peak = 0;
+    for (int i = 0; i < 1500; ++i)
+    {
+        processChecked(p, audio, midi);
+        peak = std::max(peak, audio.getMagnitude(0, 64));
+    }
+    const auto fresh = VDX7RegressionAccess::firmwareOwnership(p);
+    require(peak > 1e-4f && fresh.midi == 1 && fresh.held == 1 && fresh.sustained == 0,
+            "stage reset lost fresh ownership or retained old firmware voices");
+    midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+    float tail = 0;
+    for (int i = 0; i < 1500; ++i)
+    {
+        processChecked(p, audio, midi);
+        if (i >= 1125) tail = std::max(tail, audio.getMagnitude(0, 64));
+    }
+    const auto released = VDX7RegressionAccess::firmwareOwnership(p);
+    require(tail < 1e-5f && released.midi == 0 && released.held == 0 && released.sustained == 0,
+            "stage reset fresh voice did not release");
+    unchanged(before, capture(p));
+    std::cout << "PASS: reset at release stage=" << stage << ", sustain=" << sustain << '\n';
 }
 
 static void testContentionAndDeferred(const juce::File& rom)
@@ -496,8 +636,20 @@ int main(int argc, char** argv)
     {
         const bool reactivationOnly = argc == 3 && juce::String(argv[2]) == "--reactivation-only";
         const bool historyPairOnly = argc == 3 && juce::String(argv[2]) == "--history-pair-only";
-        if ((argc != 2 && !reactivationOnly && !historyPairOnly) || !juce::File(argv[1]).existsAsFile())
+        const bool ownershipOnly = argc == 3 && juce::String(argv[2]) == "--ownership-only";
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
+        if (ownershipOnly)
+        {
+            for (int note : {0, 60, 127})
+                for (int repeats : {1, 16})
+                    for (bool sustain : {false, true})
+                        testFirmwareOwnership(juce::File(argv[1]), note, repeats, sustain);
+            for (unsigned stage : {1u, 2u, 4u})
+                for (bool sustain : {false, true})
+                    testResetAtReleaseStage(juce::File(argv[1]), stage, sustain);
+            return 0;
+        }
         if (historyPairOnly)
         {
             const auto fresh = testExpandedHistory(juce::File(argv[1]), 0, 48000, 64, true);

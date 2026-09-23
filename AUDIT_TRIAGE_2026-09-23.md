@@ -7,6 +7,13 @@ or release until separately approved. Never upload ROMs.
 
 ## Active reset work
 
+- Firmware ownership follow-up: read-only MIDI/voice table observations and
+  queue-stage reset tests added; see VALIDATION_FIRMWARE_OWNERSHIP.md. Adapter
+  count zero can precede firmware release; empty MIDI ownership/input under
+  sustain can coexist with sustained firmware voices. Both paired-history
+  instances have zero entries in the observed tables before reset, yet latency
+  differs. Safe completed-dispatch boundary, ROM applicability, MONO/overload
+  counterexamples and production retirement remain open. No engine change.
 - New paired diagnostic: no-history vs maximum-history instances have matched
   persistent settings, idle input and no adapter ownership; measured reset
   1.333 vs 1512 ms and fresh onset 50.667 vs 1561.333 ms at 48 kHz/64.
