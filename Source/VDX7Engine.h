@@ -32,7 +32,9 @@ public:
     void prepare(double hostSampleRate);
     int latencySamples() const noexcept { return resampler_.latency(); }
     void resetAudioState();
-    void resetMidiLifecycle(); // Non-RT; host has stopped processBlock.
+    // Non-RT; host has stopped processBlock. An unfinished bounded drain
+    // remains in progress and resumes muted on subsequent audio callbacks.
+    void resetMidiLifecycle();
     // Engine-owner-only host reset. No allocation or extra warm-up render.
     // The processor mutes output and defers incoming MIDI while this drains.
     void beginHostReset();
@@ -85,6 +87,7 @@ private:
     uint64_t factoryBankLoadRevision_ = 0;
     friend struct VDX7RegressionAccess;
     void boot();
+    void beginMidiReset(bool releaseEveryPitch);
     void processQueuedMessage(dx7Emu::Message msg);
     void parseMidiBytes(const uint8_t* data, int size);
     bool reserveMidi(int bytes);

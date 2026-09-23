@@ -271,4 +271,10 @@ if(VDX7_ENABLE_ROM_TESTS)
     add_test(NAME vdx7_overlap_retirement
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --overlap-only)
     set_tests_properties(vdx7_overlap_retirement PROPERTIES TIMEOUT 180 LABELS "local-rom")
+    add_test(NAME vdx7_reset_gate_overflow
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --gate-overflow-only)
+    set_tests_properties(vdx7_reset_gate_overflow PROPERTIES TIMEOUT 180 LABELS "local-rom")
+    add_test(NAME vdx7_expanded_lifecycle
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --expanded-lifecycle-only)
+    set_tests_properties(vdx7_expanded_lifecycle PROPERTIES TIMEOUT 180 LABELS "local-rom")
 endif()

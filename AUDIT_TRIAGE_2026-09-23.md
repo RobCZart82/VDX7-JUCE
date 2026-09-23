@@ -1,12 +1,36 @@
 # Release 1.0 audit triage (2026-09-23)
 
-Latest report baseline: `659bc0b` (merged #45). Reports are evidence to check,
+Latest report baseline: main `98d61b8` / Draft #47 `696fe791`; earlier
+report baseline `659bc0b` (merged #45). Reports are evidence to check,
 not automatic implementation instructions. Preserve firmware fidelity and
 existing parameter IDs/state compatibility. Work through reviewed PRs; no tag
 or release until separately approved. Never upload ROMs.
 
 ## Active reset work
 
+- R3 lifecycle drain: reproduced on the preceding #47 tree. Maximum release
+  history followed by prepare left 16 old firmware MIDI/held entries and the
+  immediate fresh note had zero ownership/audio. Lifecycle now shares the
+  compact release/completion path with host reset. Bounded non-RT work must
+  not discard unfinished releases; remaining cleanup resumes muted in callbacks.
+  Six POLY/MONO public-lifecycle/forced-short-drain cases pass locally;
+  rebuilt registered suite 18/18 PASS in 223.83 s (separate known-failing
+  MONO pitch-zero diagnostic is NOT part of those 18). See
+  VALIDATION_RESET_LIFECYCLE_DRAIN.md for exact scope and full-suite status.
+- R1 gate/overflow: source ordering is confirmed, but audible leakage was NOT
+  reproduced in six real-ROM cases (R4=1/99, L4=0/70/99). Same-offset Note On
+  is demonstrably flushed, firmware never owns it, measured leaked peak is zero;
+  valid fresh notes subsequently sound/release, including audible nonzero-L4
+  positive controls. No speculative gate fix. Other schedules/ROMs remain open.
+- Separate newly isolated compatibility edge: v1.8 MONO, 16 repeated MIDI
+  pitch-zero On/Off pairs, WITHOUT reset, leave MIDI count 0 but one held
+  firmware entry and MONO active count 16. Explicit `--mono-note-zero-only`
+  diagnostic fails; it is not included in the passing CTest set and must not
+  be called fixed. The annotated native routine uses key zero as an empty-slot
+  sentinel. Firmware-faithfulness/product-policy decision and broader boundary
+  tests are needed before changing native behavior. Lifecycle MONO fixtures
+  seed pitch-zero history in POLY, switch normally, then exercise 1..127 in MONO;
+  retain the full 128*16 budget and assert empty firmware ownership before holds.
 - Per-pitch overlap follow-up: reproduced the global-idle implementation's
   failure with one continuously held anchor and released neighboring history.
   Known-image POLY now protects both firmware ownership tables per pitch and
@@ -46,12 +70,10 @@ or release until separately approved. Never upload ROMs.
   assertion pass across 44.1/48/96 kHz x64/128/256/512; full local suite 12/12.
   See VALIDATION_RESET_RUNNING_STATUS.md. Worst-case reset is still about 1.5 s;
   responsiveness and real-host acceptance remain open, not release-ready.
-- NEW: reset request/pending flag survives release/prepare. Reproduce both an
-  unobserved request and a request already observed by an audio callback. Full
-  device lifecycle should retire old requests without erasing a newer reset.
-- NEW: fresh Note On can unmute reset output before a later overload flushes
-  that note. Source ordering confirmed; audible consequence still NOT RUN.
-  Use nonzero L4 and a same-sample burst, then a valid post-recovery note.
+- Reset request/pending flag survived release/prepare: addressed earlier on
+  #47 by consuming old requests at lifecycle entry. Four public reactivation
+  regressions cover unobserved/observed requests and release/prepare/prepare-only;
+  concurrent requests arriving after the exchange are not erased at exit.
 - Budget retirement after successful reset may help subsequent resets, but
   cannot alone fix the first expanded-history reset. EGS reconstruction alone
   is not proof that all firmware ownership/serial work is gone.
@@ -60,6 +82,15 @@ or release until separately approved. Never upload ROMs.
 
 ## Other retained work (do not duplicate or silently drop)
 
+- Q1: actual deferred-timeline header reproduces block-partition dependence:
+  with 64 samples of prior lag, 1500x64 successful samples deliver two events;
+  one 96000-sample block drops both. O2 and ASan/UBSan component probes agree.
+  Add a processor-level regression and fix separately; not a proven ordinary
+  REAPER playback fault or a full-plugin sanitizer result.
+- Q2: old PERFORMANCE snapshot can overwrite a newer pending UI value until
+  the next publication. Source/model evidence, not permanent engine data loss.
+  Add a deterministic production publication interleaving test. Existing tests
+  are not all self-referential getters: some check explicit final engine values.
 - Bypass: missing explicit MIDI/lifecycle handling; reproduce release/sustain
   and controller state before implementing a shared muted processing path.
 - Restore: both staging-before-install and old-epoch-before-lock windows need
@@ -73,6 +104,11 @@ or release until separately approved. Never upload ROMs.
   measure actual host behavior, do not invent a fixed tail duration.
 - POLY/MONO: include unsuccessful lock-held transactions in timing statistics.
 - Public CI: compile all integration executables without distributing firmware.
+  Four excluded integration targets still need CI aggregation: processor,
+  stability, MIDI-range and timing. This round builds them explicitly locally.
+- Label known-image retirement/ownership tests separately from generic ROM
+  behavior. Unknown-ROM conservative fallback is intentional, not an automatic
+  test failure; missing required known-image runtime must not become silent PASS.
 - Allocation probes cover ordinary C++ allocation on the observed thread, not
   every allocator or a complete hard-realtime proof.
 - Exact-SHA RC workflow, full local-ROM and actual macOS/Windows host acceptance

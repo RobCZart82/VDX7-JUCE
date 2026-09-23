@@ -136,6 +136,11 @@ void VDX7Engine::resetAudioState()
 
 void VDX7Engine::beginHostReset()
 {
+    beginMidiReset(false);
+}
+
+void VDX7Engine::beginMidiReset(bool releaseEveryPitch)
+{
     hostResetInProgress_ = loaded_;
     hostResetMuted_ = true;
     resetAudioState();
@@ -155,8 +160,11 @@ void VDX7Engine::beginHostReset()
     // Include earlier, already-released notes whose firmware Note Off could
     // have been discarded from the adapter FIFO. Running status encodes the
     // same 128*16 releases in at most 1 + 128*16*2 serial bytes.
-    // Pitches never received by this instance do not require release traffic.
+    // Public reset needs only received pitches. Stopped-device lifecycle also
+    // sends at least one release per pitch, preserving its prior cleanup scope.
     activeMidiNotes_ = midiReleaseBudget_;
+    if (releaseEveryPitch)
+        for (auto& count : activeMidiNotes_) count = std::max<uint8_t>(count, 1);
     allNotesOff(true);
     toSynth_->porta(false);
 }
@@ -204,33 +212,14 @@ void VDX7Engine::advanceHostReset(int sampleBudget)
 
 void VDX7Engine::resetMidiLifecycle()
 {
-    hostResetInProgress_ = false;
-    if (!loaded_) { resetAudioState(); return; }
-    dx7_.midiSerialRx.flush();
-    dx7_.midiSerialTx.flush();
-    // Let any already-started sub-CPU handshake finish during the drain below.
-    dx7Emu::Message discarded;
-    while (toSynth_->pop(discarded)) {}
-    midiRecovering_ = false;
-    for (std::size_t note = 0; note < activeMidiNotes_.size(); ++note)
-        activeMidiNotes_[note] = std::max<uint8_t>(midiReleaseBudget_[note], 1);
-    allNotesOff();
-    toSynth_->porta(false);
-    // Let the unmodified firmware consume releases (up to 128*16*3 serial bytes)
-    // before resetting the sound generator. This is lifecycle work, NOT audio.
-    std::array<float, 256> scratchLeft {}, scratchRight {};
-    for (int remaining = static_cast<int>(hostSampleRate_ * 0.25); remaining > 0; remaining -= 256)
-        render(scratchLeft.data(), scratchRight.data(), std::min(256, remaining));
-    dx7_.midiSerialRx.flush();
-    dx7_.midiSerialTx.flush();
-    dx7_.haveMsg = false;
-    dx7_.byte1Sent = false;
-    // EGS owns envelopes, phases and analog filter history. Reconstruct it in
-    // its existing storage to stop old tails; firmware/RAM/factory data stay put.
-    std::destroy_at(&dx7_.egs);
-    std::construct_at(&dx7_.egs, dx7_.memory + 0x3000);
-    resetAudioState();
-    selectProgram(currentProgram_);
+    beginMidiReset(true);
+    // Non-RT lifecycle may advance up to two seconds of emulated audio, with
+    // a fixed sample ceiling. Completion uses the same input-stage predicate
+    // as public reset, NOT elapsed time. Never flush unconsumed releases or
+    // abort a sub-CPU handshake at this bound: processBlock will finish the
+    // pending reset muted and defer fresh MIDI via its existing bounded path.
+    // This does not increase the two-second deferred-MIDI age limit.
+    advanceHostReset(static_cast<int>(std::min(hostSampleRate_ * 2.0, 384000.0)));
 }
 
 void VDX7Engine::render(float* left, float* right, int numSamples)

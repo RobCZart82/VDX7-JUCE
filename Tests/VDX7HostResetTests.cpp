@@ -1,5 +1,5 @@
-// N1 host-reset regression proposal. Execute with the user's local ROM only.
-// It intentionally uses the public reset() entry point, not releaseResources().
+// Public host-reset and stopped-device lifecycle regressions.
+// Execute with the user's explicitly supplied local ROM only.
 #include "PluginProcessor.h"
 #include "VDX7AllocationProbe.h"
 #include <algorithm>
@@ -53,10 +53,20 @@ struct VDX7RegressionAccess
                 || d.memory[0xf6] != 0 ? 4u : 0u);
     }
     static VDX7Engine& engine(VDX7AudioProcessor& p) { return p.engine_; }
+    static int monoActiveCount(const VDX7AudioProcessor& p)
+    { return p.engine_.dx7_.memory[0x8e]; }
     static void keepConservativeHistory(VDX7AudioProcessor& p)
     { p.engine_.releaseRetirementProfile_ = false; }
     static bool knownRetirementProfile(const VDX7AudioProcessor& p)
     { return p.engine_.releaseRetirementProfile_; }
+    static void startShortLifecycleDrain(VDX7AudioProcessor& p)
+    {
+        // Force the same lifecycle drain to exhaust a one-block budget. This
+        // is a shared-engine fallback test, not a public prepare/release call.
+        p.engine_.beginMidiReset(true);
+        p.engine_.advanceHostReset(64);
+        p.engine_.prepare(48000);
+    }
     static int releaseBudget(const VDX7AudioProcessor& p, int note)
     { return p.engine_.midiReleaseBudget_[note]; }
     static void checkFirmwareProfile(const VDX7AudioProcessor& p)
@@ -259,6 +269,210 @@ static void testHeldAndTail(const juce::File& rom, int rate, int block, bool non
     // ownership release must not be confused with immediate audio silence.
     std::cout << "PASS: reset held note, sustain, tail, repeated/zero-block requests, state and fresh note at "
               << rate << '/' << block << '\n';
+}
+
+static void testResetGateOverflow(const juce::File& rom, int releaseRate, int releaseFloor)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+    auto& e = VDX7RegressionAccess::engine(p);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, releaseRate);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::level4, releaseFloor);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    juce::AudioBuffer<float> audio(2, 64), zero(2, 0);
+    juce::MidiBuffer midi;
+    midi.addEvent(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)), 0);
+    float oldPeak = 0;
+    for (int i = 0; i < 375; ++i)
+    {
+        processChecked(p, audio, midi);
+        oldPeak = std::max(oldPeak, audio.getMagnitude(0, 64));
+    }
+    require(oldPeak > 1e-4f, "reset gate fixture must sound before reset");
+    const auto before = capture(p);
+    resetChecked(p);
+    for (int i = 0; i < 750; ++i)
+    {
+        processChecked(p, audio, midi);
+        require(audio.getMagnitude(0, 64) < 1e-5f, "reset gate fixture did not become silent");
+    }
+    const auto cleared = VDX7RegressionAccess::firmwareOwnership(p);
+    require(!e.isHostResetInProgress() && cleared.midi == 0 && cleared.held == 0
+            && cleared.sustained == 0, "old ownership survived reset gate fixture");
+
+    const auto overloads = e.midiOverloadCount();
+    midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+    for (int i = 0; i < 3000; ++i)
+        midi.addEvent(juce::MidiMessage::pitchWheel(1, 8192), 0);
+    // Observe the post-dispatch queue before any firmware instruction runs.
+    // The first accepted Note On was flushed by this same-offset burst.
+    processChecked(p, zero, midi);
+    require(e.midiOverloadCount() == overloads + 1 && e.isMidiRecovering(),
+            "reset gate burst did not trigger recovery");
+    const auto queued = VDX7RegressionAccess::serialBytes(p);
+    require(queued.size() >= 384 && queued.size() % 3 == 0,
+            "reset gate recovery queue shape");
+    for (std::size_t i = 0; i < queued.size(); i += 3)
+        require((queued[i] & 0xf0) == 0x80 && queued[i + 2] == 0,
+                "flushed fresh Note On remains in the recovery queue");
+    float leakedPeak = 0;
+    bool sawFreshOwnership = false;
+    for (int i = 0; i < 1500; ++i)
+    {
+        processChecked(p, audio, midi);
+        leakedPeak = std::max(leakedPeak, audio.getMagnitude(0, 64));
+        sawFreshOwnership |= VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 72) != 0;
+    }
+    const auto recovered = VDX7RegressionAccess::firmwareOwnership(p);
+    require(!sawFreshOwnership && recovered.midi == 0 && recovered.held == 0
+            && recovered.sustained == 0, "discarded fresh note reached firmware ownership");
+    std::cout << "RESET GATE OVERFLOW: R4=" << releaseRate << ", L4=" << releaseFloor
+              << ", dropped note ownership=" << sawFreshOwnership
+              << ", leaked peak=" << leakedPeak << '\n';
+    require(leakedPeak < 1e-5f, "overflow-discarded fresh note opened reset gate and leaked L4 audio");
+    unchanged(before, capture(p));
+    midi.addEvent(juce::MidiMessage::noteOn(1, 74, juce::uint8(100)), 0);
+    float freshPeak = 0;
+    for (int i = 0; i < 375; ++i)
+    {
+        processChecked(p, audio, midi);
+        freshPeak = std::max(freshPeak, audio.getMagnitude(0, 64));
+    }
+    require(freshPeak > 1e-4f && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 74) == 1,
+            "valid fresh note failed to open reset gate after recovery");
+    midi.addEvent(juce::MidiMessage::noteOff(1, 74), 0);
+    for (int i = 0; i < 375; ++i) processChecked(p, audio, midi);
+    const auto released = VDX7RegressionAccess::firmwareOwnership(p);
+    require(released.midi == 0 && released.held == 0 && released.sustained == 0
+            && !e.hasHeldMidiNotes(), "valid fresh note failed to release after gate recovery");
+    if (releaseRate == 99 && releaseFloor != 0)
+        require(audio.getMagnitude(0, 64) > 1e-4f,
+                "nonzero-L4 positive control must remain audible after a genuine note release");
+    // Nonzero L4 is intentionally not a silence-after-Note-Off fixture.
+    unchanged(before, capture(p));
+}
+
+static void testExpandedLifecycle(const juce::File& rom, int mode, int path)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+    auto& e = VDX7RegressionAccess::engine(p);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    require(e.setPlaySetting(0, 0), "expanded lifecycle initial POLY fixture");
+    // Exercise the conservative path on a real known ROM; this is not a claim
+    // to have tested other ROM images. MONO also retains history naturally.
+    VDX7RegressionAccess::keepConservativeHistory(p);
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    const auto pump = [&](int count)
+    { for (int i = 0; i < count; ++i) processChecked(p, audio, midi); };
+    const auto overloads = e.midiOverloadCount();
+    for (int note = 0; note < 128; ++note)
+    {
+        // v1.8 MONO uses key zero as an empty-slot sentinel and does not
+        // release it normally. Seed pitch-zero history in POLY, then exercise
+        // all 127 other pitches in MONO. Keep the full 128*16 adapter budget;
+        // do not confuse that separate native-firmware edge with lifecycle.
+        if (note == 1) require(e.setPlaySetting(0, mode), "expanded lifecycle mode fixture");
+        for (bool on : {true, false})
+            for (int i = 0; i < 16; ++i)
+            {
+                midi.addEvent(on ? juce::MidiMessage::noteOn(1, note, juce::uint8(100))
+                                 : juce::MidiMessage::noteOff(1, note), 0);
+                pump(4);
+            }
+    }
+    pump(375);
+    require(VDX7RegressionAccess::fullReleaseHistory(p, 16), "expanded lifecycle history fixture");
+    const auto idle = VDX7RegressionAccess::firmwareOwnership(p);
+    require(idle.midi == 0 && idle.held == 0 && idle.sustained == 0
+            && (mode == 0 || VDX7RegressionAccess::monoActiveCount(p) == 0),
+            "expanded lifecycle history must finish with no firmware ownership");
+    // Place held ownership near the END of the release batch (6144 bytes in
+    // the old explicit-status path; 4097 with running status).
+    for (int i = 0; i < 16; ++i)
+        midi.addEvent(juce::MidiMessage::noteOn(1, 127, juce::uint8(100)), 0);
+    pump(375);
+    std::cout << "EXPANDED LIFECYCLE before: mode=" << mode
+              << ", peak=" << audio.getMagnitude(0, 64) << '\n';
+    require(audio.getMagnitude(0, 64) > 1e-4f, "expanded lifecycle held fixture must sound");
+    require(VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 127) == 16
+            && e.midiOverloadCount() == overloads, "expanded lifecycle held ownership fixture");
+    const auto before = capture(p);
+    const auto started = std::chrono::steady_clock::now();
+    if (path == 2)
+        VDX7RegressionAccess::startShortLifecycleDrain(p);
+    else
+    {
+        if (path == 1) p.releaseResources();
+        p.prepareToPlay(48000, 64);
+    }
+    const auto elapsed = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - started).count();
+    const auto afterLifecycle = VDX7RegressionAccess::firmwareOwnership(p);
+    std::cout << "EXPANDED LIFECYCLE: mode=" << mode << ", path=" << path
+              << ", old MIDI ownership immediately=" << afterLifecycle.midi
+              << ", lifecycle wall ms=" << elapsed << '\n';
+    if (path == 2)
+        require(e.isHostResetInProgress() && afterLifecycle.midi == 16,
+                "short lifecycle budget must leave a pending drain, not fake completion");
+    midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+    float peak = 0;
+    int firstAudibleBlock = -1;
+    for (int i = 0; i < 1500; ++i)
+    {
+        processChecked(p, audio, midi);
+        peak = std::max(peak, audio.getMagnitude(0, 64));
+        if (firstAudibleBlock < 0 && audio.getMagnitude(0, 64) > 1e-4f) firstAudibleBlock = i;
+    }
+    const auto fresh = VDX7RegressionAccess::firmwareOwnership(p);
+    std::cout << "EXPANDED LIFECYCLE fresh: peak=" << peak
+              << ", note72=" << VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 72)
+              << ", old127=" << VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 127)
+              << ", MIDI/held/sustained=" << fresh.midi << '/' << fresh.held
+              << '/' << fresh.sustained << ", onset ms=" << (firstAudibleBlock + 1) * 64.0 / 48.0 << '\n';
+    require(peak > 1e-4f && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 72) == 1
+            && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 127) == 0
+            && fresh.midi == 1 && fresh.held == 1 && fresh.sustained == 0
+            && !e.isHostResetInProgress() && e.midiOverloadCount() == overloads,
+            "expanded lifecycle retained old ownership or lost immediate fresh note");
+    midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+    // A short non-RT budget leaves ~1.5 seconds on the existing deferred
+    // timeline. Its Note Off has the same delay as its Note On; allow the
+    // original two-second window, not a one-second test-only deadline.
+    pump(1500);
+    const auto released = VDX7RegressionAccess::firmwareOwnership(p);
+    require(released.midi == 0 && released.held == 0 && released.sustained == 0
+            && audio.getMagnitude(0, 64) < 1e-5f, "expanded lifecycle fresh note failed to release");
+    unchanged(before, capture(p));
+}
+
+static void diagnoseMonoNoteZero(const juce::File& rom)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+    require(VDX7RegressionAccess::engine(p).setPlaySetting(0, 1), "MONO diagnostic fixture");
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    for (bool on : {true, false})
+    {
+        for (int i = 0; i < 16; ++i)
+            midi.addEvent(on ? juce::MidiMessage::noteOn(1, 0, juce::uint8(100))
+                             : juce::MidiMessage::noteOff(1, 0), 0);
+        for (int i = 0; i < 375; ++i) processChecked(p, audio, midi);
+    }
+    const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
+    std::cout << "MONO pitch-zero without any reset: MIDI=" << fw.midi
+              << ", held=" << fw.held << ", mono count="
+              << VDX7RegressionAccess::monoActiveCount(p) << '\n';
+    require(fw.midi == 0 && fw.held == 0 && VDX7RegressionAccess::monoActiveCount(p) == 0,
+            "MONO pitch-zero native release edge (separate from lifecycle drain)");
 }
 
 static void testFreshNoteRelease(const juce::File& rom, int rate, int block)
@@ -847,8 +1061,31 @@ int main(int argc, char** argv)
         const bool ownershipOnly = argc == 3 && juce::String(argv[2]) == "--ownership-only";
         const bool retirementOnly = argc == 3 && juce::String(argv[2]) == "--retirement-only";
         const bool overlapOnly = argc == 3 && juce::String(argv[2]) == "--overlap-only";
-        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly) || !juce::File(argv[1]).existsAsFile())
+        const bool gateOverflowOnly = argc == 3 && juce::String(argv[2]) == "--gate-overflow-only";
+        const bool expandedLifecycleOnly = argc == 3 && juce::String(argv[2]) == "--expanded-lifecycle-only";
+        const bool monoNoteZeroOnly = argc == 3 && juce::String(argv[2]) == "--mono-note-zero-only";
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !monoNoteZeroOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
+        if (monoNoteZeroOnly)
+        {
+            // Explicit diagnostic, not a passing release-acceptance test.
+            diagnoseMonoNoteZero(juce::File(argv[1]));
+            return 0;
+        }
+        if (expandedLifecycleOnly)
+        {
+            for (int mode : {0, 1})
+                for (int path : {0, 1, 2})
+                    testExpandedLifecycle(juce::File(argv[1]), mode, path);
+            return 0;
+        }
+        if (gateOverflowOnly)
+        {
+            for (int releaseRate : {1, 99})
+                for (int releaseFloor : {0, 70, 99})
+                    testResetGateOverflow(juce::File(argv[1]), releaseRate, releaseFloor);
+            return 0;
+        }
         if (overlapOnly)
         {
             for (int rate : {44100, 48000, 96000})
