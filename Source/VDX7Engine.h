@@ -42,7 +42,7 @@ public:
 
     void handleMidi(const uint8_t* data, int size);
     bool handleSysex(const uint8_t* data, std::size_t size);
-    void allNotesOff();
+    void allNotesOff(bool useRunningStatus = false);
     bool hasHeldMidiNotes() const noexcept;
     uint64_t midiOverloadCount() const noexcept { return midiOverloadCount_; }
     bool isMidiRecovering() const noexcept { return midiRecovering_; }

@@ -293,9 +293,40 @@ static void testReactivation(const juce::File& rom, bool observeRequest, bool re
               << " reset; fresh input and later reset work\n";
 }
 
-static void testExpandedHistory(const juce::File& rom, int repeats)
+static void testRunningStatusRelease(const juce::File& rom, bool compact, int repeats)
 {
-    constexpr int rate = 48000, block = 64;
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+    auto& e = VDX7RegressionAccess::engine(p);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    midi.addEvent(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)), 0);
+    for (int n = 0; n < repeats; ++n)
+        midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+    float peak = 0;
+    for (int n = 0; n < 375; ++n)
+    { processChecked(p, audio, midi); peak = std::max(peak, audio.getMagnitude(0, 64)); }
+    require(peak > 1e-4f, "running-status fixture must sound");
+    // No host reset, output mute gate or EGS reconstruction: only the real
+    // firmware's interpretation of the serial Note Off batch can stop this.
+    e.allNotesOff(compact);
+    float tail = 0;
+    for (int n = 0; n < 750; ++n)
+    {
+        processChecked(p, audio, midi);
+        if (n >= 375) tail = std::max(tail, audio.getMagnitude(0, 64));
+    }
+    require(tail < 1e-5f && !e.hasHeldMidiNotes(), "firmware did not release serial batch");
+    std::cout << "PASS: firmware serial release, compact=" << compact
+              << ", repeated notes=" << repeats << '\n';
+}
+
+static void testExpandedHistory(const juce::File& rom, int repeats, int rate = 48000, int block = 64)
+{
     auto owner = std::make_unique<VDX7AudioProcessor>(false);
     auto& p = *owner;
     initialise(p, rom, rate, block);
@@ -331,7 +362,8 @@ static void testExpandedHistory(const juce::File& rom, int repeats)
         if (drainBlock < 0 && !e.isHostResetInProgress()) drainBlock = n;
         if (audibleBlock < 0 && audio.getMagnitude(0, block) > 1e-4f) audibleBlock = n;
     }
-    std::cout << "HISTORY: 128 pitches x" << repeats << "; reset completion block=" << drainBlock
+    std::cout << "HISTORY: " << rate << '/' << block << ", 128 pitches x" << repeats
+              << "; reset completion block=" << drainBlock
               << " (block-end ms=" << (1000.0 * (drainBlock + 1) * block / rate)
               << "); first audible block=" << audibleBlock << std::endl;
     require(drainBlock >= 0, "expanded-history reset did not complete in observation window");
@@ -435,8 +467,13 @@ int main(int argc, char** argv)
         testContentionAndDeferred(juce::File(argv[1]));
         testReactivation(juce::File(argv[1]), false);
         testReactivation(juce::File(argv[1]), true);
+        for (int repeats : {1, 16})
+            for (bool compact : {false, true})
+                testRunningStatusRelease(juce::File(argv[1]), compact, repeats);
         testExpandedHistory(juce::File(argv[1]), 1);
-        testExpandedHistory(juce::File(argv[1]), 16);
+        for (int rate : {44100, 48000, 96000})
+            for (int block : {64, 128, 256, 512})
+                testExpandedHistory(juce::File(argv[1]), 16, rate, block);
     }
     catch (const std::exception& e)
     {

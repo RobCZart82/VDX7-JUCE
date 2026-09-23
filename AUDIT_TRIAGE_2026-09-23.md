@@ -12,6 +12,10 @@ or release until separately approved. Never upload ROMs.
   loses an immediate fresh note. Originally a Draft failing regression, merged
   as #46 into `98d61b8`; it remains a failing acceptance test, NOT a completed fix.
   Raising the global limit to 3 seconds was diagnostic only and was reverted.
+  Follow-up on #47: running-status release encoding makes the unchanged loss
+  assertion pass across 44.1/48/96 kHz x64/128/256/512; full local suite 12/12.
+  See VALIDATION_RESET_RUNNING_STATUS.md. Worst-case reset is still about 1.5 s;
+  responsiveness and real-host acceptance remain open, not release-ready.
 - NEW: reset request/pending flag survives release/prepare. Reproduce both an
   unobserved request and a request already observed by an audio callback. Full
   device lifecycle should retire old requests without erasing a newer reset.

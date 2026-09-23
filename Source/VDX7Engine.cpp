@@ -150,10 +150,11 @@ void VDX7Engine::beginHostReset()
     sustainDown_ = false;
 
     // Include earlier, already-released notes whose firmware Note Off could
-    // have been discarded from the adapter FIFO. At most 128*16*3 bytes.
+    // have been discarded from the adapter FIFO. Running status encodes the
+    // same 128*16 releases in at most 1 + 128*16*2 serial bytes.
     // Pitches never received by this instance do not require release traffic.
     activeMidiNotes_ = midiReleaseBudget_;
-    allNotesOff();
+    allNotesOff(true);
     toSynth_->porta(false);
 }
 
@@ -547,18 +548,26 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
             : (status == 0xc0 && i == 1 ? static_cast<uint8_t>(currentProgram_) : data[i]));
 }
 
-void VDX7Engine::allNotesOff()
+void VDX7Engine::allNotesOff(bool useRunningStatus)
 {
     sustainDown_ = false;
     if (!loaded_) return;
     int releaseBytes = 3; // Include a possible following CC123.
-    for (auto held : activeMidiNotes_) releaseBytes += held * 3;
+    int releases = 0;
+    for (auto held : activeMidiNotes_) releases += held;
+    releaseBytes += useRunningStatus ? (releases > 0 ? 1 + releases * 2 : 0) : releases * 3;
     if (!reserveMidi(releaseBytes)) return;
     toSynth_->analog(dx7Emu::Message::CtrlID::sustain, 0);
+    // Reset owns one contiguous serial batch: all releases have the same
+    // channel/status. MIDI running status removes only repeated status bytes,
+    // never Note Offs. Ordinary MIDI and overflow recovery keep their encoding.
+    bool first = true;
     for (int i = 0; i < 128; ++i)
         for (int repeat = 0; repeat < activeMidiNotes_[i]; ++repeat)
         {
-            dx7_.midiSerialRx.write(static_cast<uint8_t>(0x80 | (dx7_.getMidiRxChannel() & 0x0f)));
+            if (!useRunningStatus || first)
+                dx7_.midiSerialRx.write(static_cast<uint8_t>(0x80 | (dx7_.getMidiRxChannel() & 0x0f)));
+            first = false;
             dx7_.midiSerialRx.write(static_cast<uint8_t>(i));
             dx7_.midiSerialRx.write(0);
         }
