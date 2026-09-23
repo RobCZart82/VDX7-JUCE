@@ -11,6 +11,7 @@
 #include <memory>
 #include <stdexcept>
 #include <vector>
+#include "VDX7MonoTrace.h"
 
 static void require(bool ok, const char* message)
 {
@@ -55,6 +56,10 @@ struct VDX7RegressionAccess
     static VDX7Engine& engine(VDX7AudioProcessor& p) { return p.engine_; }
     static int monoActiveCount(const VDX7AudioProcessor& p)
     { return p.engine_.dx7_.memory[0x8e]; }
+    static int monoTargetPitch(const VDX7AudioProcessor& p)
+    { return VDX7MonoTrace::word(p.engine_.dx7_, 0x20d0); }
+    static int monoFirstEntry(const VDX7AudioProcessor& p)
+    { return VDX7MonoTrace::word(p.engine_.dx7_, 0x20b0); }
     static void keepConservativeHistory(VDX7AudioProcessor& p)
     { p.engine_.releaseRetirementProfile_ = false; }
     static bool knownRetirementProfile(const VDX7AudioProcessor& p)
@@ -487,6 +492,10 @@ static void diagnoseMonoNoteZero(const juce::File& rom)
 class BareFirmware
 {
 public:
+    VDX7MonoTrace trace;
+    void verifyTraceImage() const { VDX7MonoTrace::verifyImage(machine); }
+    uint16_t targetPitch() const { return VDX7MonoTrace::word(machine, 0x20d0); }
+    uint16_t firstEntry() const { return VDX7MonoTrace::word(machine, 0x20b0); }
     explicit BareFirmware(const juce::File& rom) : machine(toSynth, toGui)
     {
         require(rom.loadFileAsData(image), "raw-core ROM read");
@@ -546,7 +555,9 @@ private:
     {
         for (int samples = 0; samples < 24000;)
         {
+            const auto before = trace.enabled ? VDX7MonoTrace::state(machine) : VDX7MonoTrace::State{};
             machine.run();
+            trace.observe(before, machine);
             std::array<float, 16> discarded {};
             int emitted = 0;
             const int cycles = machine.inst != nullptr && machine.inst->cycles > 0
@@ -569,6 +580,183 @@ private:
     std::array<uint8_t, 4096> blankBank {};
     dx7Emu::DX7 machine;
 };
+
+static void testMonoInstructionTrace(const juce::File& rom)
+{
+    for (int note : {0, 1})
+    {
+        auto raw = std::make_unique<BareFirmware>(rom);
+        raw->verifyTraceImage();
+        raw->setMode(1);
+        raw->trace.start();
+        raw->notes(note, 2, true, false);
+        const auto& on = raw->trace;
+        require(on.visits(0xd591) == (note == 0 ? 2 : 3), "MONO free-slot search trace");
+        const auto& search = on.at(0xd591, 1);
+        require(search.before.entry == ((note << 8) | 2)
+                && bool(search.after.ccr & 4) == (note == 0)
+                && on.at(0xd593, 1).after.pc == (note == 0 ? 0xd59b : 0xd595),
+                "MONO active entry classified by zero key, not active flag");
+        const auto& store = on.at(0xd59f, 1);
+        require(store.before.x == (note == 0 ? 0x20b0 : 0x20b2)
+                && store.before.entry == (note == 0 ? 2 : 0)
+                && store.after.entry == ((note << 8) | 2), "MONO second allocation slot");
+        const auto& inc = on.at(0xd5a1, 1);
+        require(inc.before.count == 1 && inc.after.count == 2, "MONO allocation count transition");
+        on.print(note == 0 ? "two note-0 On" : "two note-1 On control");
+        raw->trace.start();
+        raw->notes(note, 2, false, false);
+        const auto& off = raw->trace;
+        require(off.visits(0xd6b1) == 2 && off.visits(0xd645) == 2, "MONO found-key release trace");
+        for (int i = 0; i < 2; ++i)
+        {
+            require(off.at(0xd6b1, i).after.a == note, "MONO found-key return value");
+            const auto& test = off.at(0xd644, i);
+            require(test.before.a == note && bool(test.after.ccr & 4) == (note == 0),
+                    "MONO TSTA zero flag");
+            const auto& branch = off.at(0xd645, i);
+            require(branch.after.pc == (note == 0 ? 0xd666 : 0xd647), "MONO release branch destination");
+        }
+        require(off.visits(0xd64a) == (note == 0 ? 0 : 2)
+                && off.visits(0xd651) == (note == 0 ? 0 : 2)
+                && off.keyOffWrites() == (note == 0 ? 0 : 1), "MONO skipped clear/decrement/EGS Off");
+        require(raw->counts() == (note == 0 ? std::array<int, 4>{0, 1, 0, 2}
+                                            : std::array<int, 4>{}), "MONO trace final state");
+        off.print(note == 0 ? "two note-0 Off" : "two note-1 Off control");
+    }
+}
+
+struct MonoFreshReference
+{
+    int rawPitch, processorPitch;
+    double hz;
+};
+
+static MonoFreshReference characterizeMonoContinuation(const juce::File& rom, int seed,
+    int repeats, bool sequential, bool zeroVelocityOff, const MonoFreshReference* reference)
+{
+    auto raw = std::make_unique<BareFirmware>(rom);
+    raw->verifyTraceImage();
+    raw->setMode(1);
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+    auto& e = VDX7RegressionAccess::engine(p);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    require(e.setPlaySetting(0, 1), "MONO continuation fixture");
+    const auto before = capture(p);
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    struct Sound { float peak = 0; double hz = 0; };
+    const auto send = [&](int note, int n, bool on)
+    {
+        raw->notes(note, n, on, zeroVelocityOff);
+        for (int i = 0; i < n; ++i)
+            midi.addEvent(on || zeroVelocityOff
+                ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
+                : juce::MidiMessage::noteOff(1, note), 0);
+        Sound sound;
+        int crossings = 0, frames = 0;
+        float previous = 0;
+        bool havePrevious = false;
+        for (int block = 0; block < 375; ++block)
+        {
+            processChecked(p, audio, midi);
+            // Observe only the settled final quarter-second of the sine fixture.
+            if (block < 188) continue;
+            sound.peak = std::max(sound.peak, audio.getMagnitude(0, 64));
+            for (int j = 0; j < 64; ++j)
+            {
+                const float sample = audio.getSample(0, j);
+                crossings += havePrevious && previous <= 0 && sample > 0;
+                previous = sample;
+                havePrevious = true;
+                ++frames;
+            }
+        }
+        sound.hz = crossings * 48000.0 / frames;
+        return sound;
+    };
+    const auto processorCounts = [&]
+    {
+        const auto f = VDX7RegressionAccess::firmwareOwnership(p);
+        return std::array<int, 4>{f.midi, f.held, f.sustained,
+                                 VDX7RegressionAccess::monoActiveCount(p)};
+    };
+    require(raw->counts() == std::array<int, 4>{}
+            && processorCounts() == std::array<int, 4>{}, "empty continuation fixture");
+    if (sequential)
+    {
+        for (int i = 0; i < repeats; ++i) { send(seed, 1, true); send(seed, 1, false); }
+    }
+    else if (repeats != 0)
+    {
+        send(seed, repeats, true);
+        send(seed, repeats, false);
+    }
+    const bool edge = seed == 0 && repeats != 0;
+    const bool saturated = edge && repeats == 16;
+    const auto expectedHistory = edge ? std::array<int, 4>{0, 1, 0, repeats}
+                                      : std::array<int, 4>{};
+    require(raw->counts() == expectedHistory && processorCounts() == expectedHistory,
+            "continuation history state");
+    const auto rawBeforePitch = raw->targetPitch();
+    const auto processorBeforePitch = VDX7RegressionAccess::monoTargetPitch(p);
+
+    // No reset, mode/program change or RAM edit between the bad history and
+    // the next real note. A nonzero peak alone could just be the old stuck tone.
+    raw->trace.start();
+    const auto sound = send(72, 1, true);
+    const MonoFreshReference result {raw->targetPitch(), VDX7RegressionAccess::monoTargetPitch(p), sound.hz};
+    const auto& capacity = raw->trace.at(0xd58d);
+    require(capacity.before.note == 72 && capacity.before.count == (edge ? repeats : 0)
+            && capacity.after.pc == (saturated ? 0xd5f1 : 0xd58f), "MONO capacity branch for fresh 72");
+    require(raw->trace.visits(0xd59f) == (saturated ? 0 : 1), "MONO fresh allocation trace");
+    require(VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 72) == 1,
+            "fresh note must reach MIDI ownership even when native MONO rejects allocation");
+    const auto expectedOn = std::array<int, 4>{1, 1, 0, saturated ? 16 : edge ? repeats + 1 : 1};
+    require(raw->counts() == expectedOn && processorCounts() == expectedOn, "continuation fresh-on state");
+    require(raw->firstEntry() == (saturated ? 2 : (72 << 8) | 2)
+            && VDX7RegressionAccess::monoFirstEntry(p) == (saturated ? 2 : (72 << 8) | 2),
+            "actual held voice key differs from MIDI reception record");
+    if (reference != nullptr)
+    {
+        if (saturated)
+            require(result.rawPitch == rawBeforePitch && result.processorPitch == processorBeforePitch
+                    && result.rawPitch != reference->rawPitch
+                    && result.processorPitch != reference->processorPitch
+                    && std::abs(sound.hz - reference->hz) > 100,
+                    "saturated MONO should retain old pitch, not sound fresh 72");
+        else
+            require(result.rawPitch == reference->rawPitch
+                    && result.processorPitch == reference->processorPitch
+                    && std::abs(sound.hz - reference->hz) < 8 && sound.peak > 1e-4f,
+                    "accepted fresh 72 must match target pitch and audible reference");
+    }
+    else
+        require(sound.peak > 1e-4f && sound.hz > 500 && sound.hz < 600, "audible clean note-72 sine reference");
+
+    if (saturated && !sequential && !zeroVelocityOff) raw->trace.print("fresh 72 blocked by count 16");
+    raw->trace.start();
+    const auto releasedSound = send(72, 1, false);
+    const auto expectedOff = !edge ? std::array<int, 4>{}
+        : saturated ? std::array<int, 4>{0, 1, 0, 16} : std::array<int, 4>{0, 0, 0, 1};
+    require(raw->counts() == expectedOff && processorCounts() == expectedOff,
+            "continuation fresh-off state");
+    require(raw->trace.keyOffWrites() == (edge ? 0 : 1), "continuation EGS Off observation");
+    require(edge ? releasedSound.peak > 1e-4f : releasedSound.peak < 1e-5f,
+            "continuation known stuck output versus released control");
+    raw->trace.stop();
+    unchanged(before, capture(p));
+    std::cout << "CONTINUATION CHARACTERIZATION (not a fix): seed=" << seed << " repeats=" << repeats
+              << " sequential=" << sequential << " velocity-zero-off=" << zeroVelocityOff
+              << " pitch72=" << result.processorPitch << " measuredHz=" << sound.hz
+              << " releasePeak=" << releasedSound.peak << " finalMidi/held/mono="
+              << expectedOff[0] << '/' << expectedOff[1] << '/' << expectedOff[3] << '\n';
+    return result;
+}
 
 static void characterizeMonoBoundary(const juce::File& rom, int mode, int note,
                                      int repeats, bool zeroVelocityOff)
@@ -1233,8 +1421,9 @@ int main(int argc, char** argv)
         const bool expandedLifecycleOnly = argc == 3 && juce::String(argv[2]) == "--expanded-lifecycle-only";
         const bool monoNoteZeroOnly = argc == 3 && juce::String(argv[2]) == "--mono-note-zero-only";
         const bool monoBoundaryOnly = argc == 3 && juce::String(argv[2]) == "--mono-boundary-only";
+        const bool monoTraceOnly = argc == 3 && juce::String(argv[2]) == "--mono-trace-only";
         const bool profileCheckOnly = argc == 3 && juce::String(argv[2]) == "--profile-check-only";
-        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !monoNoteZeroOnly && !monoBoundaryOnly && !profileCheckOnly) || !juce::File(argv[1]).existsAsFile())
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !monoNoteZeroOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
         juce::MemoryBlock image;
         require(juce::File(argv[1]).loadFileAsData(image), "read explicit local ROM fixture");
@@ -1259,6 +1448,18 @@ int main(int argc, char** argv)
                     for (int repeats : {1, 16})
                         for (bool zeroVelocityOff : {false, true})
                             characterizeMonoBoundary(juce::File(argv[1]), mode, note, repeats, zeroVelocityOff);
+            return 0;
+        }
+        if (monoTraceOnly)
+        {
+            testMonoInstructionTrace(juce::File(argv[1]));
+            const auto reference = characterizeMonoContinuation(juce::File(argv[1]), 1, 0, false, false, nullptr);
+            for (int seed : {0, 1})
+                for (int repeats : {1, 16})
+                    for (bool sequential : {false, true})
+                        for (bool zeroVelocityOff : {false, true})
+                            characterizeMonoContinuation(juce::File(argv[1]), seed, repeats,
+                                                         sequential, zeroVelocityOff, &reference);
             return 0;
         }
         if (monoNoteZeroOnly)

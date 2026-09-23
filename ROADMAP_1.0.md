@@ -92,6 +92,11 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
   original failing diagnostic is preserved, not counted as a passing release
   test. Firmware-fidelity policy and broader MONO/reset acceptance remain open.
   See `VALIDATION_MONO_BOUNDARY_AND_CI.md` and `AUDIT_TRIAGE_2026-09-23.md`.
+  Follow-up: local instruction trace now identifies the failing allocation and
+  release branches. Subsequent-note loss/retained output without recovery is
+  reproduced, including sequential On/Off pairs and both Off encodings. This is
+  diagnosis/test coverage, not a production fix or hardware confirmation; see
+  `VALIDATION_MONO_INSTRUCTION_TRACE.md`.
 - [x] Configure PR ROM-free CI and opt-in local ROM integration CTest gate.
   All integration runners now compile through the shared CI target. Known-v1.8
   ownership groups have a separately labelled, required firmware prerequisite;

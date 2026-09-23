@@ -8,6 +8,19 @@ or release until separately approved. Never upload ROMs.
 
 ## Active reset work
 
+- MONO instruction/continuation follow-up: the private known image's decoded
+  instruction sites match the pinned annotation. Read-only execution observes
+  active note-zero slot reuse at D591/D593/D59F, count increment D5A1, and
+  zero-return early exit D644/D645 that skips clearing/decrement/EGS Off.
+  New unrecovered continuation tests reproduce actual subsequent-note impact:
+  one note-zero pair allows pitch 72 but its release leaves nonzero output and
+  MONO count 1; sixteen pairs block its native allocation at D58D while the MIDI
+  table still accepts it. Stacked and sequential pairs, both Off encodings agree.
+  Pitch-one controls release correctly. See VALIDATION_MONO_INSTRUCTION_TRACE.md.
+  Failing local execution path now identified; production fix and physical
+  hardware confirmation remain OPEN. No automatic workaround/ROM patch.
+  Rebuilt local registered suite 21/21 PASS (245.72 s), ROM-free 5/5 PASS
+  (0.93 s). Original acceptance diagnostic remains FAIL, not included in 21.
 - MONO boundary follow-up: 32 raw-core/processor combinations isolate native
   pitch-zero behavior from wrapper reset and release retirement. Both ordinary
   Note Off and velocity-zero Note On reproduce it; pitches 1/60/127 and POLY

@@ -170,6 +170,11 @@ documented behavior and explicit mode-cycle recovery were reproduced, **not
 that the edge is fixed**. The original `vdx7_host_reset_tests /path/to/dx7.bin
 --mono-note-zero-only` diagnostic remains intentionally failing and outside the
 passing CTest set. See [validation scope](VALIDATION_MONO_BOUNDARY_AND_CI.md).
+The follow-up `vdx7_mono_trace_characterization` (`--mono-trace-only`) verifies
+the loaded image's relevant instructions, observes the actual failing branches,
+and tests subsequent notes **without** recovery. It documents retained output
+and rejected native allocation, rather than declaring them fixed. See
+[instruction trace and continuation](VALIDATION_MONO_INSTRUCTION_TRACE.md).
 
 ## 12. Licensing and release status
 

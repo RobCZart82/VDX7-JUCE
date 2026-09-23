@@ -6,6 +6,11 @@
 No production engine, firmware, parameter, GUI or installed-plugin change.
 Keep #47 Draft: this round does not close P1 or authorize release/merge.
 
+Subsequent evidence: VALIDATION_MONO_INSTRUCTION_TRACE.md records the actual
+loaded-image branch execution and subsequent-note failures without recovery.
+The results below describe the earlier boundary/recovery round, not that later
+test's scope. The original failure still has no production fix.
+
 ## Native MONO pitch-zero edge: investigated, NOT fixed
 
 The original `--mono-note-zero-only` diagnostic is preserved. It expects all
