@@ -37,6 +37,7 @@ public:
     void reset() override;
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlockBypassed(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
@@ -114,6 +115,8 @@ private:
     bool loadPackedVoices(const std::vector<uint8_t>&, juce::String* error, int selectProgram = -1);
     friend struct VDX7RegressionAccess;
     void restoreSavedStateLocked(const juce::ValueTree&);
+    bool observeStateInstall(); // Audio-thread owned; also rechecked under engine lock.
+    void discardStaleCollectedInput(juce::MidiBuffer&, std::size_t& keyboardCount);
     void capturePendingRestoreEditsLocked();
     juce::ValueTree pendingRestore_;
     bool detectRom_ = true;

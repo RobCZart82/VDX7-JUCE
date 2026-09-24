@@ -114,6 +114,22 @@ struct VDX7RegressionAccess
     { p.midiTimelineEpoch_.fetch_add(1, std::memory_order_release); }
     static void installRestore(VDX7AudioProcessor& p, const juce::ValueTree& state)
     { std::scoped_lock lock(p.engineMutex_); p.restoreSavedStateLocked(state); }
+    static void checkCollectedBoundary(VDX7AudioProcessor& p, const juce::ValueTree& state)
+    {
+        (void) p.observeStateInstall();
+        juce::MidiBuffer collected;
+        collected.addEvent(juce::MidiMessage::noteOn(1, 62, juce::uint8(100)), 0);
+        std::size_t keyboardCount = 1;
+        p.discardStaleCollectedInput(collected, keyboardCount);
+        require(!collected.isEmpty() && keyboardCount == 1, "unchanged timeline dropped input");
+        installRestore(p, state);
+        {
+            std::scoped_lock lock(p.engineMutex_);
+            p.discardStaleCollectedInput(collected, keyboardCount);
+        }
+        require(collected.isEmpty() && keyboardCount == 0,
+                "post-lock observation retained pre-install collected input");
+    }
     static bool deferred(const VDX7AudioProcessor& p) { return p.deferredMidi_.active(); }
     static uint32_t dirty(const VDX7AudioProcessor& p) { return p.modifiedVoices_.load(); }
     static bool resetWaiting(const VDX7AudioProcessor& p)
@@ -1893,8 +1909,55 @@ static std::vector<float> renderDeferredPartition(const juce::File& rom, int rat
     return output;
 }
 
+static void testBypassedRelease(const juce::File& rom)
+{
+    for (bool pedal : {false, true})
+    {
+        auto owner = std::make_unique<VDX7AudioProcessor>(false);
+        auto& p = *owner;
+        initialise(p, rom, 48000, 64);
+        auto& e = VDX7RegressionAccess::engine(p);
+        e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+        e.reloadCurrentProgram(); p.synchroniseOperatorParametersFromEngine();
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        if (pedal) midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
+        midi.addEvent(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)), 1);
+        for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+        require(audio.getMagnitude(0, 64) > 1e-4f, "bypass fixture needs audible held note");
+        midi.addEvent(juce::MidiMessage::noteOff(1, 60), 0);
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), 1);
+        for (int i = 0; i < 750; ++i)
+        {
+            VDX7AllocationProbe::allocations = VDX7AllocationProbe::deallocations = 0;
+            VDX7AllocationProbe::enabled = true;
+            p.processBlockBypassed(audio, midi);
+            VDX7AllocationProbe::enabled = false;
+            require(VDX7AllocationProbe::allocations == 0 && VDX7AllocationProbe::deallocations == 0,
+                    "bypass callback allocates/deallocates");
+            require(audio.getMagnitude(0, 64) == 0, "bypass must be silent");
+            require(midi.isEmpty(), "synth bypass must consume MIDI");
+            // Hosts deliver each block once; do not replay unconsumed input.
+            midi.clear();
+        }
+        for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+        const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
+        require(!e.hasHeldMidiNotes() && fw.midi == 0 && fw.held == 0
+                && audio.getMagnitude(0, 64) < 1e-5f,
+                "bypass lost NoteOff/pedal release and revived held note");
+        midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+        for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+        require(audio.getMagnitude(0, 64) > 1e-4f, "post-bypass note must sound");
+        midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+        for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+        require(audio.getMagnitude(0, 64) < 1e-5f && !e.hasHeldMidiNotes(), "post-bypass release");
+    }
+    std::cout << "PASS: bypass note/pedal release and fresh playback\n";
+}
+
 static void testDeferredPartitions(const juce::File& rom)
 {
+    testBypassedRelease(rom);
     {
         auto owner = std::make_unique<VDX7AudioProcessor>(false);
         auto& p = *owner;
@@ -1903,6 +1966,7 @@ static void testDeferredPartitions(const juce::File& rom)
         p.getStateInformation(saved);
         const auto xml = juce::AudioProcessor::getXmlFromBinary(saved.getData(), int(saved.getSize()));
         const auto state = juce::ValueTree::fromXml(*xml);
+        VDX7RegressionAccess::checkCollectedBoundary(p, state);
         juce::AudioBuffer<float> audio(2, 64);
         juce::MidiBuffer midi;
         // Deterministic schedule: announcement observed, input deferred, then

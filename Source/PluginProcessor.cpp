@@ -301,6 +301,37 @@ bool VDX7AudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) cons
     return out == juce::AudioChannelSet::mono() || out == juce::AudioChannelSet::stereo();
 }
 
+bool VDX7AudioProcessor::observeStateInstall()
+{
+    const auto epoch = midiTimelineEpoch_.load(std::memory_order_acquire);
+    if (epoch == audioMidiTimelineEpoch_) return false;
+    audioMidiTimelineEpoch_ = epoch;
+    deferredMidi_.clear();
+    keyboardQueue_.discard();
+    clearKeyboardSnapshot();
+    stateRestoreReleasePending_ = true;
+    return true;
+}
+
+void VDX7AudioProcessor::processBlockBypassed(juce::AudioBuffer<float>& buffer,
+                                             juce::MidiBuffer& midi)
+{
+    // Synth bypass is silent, but firmware time and MIDI lifecycle continue.
+    // In particular a Note Off or pedal release must not vanish during bypass.
+    // Hosts which suspend callbacks entirely still require host-specific tests.
+    processBlock(buffer, midi);
+    buffer.clear();
+    clearMeters();
+}
+
+void VDX7AudioProcessor::discardStaleCollectedInput(juce::MidiBuffer& midi,
+                                                   std::size_t& keyboardCount)
+{
+    if (!observeStateInstall()) return;
+    keyboardCount = 0;
+    midi.clear();
+}
+
 void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
     juce::ScopedNoDenormals noDenormals;
@@ -321,20 +352,7 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         return true;
     };
     (void) observeHostReset();
-    const auto observeStateInstall = [this]()
-    {
-        const auto epoch = midiTimelineEpoch_.load(std::memory_order_acquire);
-        if (epoch == audioMidiTimelineEpoch_) return false;
-        // The state thread must never clear this audio-owned timeline directly.
-        // Discard events queued before the restored project state, including
-        // virtual-keyboard events waiting behind a contended engine transaction.
-        audioMidiTimelineEpoch_ = epoch;
-        deferredMidi_.clear();
-        keyboardQueue_.discard();
-        clearKeyboardSnapshot();
-        stateRestoreReleasePending_ = true;
-        return true;
-    };
+    // The state thread never touches these audio-owned queues.
     (void) observeStateInstall();
     const int inputChannel = midiInputChannel_.load();
     if (inputChannel != audioMidiInputChannel_)
@@ -352,12 +370,11 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     const int total = buffer.getNumSamples();
     // A long transaction may silence a block, but never blocks audio.
     std::unique_lock lock(engineMutex_, std::try_to_lock);
-    if (lock.owns_lock() && observeStateInstall())
+    if (lock.owns_lock())
     {
         // State changed after the pre-lock observation: this collected block
         // belongs to the previous timeline, not the newly installed project.
-        keyboardCount = 0;
-        midi.clear();
+        discardStaleCollectedInput(midi, keyboardCount);
     }
     if (lock.owns_lock() && observeHostReset())
     {
