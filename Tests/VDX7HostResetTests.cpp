@@ -744,8 +744,79 @@ static void testCorrectionPersistence(const juce::File& rom)
     std::cout << "PASS: correction persistence, deferred ROM, legacy fallback and malformed policy\n";
 }
 
+static void testCorrectedCapacityAndOrder(const juce::File& rom)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    auto& e = VDX7RegressionAccess::engine(p);
+    require(p.setMonoCorrectionFromUi(true), "capacity public correction selection");
+    initialise(p, rom, 48000, 64);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    require(e.setPlaySetting(0, 1), "capacity MONO");
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    auto pump = [&] { for (int i = 0; i < 150; ++i) processChecked(p, audio, midi); };
+    auto note = [&](int key, bool on, bool zeroVelocity = false) {
+        midi.addEvent(on ? juce::MidiMessage::noteOn(1, key, juce::uint8(100))
+                        : zeroVelocity ? juce::MidiMessage::noteOn(1, key, juce::uint8(0))
+                                       : juce::MidiMessage::noteOff(1, key), 0);
+        pump();
+    };
+    auto empty = [&] {
+        const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
+        require(fw.midi == 0 && fw.held == 0 && fw.sustained == 0
+                && VDX7RegressionAccess::monoActiveCount(p) == 0
+                && audio.getMagnitude(0, 64) < 1e-5f, "capacity/order ownership and sound cleanup");
+    };
+    pump();
+    const auto overloads = e.midiOverloadCount();
+    for (bool zeroVelocity : {false, true})
+        for (int count : {1, 16, 17, 32})
+        {
+            for (int i = 0; i < count; ++i) note(0, true);
+            require(VDX7RegressionAccess::monoActiveCount(p) == std::min(count, 16)
+                    && audio.getMagnitude(0, 64) > 1e-4f, "bounded actual MONO allocation");
+            for (int i = 0; i < count; ++i) note(0, false, zeroVelocity);
+            empty();
+            note(72, true);
+            require(VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 72) == 1
+                    && audio.getMagnitude(0, 64) > 1e-4f, "fresh 72 after capacity history");
+            note(72, false, zeroVelocity); empty();
+        }
+    // Establish single-note targets, then check only the unambiguous last-held
+    // note. Do not assume a last-note priority for intermediate MONO states.
+    const std::array<int, 3> keys {0, 60, 72};
+    std::array<int, 3> targets {};
+    for (int i = 0; i < 3; ++i)
+    {
+        note(keys[i], true); targets[i] = VDX7RegressionAccess::monoTargetPitch(p);
+        note(keys[i], false); empty();
+    }
+    std::array<int, 3> order {0, 1, 2};
+    do
+    {
+        std::array<int, 3> releases {0, 1, 2};
+        do
+        {
+            for (int i : order) note(keys[i], true);
+            require(VDX7RegressionAccess::monoActiveCount(p) == 3, "three real MONO allocations");
+            note(keys[releases[0]], false);
+            note(keys[releases[1]], false, true);
+            require(VDX7RegressionAccess::monoActiveCount(p) == 1
+                    && VDX7RegressionAccess::monoTargetPitch(p) == targets[releases[2]]
+                    && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, keys[releases[2]]) == 1
+                    && audio.getMagnitude(0, 64) > 1e-4f, "last-held legato target and sound");
+            note(keys[releases[2]], false); empty();
+        } while (std::next_permutation(releases.begin(), releases.end()));
+    } while (std::next_permutation(order.begin(), order.end()));
+    require(e.midiOverloadCount() == overloads, "capacity test must not pass via overflow recovery");
+    std::cout << "PASS: corrected processor 8 capacity and 36 order histories without reset\n";
+}
+
 static void testCorrectedProcessor(const juce::File& rom)
 {
+    testCorrectedCapacityAndOrder(rom);
     testCorrectionPersistence(rom);
     testCorrectedLifecycle(rom);
     for (double rate : {44100.0, 48000.0, 96000.0})
@@ -763,7 +834,7 @@ static void testCorrectedProcessor(const juce::File& rom)
     require(std::abs(pitch(true, 72) / reference72 - 1) < 0.002,
             "subsequent 72 after zero history must match genuine reference");
     }
-    std::cout << "PASS: engine-opt-in processor zero repetition, legato, pitch controls and release (not persisted/UI-ready)\n";
+    std::cout << "PASS: corrected processor capacity, order, persistence, lifecycle and pitch controls (not full release acceptance)\n";
 }
 
 static void diagnoseMonoNoteZero(const juce::File& rom)
