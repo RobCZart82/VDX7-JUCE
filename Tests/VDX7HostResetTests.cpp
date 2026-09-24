@@ -1211,6 +1211,61 @@ static void testSupportedMidiNoteRange(const juce::File& rom)
     std::cout << "PASS: Note 0..11 and 121..127 filtered at plugin boundary in native and corrected settings\n";
 }
 
+
+static void testDirectRomReloadDropsDeferredMidi(const juce::File& rom)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+
+    midi.addEvent(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)), 0);
+    {
+        std::unique_lock lock(VDX7RegressionAccess::mutex(p));
+        auto callback = std::async(std::launch::async, [&] { processChecked(p, audio, midi); });
+        const bool timely = callback.wait_for(std::chrono::seconds(1)) == std::future_status::ready;
+        if (!timely) { lock.unlock(); callback.get(); }
+        require(timely, "direct ROM fixture callback blocked on engine mutex");
+        callback.get();
+    }
+    require(VDX7RegressionAccess::deferred(p),
+            "direct ROM fixture did not defer its pre-install Note On");
+
+    require(p.loadRomFromFile(rom), "direct successful ROM reload");
+    juce::MidiBuffer emptyMidi;
+    for (int i = 0; i < 375; ++i)
+        processChecked(p, audio, emptyMidi);
+    const auto afterReload = VDX7RegressionAccess::firmwareOwnership(p);
+    require(!VDX7RegressionAccess::deferred(p)
+            && afterReload.midi == 0 && afterReload.held == 0 && afterReload.sustained == 0
+            && VDX7RegressionAccess::monoActiveCount(p) == 0
+            && audio.getMagnitude(0, 64) < 1e-5f,
+            "pre-reload deferred MIDI reached the newly installed engine");
+
+    auto& e = VDX7RegressionAccess::engine(p);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+    float peak = 0;
+    for (int i = 0; i < 375; ++i)
+    {
+        processChecked(p, audio, midi);
+        peak = std::max(peak, audio.getMagnitude(0, 64));
+    }
+    require(peak > 1e-4f && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 72) == 1,
+            "fresh post-reload control note did not sound");
+    midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+    for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+    const auto released = VDX7RegressionAccess::firmwareOwnership(p);
+    require(released.midi == 0 && released.held == 0 && released.sustained == 0
+            && VDX7RegressionAccess::monoActiveCount(p) == 0
+            && audio.getMagnitude(0, 64) < 1e-5f,
+            "fresh post-reload control note failed to release");
+    std::cout << "PASS: direct successful ROM reload drops pre-install deferred MIDI; fresh Note 72 plays/releases\n";
+}
+
 // Independent of VDX7Engine/processor MIDI, reset, retirement and resampling.
 // Only the pinned unmodified dx7Lib core executes the user's original firmware.
 class BareFirmware
@@ -2615,6 +2670,7 @@ int main(int argc, char** argv)
         const bool gateOverflowOnly = argc == 3 && juce::String(argv[2]) == "--gate-overflow-only";
         const bool expandedLifecycleOnly = argc == 3 && juce::String(argv[2]) == "--expanded-lifecycle-only";
         const bool supportedNoteRangeOnly = argc == 3 && juce::String(argv[2]) == "--supported-note-range-only";
+        const bool directRomReloadBoundaryOnly = argc == 3 && juce::String(argv[2]) == "--direct-rom-reload-only";
         const bool monoCorrectedOnly = argc == 3 && juce::String(argv[2]) == "--mono-corrected-processor-only";
         if (argc == 3 && juce::String(argv[2]) == "--mono-soak-only")
         { testCorrectedSoak(juce::File(argv[1])); return 0; }
@@ -2623,7 +2679,7 @@ int main(int argc, char** argv)
         const bool profileCheckOnly = argc == 3 && juce::String(argv[2]) == "--profile-check-only";
         const bool deferredPartitionOnly = argc == 3 && juce::String(argv[2]) == "--deferred-partition-only";
         const bool wheelDeliveryOnly = argc == 3 && juce::String(argv[2]) == "--wheel-delivery-only";
-        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !supportedNoteRangeOnly && !monoCorrectedOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly && !deferredPartitionOnly && !wheelDeliveryOnly) || !juce::File(argv[1]).existsAsFile())
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !supportedNoteRangeOnly && !directRomReloadBoundaryOnly && !monoCorrectedOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly && !deferredPartitionOnly && !wheelDeliveryOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
         juce::MemoryBlock image;
         require(juce::File(argv[1]).loadFileAsData(image), "read explicit local ROM fixture");
@@ -2675,6 +2731,11 @@ int main(int argc, char** argv)
         if (supportedNoteRangeOnly)
         {
             testSupportedMidiNoteRange(juce::File(argv[1]));
+            return 0;
+        }
+        if (directRomReloadBoundaryOnly)
+        {
+            testDirectRomReloadDropsDeferredMidi(juce::File(argv[1]));
             return 0;
         }
         if (expandedLifecycleOnly)
