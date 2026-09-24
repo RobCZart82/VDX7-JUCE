@@ -25,6 +25,11 @@ upper limit by product decision. REAPER uses C0 for Note 12 and C9 for Note 120
 with its default octave labels. Automated processor tests cover both modes and
 range boundaries; new REAPER boundary acceptance remains outstanding.
 
+Settings policy: Native firmware is the default and recommended everyday mode.
+Correct MONO Note 0 remains available as an advanced, under-the-hood compatibility
+option; ordinary users are not expected to toggle it. The 12–120 input boundary
+is identical in both modes, and the advanced option does not restore Note 0–11.
+
 Build the opt-in `vdx7_midi_range_tests` target and pass your own local combined
 ROM path as its only argument. ROM data is not bundled. The test exercises all
 128 notes, host channels 1–16, note-off, zero-velocity note-on, all-notes-off,
@@ -53,3 +58,7 @@ mindkét SETTINGS-kompatibilitási módban (Native és Correct MONO Note 0) szű
 nincs transzponálás. A határok Note 12 / C0 és Note 120 / C9 a REAPER
 alapértelmezett oktávelnevezésével. Az új REAPER-es
 határteszt még hátravan.
+
+A firmware-hű Native az alapértelmezett és ajánlott normál használatra. A Correct
+MONO Note 0 megmarad haladó, motorháztető alatti kompatibilitási lehetőségként;
+általános használatkor nem szükséges kapcsolgatni. A két mód MIDI-tartománya azonos.

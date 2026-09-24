@@ -14,7 +14,9 @@ by this checklist. No proprietary firmware belongs in source, CI or artifacts.
   The raw native MONO Note 0 firmware issue remains documented and characterized,
   but is intentionally unreachable from supported plugin MIDI. The selectable
   correction remains a separate compatibility option; do not claim the raw
-  firmware issue itself was fixed. See `MIDI_RANGE_v0.7.0.md` and
+  firmware issue itself was fixed. Native firmware is the recommended default;
+  Correct MONO Note 0 is an advanced option, and both modes share the same range.
+  See `MIDI_RANGE_v0.7.0.md` and
   `DESIGN_MONO_NOTE_ZERO_POLICY.md`.
 - [ ] Program/edit and bank/edit ordering in both directions, including stopped transport/save.
 - [ ] Audio callback has no direct host parameter notification; ownership audit of all call sites.

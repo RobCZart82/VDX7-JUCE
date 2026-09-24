@@ -1,31 +1,27 @@
 # MONO note-zero: fidelity boundary and corrective-design decision
 
-Latest integration: project-state persistence now retains explicit correction
-intent, including missing-ROM saves and legacy-native fallback. See
-`VALIDATION_MONO_PERSISTENCE.md`. GUI selection/status is now implemented in
-`VALIDATION_MONO_SETTINGS.md`, with broader host acceptance pending; the following
-historical design/experiment sections are not a current implementation inventory.
+Current status (2026-09-24): the optional correction is integrated, selectable
+and project-persisted; see `VALIDATION_MONO_PERSISTENCE.md` and
+`VALIDATION_MONO_SETTINGS.md`. PR #47 is merged to `main` as `30a3ccbd`.
+The common 12–120 input filter is active in both modes. macOS/Windows CI passed;
+full local ROM-enabled and exact-boundary REAPER acceptance remain outstanding.
+The native raw-firmware Note 0 limitation is still documented, not claimed fixed.
 
-Status correction (2026-09-24): the selectable, project-persisted processor
-mode is implemented; the older paragraphs below that say it is “NOT complete”
-or “design pending” are historical and superseded by the validation reports.
-The new common 12–120 product input filter is now in the current development
-change, but awaits compilation/CI and REAPER boundary acceptance.
+Settings decision (2026-09-24): Native firmware remains the recommended default
+for ordinary use. Correct MONO Note 0 remains selectable as an advanced,
+under-the-hood compatibility option; routine toggling is not recommended. Both
+modes share the same Note 12–120 input range.
 
-2026-09-23. Design note, **not an implemented fix or permission to patch firmware**.
-The default remains firmware-faithful operation. Keep Draft #47;
-MONO note-zero acceptance and release approval are still open.
+The following dated design and experiment notes are historical evidence, not a
+current implementation inventory or release-approval statement.
 
-User decision (2026-09-23 follow-up): targeted corrective development is approved,
-while preserving the original/default path. This approves investigation and a
-separately tested correction, not a particular implementation, automatic mode
-cycling, silent pitch substitution, arbitrary ROM/RAM patches, or publication.
-An engine-only pre-load opt-in is now implemented and exercised through the
-processor; a user-selectable/persisted product mode is NOT complete. See
-`VALIDATION_MONO_ENGINE_OPTIN.md`. The independent portamento
-request/save fix is complete within its documented test scope; it does not close
-MONO acceptance. The isolated branch-decision experiment described in
-`VALIDATION_MONO_CANDIDATE.md` is the next design evidence, NOT a product fix.
+2026-09-23. Design note, **not permission to patch firmware**. The default was
+firmware-faithful operation; targeted corrective development was later approved.
+
+Historical 2026-09-23 decision: investigate a separate correction while
+preserving native/default behavior; do not automatically cycle modes, transpose
+input, or patch arbitrary ROM/RAM. Later reports below describe the staged
+implementation and are superseded by the current status above.
 
 ## What is established
 
@@ -62,8 +58,9 @@ by the selected product range, not because a matching failure was reproduced.
 This adapter guard is not a claim that native firmware Note 0 was fixed. The raw
 firmware issue remains documented by engine-level tracing; the former plugin-
 facing failing Note 0 acceptance check is superseded by range acceptance. The
-engine-level optional correction remains available for compatibility. New plugin
-MIDI cannot trigger Note 0 in either mode once this guard ships. REAPER tests for
+engine-level optional correction remains available for compatibility. The merged
+plugin guard prevents incoming MIDI from triggering Note 0 in either mode.
+REAPER tests for
 exact boundaries, both modes, held-note transitions and post-filter normal-note
 recovery are still required.
 
@@ -128,7 +125,8 @@ Integration (2026-09-24): the experiment and engine share the pure six-site
 decision helper, `VDX7MonoCorrection.h`, covered by ROM-free CI. Engine use is
 explicitly opt-in before ROM load and guarded by image/map verification.
 The processor test opts in before initialization; ordinary plugin construction
-stays native. Live switching and option/state integration remain pending.
+stays native. This paragraph records the earlier engine integration stage;
+live switching and option/state integration were completed in later rounds.
 
 `Tests/VDX7MonoCandidateTests.cpp` is a separately compiled test executable, not
 linked into VDX7. With explicit known-image preflight it overrides only the Z
