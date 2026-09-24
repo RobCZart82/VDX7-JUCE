@@ -9,7 +9,7 @@ indices compatible with saved projects.
 
 ### Current next steps — 2026-09-24
 
-Latest checkpoint: PR #47 was merged to `main` as `30a3ccbd` on 2026-09-24.
+Latest checkpoint: PR #48 was merged to `main` as `cfa5bbd` on 2026-09-24.
 `VALIDATION_MONO_SOAK.md` records the full 30-test run, separate desktop retry,
 dual-instance soak and remaining host boundaries. The user approved retaining
 both Native and Correct modes. Native remains the recommended default; Correct
@@ -31,6 +31,85 @@ including release, sustain, transport and subsequent normal-register notes.
    see VALIDATION_GUI_RESTORE_ORACLE.md for the persistent-state oracle change.
 3. Real DAW acceptance, remaining GUI finish/scale checks and release packaging.
    PR #47 is merged; publishing remains a separate approval.
+
+### Audit follow-up — 2026-09-24 (reviewed against current main)
+
+The audit package `VDX7_AUDIT_WORK_30a3ccbd.zip` examined main
+`30a3ccbd` immediately before PR #48. PR #48 changed documentation and editor
+wording only; the audited processor, MIDI validation, keyboard queue, voice and
+SysEx source files are unchanged on current main `cfa5bbd`. The audit's Linux
+component/model runs are useful evidence, but are not a full JUCE, firmware or
+DAW acceptance run. Preserve each finding's evidence class; do not promote a
+model result into a product pass.
+
+1. **N1 — repair the reset-history test oracle first.** In
+   `testExpandedHistory(measurePair)`, keep sending the full 0–127 proposal
+   through the public processor input, but expect only the 109 admitted notes
+   (12–120). Check both the release count and decoded pitches: for 0/1/16
+   repeats expect 0/219/3489 serial bytes respectively, and the decoded sequence
+   starts at Note 12. Do not re-enable filtered notes. Run
+   `vdx7_reset_history_pair` and the complete local ROM-enabled CTest suite on
+   the same recorded SHA. The audit's source-derived oracle demonstrated the
+   mismatch; the actual ROM CTest remains NOT RUN until executed.
+
+2. **T1 — make the characterization test exercise the production filter.**
+   Pass the disallowed MIDI events into the actual processor in the continuation
+   and boundary histories, then verify they are rejected and a later supported
+   note still sounds and releases. Add a sensitivity control showing the test
+   detects a deliberately bypassed guard. Retain separate raw-firmware
+   characterization; never let test-side prefiltering stand in for production
+   behavior.
+
+3. **N2 — reproduce state/ROM identity mixing before changing synchronization.**
+   Add deterministic processor-level save-versus-ROM-load interleavings and
+   assert that RAM and saved ROM identity belong to the same engine generation.
+   The audit reproduced mixed pairs only in protocol models, not in JUCE. If the
+   real processor test confirms the race, make snapshot capture and ROM identity
+   publication generation-consistent. Keep XML/base64 work outside long audio
+   engine-lock sections; do not treat an extra reader lock alone as a fix.
+
+4. **U1 — test direct ROM reload against deferred MIDI separately.**
+   Create a real processor test with an older deferred PC/Note On, perform a
+   direct successful ROM reload, and prove the old event cannot reach the new
+   engine on the next callback. This is distinct from the already-covered
+   project-state restore boundary. Only report a fix after the direct-load path
+   and normal Note 60/72 controls pass.
+
+5. **U2 — make packed-detune import/export contracts consistent.**
+   The component probe accepts a checksum-valid bank containing out-of-range
+   detune nibble 15, then produces a single-voice export rejected by its own
+   decoder, across all six operators. Add a regression and choose explicit
+   content rejection or documented normalization; preserve checksum checks and
+   valid round-trip behavior. Do not generalize this malformed-input result to
+   ordinary factory patches or call it a checksum defect.
+
+6. **U3 — verify conditional CC32 admission before fixing it.**
+   Reproduce the CC32 0–7 deferred-queue pressure in an actual processor
+   configured without a factory image but with a user SysEx bank. Keep a
+   factory-image-present control where those values are meaningful bank
+   requests. If confirmed, prevent unserviceable requests consuming capacity
+   without introducing a blocking engine lock on the audio input path.
+
+7. **Lower-priority hardening:** N3, bound ROM/SysEx file reads before allocating
+   full payload copies and verify failed imports do not mutate the loaded
+   engine; N4, pre-admit events on the public keyboard API before its bounded
+   queue. Keep N4 scoped to the programmatic API: the visible keyboard is
+   36–96 and normal host MIDI is already filtered. Neither item is a reproduced
+   normal-GUI crash.
+
+8. **Release validation:** after fixes, run the full local suite on the final
+   source SHA and retain separate test logs. Recheck REAPER boundaries 11/12 and
+   120/121 in both modes, including release, sustain, transport and a subsequent
+   supported-register note. CI-green, prior general-use REAPER testing and the
+   audit's component probes are not substitutes for these exact boundary and
+   ROM-enabled checks. Report unavailable Windows/Intel/physical-MIDI coverage
+   as NOT RUN, not PASS.
+
+The current product decisions remain unchanged: both modes accept Notes 12–120;
+Native firmware is the recommended default; Correct MONO Note 0 remains an
+advanced compatibility option. The raw Note 0 firmware limitation remains
+distinct from product-range behavior. No merge, tag or 1.0.0 publication is
+authorized by this audit follow-up.
 
 The feature history below records earlier milestones, not the current execution
 order. Current audit disposition is in AUDIT_TRIAGE_2026-09-23.md.
