@@ -9,7 +9,7 @@ indices compatible with saved projects.
 
 ### Current next steps — 2026-09-24
 
-Latest checkpoint: PR #48 was merged to `main` as `cfa5bbd` on 2026-09-24.
+Latest checkpoint: PR #49 was merged to `main` as `3791325` on 2026-09-24.
 `VALIDATION_MONO_SOAK.md` records the full 30-test run, separate desktop retry,
 dual-instance soak and remaining host boundaries. The user approved retaining
 both Native and Correct modes. Native remains the recommended default; Correct
@@ -36,11 +36,23 @@ including release, sustain, transport and subsequent normal-register notes.
 
 The audit package `VDX7_AUDIT_WORK_30a3ccbd.zip` examined main
 `30a3ccbd` immediately before PR #48. PR #48 changed documentation and editor
-wording only; the audited processor, MIDI validation, keyboard queue, voice and
-SysEx source files are unchanged on current main `cfa5bbd`. The audit's Linux
-component/model runs are useful evidence, but are not a full JUCE, firmware or
-DAW acceptance run. Preserve each finding's evidence class; do not promote a
-model result into a product pass.
+wording only; PR #49 added roadmap documentation only. The audited processor,
+MIDI validation, keyboard queue, voice and SysEx source files remain unchanged
+on current main `3791325`. The audit's Linux component/model runs are useful
+evidence, but are not a full JUCE, firmware or DAW acceptance run. Preserve each
+finding's evidence class; do not promote a model result into a product pass.
+
+Audit disposition refreshed against main `3791325` on 2026-09-24:
+- N1 reset-history oracle correction is proposed in open PR #50; not merged.
+  The ROM-enabled reset-history/full CTest acceptance remains NOT RUN.
+- U2 malformed checksum-valid detune round-trip is a reproduced component-level
+  defect candidate; add a regression and decide reject-versus-normalize.
+- N2 state/ROM identity mixing, U1 direct-ROM-reload stale MIDI, and U3
+  conditional CC32 queue pressure remain unconfirmed processor-level candidates.
+- T1 is a characterization-coverage gap; N3 bounded file-read and N4 public
+  keyboard-queue admission are lower-priority hardening tasks.
+- MIDI Note 12–120 policy is consistent in product admission; internal 0–127
+  cleanup/release loops are intentional. No new tests were run by this refresh.
 
 1. **N1 — repair the reset-history test oracle first.** In
    `testExpandedHistory(measurePair)`, keep sending the full 0–127 proposal
