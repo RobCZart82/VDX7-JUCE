@@ -15,6 +15,10 @@ by this checklist. No proprietary firmware belongs in source, CI or artifacts.
   state persistence/new-instance restore is now covered in
   `VALIDATION_MONO_PERSISTENCE.md`; `VALIDATION_MONO_SETTINGS.md` adds UI
   selection/status. Broader corrected-mode transition/host acceptance remains.
+  Current status: correction is integrated and selectable, not merely an
+  isolated experiment. Track its acceptance separately from native behaviour.
+  Native failure stays visible unless an explicit documented publication
+  decision accepts that limitation; no silent expected-failure conversion.
 - [ ] Program/edit and bank/edit ordering in both directions, including stopped transport/save.
 - [ ] Audio callback has no direct host parameter notification; ownership audit of all call sites.
 - [ ] Deferred MIDI preserves an explicit multi-block timeline policy; overflow reconciliation.
