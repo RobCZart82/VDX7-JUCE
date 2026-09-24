@@ -50,7 +50,8 @@ Audit disposition refreshed against main `3791325` on 2026-09-24:
   six-operator checksum-valid regression; await CI and review before closing it.
 - PR #53 sends excluded pitches through the real processor in MONO
   characterization and adds a direct-engine Note 127 guard-bypass sensitivity
-  control; await CI and local ROM-enabled execution before closing T1.
+  control; macOS/Windows CI passed on `a5cb765`. Local ROM-enabled execution
+  remains NOT RUN before closing T1.
 - N2 state/ROM identity mixing, U1 direct-ROM-reload stale MIDI, and U3
   conditional CC32 queue pressure remain unconfirmed processor-level candidates.
 - N3 bounded file-read and N4 public keyboard-queue admission are lower-priority
