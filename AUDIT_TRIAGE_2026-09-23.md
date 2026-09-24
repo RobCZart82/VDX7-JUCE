@@ -8,11 +8,32 @@ or release until separately approved. Never upload ROMs.
 
 ## Active reset work
 
-- Latest MONO engine integration (2026-09-24): a known-image/map-guarded,
+### Current implementation (2026-09-24)
+
+The correction is integrated, persisted and selectable in SETTINGS for the
+verified v1.8 image. Native/default Note0 acceptance still fails; do not equate
+the corrected path's success with native firmware repair or release acceptance.
+See VALIDATION_MONO_SETTINGS.md and VALIDATION_MONO_PERSISTENCE.md.
+
+Subsequent audit findings reproduced and targeted fixes implemented:
+- A2 held-note snapshot restoration: VALIDATION_HELD_SNAPSHOT.md.
+- A1 ignored CC admission: VALIDATION_IGNORED_CC_ADMISSION.md.
+- B1 installation boundary: VALIDATION_STATE_INSTALL_BOUNDARY.md; shared
+  collected-input control in VALIDATION_BYPASS_AND_COLLECTED_INPUT.md. Full
+  public concurrent state-call/DAW coverage remains open.
+- B2 bypass releases: VALIDATION_BYPASS_AND_COLLECTED_INPUT.md; suspended host
+  callbacks are not covered by the active-bypass fix.
+- B3 wheel rejection/flush: VALIDATION_WHEEL_DELIVERY.md; input delivery and
+  newer physical MIDI priority verified, broader scheduling/DAW tests remain.
+
+### Historical stages (not current feature availability)
+
+- Initial MONO engine integration (2026-09-24): a known-image/map-guarded,
   pre-ROM-load opt-in now applies the shared six-site policy in both engine
   stepping paths. Ordinary plugin construction remains native. Actual processor
   tests cover repetition, legato return, audio pitch controls and release.
-  No live switching or persisted/UI option exists yet; P1 remains open.
+  At this stage no live switching or persisted/UI option existed; superseded
+  by the current implementation above. Native P1 remains open.
   See VALIDATION_MONO_ENGINE_OPTIN.md. Earlier experiment-only status below is
   historical, superseded only within this limited integration scope.
 
@@ -20,7 +41,8 @@ or release until separately approved. Never upload ROMs.
   exposes incomplete two-decision and lookup-only proposals; common occupancy
   rules must cover allocation, lookup, release and first/minimum/maximum legato
   scans. Note 0 playback is checked against native POLY pitch/audio and a +12
-  patch control that distinguishes zero from one. No product correction exists.
+  patch control that distinguishes zero from one. At this historical stage no
+  product correction existed; integration followed subsequently.
   The original unchanged failing production diagnostic is now registered in
   local CTest as `vdx7_mono_note_zero_acceptance` / `release-blocker`, so the
   combined local result no longer hides it behind passing characterization.
@@ -32,7 +54,7 @@ or release until separately approved. Never upload ROMs.
   now survives serial recovery/flush and supplies display/detached state capture;
   native CC5 retains rate computation. Later accepted physical CC5 supersedes it,
   rejected input does not. See VALIDATION_PORTAMENTO_INTENT.md for validation
-  and limits. MONO targeted corrective development is approved, not implemented.
+  and limits. MONO implementation status is described in the current section.
 - Q2 publication follow-up: real processor capture/public setter interleaving
   reproduced display 0 after the newer request 99. Guarded single-attempt frame
   publication now preserves concurrent UI edits, including same-value/ABA, with

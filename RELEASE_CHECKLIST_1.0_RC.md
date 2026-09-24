@@ -27,6 +27,12 @@ by this checklist. No proprietary firmware belongs in source, CI or artifacts.
 
 ## Acceptance and evidence
 
+Recent targeted evidence (not closure of the broader gates): held-state restore,
+ignored-CC admission, staged install boundaries, active bypass releases and wheel
+delivery recovery are documented in their `VALIDATION_*.md` reports. Full host
+suspension, public concurrent state calls and mixed controller timing still need
+acceptance. Desktop-unavailable GUI tests must not be counted as passing.
+
 - [ ] Local opt-in ROM integration and ROM-free tests pass on the candidate source.
 - [ ] macOS and Windows CI pass on that exact source SHA.
 - [ ] Exact-commit release-candidate workflow passes on that SHA.

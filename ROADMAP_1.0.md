@@ -7,6 +7,19 @@ indices compatible with saved projects.
 
 ## Stabilization
 
+### Current next steps — 2026-09-24
+
+1. Rebuild/run the complete registered regression suite after the held-state,
+   ignored-CC, installation-boundary, bypass and wheel-delivery fixes. Report
+   native Note0 failure and desktop prerequisites separately, never as PASS.
+2. Broaden concurrent public restore, mixed controller/overflow timing and host
+   bypass/suspension coverage; check GUI in an actual accessible desktop session.
+3. Real DAW acceptance, remaining GUI finish/scale checks and release packaging.
+   Keep #47 Draft until review; publishing remains a separate approval.
+
+The feature history below records earlier milestones, not the current execution
+order. Current audit disposition is in AUDIT_TRIAGE_2026-09-23.md.
+
 - [x] Priority bug fix: reject unsupported CC32 bank values instead of modulo-8
   wrapping. Only a successful accepted factory-bank load may clear unexported
   voice markers or publish a bank-change result. Test 0/7 and ignored 8/15/127,
