@@ -2063,6 +2063,58 @@ static void testBypassedRelease(const juce::File& rom)
 static void testDeferredPartitions(const juce::File& rom)
 {
     testBypassedRelease(rom);
+    // Public state entry point after genuine callback lock contention. Unlike
+    // the staged epoch test below, this includes parsing/APVTS/ROM restoration.
+    for (bool correctedMono : {false, true})
+    {
+        auto owner = std::make_unique<VDX7AudioProcessor>(false);
+        auto& p = *owner;
+        auto& e = VDX7RegressionAccess::engine(p);
+        require(e.configureMonoCorrectionBeforeLoad(correctedMono), "public restore policy setup");
+        initialise(p, rom, 48000, 64);
+        require(e.setPlaySetting(0, correctedMono ? 1 : 0), "public restore play mode");
+        e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+        e.reloadCurrentProgram(); p.synchroniseOperatorParametersFromEngine();
+        juce::MemoryBlock saved;
+        p.getStateInformation(saved);
+        const int program = e.currentProgram();
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        // Observe any setup epoch before arranging pending input.
+        processChecked(p, audio, midi);
+        {
+            std::unique_lock lock(VDX7RegressionAccess::mutex(p));
+            midi.addEvent(juce::MidiMessage::programChange(1, (program + 1) % 32), 0);
+            midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 1);
+            midi.addEvent(juce::MidiMessage::noteOn(1, correctedMono ? 0 : 60, juce::uint8(100)), 2);
+            auto callback = std::async(std::launch::async, [&] { processChecked(p, audio, midi); });
+            const bool timely = callback.wait_for(std::chrono::seconds(1)) == std::future_status::ready;
+            if (!timely) lock.unlock();
+            callback.get();
+            require(timely, "public restore precondition blocked callback");
+        }
+        require(VDX7RegressionAccess::deferred(p), "public restore needs pending old input");
+        p.setStateInformation(saved.getData(), int(saved.getSize()));
+        for (int i = 0; i < 1500; ++i) processChecked(p, audio, midi);
+        const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
+        require(e.currentProgram() == program && !VDX7RegressionAccess::deferred(p)
+                && !e.hasHeldMidiNotes() && fw.midi == 0 && fw.held == 0 && fw.sustained == 0
+                && audio.getMagnitude(0, 64) < 1e-5f,
+                "public restore replayed stale program/note/pedal");
+        for (int key : {correctedMono ? 0 : 60, 72})
+        {
+            midi.addEvent(juce::MidiMessage::noteOn(1, key, juce::uint8(100)), 0);
+            for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+            require(audio.getMagnitude(0, 64) > 1e-4f, "public restore fresh note silent");
+            midi.addEvent(juce::MidiMessage::noteOff(1, key), 0);
+            for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+            require(!e.hasHeldMidiNotes() && audio.getMagnitude(0, 64) < 1e-5f,
+                    "public restore fresh release lost");
+        }
+        if (correctedMono)
+            require(VDX7RegressionAccess::monoActiveCount(p) == 0, "public restore MONO count leak");
+        std::cout << "PASS: public restore discards deferred input correctedMono=" << correctedMono << '\n';
+    }
     {
         auto owner = std::make_unique<VDX7AudioProcessor>(false);
         auto& p = *owner;
