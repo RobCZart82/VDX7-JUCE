@@ -478,14 +478,15 @@ static void testExpandedLifecycle(const juce::File& rom, int mode, int path)
     unchanged(before, capture(p));
 }
 
-static double correctedProcessorPitch(const juce::File& rom, bool corrected, int key, bool mono = true)
+static double correctedProcessorPitch(const juce::File& rom, bool corrected, int key,
+                                      bool mono, double sampleRate, int blockSize)
 {
     auto owner = std::make_unique<VDX7AudioProcessor>(false);
     auto& p = *owner;
     auto& e = VDX7RegressionAccess::engine(p);
     require(!e.isMonoCorrectionActive(), "correction inactive before image validation");
     require(e.configureMonoCorrectionBeforeLoad(corrected), "pre-load correction selection");
-    initialise(p, rom, 48000, 64);
+    initialise(p, rom, sampleRate, blockSize);
     require(e.isMonoCorrectionActive() == corrected, "verified correction activation");
     VDX7RegressionAccess::checkCorrectionProfile(p);
     require(!e.configureMonoCorrectionBeforeLoad(!corrected)
@@ -496,14 +497,17 @@ static double correctedProcessorPitch(const juce::File& rom, bool corrected, int
     e.reloadCurrentProgram();
     p.synchroniseOperatorParametersFromEngine();
     require(e.setPlaySetting(0, corrected && mono ? 1 : 0), "corrected MONO/native POLY fixture");
-    juce::AudioBuffer<float> audio(2, 64);
+    juce::AudioBuffer<float> audio(2, blockSize);
     juce::MidiBuffer midi;
-    auto pump = [&](int blocks) {
+    // Preserve elapsed firmware/audio time across host block partitions.
+    auto pump = [&](int baselineBlocks) {
+        const int blocks = static_cast<int>(std::ceil(baselineBlocks * 64.0 / 48000.0
+                                                     * sampleRate / blockSize));
         float peak = 0;
         for (int i = 0; i < blocks; ++i)
         {
             processChecked(p, audio, midi);
-            if (i > blocks / 2) peak = std::max(peak, audio.getMagnitude(0, 64));
+            if (i > blocks / 2) peak = std::max(peak, audio.getMagnitude(0, blockSize));
         }
         return peak;
     };
@@ -537,17 +541,19 @@ static double correctedProcessorPitch(const juce::File& rom, bool corrected, int
     double first = 0, last = 0;
     float previous = 0, peak = 0;
     int crossings = 0;
-    for (int block = 0; block < 1500; ++block)
+    const int measureBlocks = static_cast<int>(std::ceil(2 * sampleRate / blockSize));
+    const int startBlock = static_cast<int>(std::ceil(sampleRate / blockSize));
+    for (int block = 0; block < measureBlocks; ++block)
     {
         processChecked(p, audio, midi);
-        if (block < 750) continue;
-        for (int i = 0; i < 64; ++i)
+        if (block < startBlock) continue;
+        for (int i = 0; i < blockSize; ++i)
         {
             const float value = audio.getSample(0, i);
             peak = std::max(peak, std::abs(value));
-            if (previous <= 0 && value > 0 && (block != 750 || i != 0))
+            if (previous <= 0 && value > 0 && (block != startBlock || i != 0))
             {
-                const double crossing = block * 64 + i - 1 + (-previous / (value - previous));
+                const double crossing = block * blockSize + i - 1 + (-previous / (value - previous));
                 if (crossings++ == 0) first = crossing;
                 last = crossing;
             }
@@ -555,26 +561,93 @@ static double correctedProcessorPitch(const juce::File& rom, bool corrected, int
         }
     }
     require(peak > 1e-4f && crossings > 2, "processor measurable audio pitch");
-    const double hz = (crossings - 1) * 48000.0 / (last - first);
+    const double hz = (crossings - 1) * sampleRate / (last - first);
     require(VDX7RegressionAccess::firmwareMidiOwnershipFor(p, key) == 1, "original input key owned");
     note(key, false); require(pump(375) < 1e-5f, "measured note releases to silence");
     empty();
     VDX7RegressionAccess::checkFirmwareProfile(p);
     std::cout << "PROCESSOR corrected=" << corrected << " mono=" << (corrected && mono)
-              << " key=" << key << " transpose=12 hz=" << hz << '\n';
+              << " key=" << key << " rate=" << sampleRate << " block=" << blockSize
+              << " transpose=12 hz=" << hz << '\n';
     return hz;
+}
+
+static void testCorrectedLifecycle(const juce::File& rom)
+{
+    // Independent fixtures: one transition must not repair another's failure.
+    for (int transition = 0; transition < 3; ++transition)
+    {
+        auto owner = std::make_unique<VDX7AudioProcessor>(false);
+        auto& p = *owner;
+        auto& e = VDX7RegressionAccess::engine(p);
+        require(e.configureMonoCorrectionBeforeLoad(true), "lifecycle correction opt-in");
+        initialise(p, rom, 48000, 64);
+        e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+        e.reloadCurrentProgram();
+        require(e.setPlaySetting(0, 1), "lifecycle MONO selection");
+        p.synchroniseOperatorParametersFromEngine();
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        auto pump = [&] {
+            for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+        };
+        auto empty = [&] {
+            const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
+            require(fw.midi == 0 && fw.held == 0 && fw.sustained == 0
+                    && VDX7RegressionAccess::monoActiveCount(p) == 0,
+                    "corrected lifecycle retained ownership");
+            require(audio.getMagnitude(0, 64) < 1e-5f, "corrected lifecycle retained sound");
+        };
+        pump();
+        juce::MemoryBlock saved;
+        p.getStateInformation(saved);
+        const auto before = capture(p);
+        midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0);
+        pump();
+        require(VDX7RegressionAccess::monoActiveCount(p) == 1
+                && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 0) == 1,
+                "lifecycle requires genuinely held zero");
+        if (transition == 0) p.reset();
+        if (transition == 1) { p.releaseResources(); p.prepareToPlay(48000, 64); }
+        if (transition == 2) p.setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
+        pump();
+        require(e.isMonoCorrectionActive(), "lifecycle lost verified correction");
+        empty();
+        unchanged(before, capture(p));
+        for (int key : {0, 72})
+        {
+            midi.addEvent(juce::MidiMessage::noteOn(1, key, juce::uint8(100)), 0);
+            pump();
+            require(VDX7RegressionAccess::monoActiveCount(p) == 1
+                    && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, key) == 1
+                    && audio.getMagnitude(0, 64) > 1e-4f,
+                    "fresh corrected lifecycle note missing");
+            midi.addEvent(juce::MidiMessage::noteOff(1, key), 0);
+            pump(); empty();
+        }
+        VDX7RegressionAccess::checkFirmwareProfile(p);
+        std::cout << "PASS: corrected held-zero lifecycle transition=" << transition << '\n';
+    }
 }
 
 static void testCorrectedProcessor(const juce::File& rom)
 {
-    const double reference = correctedProcessorPitch(rom, false, 0);
+    testCorrectedLifecycle(rom);
+    for (double rate : {44100.0, 48000.0, 96000.0})
+    for (int size : {64, 256})
+    {
+    const auto pitch = [&](bool corrected, int key, bool mono = true) {
+        return correctedProcessorPitch(rom, corrected, key, mono, rate, size);
+    };
+    const double reference = pitch(false, 0);
     const auto pitchMatches = [reference](double actual) { return std::abs(actual / reference - 1) < 0.002; };
-    require(pitchMatches(correctedProcessorPitch(rom, true, 0)), "integrated genuine zero pitch");
-    require(!pitchMatches(correctedProcessorPitch(rom, true, 1)), "integrated negative pitch control must reject Note1");
-    require(pitchMatches(correctedProcessorPitch(rom, true, 0, false)), "enabled POLY pitch control");
-    const double reference72 = correctedProcessorPitch(rom, false, 72);
-    require(std::abs(correctedProcessorPitch(rom, true, 72) / reference72 - 1) < 0.002,
+    require(pitchMatches(pitch(true, 0)), "integrated genuine zero pitch");
+    require(!pitchMatches(pitch(true, 1)), "integrated negative pitch control must reject Note1");
+    require(pitchMatches(pitch(true, 0, false)), "enabled POLY pitch control");
+    const double reference72 = pitch(false, 72);
+    require(std::abs(pitch(true, 72) / reference72 - 1) < 0.002,
             "subsequent 72 after zero history must match genuine reference");
+    }
     std::cout << "PASS: engine-opt-in processor zero repetition, legato, pitch controls and release (not persisted/UI-ready)\n";
 }
 

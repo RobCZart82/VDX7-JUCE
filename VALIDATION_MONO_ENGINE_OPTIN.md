@@ -84,8 +84,42 @@ sanitizer, worst-case callback timing or real DAW acceptance result.
 
 ## Remaining gates (P1 stays open)
 
+### Follow-up: host rate/block matrix (2026-09-24)
+
+Expanded the same six processor fixtures to 44.1/48/96 kHz and 64/256 samples:
+36 fixtures total. Settling periods now preserve elapsed time (rounded up to
+whole host blocks); pitch measurement uses the actual sample rate and the final
+approximately one second of a two-second render. The 0.2% comparator, ownership,
+32-repeat and legato checks, release silence and negative control are unchanged.
+
+Rebuilt `vdx7_host_reset_tests`. Focused CTest: profile PASS, corrected matrix
+PASS (19.85 s), unchanged native acceptance FAIL (0/1/16, 0.17 s).
+Combined result 2/3, exit 8, 20.68 s. No full-suite rerun in this test-only round.
+This expands processor coverage, not GUI/persistence/lifecycle or DAW acceptance.
+Prior PR head macOS/Windows checks were green; these local changes need new CI.
+
 Persisted mode/UI and transition policy, reset/restore/ROM-reload cases with
 correction enabled, broader corrected processor ordering/capacity/pedal tests,
 nonzero-only differential controls and measured callback overhead remain open.
 An initial processor PASS cannot close these or make native acceptance PASS.
 Keep #47 Draft; no main merge, installed binary replacement, tag or release.
+
+### Follow-up: held-zero lifecycle (2026-09-24)
+
+Three independent 48 kHz/64-sample corrected MONO fixtures now hold Note 0
+across (1) host reset, (2) release/prepare, and (3) same-instance state restore
+using the saved ROM path (therefore also reloading that known image).
+After each transition, actual MIDI/held/sustained/MONO ownership and sound clear,
+the correction remains active, saved voice/performance/parameter/export state
+is unchanged, and fresh Note 0 then 72 each sound, retain the original key and
+release to silence. Final firmware profile is unchanged. Existing callback
+allocation and finite-output checks apply. Fixtures do not repair each other.
+
+Rebuilt host-reset executable. Focused profile + native acceptance + corrected
+suite: 2/3 PASS, exit 8, 22.36 s. Corrected lifecycle plus 36 rate/block/pitch
+fixtures PASS 21.52 s. Unchanged native acceptance FAIL 0.15 s (0/1/16).
+No full-suite rerun or DAW test in this test-only round.
+
+This is NOT correction-option persistence: the same instance already opted in
+before load. New-instance restore, missing/unknown ROM policy, serialized intent
+and UI selection are still unimplemented. Live switching remains rejected.
