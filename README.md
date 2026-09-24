@@ -109,6 +109,9 @@ The v0.6 series adds clickable algorithm diagrams, mechanical wheel graphics, an
   tuning (-256 to +255 firmware units, not cents) and OMNI/channel 1–16 input filtering.
   These settings are stored in the project, not voice SysEx. Input filtering is a
   wrapper feature, not multitimbral/MPE operation.
+- Supported MIDI note range is 12–120 inclusive (C0–C9 with REAPER's default
+  octave labels). Notes outside this range are filtered in both MONO
+  compatibility Settings modes and are not transposed.
 - No live MIDI Out/SysEx transmission; SysEx file import/export is available.
 - Sample-rate conversion uses a Blackman-windowed sinc filter with reported host latency.
   Final host/audio-quality acceptance remains outstanding.
@@ -165,15 +168,13 @@ remains separate acceptance work. Select these groups with
 `ctest --test-dir build-local -C Release -L firmware-v1_8 --output-on-failure`.
 
 `vdx7_mono_boundary_characterization` documents a known native MONO pitch-zero
-edge by comparing the raw emulator with the processor. Its PASS means the
-documented behavior and explicit mode-cycle recovery were reproduced, **not
-that the edge is fixed**. The unchanged original `vdx7_host_reset_tests /path/to/dx7.bin
---mono-note-zero-only` diagnostic is now registered as
-`vdx7_mono_note_zero_acceptance` (`release-blocker`). It still FAILS: **the full
-local CTest result is therefore failing, not release-ready**, even when the other
-tests pass. It is neither skipped nor inverted with WILL_FAIL. Historical passing
-counts predating this registration excluded this gate. See
-[validation scope](VALIDATION_MONO_BOUNDARY_AND_CI.md).
+edge by comparing the raw emulator with the processor. The current product
+filters Note 0–11 and 121–127 before either MONO mode, so this raw firmware issue
+is not reachable through supported plugin MIDI. The local
+`vdx7_supported_note_range_acceptance` CTest verifies both settings modes and
+the 12–120 inclusive boundary. Actual REAPER boundary acceptance remains a
+release check. Older reports below are historical evidence for the raw firmware
+behavior and earlier test naming.
 The follow-up `vdx7_mono_trace_characterization` (`--mono-trace-only`) verifies
 the loaded image's relevant instructions, observes the actual failing branches,
 and tests subsequent notes **without** recovery. It documents retained output
@@ -189,11 +190,11 @@ audio-frequency check. `--pitch-oracle-only` runs the pair;
 `--pitch-oracle-note-one-mutant` exposes the mutant's failure directly (exit 1).
 This expected negative control does not invert the real plugin acceptance gate.
 The complete experiment shares `VDX7MonoCorrection.h` with a ROM-free six-site
-decision-policy test (`vdx7_mono_correction`). The engine now has an explicit
-pre-ROM-load opt-in, covered through real `processBlock` by
-`vdx7_mono_corrected_processor`. Default plugin behavior remains native; no GUI
-switch or project-persisted option exists yet. See
-[engine integration scope](VALIDATION_MONO_ENGINE_OPTIN.md).
+decision-policy test (`vdx7_mono_correction`). The optional correction is
+selectable in SETTINGS and persisted with project state. The product input
+adapter filters Note 0–11 and 121–127 in both modes; raw-core tests continue to
+characterize native Note 0 separately. See [engine integration scope](VALIDATION_MONO_ENGINE_OPTIN.md)
+and [the product range policy](MIDI_RANGE_v0.7.0.md).
 The separate `vdx7_deferred_partition` (`--deferred-partition-only`) regression
 checks real-processor note playback/release across small and oversized successful
 blocks, plus true-delay expiry under contention and reset. Its queue-only portion

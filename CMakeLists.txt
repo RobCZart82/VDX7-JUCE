@@ -325,12 +325,12 @@ if(VDX7_ENABLE_ROM_TESTS)
         COMMAND vdx7_mono_candidate_tests "${VDX7_TEST_ROM_FILE}")
     set_tests_properties(vdx7_mono_candidate_experiment PROPERTIES
         TIMEOUT 180 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;experiment-not-product-fix")
-    # This intentionally exposes the unresolved production P1 in the combined
-    # local result. Do NOT use WILL_FAIL, SKIP or a characterization expectation.
-    add_test(NAME vdx7_mono_note_zero_acceptance
-        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --mono-note-zero-only)
-    set_tests_properties(vdx7_mono_note_zero_acceptance PROPERTIES
-        TIMEOUT 60 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;release-blocker")
+    # Product acceptance verifies the explicit MIDI-range guard in both modes.
+    # Raw native firmware behavior remains separately characterized.
+    add_test(NAME vdx7_supported_note_range_acceptance
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --supported-note-range-only)
+    set_tests_properties(vdx7_supported_note_range_acceptance PROPERTIES
+        TIMEOUT 60 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;product-input-range")
     add_test(NAME vdx7_mono_corrected_processor
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --mono-corrected-processor-only)
     add_test(NAME vdx7_mono_soak

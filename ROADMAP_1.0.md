@@ -14,9 +14,18 @@ separate desktop retry, new dual-instance soak and remaining host boundaries.
 User approved retaining both native and corrected Settings modes, not merge or
 publication. Native known failure remains explicitly separate.
 
-1. Rebuild/run the complete registered regression suite after the held-state,
-   ignored-CC, installation-boundary, bypass and wheel-delivery fixes. Report
-   native Note0 failure and desktop prerequisites separately, never as PASS.
+New product input policy (2026-09-24): filter MIDI Note events outside the
+inclusive 12–120 range in both MONO modes. This prevents the observed native
+Note 0 lockup and excludes the unused upper tail by product choice without
+transposing pitches or patching firmware. Processor/ROM-free boundary tests were
+added; local execution is pending because this Mac currently blocks Apple
+toolchain use until the Xcode license is accepted. Run GitHub CI, then targeted
+REAPER tests at Notes 11/12 and 120/121, including release, sustain, transport,
+and subsequent normal-register notes.
+
+1. Run fresh CI and the complete registered regression suite for the new range
+   guard. Keep raw-firmware Note 0 characterization distinct from the product
+   range acceptance result; report unavailable desktop prerequisites as NOT RUN.
 2. Broaden concurrent public restore, mixed controller/overflow timing and host
    bypass/suspension coverage. Desktop GUI/processor follow-up now passes;
    see VALIDATION_GUI_RESTORE_ORACLE.md for the persistent-state oracle change.
@@ -118,7 +127,12 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
   flushed-command replay and later accepted physical CC5 are covered by
   `VALIDATION_PORTAMENTO_INTENT.md`. Native CC5 still computes the actual rate;
   there is no synthetic acknowledgement or extra callback render budget.
-- [x] Full 0–127 note range and pitch/release regressions (local ROM).
+- [x] Historical full 0–127 note range and pitch/release regressions (local ROM).
+  Superseding product policy (2026-09-24): filter Note On/Off outside 12–120
+  before deferred storage and engine delivery in both modes; 12/120 are inclusive.
+  Processor and deferred-queue tests cover boundaries; actual REAPER acceptance
+  remains a release check. This is an explicit product range limit, not a claim
+  that the raw firmware issue was fixed.
   Scope correction (2026-09-23): this is not exhaustive POLY/MONO coverage.
   Native v1.8 MONO pitch 0 retains ownership after release in the raw emulator
   and processor. The new 32-case boundary characterization documents it; the
@@ -135,24 +149,12 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
   approved. The earlier engine-only stage is superseded: the optional correction
   is integrated, persisted and selectable in SETTINGS. Default firmware fidelity
   is unchanged; full corrected-mode product acceptance remains open.
-- [ ] MONO Note 0 product correction and acceptance: isolated raw-core candidate
-  experiment addresses occupied-slot decisions across allocation, lookup,
-  release and legato traversal. It is not linked into VDX7. Protect Note 0's own
-  key/pitch/audio, both Off encodings, subsequent notes, sustain/portamento and
-  native/POLY compatibility. See `VALIDATION_MONO_CANDIDATE.md` and the policy.
-  Integration follow-up: `VALIDATION_MONO_ENGINE_OPTIN.md` records shared-policy
-  engine stepping and actual processor checks. `VALIDATION_MONO_PERSISTENCE.md`
-  adds serialized intent, new-instance/deferred-ROM restore and legacy fallback.
-  `VALIDATION_MONO_SETTINGS.md` adds explicit UI selection/status and a held-note
-  transition check. Complete corrected-mode lifecycle/host acceptance remains.
-  The unchanged production diagnostic is now a registered `release-blocker`
-  CTest; the full local suite must remain failing until product acceptance is
-  actually met. Passing characterization/experiment and public ROM-free CI
-  cannot close this checkbox. Optional-mode integration, state/lifecycle/profile
-  guards and targeted processor evidence are implemented; they are not pending
-  design work. Still required: consolidated final-revision regression, real-host
-  evidence and an explicit native-versus-corrected publication decision. Keep the
-  native acceptance failure visible; do not silently invert it into a PASS.
+- [x] Prevent the observed Note 0 MONO lockup at the product boundary by filtering
+  Note 0–11 and 121–127 in both modes; retain raw firmware characterization.
+  The selectable correction, project persistence and candidate evidence remain
+  separately documented in `VALIDATION_MONO_*`. Reopen only for a reproduced
+  bypass or regression; broader corrected-mode host acceptance remains.
+  REAPER validation at Note 11/12 and 120/121 is still required before release.
 - [x] Configure PR ROM-free CI and opt-in local ROM integration CTest gate.
   All integration runners now compile through the shared CI target. Known-v1.8
   ownership groups have a separately labelled, required firmware prerequisite;

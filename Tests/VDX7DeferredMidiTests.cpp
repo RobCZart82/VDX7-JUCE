@@ -22,6 +22,14 @@ struct VDX7EditQueueTestAccess
 };
 
 void require(bool result) { if (!result) std::exit(1); }
+void require(bool result, const char* message)
+{
+    if (!result)
+    {
+        std::cerr << "FAIL: " << message << '\n';
+        std::exit(1);
+    }
+}
 int main()
 {
     // Exhaust every status, length and data-byte value without ROM or JUCE.
@@ -48,10 +56,47 @@ int main()
         for (int channel = 1; channel <= 16; ++channel)
             for (int kind = 0x80; kind < 0xf0; kind += 0x10)
             {
-                const uint8_t event[] {static_cast<uint8_t>(kind | (channel-1)), 7, 64};
+                const uint8_t event[] {static_cast<uint8_t>(kind | (channel-1)), 60, 64};
                 require(VDX7MidiValidation::acceptsHostEvent(event, kind == 0xc0 || kind == 0xd0 ? 2 : 3, selected)
                         == (selected == 0 || selected == channel));
             }
+    for (int note = 0; note < 128; ++note)
+        for (const uint8_t status : {uint8_t(0x80), uint8_t(0x90)})
+            for (const uint8_t velocity : {uint8_t(0), uint8_t(1), uint8_t(127)})
+            {
+                const uint8_t event[] {status, static_cast<uint8_t>(note), velocity};
+                const bool supported = note >= VDX7MidiValidation::firstSupportedNote
+                    && note <= VDX7MidiValidation::lastSupportedNote;
+                require(VDX7MidiValidation::acceptsHostEvent(event, sizeof(event), 0) == supported);
+            }
+    const uint8_t lowNumberedControl[] {0xb0, 11, 127};
+    require(VDX7MidiValidation::acceptsHostEvent(lowNumberedControl,
+            sizeof(lowNumberedControl), 0), "note-range filter must not reject low-numbered CCs");
+    {
+        VDX7DeferredMidi filteredRange;
+        for (int i = 0; i < 300; ++i)
+        {
+            const int index = i % 19;
+            const auto pitch = static_cast<uint8_t>(index < 12 ? index : 121 + index - 12);
+            const uint8_t on[] {0x90, pitch, 100}, off[] {0x80, pitch, 0};
+            const bool acceptedOn = VDX7MidiValidation::acceptsHostEvent(on, sizeof(on), 0);
+            const bool acceptedOff = VDX7MidiValidation::acceptsHostEvent(off, sizeof(off), 0);
+            require(!acceptedOn && !acceptedOff, "excluded pitch tails rejected before deferral");
+            if (acceptedOn) require(filteredRange.push(on, sizeof(on)), "queue accepted On");
+            if (acceptedOff) require(filteredRange.push(off, sizeof(off)), "queue accepted Off");
+        }
+        const uint8_t firstSupported[] {0x90, 12, 100};
+        require(VDX7MidiValidation::acceptsHostEvent(firstSupported, sizeof(firstSupported), 0)
+                && filteredRange.push(firstSupported, sizeof(firstSupported)),
+                "filtered-note flood leaves deferred queue capacity for C0");
+        bool panic = false;
+        int deliveredPitch = -1;
+        filteredRange.renderBlock(64, [&](const uint8_t* event, std::size_t size, int) {
+            require(size == sizeof(firstSupported));
+            deliveredPitch = event[1];
+        }, [&] { panic = true; });
+        require(!panic && deliveredPitch == 12, "supported lower boundary survives filtered flood");
+    }
     checkEditQueue();
     for (int cc = 0; cc < 128; ++cc)
         for (int value = 0; value < 128; ++value)

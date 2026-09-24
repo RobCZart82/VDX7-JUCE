@@ -6,6 +6,12 @@ intent, including missing-ROM saves and legacy-native fallback. See
 `VALIDATION_MONO_SETTINGS.md`, with broader host acceptance pending; the following
 historical design/experiment sections are not a current implementation inventory.
 
+Status correction (2026-09-24): the selectable, project-persisted processor
+mode is implemented; the older paragraphs below that say it is “NOT complete”
+or “design pending” are historical and superseded by the validation reports.
+The new common 12–120 product input filter is now in the current development
+change, but awaits compilation/CI and REAPER boundary acceptance.
+
 2026-09-23. Design note, **not an implemented fix or permission to patch firmware**.
 The default remains firmware-faithful operation. Keep Draft #47;
 MONO note-zero acceptance and release approval are still open.
@@ -42,20 +48,37 @@ must not be disguised as a CPU fix.
 
 ## Separate the two product choices
 
-1. **Native path (current authorized baseline).** Preserve the ROM's behavior
-   and explicitly document the limitation. Do not silently reject/transplant
-   pitch zero or convert MONO to POLY. This choice does not turn the failing
-   note-zero test into a passing release test. Shipping with this limitation
-   would require explicit release acceptance; none is granted here.
-2. **Optional corrected path (development direction approved; design pending).**
-   Define a clearly named, persisted compatibility option with
-   native behavior as the legacy-project/default fallback. A corrective design
-   must address allocation occupancy AND found/not-found release status, count
-   consistency, legato priority and subsequent notes. It must be scoped to a
-   verified compatible image; unknown images must not receive an assumed RAM
-   or instruction patch. The branch-decision hook has initial engine/processor
-   validation; complete product-option/lifecycle acceptance is still pending.
-   Do not modify/distribute ROM bytes as part of the present work.
+### Superseding product input-range decision — 2026-09-24
+
+The user observed in REAPER that Note 0 can leave the native MONO engine silent;
+Note 12 / C0 was the lowest manually tested note that did not trigger the lockup.
+The user also found the 0–11 octave musically unnecessary for this DX7 product.
+Therefore the accepted product input range is Note 12–120 inclusive in BOTH
+compatibility modes. Note On, Note Off and velocity-zero Note On outside that
+range are filtered before deferred storage and before engine delivery. No pitch
+substitution or firmware/RAM modification is made. Note 121–127 are excluded
+by the selected product range, not because a matching failure was reproduced.
+
+This adapter guard is not a claim that native firmware Note 0 was fixed. The raw
+firmware issue remains documented by engine-level tracing; the former plugin-
+facing failing Note 0 acceptance check is superseded by range acceptance. The
+engine-level optional correction remains available for compatibility. New plugin
+MIDI cannot trigger Note 0 in either mode once this guard ships. REAPER tests for
+exact boundaries, both modes, held-note transitions and post-filter normal-note
+recovery are still required.
+
+1. **Native path (current authorized baseline within product range).** Preserve
+   the ROM's behavior for accepted Notes 12–120 and explicitly document the
+   out-of-range adapter filter. The raw native Note 0 defect remains documented
+   and must not be re-labelled as fixed; its acceptance diagnostic continues to
+   expose the firmware-level failure.
+2. **Optional corrected path.** The selectable and persisted compatibility
+   option is implemented and covered by targeted processor tests. Preserve its
+   known-image guard and the established allocation/release/count/legato rules;
+   unknown images must not receive an assumed RAM or instruction patch. Keep
+   its engine-level Note 0 regression evidence distinct from the current product
+   filter, which intentionally prevents Note 0 input in both modes. Do not
+   modify/distribute ROM bytes as part of the present work.
 
 An explicit user-requested native mode cycle can clear ownership in the measured
 fixture, but interrupts/reconfigures voices. It is recovery, not transparent
@@ -64,6 +87,12 @@ The ordinary plugin reset must not be advertised as a proven universal cure
 for native MONO ownership either.
 
 ## Required acceptance before any corrected path could be called fixed
+
+The engine-level Note 0 pitch/release criteria below remain applicable to the
+correction implementation in its direct processor/engine acceptance tests. The
+2026-09-24 product contract supersedes Note 0 playback as a DAW-facing feature:
+the plugin boundary must now reject Note 0–11 and 121–127 in both modes, while
+allowing and releasing Notes 12–120. Keep both acceptance layers explicit.
 
 - Preserve the native failing diagnostic and read-only characterization as
   references; add separate corrected-path tests, never weaken their assertions.
@@ -113,16 +142,11 @@ zero. Correcting that lookup still leaves legato's first/minimum/maximum searche
 using zero pitch as emptiness. All these consumers need one occupancy contract.
 See the experiment's negative controls before its complete candidate tests.
 
-The existing unchanged `--mono-note-zero-only` production diagnostic is now
-registered as `vdx7_mono_note_zero_acceptance`, labelled `release-blocker`.
-No WILL_FAIL, skip or expected-bug conversion: the full local CTest invocation
-must report failure while this product P1 remains unresolved. Public ROM-free
-CI still cannot run it. A passing experiment cannot substitute for this gate.
-The native FAIL exposes the pre-existing defect; it is not a regression caused
-by the unlinked experiment. An expected rejection in an oracle-sensitivity test
-is a different result and must never convert that native failure to PASS.
-When a corrected product mode exists, test its explicit activation and native
-fallback independently; never silently flip the expected defect into acceptance.
+Historical reports below describe the old plugin-facing Note 0 failure and
+`--mono-note-zero-only` test. Superseding 2026-09-24 behavior filters pitches
+outside 12–120 in both modes; current local product acceptance is
+`vdx7_supported_note_range_acceptance`. The raw firmware failure remains covered
+by separate engine-level characterization and has not been turned into a pass.
 
 Before selecting this method for production, resolve optional-mode persistence,
 safe changes with held notes, known/unknown-image guards, every CPU stepping path,

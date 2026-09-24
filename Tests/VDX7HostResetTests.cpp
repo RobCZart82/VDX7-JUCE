@@ -2,6 +2,7 @@
 // Execute with the user's explicitly supplied local ROM only.
 #include "PluginProcessor.h"
 #include "VDX7AllocationProbe.h"
+#include "VDX7MidiValidation.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -162,8 +163,14 @@ struct VDX7RegressionAccess
     { return p.hostResetRequested_.load() || p.hostResetPending_; }
     static bool fullReleaseHistory(const VDX7AudioProcessor& p, int repeats)
     {
-        return std::all_of(p.engine_.midiReleaseBudget_.begin(), p.engine_.midiReleaseBudget_.end(),
-                           [repeats](uint8_t value) { return value == repeats; });
+        for (int note = 0; note < 128; ++note)
+        {
+            const auto expected = note >= VDX7MidiValidation::firstSupportedNote
+                               && note <= VDX7MidiValidation::lastSupportedNote
+                ? repeats : 0;
+            if (p.engine_.midiReleaseBudget_[note] != expected) return false;
+        }
+        return true;
     }
     static bool inputIdle(VDX7AudioProcessor& p)
     {
@@ -444,13 +451,10 @@ static void testExpandedLifecycle(const juce::File& rom, int mode, int path)
     const auto pump = [&](int count)
     { for (int i = 0; i < count; ++i) processChecked(p, audio, midi); };
     const auto overloads = e.midiOverloadCount();
-    for (int note = 0; note < 128; ++note)
+    for (int note = 12; note <= 120; ++note)
     {
-        // v1.8 MONO uses key zero as an empty-slot sentinel and does not
-        // release it normally. Seed pitch-zero history in POLY, then exercise
-        // all 127 other pitches in MONO. Keep the full 128*16 adapter budget;
-        // do not confuse that separate native-firmware edge with lifecycle.
-        if (note == 1) require(e.setPlaySetting(0, mode), "expanded lifecycle mode fixture");
+        // The public plugin range is intentionally restricted to 12..120.
+        if (note == 12) require(e.setPlaySetting(0, mode), "expanded lifecycle mode fixture");
         for (bool on : {true, false})
             for (int i = 0; i < 16; ++i)
             {
@@ -465,15 +469,14 @@ static void testExpandedLifecycle(const juce::File& rom, int mode, int path)
     require(idle.midi == 0 && idle.held == 0 && idle.sustained == 0
             && (mode == 0 || VDX7RegressionAccess::monoActiveCount(p) == 0),
             "expanded lifecycle history must finish with no firmware ownership");
-    // Place held ownership near the END of the release batch (6144 bytes in
-    // the old explicit-status path; 4097 with running status).
+    // Place held ownership near the end of the release batch.
     for (int i = 0; i < 16; ++i)
-        midi.addEvent(juce::MidiMessage::noteOn(1, 127, juce::uint8(100)), 0);
+        midi.addEvent(juce::MidiMessage::noteOn(1, 120, juce::uint8(100)), 0);
     pump(375);
     std::cout << "EXPANDED LIFECYCLE before: mode=" << mode
               << ", peak=" << audio.getMagnitude(0, 64) << '\n';
     require(audio.getMagnitude(0, 64) > 1e-4f, "expanded lifecycle held fixture must sound");
-    require(VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 127) == 16
+    require(VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 120) == 16
             && e.midiOverloadCount() == overloads, "expanded lifecycle held ownership fixture");
     const auto before = capture(p);
     const auto started = std::chrono::steady_clock::now();
@@ -505,11 +508,11 @@ static void testExpandedLifecycle(const juce::File& rom, int mode, int path)
     const auto fresh = VDX7RegressionAccess::firmwareOwnership(p);
     std::cout << "EXPANDED LIFECYCLE fresh: peak=" << peak
               << ", note72=" << VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 72)
-              << ", old127=" << VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 127)
+              << ", old120=" << VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 120)
               << ", MIDI/held/sustained=" << fresh.midi << '/' << fresh.held
               << '/' << fresh.sustained << ", onset ms=" << (firstAudibleBlock + 1) * 64.0 / 48.0 << '\n';
     require(peak > 1e-4f && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 72) == 1
-            && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 127) == 0
+            && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 120) == 0
             && fresh.midi == 1 && fresh.held == 1 && fresh.sustained == 0
             && !e.isHostResetInProgress() && e.midiOverloadCount() == overloads,
             "expanded lifecycle retained old ownership or lost immediate fresh note");
@@ -569,19 +572,19 @@ static double correctedProcessorPitch(const juce::File& rom, bool corrected, int
     pump(375);
     if (corrected && mono)
     {
-        // No reset or mode recovery between repeated zero notes and new input.
+        // The plugin-facing range starts at MIDI Note 12 in both modes.
         for (int repeat = 0; repeat < 32; ++repeat)
         {
-            note(0, true); pump(75);
-            require(VDX7RegressionAccess::monoActiveCount(p) == 1, "one actual zero allocation");
-            note(0, false); pump(75); empty();
+            note(12, true); pump(75);
+            require(VDX7RegressionAccess::monoActiveCount(p) == 1, "one actual boundary-note allocation");
+            note(12, false); pump(75); empty();
         }
-        note(0, true); pump(375);
-        const auto zeroTarget = VDX7RegressionAccess::monoTargetPitch(p);
+        note(12, true); pump(375);
+        const auto boundaryTarget = VDX7RegressionAccess::monoTargetPitch(p);
         note(60, true); pump(375); note(60, false); pump(375);
-        require(VDX7RegressionAccess::monoTargetPitch(p) == zeroTarget
-                && VDX7RegressionAccess::monoActiveCount(p) == 1, "integrated legato returns to zero");
-        note(0, false); require(pump(375) < 1e-5f, "legato final silence"); empty();
+        require(VDX7RegressionAccess::monoTargetPitch(p) == boundaryTarget
+                && VDX7RegressionAccess::monoActiveCount(p) == 1, "integrated legato returns to boundary note");
+        note(12, false); require(pump(375) < 1e-5f, "legato final silence"); empty();
     }
     note(key, true);
     double first = 0, last = 0;
@@ -654,17 +657,17 @@ static void testCorrectedLifecycle(const juce::File& rom)
             midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
         for (int i = 0; i < repetitions; ++i)
         {
-            midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0);
+            midi.addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(100)), 0);
             pump();
         }
         require(VDX7RegressionAccess::monoActiveCount(p) == repetitions
-                && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 0) == repetitions,
-                "lifecycle requires genuinely held zero");
+                && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 12) == repetitions,
+                "lifecycle requires genuinely held lowest supported note");
         if (history == 2)
         {
             // Exercise the alternate Note Off encoding while the pedal keeps
             // the voice audible; adapter emptiness alone is not acceptance.
-            midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(0)), 0);
+            midi.addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(0)), 0);
             pump();
             const auto sustained = VDX7RegressionAccess::firmwareOwnership(p);
             std::cout << "SUSTAIN transition=" << transition << " MIDI/held/sustained="
@@ -680,9 +683,9 @@ static void testCorrectedLifecycle(const juce::File& rom)
             midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), 0);
             pump(); empty();
             midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
-            midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0);
+            midi.addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(100)), 0);
             pump();
-            midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(0)), 0);
+            midi.addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(0)), 0);
             pump();
             require(audio.getMagnitude(0, 64) > 1e-4f, "sustain precondition recreated");
         }
@@ -692,7 +695,7 @@ static void testCorrectedLifecycle(const juce::File& rom)
             // the idle snapshot captured above while a key happens to be held.
             p.getStateInformation(saved);
             for (int i = 0; i < repetitions; ++i)
-                midi.addEvent(juce::MidiMessage::noteOff(1, 0), 0);
+                midi.addEvent(juce::MidiMessage::noteOff(1, 12), 0);
             midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), 0);
             pump();
             empty();
@@ -720,7 +723,7 @@ static void testCorrectedLifecycle(const juce::File& rom)
         require(e.isMonoCorrectionActive(), "lifecycle lost verified correction");
         empty();
         unchanged(before, capture(p));
-        for (int key : {0, 72})
+        for (int key : {12, 72})
         {
             midi.addEvent(juce::MidiMessage::noteOn(1, key, juce::uint8(100)), 0);
             pump();
@@ -732,7 +735,7 @@ static void testCorrectedLifecycle(const juce::File& rom)
             pump(); empty();
         }
         VDX7RegressionAccess::checkFirmwareProfile(p);
-        std::cout << "PASS: corrected held-zero lifecycle transition=" << transition
+        std::cout << "PASS: corrected supported-note lifecycle transition=" << transition
                   << " history=" << history << '\n';
     }
 }
@@ -749,10 +752,10 @@ static void testCorrectionPersistence(const juce::File& rom)
     source->synchroniseOperatorParametersFromEngine();
     juce::AudioBuffer<float> sourceAudio(2, 64);
     juce::MidiBuffer sourceMidi;
-    sourceMidi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0);
+    sourceMidi.addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(100)), 0);
     for (int i = 0; i < 750; ++i) processChecked(*source, sourceAudio, sourceMidi);
     require(VDX7RegressionAccess::monoActiveCount(*source) == 1,
-            "persistence snapshot must contain held zero");
+            "persistence snapshot must contain held supported note");
     juce::MemoryBlock saved;
     source->getStateInformation(saved);
     auto xml = juce::AudioProcessor::getXmlFromBinary(saved.getData(), int(saved.getSize()));
@@ -788,17 +791,17 @@ static void testCorrectionPersistence(const juce::File& rom)
                 && VDX7RegressionAccess::firmwareOwnership(p).midi == 0
                 && VDX7RegressionAccess::firmwareOwnership(p).held == 0
                 && audio.getMagnitude(0, 64) < 1e-5f,
-                "fresh/deferred ROM restore must not revive saved held zero");
-        midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0); pump();
+                "fresh/deferred ROM restore must not revive saved held note");
+        midi.addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(100)), 0); pump();
         require(VDX7RegressionAccess::monoActiveCount(p) == 1
-                && audio.getMagnitude(0, 64) > 1e-4f, "restored zero sounds");
-        midi.addEvent(juce::MidiMessage::noteOff(1, 0), 0); pump();
+                && audio.getMagnitude(0, 64) > 1e-4f, "restored lowest supported note sounds");
+        midi.addEvent(juce::MidiMessage::noteOff(1, 12), 0); pump();
         require(VDX7RegressionAccess::monoActiveCount(p) == 0
                 && VDX7RegressionAccess::firmwareOwnership(p).held == 0
-                && audio.getMagnitude(0, 64) < 1e-5f, "restored zero releases");
+                && audio.getMagnitude(0, 64) < 1e-5f, "restored supported note releases");
         // A legacy project must revert a corrected instance, even with a held
         // zero and no accessible saved path. The current image is revalidated.
-        midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0); pump();
+        midi.addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(100)), 0); pump();
         auto legacy = tree.createCopy();
         legacy.removeProperty("monoNoteZeroCorrection", nullptr);
         legacy.setProperty("romPath", "", nullptr);
@@ -848,10 +851,10 @@ static void testCorrectedCapacityAndOrder(const juce::File& rom)
     for (bool zeroVelocity : {false, true})
         for (int count : {1, 16, 17, 32})
         {
-            for (int i = 0; i < count; ++i) note(0, true);
+            for (int i = 0; i < count; ++i) note(12, true);
             require(VDX7RegressionAccess::monoActiveCount(p) == std::min(count, 16)
                     && audio.getMagnitude(0, 64) > 1e-4f, "bounded actual MONO allocation");
-            for (int i = 0; i < count; ++i) note(0, false, zeroVelocity);
+            for (int i = 0; i < count; ++i) note(12, false, zeroVelocity);
             empty();
             note(72, true);
             require(VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 72) == 1
@@ -860,7 +863,7 @@ static void testCorrectedCapacityAndOrder(const juce::File& rom)
         }
     // Establish single-note targets, then check only the unambiguous last-held
     // note. Do not assume a last-note priority for intermediate MONO states.
-    const std::array<int, 3> keys {0, 60, 72};
+    const std::array<int, 3> keys {12, 60, 72};
     std::array<int, 3> targets {};
     for (int i = 0; i < 3; ++i)
     {
@@ -934,10 +937,10 @@ static void testCorrectionNonzeroDifferential(const juce::File& rom)
         pump();
         send(juce::MidiMessage::controllerEvent(1, 64, sustain ? 127 : 0));
         send(juce::MidiMessage::controllerEvent(1, 65, porta ? 127 : 0));
-        for (int key : {1, 60, 127, 60}) send(juce::MidiMessage::noteOn(1, key, juce::uint8(100)));
+        for (int key : {12, 60, 120, 60}) send(juce::MidiMessage::noteOn(1, key, juce::uint8(100)));
         send(juce::MidiMessage::noteOff(1, 60));
-        send(juce::MidiMessage::noteOn(1, 127, juce::uint8(0)));
-        send(juce::MidiMessage::noteOff(1, 1));
+        send(juce::MidiMessage::noteOn(1, 120, juce::uint8(0)));
+        send(juce::MidiMessage::noteOff(1, 12));
         send(juce::MidiMessage::noteOff(1, 60));
         send(juce::MidiMessage::controllerEvent(1, 64, 0));
         send(juce::MidiMessage::controllerEvent(1, 65, 0));
@@ -981,7 +984,7 @@ static void testCorrectedInstanceIsolation(const juce::File& rom)
             processChecked(*b, ab, mb);
         }
     };
-    ma.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0);
+    ma.addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(100)), 0);
     mb.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
     pump();
     require(VDX7RegressionAccess::monoActiveCount(*a) == 1
@@ -1000,12 +1003,12 @@ static void testCorrectedInstanceIsolation(const juce::File& rom)
     pump();
     require(VDX7RegressionAccess::monoActiveCount(*b) == 0
             && ab.getMagnitude(0, 64) < 1e-5f, "sibling note must release");
-    // Reverse the roles and keep Note 0 sounding via CC64, not key ownership.
+    // Reverse the roles and keep the lowest supported note sounding via CC64.
     // Empty MONO slots alone must not be mistaken for a silent instance.
     ma.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
-    ma.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 1);
+    ma.addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(100)), 1);
     pump();
-    ma.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(0)), 0);
+    ma.addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(0)), 0);
     pump();
     require(VDX7RegressionAccess::monoActiveCount(*a) == 0
             && aa.getMagnitude(0, 64) > 1e-4f, "isolation needs audible pedal hold");
@@ -1051,20 +1054,20 @@ static void testCorrectedRepeatedReset(const juce::File& rom)
     for (int cycle = 0; cycle < 12; ++cycle)
     {
         midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
-        midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 63);
+        midi.addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(100)), 63);
         pump();
         require(VDX7RegressionAccess::monoActiveCount(p) == 1
-                && audio.getMagnitude(0, 64) > 1e-4f, "reset cycle needs sounding zero");
-        midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(0)), 63);
+                && audio.getMagnitude(0, 64) > 1e-4f, "reset cycle needs sounding boundary note");
+        midi.addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(0)), 63);
         pump();
         require(audio.getMagnitude(0, 64) > 1e-4f, "reset cycle needs pedal hold");
         resetChecked(p);
         pump(); empty();
         // Late releases from the interrupted history must not poison fresh input.
-        midi.addEvent(juce::MidiMessage::noteOff(1, 0), 0);
+        midi.addEvent(juce::MidiMessage::noteOff(1, 12), 0);
         midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), 63);
         pump(); empty();
-        for (int key : {0, 72})
+        for (int key : {12, 72})
         {
             midi.addEvent(juce::MidiMessage::noteOn(1, key, juce::uint8(100)), 63);
             pump();
@@ -1118,11 +1121,11 @@ static void testCorrectedSoak(const juce::File& rom)
         for (auto* m : {&ma, &mb})
         {
             m->addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
-            m->addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 63);
+            m->addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(100)), 63);
         }
         pump();
         require(aa.getMagnitude(0,64) > 1e-4f && ab.getMagnitude(0,64) > 1e-4f,
-                "soak individual zero missing");
+                "soak individual boundary note missing");
         ma.addEvent(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)), 0);
         mb.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 63);
         pump();
@@ -1131,10 +1134,10 @@ static void testCorrectedSoak(const juce::File& rom)
         pump();
         for (auto* p : {a.get(), b.get()})
             require(VDX7RegressionAccess::monoActiveCount(*p) == 1
-                    && VDX7RegressionAccess::firmwareMidiOwnershipFor(*p,0) == 1,
-                    "soak legato zero ownership");
+                    && VDX7RegressionAccess::firmwareMidiOwnershipFor(*p,12) == 1,
+                    "soak legato boundary-note ownership");
         for (auto* m : {&ma, &mb})
-            m->addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(0)), 63);
+            m->addEvent(juce::MidiMessage::noteOn(1, 12, juce::uint8(0)), 63);
         pump();
         require(aa.getMagnitude(0,64) > 1e-4f && ab.getMagnitude(0,64) > 1e-4f,
                 "soak pedal hold missing");
@@ -1170,19 +1173,19 @@ static void testCorrectedProcessor(const juce::File& rom)
     const auto pitch = [&](bool corrected, int key, bool mono = true) {
         return correctedProcessorPitch(rom, corrected, key, mono, rate, size);
     };
-    const double reference = pitch(false, 0);
+    const double reference = pitch(false, 12);
     const auto pitchMatches = [reference](double actual) { return std::abs(actual / reference - 1) < 0.002; };
-    require(pitchMatches(pitch(true, 0)), "integrated genuine zero pitch");
-    require(!pitchMatches(pitch(true, 1)), "integrated negative pitch control must reject Note1");
-    require(pitchMatches(pitch(true, 0, false)), "enabled POLY pitch control");
+    require(pitchMatches(pitch(true, 12)), "integrated lowest supported note pitch");
+    require(!pitchMatches(pitch(true, 13)), "integrated adjacent-note pitch control");
+    require(pitchMatches(pitch(true, 12, false)), "enabled POLY lowest supported pitch control");
     const double reference72 = pitch(false, 72);
     require(std::abs(pitch(true, 72) / reference72 - 1) < 0.002,
-            "subsequent 72 after zero history must match genuine reference");
+            "subsequent 72 after boundary-note history must match genuine reference");
     }
     std::cout << "PASS: corrected processor capacity, order, persistence, lifecycle and pitch controls (not full release acceptance)\n";
 }
 
-static void diagnoseMonoNoteZero(const juce::File& rom)
+static void testSupportedMidiNoteRange(const juce::File& rom)
 {
     auto owner = std::make_unique<VDX7AudioProcessor>(false);
     auto& p = *owner;
@@ -1190,19 +1193,22 @@ static void diagnoseMonoNoteZero(const juce::File& rom)
     require(VDX7RegressionAccess::engine(p).setPlaySetting(0, 1), "MONO diagnostic fixture");
     juce::AudioBuffer<float> audio(2, 64);
     juce::MidiBuffer midi;
-    for (bool on : {true, false})
+    for (bool corrected : {false, true})
     {
-        for (int i = 0; i < 16; ++i)
-            midi.addEvent(on ? juce::MidiMessage::noteOn(1, 0, juce::uint8(100))
-                             : juce::MidiMessage::noteOff(1, 0), 0);
+        require(p.setMonoCorrectionFromUi(corrected), "Note 0 range-filter mode selection");
+        for (auto message : {juce::MidiMessage::noteOn(1, 0, juce::uint8(100)),
+                             juce::MidiMessage::noteOff(1, 0),
+                             juce::MidiMessage::noteOn(1, 11, juce::uint8(100)),
+                             juce::MidiMessage::noteOn(1, 121, juce::uint8(100)),
+                             juce::MidiMessage::noteOn(1, 127, juce::uint8(100))})
+            midi.addEvent(message, 0);
         for (int i = 0; i < 375; ++i) processChecked(p, audio, midi);
+        const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
+        require(fw.midi == 0 && fw.held == 0 && VDX7RegressionAccess::monoActiveCount(p) == 0
+                && audio.getMagnitude(0, 64) < 1e-5f,
+                "unsupported notes must be filtered in both compatibility modes");
     }
-    const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
-    std::cout << "MONO pitch-zero without any reset: MIDI=" << fw.midi
-              << ", held=" << fw.held << ", mono count="
-              << VDX7RegressionAccess::monoActiveCount(p) << '\n';
-    require(fw.midi == 0 && fw.held == 0 && VDX7RegressionAccess::monoActiveCount(p) == 0,
-            "MONO pitch-zero native release edge (separate from lifecycle drain)");
+    std::cout << "PASS: Note 0..11 and 121..127 filtered at plugin boundary in native and corrected settings\n";
 }
 
 // Independent of VDX7Engine/processor MIDI, reset, retirement and resampling.
@@ -1371,10 +1377,11 @@ static MonoFreshReference characterizeMonoContinuation(const juce::File& rom, in
     const auto send = [&](int note, int n, bool on)
     {
         raw->notes(note, n, on, zeroVelocityOff);
-        for (int i = 0; i < n; ++i)
-            midi.addEvent(on || zeroVelocityOff
-                ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
-                : juce::MidiMessage::noteOff(1, note), 0);
+        if (VDX7MidiValidation::isSupportedNoteNumber(static_cast<uint8_t>(note)))
+            for (int i = 0; i < n; ++i)
+                midi.addEvent(on || zeroVelocityOff
+                    ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
+                    : juce::MidiMessage::noteOff(1, note), 0);
         Sound sound;
         int crossings = 0, frames = 0;
         float previous = 0;
@@ -1418,10 +1425,10 @@ static MonoFreshReference characterizeMonoContinuation(const juce::File& rom, in
     const bool saturated = edge && repeats == 16;
     const auto expectedHistory = edge ? std::array<int, 4>{0, 1, 0, repeats}
                                       : std::array<int, 4>{};
-    require(raw->counts() == expectedHistory && processorCounts() == expectedHistory,
-            "continuation history state");
+    require(raw->counts() == expectedHistory, "raw continuation history state");
+    require(processorCounts() == std::array<int, 4>{},
+            "excluded Note 0 must not create plugin-side MONO ownership");
     const auto rawBeforePitch = raw->targetPitch();
-    const auto processorBeforePitch = VDX7RegressionAccess::monoTargetPitch(p);
 
     // No reset, mode/program change or RAM edit between the bad history and
     // the next real note. A nonzero peak alone could just be the old stuck tone.
@@ -1433,25 +1440,26 @@ static MonoFreshReference characterizeMonoContinuation(const juce::File& rom, in
             && capacity.after.pc == (saturated ? 0xd5f1 : 0xd58f), "MONO capacity branch for fresh 72");
     require(raw->trace.visits(0xd59f) == (saturated ? 0 : 1), "MONO fresh allocation trace");
     require(VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 72) == 1,
-            "fresh note must reach MIDI ownership even when native MONO rejects allocation");
+            "fresh supported note must reach plugin MIDI ownership after excluded input");
     const auto expectedOn = std::array<int, 4>{1, 1, 0, saturated ? 16 : edge ? repeats + 1 : 1};
-    require(raw->counts() == expectedOn && processorCounts() == expectedOn, "continuation fresh-on state");
+    require(raw->counts() == expectedOn, "raw continuation fresh-on state");
+    require(processorCounts() == std::array<int, 4>{1, 1, 0, 1},
+            "supported plugin note must allocate independently of raw Note 0 history");
     require(raw->firstEntry() == (saturated ? 2 : (72 << 8) | 2)
-            && VDX7RegressionAccess::monoFirstEntry(p) == (saturated ? 2 : (72 << 8) | 2),
-            "actual held voice key differs from MIDI reception record");
+            && VDX7RegressionAccess::monoFirstEntry(p) == ((72 << 8) | 2),
+            "raw and plugin key ownership should reflect their distinct input policies");
     if (reference != nullptr)
     {
         if (saturated)
-            require(result.rawPitch == rawBeforePitch && result.processorPitch == processorBeforePitch
-                    && result.rawPitch != reference->rawPitch
-                    && result.processorPitch != reference->processorPitch
-                    && std::abs(sound.hz - reference->hz) > 100,
-                    "saturated MONO should retain old pitch, not sound fresh 72");
+            require(result.rawPitch == rawBeforePitch
+                    && result.rawPitch != reference->rawPitch,
+                    "raw saturated MONO should retain old pitch");
         else
-            require(result.rawPitch == reference->rawPitch
-                    && result.processorPitch == reference->processorPitch
-                    && std::abs(sound.hz - reference->hz) < 8 && sound.peak > 1e-4f,
-                    "accepted fresh 72 must match target pitch and audible reference");
+            require(result.rawPitch == reference->rawPitch,
+                    "raw fresh 72 should match clean raw reference");
+        require(result.processorPitch == reference->processorPitch
+                && std::abs(sound.hz - reference->hz) < 8 && sound.peak > 1e-4f,
+                "plugin must play the supported fresh 72 despite raw Note 0 history");
     }
     else
         require(sound.peak > 1e-4f && sound.hz > 500 && sound.hz < 600, "audible clean note-72 sine reference");
@@ -1461,11 +1469,12 @@ static MonoFreshReference characterizeMonoContinuation(const juce::File& rom, in
     const auto releasedSound = send(72, 1, false);
     const auto expectedOff = !edge ? std::array<int, 4>{}
         : saturated ? std::array<int, 4>{0, 1, 0, 16} : std::array<int, 4>{0, 0, 0, 1};
-    require(raw->counts() == expectedOff && processorCounts() == expectedOff,
-            "continuation fresh-off state");
+    require(raw->counts() == expectedOff, "raw continuation fresh-off state");
+    require(processorCounts() == std::array<int, 4>{},
+            "plugin supported fresh note must release without inherited excluded-note state");
     require(raw->trace.keyOffWrites() == (edge ? 0 : 1), "continuation EGS Off observation");
-    require(edge ? releasedSound.peak > 1e-4f : releasedSound.peak < 1e-5f,
-            "continuation known stuck output versus released control");
+    require(releasedSound.peak < 1e-5f,
+            "plugin supported fresh note release must be clean after excluded input");
     raw->trace.stop();
     unchanged(before, capture(p));
     std::cout << "CONTINUATION CHARACTERIZATION (not a fix): seed=" << seed << " repeats=" << repeats
@@ -1498,10 +1507,11 @@ static void characterizeMonoBoundary(const juce::File& rom, int mode, int note,
     for (bool on : {true, false})
     {
         raw->notes(note, repeats, on, zeroVelocityOff);
-        for (int i = 0; i < repeats; ++i)
-            midi.addEvent(on || zeroVelocityOff
-                ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
-                : juce::MidiMessage::noteOff(1, note), 0);
+        if (VDX7MidiValidation::isSupportedNoteNumber(static_cast<uint8_t>(note)))
+            for (int i = 0; i < repeats; ++i)
+                midi.addEvent(on || zeroVelocityOff
+                    ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
+                    : juce::MidiMessage::noteOff(1, note), 0);
         pump();
         const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
         const std::array<int, 4> actual {fw.midi, fw.held, fw.sustained,
@@ -1513,12 +1523,16 @@ static void characterizeMonoBoundary(const juce::File& rom, int mode, int note,
             0,
             mode == 1 && (on || nativeZeroEdge) ? repeats : 0};
         require(raw->counts() == expected, "raw-core boundary differs from explicit native expectation");
-        require(actual == expected, "processor boundary differs from explicit native expectation");
+        const bool accepted = VDX7MidiValidation::isSupportedNoteNumber(static_cast<uint8_t>(note));
+        const std::array<int, 4> expectedPlugin = accepted ? expected : std::array<int, 4>{};
+        require(actual == expectedPlugin,
+                "plugin boundary must filter excluded pitches while raw firmware is characterized independently");
     }
     unchanged(before, capture(p));
     std::cout << "CHARACTERIZATION (not a fix): mode=" << mode << ", pitch=" << note
               << ", repeats=" << repeats << ", velocity-zero-off=" << zeroVelocityOff
-              << ", raw/processor match; native zero edge=" << (mode == 1 && note == 0) << '\n';
+              << ", plugin filtered=" << !VDX7MidiValidation::isSupportedNoteNumber(static_cast<uint8_t>(note))
+              << ", raw native zero edge=" << (mode == 1 && note == 0) << '\n';
 
     // Prove a firmware-driven recovery route, without patching its RAM or
     // introducing an automatic mode change into ordinary plugin playback.
@@ -1527,7 +1541,6 @@ static void characterizeMonoBoundary(const juce::File& rom, int mode, int note,
         raw->setMode(0);
         raw->setMode(1);
         require(raw->counts() == std::array<int, 4>{}, "raw native mode-cycle recovery");
-        require(e.setPlaySetting(0, 0) && e.setPlaySetting(0, 1), "processor native mode-cycle recovery");
     }
     midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
     float peak = 0;
@@ -2182,7 +2195,7 @@ static void testWheelDelivery(const juce::File& rom)
         require(e.configureMonoCorrectionBeforeLoad(correctedMono), "mixed overload policy setup");
         initialise(p, rom, rate, size);
         require(e.setPlaySetting(0, correctedMono ? 1 : 0), "mixed overload mode setup");
-        const int heldKey = correctedMono ? 0 : 60;
+        const int heldKey = correctedMono ? 12 : 60;
         e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
         e.reloadCurrentProgram(); p.synchroniseOperatorParametersFromEngine();
         juce::AudioBuffer<float> audio(2, size);
@@ -2300,7 +2313,7 @@ static void testDeferredPartitions(const juce::File& rom)
         p.keyboardState().noteOn(1, 67, 1.0f);
         midi.addEvent(juce::MidiMessage::programChange(1, (program + 1) % 32), 0);
         midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 1);
-        midi.addEvent(juce::MidiMessage::noteOn(1, correctedMono ? 0 : 60, juce::uint8(100)), 2);
+        midi.addEvent(juce::MidiMessage::noteOn(1, correctedMono ? 12 : 60, juce::uint8(100)), 2);
         StateBoundaryGate gate;
         auto callback = std::async(std::launch::async, [&] {
             stateBoundaryGate = &gate;
@@ -2360,7 +2373,7 @@ static void testDeferredPartitions(const juce::File& rom)
             std::unique_lock lock(VDX7RegressionAccess::mutex(p));
             midi.addEvent(juce::MidiMessage::programChange(1, (program + 1) % 32), 0);
             midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 1);
-            midi.addEvent(juce::MidiMessage::noteOn(1, correctedMono ? 0 : 60, juce::uint8(100)), 2);
+            midi.addEvent(juce::MidiMessage::noteOn(1, correctedMono ? 12 : 60, juce::uint8(100)), 2);
             auto callback = std::async(std::launch::async, [&] { processChecked(p, audio, midi); });
             const bool timely = callback.wait_for(std::chrono::seconds(1)) == std::future_status::ready;
             if (!timely) lock.unlock();
@@ -2375,7 +2388,7 @@ static void testDeferredPartitions(const juce::File& rom)
                 && !e.hasHeldMidiNotes() && fw.midi == 0 && fw.held == 0 && fw.sustained == 0
                 && audio.getMagnitude(0, 64) < 1e-5f,
                 "public restore replayed stale program/note/pedal");
-        for (int key : {correctedMono ? 0 : 60, 72})
+        for (int key : {correctedMono ? 12 : 60, 72})
         {
             midi.addEvent(juce::MidiMessage::noteOn(1, key, juce::uint8(100)), 0);
             for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
@@ -2570,7 +2583,7 @@ int main(int argc, char** argv)
         const bool overlapOnly = argc == 3 && juce::String(argv[2]) == "--overlap-only";
         const bool gateOverflowOnly = argc == 3 && juce::String(argv[2]) == "--gate-overflow-only";
         const bool expandedLifecycleOnly = argc == 3 && juce::String(argv[2]) == "--expanded-lifecycle-only";
-        const bool monoNoteZeroOnly = argc == 3 && juce::String(argv[2]) == "--mono-note-zero-only";
+        const bool supportedNoteRangeOnly = argc == 3 && juce::String(argv[2]) == "--supported-note-range-only";
         const bool monoCorrectedOnly = argc == 3 && juce::String(argv[2]) == "--mono-corrected-processor-only";
         if (argc == 3 && juce::String(argv[2]) == "--mono-soak-only")
         { testCorrectedSoak(juce::File(argv[1])); return 0; }
@@ -2579,7 +2592,7 @@ int main(int argc, char** argv)
         const bool profileCheckOnly = argc == 3 && juce::String(argv[2]) == "--profile-check-only";
         const bool deferredPartitionOnly = argc == 3 && juce::String(argv[2]) == "--deferred-partition-only";
         const bool wheelDeliveryOnly = argc == 3 && juce::String(argv[2]) == "--wheel-delivery-only";
-        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !monoNoteZeroOnly && !monoCorrectedOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly && !deferredPartitionOnly && !wheelDeliveryOnly) || !juce::File(argv[1]).existsAsFile())
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !supportedNoteRangeOnly && !monoCorrectedOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly && !deferredPartitionOnly && !wheelDeliveryOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
         juce::MemoryBlock image;
         require(juce::File(argv[1]).loadFileAsData(image), "read explicit local ROM fixture");
@@ -2628,10 +2641,9 @@ int main(int argc, char** argv)
                                                          sequential, zeroVelocityOff, &reference);
             return 0;
         }
-        if (monoNoteZeroOnly)
+        if (supportedNoteRangeOnly)
         {
-            // Explicit diagnostic, not a passing release-acceptance test.
-            diagnoseMonoNoteZero(juce::File(argv[1]));
+            testSupportedMidiNoteRange(juce::File(argv[1]));
             return 0;
         }
         if (expandedLifecycleOnly)

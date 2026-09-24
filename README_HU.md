@@ -100,6 +100,11 @@ A v0.6 sorozat kattintható algoritmusábrát, mechanikus kerékgrafikát, OUTPU
 
 ## 9. Ismert korlátok
 
+- Támogatott MIDI-hangterjedelem: Note 12–120 (C0–C9 a REAPER alapértelmezett
+  oktávelnevezésével). A tartományon kívüli Note On/Off események mindkét
+  SETTINGS-kompatibilitási módban szűrtek; a plugin nem transzponálja őket
+  más hangra.
+
 - A PERFORMANCE oldalon már működik a modulációs kerék, lábvezérlő (CC4),
   légzésvezérlő (CC2) és csatorna-aftertouch tartománya (0–99), valamint
   pitch/amplitude/EG-bias hozzárendelése. Ezek globális, DAW-projektben mentett

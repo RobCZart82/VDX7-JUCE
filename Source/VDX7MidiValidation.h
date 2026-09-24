@@ -4,6 +4,18 @@
 
 namespace VDX7MidiValidation
 {
+// Product-supported pitch range. The lowest octave below C0 has shown a
+// firmware MONO ownership failure, while notes above MIDI 120 are outside the
+// supported instrument range. Apply this at the plugin boundary in both modes;
+// never rewrite a rejected note to another pitch.
+inline constexpr uint8_t firstSupportedNote = 12;
+inline constexpr uint8_t lastSupportedNote = 120;
+
+inline constexpr bool isSupportedNoteNumber(uint8_t note) noexcept
+{
+    return note >= firstSupportedNote && note <= lastSupportedNote;
+}
+
 // Host events contain complete messages, not a running-status byte stream.
 // System common/realtime messages have no supported host action. SysEx banks
 // use their own complete-message validator and never enter the serial fallback.
@@ -19,8 +31,9 @@ inline bool isChannelMessage(const uint8_t* data, std::size_t size) noexcept
     return true;
 }
 
-// Adapter semantics, separate from MIDI syntax. Only statically inert messages
-// are excluded; unknown CCs and supported bank values retain their old route.
+// Adapter semantics, separate from MIDI syntax. Inert adapter messages and
+// notes outside the product pitch range are excluded; other CCs and supported
+// bank values retain their existing route.
 inline bool isIgnoredAdapterEvent(const uint8_t* data, std::size_t size) noexcept
 {
     return isChannelMessage(data, size) && (data[0] & 0xf0) == 0xb0
@@ -59,8 +72,11 @@ inline bool acceptsHostEvent(const uint8_t* data, std::size_t size, int channel)
 {
     if (data == nullptr || size == 0) return false;
     if (data[0] == 0xf0) return isLiveBankSysex(data, size);
-    return isChannelMessage(data, size)
-        && !isIgnoredAdapterEvent(data, size)
-        && (channel == 0 || (data[0] & 15) + 1 == channel);
+    if (!isChannelMessage(data, size) || isIgnoredAdapterEvent(data, size)
+        || (channel != 0 && (data[0] & 15) + 1 != channel))
+        return false;
+
+    const auto kind = data[0] & 0xf0;
+    return (kind != 0x80 && kind != 0x90) || isSupportedNoteNumber(data[1]);
 }
 }

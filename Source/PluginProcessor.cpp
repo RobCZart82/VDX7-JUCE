@@ -408,7 +408,8 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     if (engineLoaded_.load(std::memory_order_acquire) && useDeferred)
     {
         for (std::size_t i = 0; i < keyboardCount; ++i)
-            deferredMidi_.push(keyboardEvents[i].data(), 3, 0);
+            if (VDX7MidiValidation::acceptsHostEvent(keyboardEvents[i].data(), 3, 0))
+                deferredMidi_.push(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
         {
             if (event.numBytes <= 0 || !VDX7MidiValidation::acceptsHostEvent(
@@ -490,7 +491,8 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     else
     {
         for (std::size_t i = 0; i < keyboardCount; ++i)
-            deliver(keyboardEvents[i].data(), 3, 0);
+            if (VDX7MidiValidation::acceptsHostEvent(keyboardEvents[i].data(), 3, 0))
+                deliver(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
             if (event.numBytes > 0 && VDX7MidiValidation::acceptsHostEvent(
                     event.data, static_cast<std::size_t>(event.numBytes), inputChannel))
@@ -532,6 +534,10 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
     }
     const auto bankRevision = engine_.factoryBankLoadRevision();
     if (!VDX7MidiValidation::isChannelMessage(data, static_cast<std::size_t>(size))) return false;
+    const auto messageKind = data[0] & 0xf0;
+    if ((messageKind == 0x80 || messageKind == 0x90)
+        && !VDX7MidiValidation::isSupportedNoteNumber(data[1]))
+        return false;
     engine_.handleMidi(data, size);
     const bool bankChange = engine_.factoryBankLoadRevision() != bankRevision;
     if (bankChange) modifiedVoices_.store(0);

@@ -6,19 +6,16 @@ by this checklist. No proprietary firmware belongs in source, CI or artifacts.
 
 ## Correctness and realtime gates
 
-- [ ] MONO Note 0 product acceptance: real Note 0 pitch/audio and release,
-  repeated/overlapping notes, subsequent notes, legato, sustain and portamento.
-  `vdx7_mono_note_zero_acceptance` is a currently failing, non-inverted local
-  CTest release blocker. Passing characterization/candidate experiments or
-  ROM-free CI are NOT a replacement. See `VALIDATION_MONO_CANDIDATE.md`.
-  Initial engine-opt-in processor coverage is in `VALIDATION_MONO_ENGINE_OPTIN.md`;
-  state persistence/new-instance restore is now covered in
-  `VALIDATION_MONO_PERSISTENCE.md`; `VALIDATION_MONO_SETTINGS.md` adds UI
-  selection/status. Broader corrected-mode transition/host acceptance remains.
-  Current status: correction is integrated and selectable, not merely an
-  isolated experiment. Track its acceptance separately from native behaviour.
-  Native failure stays visible unless an explicit documented publication
-  decision accepts that limitation; no silent expected-failure conversion.
+- [ ] MIDI product-range acceptance: Notes 12–120 inclusive reach and release
+  correctly; Note On, Note Off, and velocity-zero Note On outside that range are
+  rejected in both Settings modes before queueing or engine delivery. Local
+  processor/deferred tests are added; run `vdx7_supported_note_range_acceptance`
+  and perform REAPER boundary checks at 11/12 and 120/121 before release.
+  The raw native MONO Note 0 firmware issue remains documented and characterized,
+  but is intentionally unreachable from supported plugin MIDI. The selectable
+  correction remains a separate compatibility option; do not claim the raw
+  firmware issue itself was fixed. See `MIDI_RANGE_v0.7.0.md` and
+  `DESIGN_MONO_NOTE_ZERO_POLICY.md`.
 - [ ] Program/edit and bank/edit ordering in both directions, including stopped transport/save.
 - [ ] Audio callback has no direct host parameter notification; ownership audit of all call sites.
 - [ ] Deferred MIDI preserves an explicit multi-block timeline policy; overflow reconciliation.

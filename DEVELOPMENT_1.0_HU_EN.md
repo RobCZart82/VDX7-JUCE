@@ -42,7 +42,8 @@ Az első stabilizáló változtatások:
   Más élő SysEx üzenet jelenleg elutasított; egyhangszínes fájlimport megmarad.
 - MIDI bankváltás ugyanazt a belső bankot módosítja, amelyet a GUI szerkeszt.
 - A korábbi 512 mintás előrerenderelés helyett a következő EGS-mintáig fut az engine.
-- Teljes 0–127 MIDI-bemenet, továbbra is egy hangszer, omni csatornakezeléssel.
+- Támogatott MIDI Note-tartomány: 12–120 (C0–C9 a REAPER alapértelmezett
+  oktávelnevezésével); a tartományon kívüli hangüzenetek mindkét MONO módban szűrtek.
 
 Nem kész még: PERFORMANCE/SETTINGS, jobb minőségű resampling, teljes host-
 és platformelfogadás, végleges kiadási csomagolás. A végleges 1.0.0 nincs publikálva.
@@ -74,7 +75,9 @@ non-destructive invalid-ROM rejection, correct CC64/65 thresholds, relative CC11
 expression, bounded MIDI retention during engine transactions, validated live
 bank SysEx with coherent editor/host state, consistent CC32 internal bank selection,
 and demand-driven native sample generation instead of 512-sample lookahead.
-Full-range 0–127 MIDI input remains single-part omni, not multitimbral/MPE.
+Supported MIDI Note input is 12–120 (C0–C9 in REAPER's default octave naming).
+Out-of-range note events are filtered in both MONO modes. Input remains single-part
+omni, not multitimbral/MPE.
 
 On queue overflow, a safety note release replaces the discarded event batch.
 An engine transaction can still silence an audio block; full realtime ownership
