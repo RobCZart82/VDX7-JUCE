@@ -160,6 +160,25 @@ int main()
     auto bankMessage=VDX7Sysex::encode(bank);
     require(bankMessage.size()==4104 && bankMessage[3]==9,"VMEM header");
     require(VDX7Sysex::decode(bankMessage,decoded) && decoded==bank,"VMEM full bank round trip");
+
+    // A bulk-bank checksum does not make every packed voice field valid.
+    // Probe the invalid detune code on all six operators and ensure rejection
+    // is transactional (the previous decoded output remains unchanged).
+    for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
+    {
+        auto invalidBank = bankMessage;
+        const auto packedOperatorOffset =
+            (VDX7VoiceData::kOperatorCount - 1 - op) * VDX7VoiceData::kPackedOperatorSize;
+        const auto detuneByte = static_cast<std::size_t>(6 + packedOperatorOffset + 12);
+        invalidBank[detuneByte] = static_cast<uint8_t>((invalidBank[detuneByte] & 0x87) | 0x78);
+        unsigned bankSum = 0;
+        for (int i = 6; i < 4102; ++i) bankSum += invalidBank[static_cast<std::size_t>(i)];
+        invalidBank[4102] = static_cast<uint8_t>((128 - (bankSum & 127)) & 127);
+        require(!VDX7Sysex::decode(invalidBank, decoded),
+                "reject checksum-valid VMEM with invalid operator detune");
+        require(decoded == bank, "invalid VMEM rejection is nonmutating");
+    }
+
     require(!VDX7Sysex::decode({},decoded) && VDX7Sysex::encode({}).empty(),"reject empty input");
     std::cout << "VDX7 voice-data and SysEx tests passed\n";
     return 0;
