@@ -1263,7 +1263,7 @@ static void testDirectRomReloadDropsDeferredMidi(const juce::File& rom)
             && VDX7RegressionAccess::monoActiveCount(p) == 0
             && audio.getMagnitude(0, 64) < 1e-5f,
             "fresh post-reload control note failed to release");
-    std::cout << "PASS: direct successful ROM reload drops pre-install deferred MIDI; fresh Note 72 plays/releases\\n";
+    std::cout << "PASS: direct successful ROM reload drops pre-install deferred MIDI; fresh Note 72 plays/releases\n";
 }
 
 // Independent of VDX7Engine/processor MIDI, reset, retirement and resampling.
