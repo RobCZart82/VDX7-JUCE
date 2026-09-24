@@ -814,8 +814,78 @@ static void testCorrectedCapacityAndOrder(const juce::File& rom)
     std::cout << "PASS: corrected processor 8 capacity and 36 order histories without reset\n";
 }
 
+static void testCorrectionNonzeroDifferential(const juce::File& rom)
+{
+    for (bool sustain : {false, true})
+    for (bool porta : {false, true})
+    {
+        auto native = std::make_unique<VDX7AudioProcessor>(false);
+        auto corrected = std::make_unique<VDX7AudioProcessor>(false);
+        require(corrected->setMonoCorrectionFromUi(true), "differential opt-in");
+        for (auto* p : {native.get(), corrected.get()})
+        {
+            initialise(*p, rom, 48000, 64);
+            auto& e = VDX7RegressionAccess::engine(*p);
+            e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+            e.reloadCurrentProgram();
+            require(e.setPlaySetting(0, 1), "differential MONO");
+            require(e.setPlaySetting(3, porta ? 64 : 0), "differential portamento time");
+        }
+        juce::AudioBuffer<float> a(2, 64), b(2, 64);
+        juce::MidiBuffer ma, mb;
+        float maximumDifference = 0, peak = 0;
+        auto pump = [&] {
+            for (int block = 0; block < 150; ++block)
+            {
+                processChecked(*native, a, ma);
+                processChecked(*corrected, b, mb);
+                for (int ch = 0; ch < 2; ++ch)
+                    for (int i = 0; i < 64; ++i)
+                    {
+                        maximumDifference = std::max(maximumDifference,
+                            std::abs(a.getSample(ch, i) - b.getSample(ch, i)));
+                        peak = std::max(peak, std::abs(a.getSample(ch, i)));
+                    }
+                const auto x = VDX7RegressionAccess::firmwareOwnership(*native);
+                const auto y = VDX7RegressionAccess::firmwareOwnership(*corrected);
+                require(x.midi == y.midi && x.held == y.held && x.sustained == y.sustained
+                        && VDX7RegressionAccess::monoActiveCount(*native)
+                            == VDX7RegressionAccess::monoActiveCount(*corrected)
+                        && VDX7RegressionAccess::monoTargetPitch(*native)
+                            == VDX7RegressionAccess::monoTargetPitch(*corrected),
+                        "nonzero firmware state differs between policies");
+            }
+        };
+        auto send = [&](juce::MidiMessage msg) { ma.addEvent(msg, 0); mb.addEvent(msg, 0); pump(); };
+        pump();
+        send(juce::MidiMessage::controllerEvent(1, 64, sustain ? 127 : 0));
+        send(juce::MidiMessage::controllerEvent(1, 65, porta ? 127 : 0));
+        for (int key : {1, 60, 127, 60}) send(juce::MidiMessage::noteOn(1, key, juce::uint8(100)));
+        send(juce::MidiMessage::noteOff(1, 60));
+        send(juce::MidiMessage::noteOn(1, 127, juce::uint8(0)));
+        send(juce::MidiMessage::noteOff(1, 1));
+        send(juce::MidiMessage::noteOff(1, 60));
+        send(juce::MidiMessage::controllerEvent(1, 64, 0));
+        send(juce::MidiMessage::controllerEvent(1, 65, 0));
+        require(peak > 1e-4f && maximumDifference <= 1e-6f,
+                "nonzero native/corrected rendered audio mismatch");
+        for (auto* p : {native.get(), corrected.get()})
+        {
+            const auto fw = VDX7RegressionAccess::firmwareOwnership(*p);
+            require(fw.midi == 0 && fw.held == 0 && fw.sustained == 0
+                    && VDX7RegressionAccess::monoActiveCount(*p) == 0,
+                    "differential final cleanup");
+        }
+        require(a.getMagnitude(0, 64) < 1e-5f && b.getMagnitude(0, 64) < 1e-5f,
+                "differential final silence");
+        std::cout << "PASS: nonzero differential sustain=" << sustain << " porta=" << porta
+                  << " maximum sample difference=" << maximumDifference << '\n';
+    }
+}
+
 static void testCorrectedProcessor(const juce::File& rom)
 {
+    testCorrectionNonzeroDifferential(rom);
     testCorrectedCapacityAndOrder(rom);
     testCorrectionPersistence(rom);
     testCorrectedLifecycle(rom);
