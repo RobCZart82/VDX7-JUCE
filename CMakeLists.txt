@@ -333,6 +333,10 @@ if(VDX7_ENABLE_ROM_TESTS)
         TIMEOUT 60 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;release-blocker")
     add_test(NAME vdx7_mono_corrected_processor
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --mono-corrected-processor-only)
+    add_test(NAME vdx7_mono_soak
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --mono-soak-only)
+    set_tests_properties(vdx7_mono_soak PROPERTIES TIMEOUT 300
+        FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;integration-stage")
     set_tests_properties(vdx7_mono_corrected_processor PROPERTIES
         TIMEOUT 120 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;integration-stage")
 endif()

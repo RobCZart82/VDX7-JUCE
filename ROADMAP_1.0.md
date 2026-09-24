@@ -9,6 +9,11 @@ indices compatible with saved projects.
 
 ### Current next steps — 2026-09-24
 
+Latest checkpoint: `VALIDATION_MONO_SOAK.md` records the full 30-test run,
+separate desktop retry, new dual-instance soak and remaining host boundaries.
+User approved retaining both native and corrected Settings modes, not merge or
+publication. Native known failure remains explicitly separate.
+
 1. Rebuild/run the complete registered regression suite after the held-state,
    ignored-CC, installation-boundary, bypass and wheel-delivery fixes. Report
    native Note0 failure and desktop prerequisites separately, never as PASS.

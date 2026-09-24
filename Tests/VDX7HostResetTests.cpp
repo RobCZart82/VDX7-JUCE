@@ -1079,6 +1079,83 @@ static void testCorrectedRepeatedReset(const juce::File& rom)
     std::cout << "PASS: corrected 12 repeated reset/pedal/late-release cycles (not DAW transport)\n";
 }
 
+static void testCorrectedSoak(const juce::File& rom)
+{
+    auto a = std::make_unique<VDX7AudioProcessor>(false);
+    auto b = std::make_unique<VDX7AudioProcessor>(false);
+    for (auto* p : {a.get(), b.get()})
+    {
+        auto& e = VDX7RegressionAccess::engine(*p);
+        require(e.configureMonoCorrectionBeforeLoad(true), "soak correction");
+        initialise(*p, rom, 48000, 64);
+        e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+        e.reloadCurrentProgram();
+        require(e.setPlaySetting(0, 1), "soak MONO");
+    }
+    juce::AudioBuffer<float> aa(2, 64), ab(2, 64);
+    juce::MidiBuffer ma, mb;
+    double maximumUs = 0;
+    int overBudget = 0;
+    auto pump = [&] {
+        for (int n = 0; n < 375; ++n)
+        {
+            for (double us : {processChecked(*a, aa, ma), processChecked(*b, ab, mb)})
+            {
+                maximumUs = std::max(maximumUs, us);
+                if (us > 64.0 / 48000.0 * 1e6) ++overBudget;
+            }
+        }
+    };
+    pump();
+    for (int cycle = 0; cycle < 120; ++cycle)
+    {
+        for (auto* p : {a.get(), b.get()})
+        {
+            auto* volume = p->parameters().getParameter(VDX7ParameterIDs::masterVolume);
+            require(volume != nullptr, "soak volume parameter");
+            volume->setValueNotifyingHost(volume->convertTo0to1(cycle % 2 ? -12.0f : 0.0f));
+        }
+        for (auto* m : {&ma, &mb})
+        {
+            m->addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
+            m->addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 63);
+        }
+        pump();
+        require(aa.getMagnitude(0,64) > 1e-4f && ab.getMagnitude(0,64) > 1e-4f,
+                "soak individual zero missing");
+        ma.addEvent(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)), 0);
+        mb.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 63);
+        pump();
+        ma.addEvent(juce::MidiMessage::noteOff(1, 60), 63);
+        mb.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+        pump();
+        for (auto* p : {a.get(), b.get()})
+            require(VDX7RegressionAccess::monoActiveCount(*p) == 1
+                    && VDX7RegressionAccess::firmwareMidiOwnershipFor(*p,0) == 1,
+                    "soak legato zero ownership");
+        for (auto* m : {&ma, &mb})
+            m->addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(0)), 63);
+        pump();
+        require(aa.getMagnitude(0,64) > 1e-4f && ab.getMagnitude(0,64) > 1e-4f,
+                "soak pedal hold missing");
+        for (auto* m : {&ma, &mb})
+            m->addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), 0);
+        pump();
+        for (auto* p : {a.get(), b.get()})
+        {
+            const auto fw = VDX7RegressionAccess::firmwareOwnership(*p);
+            require(fw.midi == 0 && fw.held == 0 && fw.sustained == 0
+                    && VDX7RegressionAccess::monoActiveCount(*p) == 0,
+                    "soak ownership leak");
+        }
+        require(aa.getMagnitude(0,64) < 1e-5f && ab.getMagnitude(0,64) < 1e-5f,
+                "soak individual release failed");
+    }
+    std::cout << "PASS: 120 dual-instance pedal/legato/volume cycles; 300.5 simulated seconds per instance; max callback us="
+              << maximumUs << " callbacks above nominal budget=" << overBudget
+              << " (instrumented offline execution, not realtime xrun measurement)\n";
+}
+
 static void testCorrectedProcessor(const juce::File& rom)
 {
     testCorrectedRepeatedReset(rom);
@@ -2495,6 +2572,8 @@ int main(int argc, char** argv)
         const bool expandedLifecycleOnly = argc == 3 && juce::String(argv[2]) == "--expanded-lifecycle-only";
         const bool monoNoteZeroOnly = argc == 3 && juce::String(argv[2]) == "--mono-note-zero-only";
         const bool monoCorrectedOnly = argc == 3 && juce::String(argv[2]) == "--mono-corrected-processor-only";
+        if (argc == 3 && juce::String(argv[2]) == "--mono-soak-only")
+        { testCorrectedSoak(juce::File(argv[1])); return 0; }
         const bool monoBoundaryOnly = argc == 3 && juce::String(argv[2]) == "--mono-boundary-only";
         const bool monoTraceOnly = argc == 3 && juce::String(argv[2]) == "--mono-trace-only";
         const bool profileCheckOnly = argc == 3 && juce::String(argv[2]) == "--profile-check-only";
