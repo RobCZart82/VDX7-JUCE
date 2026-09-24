@@ -575,7 +575,7 @@ static double correctedProcessorPitch(const juce::File& rom, bool corrected, int
 static void testCorrectedLifecycle(const juce::File& rom)
 {
     // Independent fixtures: one transition must not repair another's failure.
-    for (int transition = 0; transition < 4; ++transition)
+    for (int transition = 0; transition < 5; ++transition)
     for (int history = 0; history < 3; ++history)
     {
         auto owner = std::make_unique<VDX7AudioProcessor>(false);
@@ -640,6 +640,23 @@ static void testCorrectedLifecycle(const juce::File& rom)
             pump();
             require(audio.getMagnitude(0, 64) > 1e-4f, "sustain precondition recreated");
         }
+        if (transition == 4)
+        {
+            // Audit A2: saving while sounding is not equivalent to restoring
+            // the idle snapshot captured above while a key happens to be held.
+            p.getStateInformation(saved);
+            for (int i = 0; i < repetitions; ++i)
+                midi.addEvent(juce::MidiMessage::noteOff(1, 0), 0);
+            midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), 0);
+            pump();
+            empty();
+            p.setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
+            pump();
+            const auto restored = VDX7RegressionAccess::firmwareOwnership(p);
+            std::cout << "HELD-SNAPSHOT history=" << history << " MIDI/held/MONO="
+                      << restored.midi << '/' << restored.held << '/'
+                      << VDX7RegressionAccess::monoActiveCount(p) << std::endl;
+        }
         if (transition == 0) p.reset();
         if (transition == 1) { p.releaseResources(); p.prepareToPlay(48000, 64); }
         if (transition == 2) p.setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
@@ -684,6 +701,12 @@ static void testCorrectionPersistence(const juce::File& rom)
     original.reloadCurrentProgram();
     require(original.setPlaySetting(0, 1), "persist MONO");
     source->synchroniseOperatorParametersFromEngine();
+    juce::AudioBuffer<float> sourceAudio(2, 64);
+    juce::MidiBuffer sourceMidi;
+    sourceMidi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0);
+    for (int i = 0; i < 750; ++i) processChecked(*source, sourceAudio, sourceMidi);
+    require(VDX7RegressionAccess::monoActiveCount(*source) == 1,
+            "persistence snapshot must contain held zero");
     juce::MemoryBlock saved;
     source->getStateInformation(saved);
     auto xml = juce::AudioProcessor::getXmlFromBinary(saved.getData(), int(saved.getSize()));
@@ -715,6 +738,11 @@ static void testCorrectionPersistence(const juce::File& rom)
         juce::MidiBuffer midi;
         auto pump = [&] { for (int i = 0; i < 750; ++i) processChecked(p, audio, midi); };
         pump();
+        require(VDX7RegressionAccess::monoActiveCount(p) == 0
+                && VDX7RegressionAccess::firmwareOwnership(p).midi == 0
+                && VDX7RegressionAccess::firmwareOwnership(p).held == 0
+                && audio.getMagnitude(0, 64) < 1e-5f,
+                "fresh/deferred ROM restore must not revive saved held zero");
         midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0); pump();
         require(VDX7RegressionAccess::monoActiveCount(p) == 1
                 && audio.getMagnitude(0, 64) > 1e-4f, "restored zero sounds");

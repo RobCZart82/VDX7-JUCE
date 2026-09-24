@@ -1170,7 +1170,7 @@ void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
             {
                 std::vector<uint8_t> ram(block.getSize());
                 std::memcpy(ram.data(), block.getData(), block.getSize());
-                if (engine_.restoreRam(ram))
+                if (engine_.restoreProjectRam(ram))
                     engine_.setCurrentBankMarker(bank);
             }
         }

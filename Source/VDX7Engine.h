@@ -82,6 +82,8 @@ public:
 
     bool saveRam(std::vector<uint8_t>& out) const;
     bool restoreRam(const std::vector<uint8_t>& in);
+    // Project load only: never revive transient voice ownership from a snapshot.
+    bool restoreProjectRam(const std::vector<uint8_t>& in);
 
     // Global battery-RAM controller settings, NOT voice/SysEx parameters.
     // Controller order: wheel, foot, breath, aftertouch. Field 0: range 0-99;

@@ -951,6 +951,40 @@ bool VDX7Engine::setControllerSetting(int controller, int field, int value) noex
     return true;
 }
 
+bool VDX7Engine::restoreProjectRam(const std::vector<uint8_t>& in)
+{
+    if (!loaded_ || in.size() != kRamStateSize) return false;
+    // This persistent projection is verified for v1.8 only. Do not guess the
+    // memory layout of other firmware images or change their legacy restore.
+    if (!releaseRetirementProfile_) return restoreRam(in);
+    const auto value = [&in](int address) { return int(in[address - 0x1000]); };
+    const int tuning = std::clamp((value(0x2311) << 8) + value(0x2312) - 256, -256, 255);
+    const std::vector<uint8_t> firmware(dx7_.memory + 0xc000, dx7_.memory + 0x10000);
+    const auto voices = factoryVoices_;
+    if (!loadRomImage(firmware.data(), firmware.size(),
+                      voices.empty() ? nullptr : voices.data(), voices.size())) return false;
+    std::vector<uint8_t> clean;
+    if (!saveRam(clean)) return false;
+    // Only the packed 32-voice bank is copied wholesale. Runtime RAM, queues,
+    // pedal state and adapter ownership all originate from the fresh boot.
+    std::copy_n(in.begin(), 4096, clean.begin());
+    if (!restoreRam(clean) || !setMasterTune(tuning)) return false;
+    constexpr int playAddresses[] {0x20a9, 0x20aa, 0x20ab, 0x257d};
+    for (int i = 0; i < 4; ++i)
+        if (!setPlaySetting(i, std::clamp(value(playAddresses[i]), 0, i == 3 ? 99 : 1))) return false;
+    for (int i = 0; i < 2; ++i)
+        if (!setPitchBendSetting(i, std::clamp(value(0x2328 + i), 0, 12))) return false;
+    for (int controller = 0; controller < 4; ++controller)
+    {
+        if (!setControllerSetting(controller, 0,
+                std::clamp(value(0x2336 + 2 * controller), 0, 99))) return false;
+        for (int field = 1; field < 4; ++field)
+            if (!setControllerSetting(controller, field,
+                    (value(0x232e + 2 * controller) >> (field - 1)) & 1)) return false;
+    }
+    return true;
+}
+
 bool VDX7Engine::restoreRam(const std::vector<uint8_t>& in)
 {
     if (!loaded_ || in.size() != kRamStateSize)
