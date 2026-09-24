@@ -957,8 +957,55 @@ static void testCorrectionNonzeroDifferential(const juce::File& rom)
     }
 }
 
+// Interleaved processor calls test ownership isolation, not concurrent DAW load.
+static void testCorrectedInstanceIsolation(const juce::File& rom)
+{
+    auto a = std::make_unique<VDX7AudioProcessor>(false);
+    auto b = std::make_unique<VDX7AudioProcessor>(false);
+    for (auto* p : {a.get(), b.get()})
+    {
+        auto& e = VDX7RegressionAccess::engine(*p);
+        require(e.configureMonoCorrectionBeforeLoad(true), "isolation opt-in");
+        initialise(*p, rom, 48000, 64);
+        e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+        e.reloadCurrentProgram();
+        require(e.setPlaySetting(0, 1), "isolation MONO");
+        p->synchroniseOperatorParametersFromEngine();
+    }
+    juce::AudioBuffer<float> aa(2, 64), ab(2, 64);
+    juce::MidiBuffer ma, mb;
+    auto pump = [&] {
+        for (int i = 0; i < 750; ++i)
+        {
+            processChecked(*a, aa, ma);
+            processChecked(*b, ab, mb);
+        }
+    };
+    ma.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0);
+    mb.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+    pump();
+    require(VDX7RegressionAccess::monoActiveCount(*a) == 1
+            && VDX7RegressionAccess::monoActiveCount(*b) == 1,
+            "both isolation fixtures must own a note");
+    const auto settings = capture(*b);
+    a->reset();
+    pump();
+    require(VDX7RegressionAccess::monoActiveCount(*a) == 0
+            && aa.getMagnitude(0, 64) < 1e-5f, "reset instance must clear");
+    require(VDX7RegressionAccess::monoActiveCount(*b) == 1
+            && VDX7RegressionAccess::firmwareMidiOwnershipFor(*b, 72) == 1
+            && ab.getMagnitude(0, 64) > 1e-4f, "reset leaked into sibling");
+    unchanged(settings, capture(*b));
+    mb.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+    pump();
+    require(VDX7RegressionAccess::monoActiveCount(*b) == 0
+            && ab.getMagnitude(0, 64) < 1e-5f, "sibling note must release");
+    std::cout << "PASS: corrected two-instance reset isolation (interleaved)\n";
+}
+
 static void testCorrectedProcessor(const juce::File& rom)
 {
+    testCorrectedInstanceIsolation(rom);
     testCorrectionNonzeroDifferential(rom);
     testCorrectedCapacityAndOrder(rom);
     testCorrectionPersistence(rom);
