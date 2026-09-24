@@ -576,6 +576,7 @@ static void testCorrectedLifecycle(const juce::File& rom)
 {
     // Independent fixtures: one transition must not repair another's failure.
     for (int transition = 0; transition < 4; ++transition)
+    for (int history = 0; history < 3; ++history)
     {
         auto owner = std::make_unique<VDX7AudioProcessor>(false);
         auto& p = *owner;
@@ -602,11 +603,43 @@ static void testCorrectedLifecycle(const juce::File& rom)
         juce::MemoryBlock saved;
         p.getStateInformation(saved);
         const auto before = capture(p);
-        midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0);
-        pump();
-        require(VDX7RegressionAccess::monoActiveCount(p) == 1
-                && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 0) == 1,
+        const int repetitions = history == 1 ? 16 : 1;
+        if (history == 2)
+            midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
+        for (int i = 0; i < repetitions; ++i)
+        {
+            midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0);
+            pump();
+        }
+        require(VDX7RegressionAccess::monoActiveCount(p) == repetitions
+                && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 0) == repetitions,
                 "lifecycle requires genuinely held zero");
+        if (history == 2)
+        {
+            // Exercise the alternate Note Off encoding while the pedal keeps
+            // the voice audible; adapter emptiness alone is not acceptance.
+            midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(0)), 0);
+            pump();
+            const auto sustained = VDX7RegressionAccess::firmwareOwnership(p);
+            std::cout << "SUSTAIN transition=" << transition << " MIDI/held/sustained="
+                      << sustained.midi << '/' << sustained.held << '/' << sustained.sustained
+                      << " mono=" << VDX7RegressionAccess::monoActiveCount(p)
+                      << " peak=" << audio.getMagnitude(0, 64) << '\n';
+            require(sustained.midi == 0 && sustained.held == 0
+                    && VDX7RegressionAccess::monoActiveCount(p) == 0
+                    && audio.getMagnitude(0, 64) > 1e-4f,
+                    "lifecycle requires genuine sustained sound");
+            // MONO pedal hold is audible even with empty key slots. Prove
+            // pedal release stops it, then recreate the sustained precondition.
+            midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), 0);
+            pump(); empty();
+            midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
+            midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0);
+            pump();
+            midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(0)), 0);
+            pump();
+            require(audio.getMagnitude(0, 64) > 1e-4f, "sustain precondition recreated");
+        }
         if (transition == 0) p.reset();
         if (transition == 1) { p.releaseResources(); p.prepareToPlay(48000, 64); }
         if (transition == 2) p.setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
@@ -636,7 +669,8 @@ static void testCorrectedLifecycle(const juce::File& rom)
             pump(); empty();
         }
         VDX7RegressionAccess::checkFirmwareProfile(p);
-        std::cout << "PASS: corrected held-zero lifecycle transition=" << transition << '\n';
+        std::cout << "PASS: corrected held-zero lifecycle transition=" << transition
+                  << " history=" << history << '\n';
     }
 }
 

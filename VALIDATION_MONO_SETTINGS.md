@@ -37,3 +37,27 @@ the visible control and public setter are tested separately.
 Keep Draft/P1 open pending broader pedal/overload/transition and real-host
 acceptance. Unsupported-image status and pending-ROM selection need additional
 GUI interaction coverage. This is not a claim that native Note 0 now passes.
+
+## Follow-up: stacked zero and pedal lifecycle
+
+The four independent lifecycle cases (reset, release/prepare, project restore,
+UI native/corrected round trip) now each run three histories: one held zero,
+16 stacked zero Ons, and a pedal-held zero released with velocity-zero Note On.
+The stacked case requires 16 actual firmware allocations before transition.
+All cases retain empty ownership/silence, unchanged persistent settings and
+fresh zero/72 playback/release assertions after the transition.
+
+An initial test precondition incorrectly required a sustained-slot bit in MONO.
+The actual measurement was MIDI/held/sustained=0/0/0, MONO=0 while audio remained
+~0.04218. The isolated candidate already distinguishes MONO sustain via audio.
+The corrected test requires empty released-key ownership plus audible sound,
+then releases CC64 and requires silence/empty state, and recreates the pedal
+hold before the transition. This is a test-oracle correction, not a production
+bug fix or removal of the native failing acceptance gate.
+
+This remains 48 kHz/64-sample transition coverage, not a full overload or
+cross-platform ROM runtime result. No production source change in this round.
+Rebuilt host-reset executable; final focused CTest profile PASS0.66s, corrected
+group PASS32.67s (12 lifecycle histories plus existing persistence/pitch matrix),
+native acceptance FAIL0/1/16 (0.15s). Combined 2/3, exit8,33.49s.
+No full-suite rerun. Prior-head CI was still running at the start of the round.
