@@ -53,6 +53,16 @@ int main()
                         == (selected == 0 || selected == channel));
             }
     checkEditQueue();
+    for (int cc = 0; cc < 128; ++cc)
+        for (int value = 0; value < 128; ++value)
+        {
+            const uint8_t event[] {0xb0, static_cast<uint8_t>(cc), static_cast<uint8_t>(value)};
+            const bool ignored = cc == 0 || cc == 100 || cc == 101 || (cc == 32 && value >= 8);
+            require(VDX7MidiValidation::isChannelMessage(event, 3));
+            require(VDX7MidiValidation::isIgnoredAdapterEvent(event, 3) == ignored);
+            require(VDX7MidiValidation::acceptsHostEvent(event, 3, 1) == !ignored);
+            require(!VDX7MidiValidation::acceptsHostEvent(event, 3, 2));
+        }
     checkMidiTimeline();
     checkMidiLagAccounting();
     checkKeyboardQueue();

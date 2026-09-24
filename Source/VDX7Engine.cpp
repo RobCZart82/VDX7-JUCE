@@ -558,6 +558,8 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
         return;
 
     if (data[0] >= 0xf8) return;
+    // Reject before reservation/recovery, also for callers bypassing the host.
+    if (VDX7MidiValidation::isIgnoredAdapterEvent(data, static_cast<std::size_t>(size))) return;
     // Unsupported bank requests must not trigger serial-overflow recovery.
     if ((data[0] & 0xf0) == 0xb0 && size == 3 && data[1] == 32
         && (data[2] >= 8 || !hasFactoryVoices())) return;

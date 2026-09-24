@@ -1828,7 +1828,7 @@ static void testMonoRetirementFallback(const juce::File& rom)
 }
 
 static std::vector<float> renderDeferredPartition(const juce::File& rom, int rate,
-                                                 const std::vector<int>& partitions)
+                                                 const std::vector<int>& partitions, int ignoredCC = -1)
 {
     auto owner = std::make_unique<VDX7AudioProcessor>(false);
     auto& p = *owner;
@@ -1842,6 +1842,9 @@ static std::vector<float> renderDeferredPartition(const juce::File& rom, int rat
     for (int i = 0; i < 100; ++i) processChecked(p, blocked, midi);
     const auto before = capture(p);
     // Create actual processor contention, not an injected queue/counter state.
+    if (ignoredCC >= 0)
+        for (int i = 0; i < 300; ++i)
+            midi.addEvent(juce::MidiMessage::controllerEvent(1, ignoredCC, 127), 0);
     midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 16);
     {
         std::unique_lock lock(VDX7RegressionAccess::mutex(p));
@@ -1888,6 +1891,11 @@ static std::vector<float> renderDeferredPartition(const juce::File& rom, int rat
 
 static void testDeferredPartitions(const juce::File& rom)
 {
+    for (int cc : {0, 100, 101, 32})
+    {
+        std::cout << "Ignored CC contention fixture: " << cc << std::endl;
+        renderDeferredPartition(rom, 48000, {64}, cc);
+    }
     for (int rate : {44100, 48000, 96000})
     {
         const auto reference = renderDeferredPartition(rom, rate, {64});

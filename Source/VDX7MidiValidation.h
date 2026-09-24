@@ -19,6 +19,15 @@ inline bool isChannelMessage(const uint8_t* data, std::size_t size) noexcept
     return true;
 }
 
+// Adapter semantics, separate from MIDI syntax. Only statically inert messages
+// are excluded; unknown CCs and supported bank values retain their old route.
+inline bool isIgnoredAdapterEvent(const uint8_t* data, std::size_t size) noexcept
+{
+    return isChannelMessage(data, size) && (data[0] & 0xf0) == 0xb0
+        && (data[1] == 0 || data[1] == 100 || data[1] == 101
+            || (data[1] == 32 && data[2] >= 8));
+}
+
 // Live input supports only a complete 32-voice bulk-bank message. File import
 // deliberately has broader support (including single voices), but accepting an
 // arbitrary F0 packet here would let invalid traffic exhaust the bounded
@@ -51,6 +60,7 @@ inline bool acceptsHostEvent(const uint8_t* data, std::size_t size, int channel)
     if (data == nullptr || size == 0) return false;
     if (data[0] == 0xf0) return isLiveBankSysex(data, size);
     return isChannelMessage(data, size)
+        && !isIgnoredAdapterEvent(data, size)
         && (channel == 0 || (data[0] & 15) + 1 == channel);
 }
 }
