@@ -29,7 +29,26 @@ bool decode(const std::vector<uint8_t>& m, std::vector<uint8_t>& packed)
     if ((sum & 127) != 0) return false;
     std::vector<uint8_t> result(single ? 128 : 4096, 0);
     if (!single)
+    {
         std::copy(m.begin()+6, m.end()-2, result.begin());
+
+        // A checksum-valid VMEM bank can still contain an invalid packed
+        // detune nibble (15 encodes +8, outside the DX7 range -7..+7).
+        // Reject it here so importing then exporting a voice cannot create
+        // VCED data that this decoder itself would reject.
+        for (int voice = 0; voice < 32; ++voice)
+        {
+            const auto* packedVoice = result.data() + voice * VDX7VoiceData::kPackedVoiceSize;
+            for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
+            {
+                const int detune = VDX7VoiceData::getOperatorParameter(
+                    packedVoice, VDX7VoiceData::kPackedVoiceSize, op, P::detune);
+                if (detune < VDX7VoiceData::parameterMinimum(P::detune)
+                    || detune > VDX7VoiceData::parameterMaximum(P::detune))
+                    return false;
+            }
+        }
+    }
     else
     {
         for (int block = 0; block < 6; ++block)
