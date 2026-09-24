@@ -1377,11 +1377,13 @@ static MonoFreshReference characterizeMonoContinuation(const juce::File& rom, in
     const auto send = [&](int note, int n, bool on)
     {
         raw->notes(note, n, on, zeroVelocityOff);
-        if (VDX7MidiValidation::isSupportedNoteNumber(static_cast<uint8_t>(note)))
-            for (int i = 0; i < n; ++i)
-                midi.addEvent(on || zeroVelocityOff
-                    ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
-                    : juce::MidiMessage::noteOff(1, note), 0);
+        // Deliberately send every proposed note through the real processor
+        // boundary. The processor's admission guard, not this fixture, must
+        // exclude pitches outside the product-supported range.
+        for (int i = 0; i < n; ++i)
+            midi.addEvent(on || zeroVelocityOff
+                ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
+                : juce::MidiMessage::noteOff(1, note), 0);
         Sound sound;
         int crossings = 0, frames = 0;
         float previous = 0;
@@ -1485,6 +1487,27 @@ static MonoFreshReference characterizeMonoContinuation(const juce::File& rom, in
     return result;
 }
 
+static void checkRangeGuardBypassSensitivity(VDX7AudioProcessor& p)
+{
+    // Deliberately bypass the processor admission layer and deliver an
+    // excluded pitch directly to the engine. The firmware must accept it;
+    // this control proves the test's zero-ownership assertion would detect a
+    // missing processor guard rather than pass vacuously.
+    auto& e = VDX7RegressionAccess::engine(p);
+    const uint8_t noteOn[] {0x90, 127, 100};
+    const uint8_t noteOff[] {0x80, 127, 0};
+    e.handleMidi(noteOn, 3);
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    for (int i = 0; i < 375; ++i) processChecked(p, audio, midi);
+    require(VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 127) == 1,
+            "guard-bypass sensitivity control reaches firmware for excluded Note 127");
+    e.handleMidi(noteOff, 3);
+    for (int i = 0; i < 375; ++i) processChecked(p, audio, midi);
+    require(VDX7RegressionAccess::firmwareMidiOwnershipFor(p, 127) == 0,
+            "guard-bypass sensitivity control releases its direct engine note");
+}
+
 static void characterizeMonoBoundary(const juce::File& rom, int mode, int note,
                                      int repeats, bool zeroVelocityOff)
 {
@@ -1507,11 +1530,12 @@ static void characterizeMonoBoundary(const juce::File& rom, int mode, int note,
     for (bool on : {true, false})
     {
         raw->notes(note, repeats, on, zeroVelocityOff);
-        if (VDX7MidiValidation::isSupportedNoteNumber(static_cast<uint8_t>(note)))
-            for (int i = 0; i < repeats; ++i)
-                midi.addEvent(on || zeroVelocityOff
-                    ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
-                    : juce::MidiMessage::noteOff(1, note), 0);
+        // Keep raw-core characterization independent, but always offer the
+        // same event to the plugin so its production MIDI filter is exercised.
+        for (int i = 0; i < repeats; ++i)
+            midi.addEvent(on || zeroVelocityOff
+                ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
+                : juce::MidiMessage::noteOff(1, note), 0);
         pump();
         const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
         const std::array<int, 4> actual {fw.midi, fw.held, fw.sustained,
@@ -1528,6 +1552,7 @@ static void characterizeMonoBoundary(const juce::File& rom, int mode, int note,
         require(actual == expectedPlugin,
                 "plugin boundary must filter excluded pitches while raw firmware is characterized independently");
     }
+    checkRangeGuardBypassSensitivity(p);
     unchanged(before, capture(p));
     std::cout << "CHARACTERIZATION (not a fix): mode=" << mode << ", pitch=" << note
               << ", repeats=" << repeats << ", velocity-zero-off=" << zeroVelocityOff
