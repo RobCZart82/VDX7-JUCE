@@ -11,11 +11,28 @@
 #include <memory>
 #include <stdexcept>
 #include <vector>
+#include <thread>
 #include "VDX7MonoTrace.h"
 
 static void require(bool ok, const char* message)
 {
     if (!ok) throw std::runtime_error(message);
+}
+
+struct StateBoundaryGate
+{
+    std::atomic<bool> entered {false}, resume {false};
+    std::size_t collectedKeys = 0; // Published by entered's release/acquire.
+};
+static thread_local StateBoundaryGate* stateBoundaryGate = nullptr;
+void vdx7TestStateBoundary(std::size_t keyboardCount)
+{
+    if (auto* gate = stateBoundaryGate)
+    {
+        gate->collectedKeys = keyboardCount;
+        gate->entered.store(true, std::memory_order_release);
+        while (!gate->resume.load(std::memory_order_acquire)) std::this_thread::yield();
+    }
 }
 
 struct VDX7RegressionAccess
@@ -2063,6 +2080,62 @@ static void testBypassedRelease(const juce::File& rom)
 static void testDeferredPartitions(const juce::File& rom)
 {
     testBypassedRelease(rom);
+    for (bool correctedMono : {false, true})
+    {
+        auto owner = std::make_unique<VDX7AudioProcessor>(false);
+        auto& p = *owner;
+        auto& e = VDX7RegressionAccess::engine(p);
+        require(e.configureMonoCorrectionBeforeLoad(correctedMono), "overlap policy setup");
+        initialise(p, rom, 48000, 64);
+        require(e.setPlaySetting(0, correctedMono ? 1 : 0), "overlap play mode");
+        e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+        e.reloadCurrentProgram(); p.synchroniseOperatorParametersFromEngine();
+        juce::MemoryBlock saved;
+        p.getStateInformation(saved);
+        const int program = e.currentProgram();
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        processChecked(p, audio, midi);
+        p.keyboardState().noteOn(1, 67, 1.0f);
+        midi.addEvent(juce::MidiMessage::programChange(1, (program + 1) % 32), 0);
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 1);
+        midi.addEvent(juce::MidiMessage::noteOn(1, correctedMono ? 0 : 60, juce::uint8(100)), 2);
+        StateBoundaryGate gate;
+        auto callback = std::async(std::launch::async, [&] {
+            stateBoundaryGate = &gate;
+            try { processChecked(p, audio, midi); }
+            catch (...) { stateBoundaryGate = nullptr; throw; }
+            stateBoundaryGate = nullptr;
+        });
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (!gate.entered.load(std::memory_order_acquire)
+               && std::chrono::steady_clock::now() < deadline) std::this_thread::yield();
+        const bool entered = gate.entered.load(std::memory_order_acquire);
+        try
+        {
+            require(entered, "callback did not reach overlap gate");
+            require(gate.collectedKeys == 1, "overlap must include collected keyboard input");
+            p.setStateInformation(saved.getData(), int(saved.getSize()));
+        }
+        catch (...) { gate.resume.store(true, std::memory_order_release); callback.wait(); throw; }
+        gate.resume.store(true, std::memory_order_release);
+        callback.get();
+        for (int i = 0; i < 1500; ++i) processChecked(p, audio, midi);
+        const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
+        require(e.currentProgram() == program && !e.hasHeldMidiNotes()
+                && fw.midi == 0 && fw.held == 0 && fw.sustained == 0
+                && audio.getMagnitude(0, 64) < 1e-5f,
+                "overlapping public restore replayed collected host/keyboard input");
+        midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+        for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+        require(audio.getMagnitude(0, 64) > 1e-4f, "overlap fresh note silent");
+        midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+        for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+        require(!e.hasHeldMidiNotes() && audio.getMagnitude(0, 64) < 1e-5f,
+                "overlap fresh release lost");
+        std::cout << "PASS: public install inside callback collection/lock gap correctedMono="
+                  << correctedMono << '\n';
+    }
     // Public state entry point after genuine callback lock contention. Unlike
     // the staged epoch test below, this includes parsing/APVTS/ROM restoration.
     for (bool correctedMono : {false, true})

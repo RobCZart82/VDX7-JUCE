@@ -245,6 +245,10 @@ endif()
 # N1 regression: compile on ROM-free CI, execute the firmware test only when
 # the existing local-ROM suite is explicitly enabled.
 add_executable(vdx7_host_reset_tests EXCLUDE_FROM_ALL Tests/VDX7HostResetTests.cpp)
+# Recompile the processor only for this executable so deterministic scheduling
+# instrumentation is absent from the plugin/shared-code library.
+target_sources(vdx7_host_reset_tests PRIVATE Source/PluginProcessor.cpp)
+target_compile_definitions(vdx7_host_reset_tests PRIVATE VDX7_TEST_STATE_BOUNDARY=1)
 target_link_libraries(vdx7_host_reset_tests PRIVATE VDX7)
 target_include_directories(vdx7_host_reset_tests PRIVATE
     $<TARGET_PROPERTY:VDX7,INCLUDE_DIRECTORIES>)

@@ -368,6 +368,11 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     while (keyboardCount < keyboardEvents.size() && keyboardQueue_.pop(keyboardEvents[keyboardCount]))
         ++keyboardCount;
     const int total = buffer.getNumSamples();
+#if defined(VDX7_TEST_STATE_BOUNDARY)
+    // Test executable only: pause after collection, before taking engineMutex_.
+    extern void vdx7TestStateBoundary(std::size_t);
+    vdx7TestStateBoundary(keyboardCount);
+#endif
     // A long transaction may silence a block, but never blocks audio.
     std::unique_lock lock(engineMutex_, std::try_to_lock);
     if (lock.owns_lock())
