@@ -321,18 +321,21 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         return true;
     };
     (void) observeHostReset();
-    const auto midiTimelineEpoch = midiTimelineEpoch_.load(std::memory_order_acquire);
-    if (midiTimelineEpoch != audioMidiTimelineEpoch_)
+    const auto observeStateInstall = [this]()
     {
+        const auto epoch = midiTimelineEpoch_.load(std::memory_order_acquire);
+        if (epoch == audioMidiTimelineEpoch_) return false;
         // The state thread must never clear this audio-owned timeline directly.
         // Discard events queued before the restored project state, including
         // virtual-keyboard events waiting behind a contended engine transaction.
-        audioMidiTimelineEpoch_ = midiTimelineEpoch;
+        audioMidiTimelineEpoch_ = epoch;
         deferredMidi_.clear();
         keyboardQueue_.discard();
         clearKeyboardSnapshot();
         stateRestoreReleasePending_ = true;
-    }
+        return true;
+    };
+    (void) observeStateInstall();
     const int inputChannel = midiInputChannel_.load();
     if (inputChannel != audioMidiInputChannel_)
     {
@@ -349,6 +352,13 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     const int total = buffer.getNumSamples();
     // A long transaction may silence a block, but never blocks audio.
     std::unique_lock lock(engineMutex_, std::try_to_lock);
+    if (lock.owns_lock() && observeStateInstall())
+    {
+        // State changed after the pre-lock observation: this collected block
+        // belongs to the previous timeline, not the newly installed project.
+        keyboardCount = 0;
+        midi.clear();
+    }
     if (lock.owns_lock() && observeHostReset())
     {
         // A reset overlapping the pre-lock section invalidates that callback's
@@ -1212,6 +1222,9 @@ void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
         lastPitchMsb_ = -1;
         lastModValue_ = -1;
         updateEngineSnapshot();
+        // Publish the actual installation, not only the earlier request.
+        // Input deferred during parameter/ROM preparation is now stale too.
+        midiTimelineEpoch_.fetch_add(1, std::memory_order_release);
 }
 
 bool VDX7AudioProcessor::readFile(const juce::File& file, std::vector<uint8_t>& data)

@@ -110,6 +110,10 @@ struct VDX7RegressionAccess
         }
     }
     static std::mutex& mutex(VDX7AudioProcessor& p) { return p.engineMutex_; }
+    static void announceRestore(VDX7AudioProcessor& p)
+    { p.midiTimelineEpoch_.fetch_add(1, std::memory_order_release); }
+    static void installRestore(VDX7AudioProcessor& p, const juce::ValueTree& state)
+    { std::scoped_lock lock(p.engineMutex_); p.restoreSavedStateLocked(state); }
     static bool deferred(const VDX7AudioProcessor& p) { return p.deferredMidi_.active(); }
     static uint32_t dirty(const VDX7AudioProcessor& p) { return p.modifiedVoices_.load(); }
     static bool resetWaiting(const VDX7AudioProcessor& p)
@@ -1891,6 +1895,43 @@ static std::vector<float> renderDeferredPartition(const juce::File& rom, int rat
 
 static void testDeferredPartitions(const juce::File& rom)
 {
+    {
+        auto owner = std::make_unique<VDX7AudioProcessor>(false);
+        auto& p = *owner;
+        initialise(p, rom, 48000, 64);
+        juce::MemoryBlock saved;
+        p.getStateInformation(saved);
+        const auto xml = juce::AudioProcessor::getXmlFromBinary(saved.getData(), int(saved.getSize()));
+        const auto state = juce::ValueTree::fromXml(*xml);
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        // Deterministic schedule: announcement observed, input deferred, then
+        // actual state installed. Uses real callback and restore implementation.
+        VDX7RegressionAccess::announceRestore(p);
+        {
+            std::unique_lock lock(VDX7RegressionAccess::mutex(p));
+            midi.addEvent(juce::MidiMessage::programChange(1, 7), 0);
+            midi.addEvent(juce::MidiMessage::noteOn(1, 62, juce::uint8(100)), 2);
+            auto callback = std::async(std::launch::async, [&] { processChecked(p, audio, midi); });
+            const bool timely = callback.wait_for(std::chrono::seconds(1)) == std::future_status::ready;
+            if (!timely) lock.unlock();
+            callback.get();
+            require(timely, "restore schedule blocked callback");
+        }
+        require(VDX7RegressionAccess::deferred(p), "restore schedule needs deferred input");
+        VDX7RegressionAccess::installRestore(p, state);
+        for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+        require(VDX7RegressionAccess::engine(p).currentProgram() == int(state.getProperty("program"))
+                && !VDX7RegressionAccess::engine(p).hasHeldMidiNotes(),
+                "pre-install MIDI replayed into restored project");
+        midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+        for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+        require(audio.getMagnitude(0, 64) > 1e-4f, "fresh post-install note lost");
+        midi.addEvent(juce::MidiMessage::noteOff(1, 72), 0);
+        for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+        require(!VDX7RegressionAccess::engine(p).hasHeldMidiNotes(), "fresh post-install release lost");
+        std::cout << "PASS: announcement/deferred-input/install boundary\n";
+    }
     for (int cc : {0, 100, 101, 32})
     {
         std::cout << "Ignored CC contention fixture: " << cc << std::endl;
