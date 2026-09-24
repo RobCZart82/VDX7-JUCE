@@ -82,6 +82,10 @@ public:
     int getMasterTune() const;
     int getMidiInputChannel() const noexcept { return midiInputChannel_.load(); }
     bool setMidiInputChannelFromUi(int channel);
+    struct MonoCorrectionStatus { bool requested, active, loaded; };
+    MonoCorrectionStatus getMonoCorrectionStatus() const;
+    // Non-RT, explicit user action: changing mode releases all playing notes.
+    bool setMonoCorrectionFromUi(bool enabled);
     bool setMasterTuneFromUi(int value);
     bool setPlaySettingFromUi(int field, int value);
     bool setPitchBendSettingFromUi(int field, int value);

@@ -1424,11 +1424,18 @@ void VDX7AudioProcessorEditor::showSettings()
 {
     const int initial = processor_.getMasterTune();
     const int initialChannel = processor_.getMidiInputChannel();
+    const auto initialCorrection = processor_.getMonoCorrectionStatus();
+    const juce::String correctionStatus = initialCorrection.active ? "Active (verified firmware)"
+        : initialCorrection.requested ? (initialCorrection.loaded ? "Unavailable for this firmware: native behavior"
+                                                                   : "Waiting for compatible firmware")
+                                      : "Native firmware behavior";
     auto* dialog = new juce::AlertWindow("SETTINGS",
         "Master tuning: -256 to +255 firmware units (not cents). 0 = default tuning.\n"
         "Saved in the DAW project, not voice/bank SysEx.\n"
         "Channel changes release held notes/sustain on the next audio block.\n"
-        "On-screen keyboard and bank SysEx import are not channel-filtered.",
+        "On-screen keyboard and bank SysEx import are not channel-filtered.\n"
+        "Changing MONO correction restarts the engine and stops playing notes.\n"
+        "MONO correction: " + correctionStatus,
         juce::MessageBoxIconType::NoIcon);
     dialog->addTextEditor("tuning", juce::String(initial), "Master tuning:");
     dialog->getTextEditor("tuning")->setInputRestrictions(4, "-0123456789");
@@ -1436,11 +1443,13 @@ void VDX7AudioProcessorEditor::showSettings()
     for (int channel = 1; channel <= 16; ++channel) channels.add(juce::String(channel));
     dialog->addComboBox("channel", channels, "Host MIDI input:");
     dialog->getComboBoxComponent("channel")->setSelectedItemIndex(initialChannel);
+    dialog->addComboBox("monoCorrection", {"Native firmware (default)", "Correct MONO Note 0"}, "MONO compatibility:");
+    dialog->getComboBoxComponent("monoCorrection")->setSelectedItemIndex(initialCorrection.requested ? 1 : 0);
     dialog->addButton("Apply", 1, juce::KeyPress(juce::KeyPress::returnKey));
     dialog->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
     juce::Component::SafePointer<VDX7AudioProcessorEditor> safe(this);
     dialog->enterModalState(true, juce::ModalCallbackFunction::create(
-        [safe, dialog, initial, initialChannel](int result)
+        [safe, dialog, initial, initialChannel, initialCorrection](int result)
         {
             if (safe == nullptr || result != 1) return;
             const auto text = dialog->getTextEditorContents("tuning").trim();
@@ -1449,11 +1458,15 @@ void VDX7AudioProcessorEditor::showSettings()
                 || text.getIntValue() < -256 || text.getIntValue() > 255)
             { safe->showError("Invalid tuning", "Enter an integer from -256 to 255."); return; }
             if (safe->processor_.getMasterTune() != initial
-                || safe->processor_.getMidiInputChannel() != initialChannel)
+                || safe->processor_.getMidiInputChannel() != initialChannel
+                || safe->processor_.getMonoCorrectionStatus().requested != initialCorrection.requested)
             { safe->showError("Settings changed", "Settings changed while this dialog was open. Reopen SETTINGS."); return; }
-            if (!safe->processor_.setMasterTuneFromUi(text.getIntValue()))
+            if (text.getIntValue() != initial && !safe->processor_.setMasterTuneFromUi(text.getIntValue()))
             { safe->showError("Tuning unavailable", "Load compatible firmware before applying settings."); return; }
             safe->processor_.setMidiInputChannelFromUi(dialog->getComboBoxComponent("channel")->getSelectedItemIndex());
+            if (!safe->processor_.setMonoCorrectionFromUi(
+                    dialog->getComboBoxComponent("monoCorrection")->getSelectedItemIndex() == 1))
+                safe->showError("Correction unavailable", "A project restore may be in progress. Reopen SETTINGS.");
         }), true);
 }
 

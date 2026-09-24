@@ -13,8 +13,8 @@ by this checklist. No proprietary firmware belongs in source, CI or artifacts.
   ROM-free CI are NOT a replacement. See `VALIDATION_MONO_CANDIDATE.md`.
   Initial engine-opt-in processor coverage is in `VALIDATION_MONO_ENGINE_OPTIN.md`;
   state persistence/new-instance restore is now covered in
-  `VALIDATION_MONO_PERSISTENCE.md`; UI selection and broader corrected-mode
-  transition/host acceptance remain.
+  `VALIDATION_MONO_PERSISTENCE.md`; `VALIDATION_MONO_SETTINGS.md` adds UI
+  selection/status. Broader corrected-mode transition/host acceptance remains.
 - [ ] Program/edit and bank/edit ordering in both directions, including stopped transport/save.
 - [ ] Audio callback has no direct host parameter notification; ownership audit of all call sites.
 - [ ] Deferred MIDI preserves an explicit multi-block timeline policy; overflow reconciliation.

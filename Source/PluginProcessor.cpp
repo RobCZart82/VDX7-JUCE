@@ -903,6 +903,63 @@ const juce::String VDX7AudioProcessor::getProgramName(int index)
     return "Program " + juce::String(index + 1);
 }
 
+VDX7AudioProcessor::MonoCorrectionStatus VDX7AudioProcessor::getMonoCorrectionStatus() const
+{
+    std::scoped_lock lock(engineMutex_);
+    return {engine_.isMonoCorrectionRequested(), engine_.isMonoCorrectionActive(), engine_.isLoaded()};
+}
+
+bool VDX7AudioProcessor::setMonoCorrectionFromUi(bool enabled)
+{
+    {
+        std::unique_lock lock(engineMutex_);
+        if (enabled == engine_.isMonoCorrectionRequested()) return true;
+        if (!engine_.isLoaded())
+        {
+            if (!engine_.configureMonoCorrectionBeforeLoad(enabled)) return false;
+            if (pendingRestore_.isValid())
+                pendingRestore_.setProperty("monoNoteZeroCorrection", enabled, nullptr);
+            lock.unlock();
+            updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+            return true;
+        }
+        if (pendingRestore_.isValid()) return false; // Do not interrupt a project restore.
+        if (applyOperatorParameters() | applyVoiceParameters()) engine_.reloadCurrentProgram();
+        applyPendingCommands();
+        applyPendingPerformanceSettings();
+        std::vector<uint8_t> ram;
+        if (!engine_.saveRam(ram)) return false;
+        const int bank = engine_.currentBank(), program = engine_.currentProgram();
+        const int tuning = engine_.masterTune();
+        std::array<int, 4> play;
+        std::array<int, 2> bend;
+        std::array<int, 16> controllers;
+        for (int i = 0; i < 4; ++i) play[i] = engine_.getPlaySetting(i);
+        for (int i = 0; i < 2; ++i) bend[i] = engine_.getPitchBendSetting(i);
+        for (int i = 0; i < 16; ++i) controllers[i] = engine_.getControllerSetting(i / 4, i % 4);
+        if (!engine_.configureMonoCorrectionForStateRestore(enabled)) return false;
+        // Runtime ownership must come from the new boot, not the held-note
+        // snapshot. Preserve the packed bank and explicit persistent settings.
+        std::vector<uint8_t> clean;
+        if (!engine_.saveRam(clean)) return false;
+        std::copy_n(ram.begin(), 4096, clean.begin());
+        if (!engine_.restoreRam(clean)) return false;
+        engine_.setCurrentBankMarker(bank);
+        engine_.selectProgram(program);
+        engine_.setMasterTune(tuning);
+        for (int i = 0; i < 4; ++i) engine_.setPlaySetting(i, play[i]);
+        for (int i = 0; i < 2; ++i) engine_.setPitchBendSetting(i, bend[i]);
+        for (int i = 0; i < 16; ++i) engine_.setControllerSetting(i / 4, i % 4, controllers[i]);
+        midiTimelineEpoch_.fetch_add(1, std::memory_order_release);
+        lastPitchMsb_ = -1;
+        lastModValue_ = -1;
+        updateEngineSnapshot();
+    }
+    synchroniseOperatorParametersFromEngine();
+    updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    return true;
+}
+
 void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     synchroniseOperatorParametersFromEngine();

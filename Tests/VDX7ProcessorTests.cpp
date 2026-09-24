@@ -92,6 +92,10 @@ static void checkUserLibrary(const juce::File& romFile, const juce::File& imageF
         require(tuning->getComboBoxComponent("channel")->getNumItems() == 17
                 && tuning->getComboBoxComponent("channel")->getSelectedItemIndex() == p.getMidiInputChannel(),
                 "SETTINGS has OMNI plus 16 channels");
+        require(tuning->getComboBoxComponent("monoCorrection")
+                && tuning->getComboBoxComponent("monoCorrection")->getNumItems() == 2
+                && tuning->getComboBoxComponent("monoCorrection")->getSelectedItemIndex() == 0,
+                "SETTINGS exposes native-default MONO correction choice");
         if (imageFolder != juce::File())
         {
             juce::FileOutputStream stream(imageFolder.getChildFile("VDX7-settings.png"));

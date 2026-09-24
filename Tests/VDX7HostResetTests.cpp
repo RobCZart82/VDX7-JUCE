@@ -575,7 +575,7 @@ static double correctedProcessorPitch(const juce::File& rom, bool corrected, int
 static void testCorrectedLifecycle(const juce::File& rom)
 {
     // Independent fixtures: one transition must not repair another's failure.
-    for (int transition = 0; transition < 3; ++transition)
+    for (int transition = 0; transition < 4; ++transition)
     {
         auto owner = std::make_unique<VDX7AudioProcessor>(false);
         auto& p = *owner;
@@ -610,6 +610,16 @@ static void testCorrectedLifecycle(const juce::File& rom)
         if (transition == 0) p.reset();
         if (transition == 1) { p.releaseResources(); p.prepareToPlay(48000, 64); }
         if (transition == 2) p.setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
+        if (transition == 3)
+        {
+            require(p.setMonoCorrectionFromUi(false), "UI disable while held");
+            pump();
+            require(!p.getMonoCorrectionStatus().requested && !p.getMonoCorrectionStatus().active,
+                    "UI native selection status");
+            empty();
+            unchanged(before, capture(p));
+            require(p.setMonoCorrectionFromUi(true), "UI re-enable");
+        }
         pump();
         require(e.isMonoCorrectionActive(), "lifecycle lost verified correction");
         empty();
