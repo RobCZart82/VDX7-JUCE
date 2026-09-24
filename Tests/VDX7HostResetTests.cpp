@@ -1787,13 +1787,19 @@ static SavedSettings testExpandedHistory(const juce::File& rom, int repeats, int
         // Observe the actual queued bytes before any audio-time drain. This
         // zero-sample observation is separate from the immediate-input matrix.
         const auto bytes = VDX7RegressionAccess::serialBytes(p);
-        const size_t releases = conservative ? static_cast<size_t>(128 * repeats) : 0;
+        const auto supportedNoteCount = static_cast<size_t>(
+            VDX7MidiValidation::lastSupportedNote - VDX7MidiValidation::firstSupportedNote + 1);
+        const size_t releases = conservative
+            ? supportedNoteCount * static_cast<size_t>(repeats) : 0;
         require(bytes.size() == (releases == 0 ? 0 : 1 + 2 * releases), "unexpected reset serial byte count");
         if (!bytes.empty()) require(bytes[0] == 0x80, "unexpected reset status");
         size_t decoded = 0;
         for (size_t i = 1; i + 1 < bytes.size(); i += 2)
         {
-            require(bytes[i] == decoded / repeats && bytes[i + 1] == 0, "unexpected reset Note Off payload");
+            const auto expectedNote = VDX7MidiValidation::firstSupportedNote
+                + static_cast<int>(decoded / static_cast<size_t>(repeats));
+            require(bytes[i] == expectedNote && bytes[i + 1] == 0,
+                    "unexpected reset Note Off pitch or velocity");
             ++decoded;
         }
         require(decoded == releases, "unexpected decoded reset release count");
