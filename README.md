@@ -190,10 +190,12 @@ audio-frequency check. `--pitch-oracle-only` runs the pair;
 `--pitch-oracle-note-one-mutant` exposes the mutant's failure directly (exit 1).
 This expected negative control does not invert the real plugin acceptance gate.
 The complete experiment shares `VDX7MonoCorrection.h` with a ROM-free six-site
-decision-policy test (`vdx7_mono_correction`). The optional correction is
-selectable in SETTINGS and persisted with project state. The product input
-adapter filters Note 0–11 and 121–127 in both modes; raw-core tests continue to
-characterize native Note 0 separately. See [engine integration scope](VALIDATION_MONO_ENGINE_OPTIN.md)
+decision-policy test (`vdx7_mono_correction`). The optional correction remains
+selectable in SETTINGS and persisted with project state as an advanced compatibility
+option; Native firmware is the recommended default and routine users should
+normally leave it unchanged. Both modes accept only Note 12–120, so the option
+does not enable the excluded low octave. Raw-core tests continue to characterize
+native Note 0 separately. See [engine integration scope](VALIDATION_MONO_ENGINE_OPTIN.md)
 and [the product range policy](MIDI_RANGE_v0.7.0.md).
 The separate `vdx7_deferred_partition` (`--deferred-partition-only`) regression
 checks real-processor note playback/release across small and oversized successful

@@ -1434,6 +1434,8 @@ void VDX7AudioProcessorEditor::showSettings()
         "Saved in the DAW project, not voice/bank SysEx.\n"
         "Channel changes release held notes/sustain on the next audio block.\n"
         "On-screen keyboard and bank SysEx import are not channel-filtered.\n"
+        "Advanced MONO compatibility is normally best left at Native firmware.\n"
+        "Both modes accept MIDI Notes 12–120 only.\n"
         "Changing MONO correction restarts the engine and stops playing notes.\n"
         "MONO correction: " + correctionStatus,
         juce::MessageBoxIconType::NoIcon);
@@ -1443,7 +1445,8 @@ void VDX7AudioProcessorEditor::showSettings()
     for (int channel = 1; channel <= 16; ++channel) channels.add(juce::String(channel));
     dialog->addComboBox("channel", channels, "Host MIDI input:");
     dialog->getComboBoxComponent("channel")->setSelectedItemIndex(initialChannel);
-    dialog->addComboBox("monoCorrection", {"Native firmware (default)", "Correct MONO Note 0"}, "MONO compatibility:");
+    dialog->addComboBox("monoCorrection", {"Native firmware (recommended)", "Correct MONO Note 0 (advanced)"},
+                        "Advanced MONO engine mode:");
     dialog->getComboBoxComponent("monoCorrection")->setSelectedItemIndex(initialCorrection.requested ? 1 : 0);
     dialog->addButton("Apply", 1, juce::KeyPress(juce::KeyPress::returnKey));
     dialog->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));

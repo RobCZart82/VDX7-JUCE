@@ -9,28 +9,28 @@ indices compatible with saved projects.
 
 ### Current next steps — 2026-09-24
 
-Latest checkpoint: `VALIDATION_MONO_SOAK.md` records the full 30-test run,
-separate desktop retry, new dual-instance soak and remaining host boundaries.
-User approved retaining both native and corrected Settings modes, not merge or
-publication. Native known failure remains explicitly separate.
+Latest checkpoint: PR #47 was merged to `main` as `30a3ccbd` on 2026-09-24.
+`VALIDATION_MONO_SOAK.md` records the full 30-test run, separate desktop retry,
+dual-instance soak and remaining host boundaries. The user approved retaining
+both Native and Correct modes. Native remains the recommended default; Correct
+is an advanced compatibility setting. No 1.0.0 publication is authorized.
 
 New product input policy (2026-09-24): filter MIDI Note events outside the
 inclusive 12–120 range in both MONO modes. This prevents the observed native
 Note 0 lockup and excludes the unused upper tail by product choice without
 transposing pitches or patching firmware. Processor/ROM-free boundary tests were
-added; local execution is pending because this Mac currently blocks Apple
-toolchain use until the Xcode license is accepted. Run GitHub CI, then targeted
-REAPER tests at Notes 11/12 and 120/121, including release, sustain, transport,
-and subsequent normal-register notes.
+added and macOS/Windows CI passed on the merged head. Full local ROM-enabled
+suite and targeted REAPER tests at Notes 11/12 and 120/121 remain outstanding,
+including release, sustain, transport and subsequent normal-register notes.
 
-1. Run fresh CI and the complete registered regression suite for the new range
-   guard. Keep raw-firmware Note 0 characterization distinct from the product
-   range acceptance result; report unavailable desktop prerequisites as NOT RUN.
+1. Complete the local ROM-enabled regression and exact-boundary REAPER acceptance.
+   Keep raw-firmware Note 0 characterization distinct from product range
+   acceptance; report unavailable desktop prerequisites as NOT RUN.
 2. Broaden concurrent public restore, mixed controller/overflow timing and host
    bypass/suspension coverage. Desktop GUI/processor follow-up now passes;
    see VALIDATION_GUI_RESTORE_ORACLE.md for the persistent-state oracle change.
 3. Real DAW acceptance, remaining GUI finish/scale checks and release packaging.
-   Keep #47 Draft until review; publishing remains a separate approval.
+   PR #47 is merged; publishing remains a separate approval.
 
 The feature history below records earlier milestones, not the current execution
 order. Current audit disposition is in AUDIT_TRIAGE_2026-09-23.md.

@@ -34,9 +34,20 @@ No complete-suite rerun in this GUI/API round; prior persistence round contains
 the rebuilt full-suite evidence. GUI callback itself is not end-to-end automated;
 the visible control and public setter are tested separately.
 
-Keep Draft/P1 open pending broader pedal/overload/transition and real-host
-acceptance. Unsupported-image status and pending-ROM selection need additional
-GUI interaction coverage. This is not a claim that native Note 0 now passes.
+## Settings recommendation (2026-09-24)
+
+Product decision: Native firmware remains the default and recommended mode for
+ordinary use. Keep Correct MONO Note 0 selectable as an advanced, under-the-hood
+compatibility setting, not a control users are expected to toggle routinely.
+The product Note 12–120 MIDI range is common to both modes; the option does not
+make the excluded Note 0–11 octave available. The GUI helper text and labels now
+state this explicitly.
+
+At the time this validation round was recorded, PR #47 remained Draft pending
+broader pedal/overload/transition and real-host acceptance. PR #47 has since
+merged; those outstanding checks remain release work. Unsupported-image status
+and pending-ROM selection still need additional GUI interaction coverage. This
+is not a claim that native Note 0 now passes.
 
 ## Follow-up: stacked zero and pedal lifecycle
 
