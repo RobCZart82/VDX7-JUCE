@@ -1000,6 +1000,30 @@ static void testCorrectedInstanceIsolation(const juce::File& rom)
     pump();
     require(VDX7RegressionAccess::monoActiveCount(*b) == 0
             && ab.getMagnitude(0, 64) < 1e-5f, "sibling note must release");
+    // Reverse the roles and keep Note 0 sounding via CC64, not key ownership.
+    // Empty MONO slots alone must not be mistaken for a silent instance.
+    ma.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
+    ma.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 1);
+    pump();
+    ma.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(0)), 0);
+    pump();
+    require(VDX7RegressionAccess::monoActiveCount(*a) == 0
+            && aa.getMagnitude(0, 64) > 1e-4f, "isolation needs audible pedal hold");
+    mb.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 0);
+    pump();
+    require(VDX7RegressionAccess::monoActiveCount(*b) == 1,
+            "reverse reset fixture must own a note");
+    const auto pedalSettings = capture(*a);
+    b->reset();
+    pump();
+    require(VDX7RegressionAccess::monoActiveCount(*b) == 0
+            && ab.getMagnitude(0, 64) < 1e-5f, "reverse reset must clear");
+    require(VDX7RegressionAccess::monoActiveCount(*a) == 0
+            && aa.getMagnitude(0, 64) > 1e-4f, "sibling reset released pedal hold");
+    unchanged(pedalSettings, capture(*a));
+    ma.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), 0);
+    pump();
+    require(aa.getMagnitude(0, 64) < 1e-5f, "isolated pedal release must silence");
     std::cout << "PASS: corrected two-instance reset isolation (interleaved)\n";
 }
 
