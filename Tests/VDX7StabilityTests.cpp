@@ -135,6 +135,64 @@ struct VDX7RegressionAccess
         for (int block = 0; block < 8; ++block) p.processBlock(audio, midi);
         require(!p.engine_.hasHeldMidiNotes(), "valid note-off works after ignored traffic");
     }
+    static void checkSupportedNoteRange(VDX7AudioProcessor& p)
+    {
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        for (const bool correction : {false, true})
+        {
+            require(p.setMonoCorrectionFromUi(correction), "select each MONO compatibility mode");
+            const int queuedBefore = p.engine_.dx7_.midiSerialRx.writeIdx;
+            for (const auto note : {0, 11, 121, 127})
+            {
+                const uint8_t on[] {0x90, static_cast<uint8_t>(note), 100};
+                const uint8_t off[] {0x80, static_cast<uint8_t>(note), 0};
+                const uint8_t zeroVelocityOn[] {0x90, static_cast<uint8_t>(note), 0};
+                require(!p.handleMidiEventLocked(on, 3) && !p.handleMidiEventLocked(off, 3)
+                        && !p.handleMidiEventLocked(zeroVelocityOn, 3),
+                        "out-of-range note-on and release events are rejected at processor boundary");
+            }
+            require(p.engine_.dx7_.midiSerialRx.writeIdx == queuedBefore
+                    && !p.engine_.hasHeldMidiNotes(),
+                    "rejected range cannot enter firmware or leave a held-note record");
+
+            // The built-in keyboard has a separate collection path; exercise
+            // its lower out-of-range event while the engine lock is contended.
+            p.keyboardState_.noteOn(1, 0, 1.0f);
+            midi.clear();
+            VDX7RegressionAccess::contend(p, midi);
+            require(!p.deferredMidi_.active() && !p.engine_.hasHeldMidiNotes(),
+                    "unsupported GUI key must not enter deferred MIDI or reach firmware");
+            p.keyboardState_.noteOff(1, 0, 0.0f);
+            midi.clear();
+            p.processBlock(audio, midi);
+            require(!p.engine_.hasHeldMidiNotes(), "unsupported GUI key release remains inert");
+
+            // Also flood out-of-range events while rendering is deferred: they
+            // must not consume deferred capacity or trigger its overflow panic.
+            midi.clear();
+            for (int i = 0; i < 160; ++i)
+            {
+                midi.addEvent(juce::MidiMessage::noteOn(1, i % 12, uint8_t(100)), 0);
+                midi.addEvent(juce::MidiMessage::noteOff(1, i % 12), 1);
+            }
+            VDX7RegressionAccess::contend(p, midi);
+            require(!p.deferredMidi_.active() && !p.engine_.isMidiRecovering(),
+                    "filtered pitch events do not fill delayed MIDI or trigger panic");
+
+            midi.clear();
+            for (const auto note : {12, 60, 120})
+                midi.addEvent(juce::MidiMessage::noteOn(1, note, uint8_t(100)), 0);
+            p.processBlock(audio, midi);
+            for (const auto note : {12, 60, 120})
+                require(p.engine_.activeMidiNotes_[note], "supported boundary note reaches firmware");
+            for (const auto note : {12, 60, 120})
+                midi.addEvent(juce::MidiMessage::noteOff(1, note), 0);
+            p.processBlock(audio, midi);
+            require(!p.engine_.hasHeldMidiNotes(), "supported boundary notes release cleanly");
+        }
+        require(!p.getMonoCorrectionStatus().requested, "native mode restored after range acceptance");
+    }
     static void checkSerialOverflow(VDX7Engine& e)
     {
         e.dx7_.midiSerialRx.flush();
@@ -184,10 +242,24 @@ struct VDX7RegressionAccess
         bank.resize(4096);
         const auto sysex = VDX7Sysex::encode(bank);
         const int beforeBank = (e.dx7_.midiSerialRx.writeIdx - e.dx7_.midiSerialRx.readIdx) & 8191;
+        std::vector<uint8_t> queuedBeforeBank;
+        for (int i = 0; i < beforeBank; ++i)
+            queuedBeforeBank.push_back(e.dx7_.midiSerialRx.buffer[(e.dx7_.midiSerialRx.readIdx + i) & 8191]);
         require(e.handleSysex(sysex.data(), sysex.size()), "live bank after recovery starts draining");
         const int afterBank = (e.dx7_.midiSerialRx.writeIdx - e.dx7_.midiSerialRx.readIdx) & 8191;
+        // No explicit time request in this fixture: keep the original +2
+        // program-only ordering. Check every old byte, not only queue length.
         require(beforeBank >= 384 && afterBank == beforeBank + 2,
                 "live bank must preserve queued recovery note-offs");
+        for (int i = 0; i < beforeBank; ++i)
+            require(e.dx7_.midiSerialRx.buffer[(e.dx7_.midiSerialRx.readIdx + i) & 8191] == queuedBeforeBank[i],
+                    "live bank must preserve every queued recovery byte");
+        const std::array<uint8_t, 2> appended {
+            static_cast<uint8_t>(0xc0 | (e.dx7_.getMidiRxChannel() & 15)),
+            static_cast<uint8_t>(e.currentProgram()) };
+        for (int i = 0; i < 2; ++i)
+            require(e.dx7_.midiSerialRx.buffer[(e.dx7_.midiSerialRx.readIdx + beforeBank + i) & 8191] == appended[i],
+                    "recovery must append only program without an explicit time request");
         e.resetMidiLifecycle();
         require(!e.isMidiRecovering(), "restart during recovery reconciles lifecycle");
         e.handleMidi(note, 3);
@@ -488,6 +560,7 @@ int main(int argc, char** argv)
             require(input.loadRomFromFile(romFile), "MIDI validation ROM");
             input.prepareToPlay(48000, 64);
             VDX7RegressionAccess::checkInvalidMidi(input);
+            VDX7RegressionAccess::checkSupportedNoteRange(input);
             VDX7RegressionAccess::checkInputChannel(input);
             VDX7RegressionAccess::checkStateRestoreDropsDeferredMidi(input);
         }

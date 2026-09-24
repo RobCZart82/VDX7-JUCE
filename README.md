@@ -109,6 +109,9 @@ The v0.6 series adds clickable algorithm diagrams, mechanical wheel graphics, an
   tuning (-256 to +255 firmware units, not cents) and OMNI/channel 1–16 input filtering.
   These settings are stored in the project, not voice SysEx. Input filtering is a
   wrapper feature, not multitimbral/MPE operation.
+- Supported MIDI note range is 12–120 inclusive (C0–C9 with REAPER's default
+  octave labels). Notes outside this range are filtered in both MONO
+  compatibility Settings modes and are not transposed.
 - No live MIDI Out/SysEx transmission; SysEx file import/export is available.
 - Sample-rate conversion uses a Blackman-windowed sinc filter with reported host latency.
   Final host/audio-quality acceptance remains outstanding.
@@ -147,12 +150,65 @@ cmake --build build-local --config Release --target vdx7_all_tests
 ctest --test-dir build-local -C Release --output-on-failure
 ```
 
-By default CTest runs five ROM-free tests. The shared target also compile-checks
-stress coverage without running it. For the full local suite, configure with
+By default CTest runs six ROM-free tests. Both `vdx7_ci_checks` and
+`vdx7_all_tests` also compile all six integration runners (processor, stability,
+MIDI range, timing, stress and host reset), plus the isolated MONO candidate
+experiment, without executing them or needing a ROM. For the full local suite, configure with
 `-DVDX7_ENABLE_ROM_TESTS=ON -DVDX7_TEST_ROM_FILE=/absolute/path/to/your/dx7.bin`,
 then rebuild `vdx7_all_tests` and rerun CTest. Never upload the ROM. The processor
 runner opens no audio device and optionally accepts an existing absolute directory
 for PNG snapshots.
+
+The host-reset/ownership groups inspect the validated v1.8 firmware memory map.
+They are labelled `local-rom;firmware-v1_8` and require the `vdx7_v18_profile`
+CTest fixture. It verifies the firmware identity before running those groups;
+an incompatible image fails the prerequisite, rather than silently passing or
+being interpreted as a broken unknown-ROM fallback. Other-ROM runtime coverage
+remains separate acceptance work. Select these groups with
+`ctest --test-dir build-local -C Release -L firmware-v1_8 --output-on-failure`.
+
+`vdx7_mono_boundary_characterization` documents a known native MONO pitch-zero
+edge by comparing the raw emulator with the processor. The current product
+filters Note 0–11 and 121–127 before either MONO mode, so this raw firmware issue
+is not reachable through supported plugin MIDI. The local
+`vdx7_supported_note_range_acceptance` CTest verifies both settings modes and
+the 12–120 inclusive boundary. Actual REAPER boundary acceptance remains a
+release check. Older reports below are historical evidence for the raw firmware
+behavior and earlier test naming.
+The follow-up `vdx7_mono_trace_characterization` (`--mono-trace-only`) verifies
+the loaded image's relevant instructions, observes the actual failing branches,
+and tests subsequent notes **without** recovery. It documents retained output
+and rejected native allocation, rather than declaring them fixed. See
+[instruction trace and continuation](VALIDATION_MONO_INSTRUCTION_TRACE.md).
+`vdx7_mono_candidate_experiment` evaluates explicitly changed branch decisions
+in a separate raw-core test machine. It checks real Note 0 playback as well as
+lookup, cleanup and legato; **it is not linked into the plugin**. Its PASS cannot
+close production acceptance. See [experiment and remaining work](VALIDATION_MONO_CANDIDATE.md).
+The experiment includes a pitch-oracle sensitivity control: unchanged Note 0
+passes; deliberate test-only Note 1 input while expecting Note 0 fails the same
+audio-frequency check. `--pitch-oracle-only` runs the pair;
+`--pitch-oracle-note-one-mutant` exposes the mutant's failure directly (exit 1).
+This expected negative control does not invert the real plugin acceptance gate.
+The complete experiment shares `VDX7MonoCorrection.h` with a ROM-free six-site
+decision-policy test (`vdx7_mono_correction`). The optional correction is
+selectable in SETTINGS and persisted with project state. The product input
+adapter filters Note 0–11 and 121–127 in both modes; raw-core tests continue to
+characterize native Note 0 separately. See [engine integration scope](VALIDATION_MONO_ENGINE_OPTIN.md)
+and [the product range policy](MIDI_RANGE_v0.7.0.md).
+The separate `vdx7_deferred_partition` (`--deferred-partition-only`) regression
+checks real-processor note playback/release across small and oversized successful
+blocks, plus true-delay expiry under contention and reset. Its queue-only portion
+also executes in public ROM-free CI. See [Q1 validation](VALIDATION_DEFERRED_PARTITION.md).
+Native MONO compatibility choices remain a separate
+[design decision](DESIGN_MONO_NOTE_ZERO_POLICY.md), not a fix implied by green CI.
+The local `vdx7_portamento` (`vdx7_stress_tests <private-ROM> --portamento-only`)
+checks accepted time intent, immediate save during recovery, restore, physical
+CC5 precedence and actual native time/rate across six rate/block configurations.
+It requires the validated v1.8 firmware fixture; see `VALIDATION_PORTAMENTO_INTENT.md`.
+
+The ROM-free `vdx7_latest_display` and local stress runner's `--publication-only`
+cover stale PERFORMANCE/tuning publication versus newer UI edits, including
+same-value/ABA races. See [Q2 validation and limits](VALIDATION_PERFORMANCE_PUBLICATION.md).
 
 ## 12. Licensing and release status
 

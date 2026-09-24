@@ -5,6 +5,7 @@
 #include <atomic>
 #include <cstdint>
 #include <mutex>
+#include "VDX7LatestDisplay.h"
 #include <vector>
 
 #include "VDX7Engine.h"
@@ -36,6 +37,7 @@ public:
     void reset() override;
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlockBypassed(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
@@ -81,6 +83,10 @@ public:
     int getMasterTune() const;
     int getMidiInputChannel() const noexcept { return midiInputChannel_.load(); }
     bool setMidiInputChannelFromUi(int channel);
+    struct MonoCorrectionStatus { bool requested, active, loaded; };
+    MonoCorrectionStatus getMonoCorrectionStatus() const;
+    // Non-RT, explicit user action: changing mode releases all playing notes.
+    bool setMonoCorrectionFromUi(bool enabled);
     bool setMasterTuneFromUi(int value);
     bool setPlaySettingFromUi(int field, int value);
     bool setPitchBendSettingFromUi(int field, int value);
@@ -109,6 +115,8 @@ private:
     bool loadPackedVoices(const std::vector<uint8_t>&, juce::String* error, int selectProgram = -1);
     friend struct VDX7RegressionAccess;
     void restoreSavedStateLocked(const juce::ValueTree&);
+    bool observeStateInstall(); // Audio-thread owned; also rechecked under engine lock.
+    void discardStaleCollectedInput(juce::MidiBuffer&, std::size_t& keyboardCount);
     void capturePendingRestoreEditsLocked();
     juce::ValueTree pendingRestore_;
     bool detectRom_ = true;
@@ -140,9 +148,11 @@ private:
     void updateEngineSnapshot() noexcept;
     void publishPerformanceDisplay() noexcept; // Caller owns engineMutex_.
     void publishMasterTune() noexcept; // Caller owns engineMutex_.
+    uint64_t capturePerformanceDisplay() const noexcept;
+    uint64_t captureMasterTuneDisplay() const noexcept;
     void setPerformanceDisplayBits(uint64_t mask, uint64_t value) noexcept;
     static_assert(std::atomic<uint64_t>::is_always_lock_free);
-    std::atomic<uint64_t> performanceDisplay_ {0};
+    VDX7LatestDisplay performanceDisplay_;
     // The UI can coalesce frequent global edits without taking engineMutex_.
     // Bits 0-15: controller fields, 16-18: play fields 1-3, 19-20: bend,
     // bit 21: master tuning. The audio thread owns their firmware application.
@@ -152,7 +162,7 @@ private:
     std::array<std::atomic<int>, 3> pendingPlaySettings_ {};
     std::array<std::atomic<int>, 2> pendingPitchBendSettings_ {};
     std::atomic<int> pendingMasterTune_ {0};
-    std::atomic<int> masterTuneSnapshot_ {0};
+    VDX7LatestDisplay masterTuneSnapshot_ {256}; // Nine-bit offset encoding: -256..255.
     void timerCallback() override;
     void handleNoteOn(juce::MidiKeyboardState*, int, int, float) override;
     void handleNoteOff(juce::MidiKeyboardState*, int, int, float) override;

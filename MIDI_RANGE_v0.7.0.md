@@ -3,8 +3,8 @@
 The v0.6.6 release/tag and installed plugins are not modified.
 
 The previous adapter discarded notes outside MIDI 36–96 and passed keyboard
-indices 0–60 to the emulated sub-CPU. The new adapter forwards valid note
-messages through the firmware's serial MIDI receiver for MIDI 0–127.
+indices 0–60 to the emulated sub-CPU. The v0.7 development adapter then forwarded
+MIDI 0–127. The current product policy is MIDI Note 12–120 inclusive.
 Velocity mapping remains the existing curve. Host channels retain legacy omni
 behaviour, mapped onto the firmware receive channel (not multitimbral/MPE).
 Zero-velocity note-on is normalised to note-off. All Notes Off releases tracked
@@ -15,6 +15,15 @@ not sample-simultaneously. The existing upstream serial FIFO remains finite;
 arbitrary MIDI floods are not claimed to be supported. No firmware, EGS frequency
 tables or synthesis algorithm changes are made. No pitch wrapping/transposition
 workaround is used. The onscreen keyboard retains its existing visual range.
+
+Current product boundary: Note On, Note Off, and velocity-zero Note On below 12
+or above 120 are filtered in both MONO compatibility Settings modes (Native and
+Correct MONO Note 0). Rejected pitches are
+never transposed to another note. The lower cutoff protects against the observed
+MONO Note 0 lockup; 0–11 is excluded as a full low octave, and 120 is the inclusive
+upper limit by product decision. REAPER uses C0 for Note 12 and C9 for Note 120
+with its default octave labels. Automated processor tests cover both modes and
+range boundaries; new REAPER boundary acceptance remains outstanding.
 
 Build the opt-in `vdx7_midi_range_tests` target and pass your own local combined
 ROM path as its only argument. ROM data is not bundled. The test exercises all
@@ -31,9 +40,16 @@ until host acceptance is complete.
 
 ## Magyar összefoglaló
 
-A 61 billentyűs belső protokoll helyett a firmware valódi soros MIDI-bemenete
-kapja a 0–127 hangszámokat. A firmware és a hangképzés változatlan. Az összes
+A 0–127 tartományt továbbító v0.7 fejlesztési változat után az aktuális
+termékpolitika a Note 12–120 tartományt engedi a hangmotornak. A firmware és a
+hangképzés változatlan. Az összes
 hostcsatorna továbbra is ugyanazt a hangszert vezérli; ez nem MPE vagy multitimbral
 mód. A képernyő-billentyűzet mérete változatlan. Sűrű akkordoknál a MIDI soros
 átvitele kis időbeli eltolódást jelenthet. A régi kiadás érintetlen, az új változat
 REAPER-es tesztje és platformonkénti elfogadása még szükséges.
+
+A Note 0–11 és 121–127 Note On/Off, illetve velocity-zero Note On eseményei
+mindkét SETTINGS-kompatibilitási módban (Native és Correct MONO Note 0) szűrtek;
+nincs transzponálás. A határok Note 12 / C0 és Note 120 / C9 a REAPER
+alapértelmezett oktávelnevezésével. Az új REAPER-es
+határteszt még hátravan.

@@ -7,6 +7,34 @@ indices compatible with saved projects.
 
 ## Stabilization
 
+### Current next steps — 2026-09-24
+
+Latest checkpoint: `VALIDATION_MONO_SOAK.md` records the full 30-test run,
+separate desktop retry, new dual-instance soak and remaining host boundaries.
+User approved retaining both native and corrected Settings modes, not merge or
+publication. Native known failure remains explicitly separate.
+
+New product input policy (2026-09-24): filter MIDI Note events outside the
+inclusive 12–120 range in both MONO modes. This prevents the observed native
+Note 0 lockup and excludes the unused upper tail by product choice without
+transposing pitches or patching firmware. Processor/ROM-free boundary tests were
+added; local execution is pending because this Mac currently blocks Apple
+toolchain use until the Xcode license is accepted. Run GitHub CI, then targeted
+REAPER tests at Notes 11/12 and 120/121, including release, sustain, transport,
+and subsequent normal-register notes.
+
+1. Run fresh CI and the complete registered regression suite for the new range
+   guard. Keep raw-firmware Note 0 characterization distinct from the product
+   range acceptance result; report unavailable desktop prerequisites as NOT RUN.
+2. Broaden concurrent public restore, mixed controller/overflow timing and host
+   bypass/suspension coverage. Desktop GUI/processor follow-up now passes;
+   see VALIDATION_GUI_RESTORE_ORACLE.md for the persistent-state oracle change.
+3. Real DAW acceptance, remaining GUI finish/scale checks and release packaging.
+   Keep #47 Draft until review; publishing remains a separate approval.
+
+The feature history below records earlier milestones, not the current execution
+order. Current audit disposition is in AUDIT_TRIAGE_2026-09-23.md.
+
 - [x] Priority bug fix: reject unsupported CC32 bank values instead of modulo-8
   wrapping. Only a successful accepted factory-bank load may clear unexported
   voice markers or publish a bank-change result. Test 0/7 and ignored 8/15/127,
@@ -46,6 +74,10 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
 - [x] Deferred multi-block MIDI timeline, restart cleanup and consistent program
   normalization implemented; see `VALIDATION_1.0_MIDI_LIFECYCLE.md` for policy
   and local tests. Actual host transport acceptance remains open.
+  Q1 follow-up corrects false age expiry in large successful callbacks, with
+  real-processor before/after reproduction, waveform comparison and true-delay
+  expiry tests. The two-second actual-lag limit remains; see
+  `VALIDATION_DEFERRED_PARTITION.md`. Queue-capacity and real-host limits remain.
 
 - [x] Ordered program/bank/voice/operator edit queue with local save/audio
   regressions; see `VALIDATION_1.0_EDIT_ORDER.md` for scope and overload policy.
@@ -85,8 +117,48 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
 - [x] Remove keyboard-state locking/listeners from audio; bounded UI MIDI handoff
   and 12-configuration local stress grid (see `VALIDATION_1.0_REALTIME_BASELINE.md`).
   Full allocation/overload audit and host acceptance are still open.
-- [x] Full 0–127 note range and pitch/release regressions (local ROM).
+- [x] Q2 stale PERFORMANCE/tuning display publication: guard the commit against
+  newer UI edits (including same-value/ABA) without audio waiting/retry. Real
+  processor before/after reproduction and public-CI helper regression; see
+  `VALIDATION_PERFORMANCE_PUBLICATION.md`. Restore/write epochs remain separate
+  open work; the portamento follow-up below is independently reproduced/tested.
+- [x] Retain the latest accepted portamento setting separately from transient
+  firmware work RAM. Immediate save during recovery, queued CC5 display rollback,
+  flushed-command replay and later accepted physical CC5 are covered by
+  `VALIDATION_PORTAMENTO_INTENT.md`. Native CC5 still computes the actual rate;
+  there is no synthetic acknowledgement or extra callback render budget.
+- [x] Historical full 0–127 note range and pitch/release regressions (local ROM).
+  Superseding product policy (2026-09-24): filter Note On/Off outside 12–120
+  before deferred storage and engine delivery in both modes; 12/120 are inclusive.
+  Processor and deferred-queue tests cover boundaries; actual REAPER acceptance
+  remains a release check. This is an explicit product range limit, not a claim
+  that the raw firmware issue was fixed.
+  Scope correction (2026-09-23): this is not exhaustive POLY/MONO coverage.
+  Native v1.8 MONO pitch 0 retains ownership after release in the raw emulator
+  and processor. The new 32-case boundary characterization documents it; the
+  original failing diagnostic is preserved, not counted as a passing release
+  test. Firmware-fidelity policy and broader MONO/reset acceptance remain open.
+  See `VALIDATION_MONO_BOUNDARY_AND_CI.md` and `AUDIT_TRIAGE_2026-09-23.md`.
+  Follow-up: local instruction trace now identifies the failing allocation and
+  release branches. Subsequent-note loss/retained output without recovery is
+  reproduced, including sequential On/Off pairs and both Off encodings. This is
+  diagnosis/test coverage, not a production fix or hardware confirmation; see
+  `VALIDATION_MONO_INSTRUCTION_TRACE.md`.
+  Native/corrected-path options and required acceptance are separated in
+  `DESIGN_MONO_NOTE_ZERO_POLICY.md`. Targeted corrective development is now
+  approved. The earlier engine-only stage is superseded: the optional correction
+  is integrated, persisted and selectable in SETTINGS. Default firmware fidelity
+  is unchanged; full corrected-mode product acceptance remains open.
+- [x] Prevent the observed Note 0 MONO lockup at the product boundary by filtering
+  Note 0–11 and 121–127 in both modes; retain raw firmware characterization.
+  The selectable correction, project persistence and candidate evidence remain
+  separately documented in `VALIDATION_MONO_*`. Reopen only for a reproduced
+  bypass or regression; broader corrected-mode host acceptance remains.
+  REAPER validation at Note 11/12 and 120/121 is still required before release.
 - [x] Configure PR ROM-free CI and opt-in local ROM integration CTest gate.
+  All integration runners now compile through the shared CI target. Known-v1.8
+  ownership groups have a separately labelled, required firmware prerequisite;
+  public CI executes six ROM-free tests, including the Q2 publication helper.
 - [x] Run the development CI configuration on GitHub: macOS and Windows passed
   on `5164fabd36c8fdd745e272fc1f493c0c352c1ced`. Every subsequent change needs
   fresh checks; this does not constitute RC or host acceptance.

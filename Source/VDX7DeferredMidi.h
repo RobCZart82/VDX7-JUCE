@@ -10,6 +10,7 @@
 class VDX7DeferredMidi
 {
 public:
+    enum class Playback { paused, rendering };
     bool push(const uint8_t* data, std::size_t size, int samplePosition = 0) noexcept
     {
         if (panic_) return false;
@@ -27,10 +28,18 @@ public:
         used_ += size;
         return true;
     }
-    void advanceInputBlock(int samples, uint64_t maximumLag) noexcept
+    // Rendering must be followed by renderBlock with the same sample count.
+    // Compare the resulting timeline delay, not the transient input lead before
+    // playback advances. Only skipped callbacks add to the delay; a large
+    // successful callback must not expire events which it is about to deliver.
+    void advanceInputBlock(int samples, uint64_t maximumLag,
+                           Playback playback = Playback::paused) noexcept
     {
-        inputTime_ += static_cast<uint64_t>(samples > 0 ? samples : 0);
-        if (inputTime_ - playbackTime_ > maximumLag)
+        if (panic_) return;
+        const auto block = static_cast<uint64_t>(samples > 0 ? samples : 0);
+        inputTime_ += block;
+        const auto playbackEnd = playbackTime_ + (playback == Playback::rendering ? block : 0);
+        if (inputTime_ > playbackEnd && inputTime_ - playbackEnd > maximumLag)
         { clear(); panic_ = true; }
     }
     template<class Event, class Panic>

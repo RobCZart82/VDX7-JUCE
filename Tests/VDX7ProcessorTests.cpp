@@ -42,6 +42,42 @@ static juce::MemoryBlock ram(const juce::MemoryBlock& state)
     return result;
 }
 
+// Project restore preserves persistent data, not CPU stack/working tables or
+// live voice ownership. In-place nonmutation tests below still compare all RAM.
+static bool sameProjectRam(const juce::MemoryBlock& a, const juce::MemoryBlock& b)
+{
+    if (a.getSize() != 6144 || b.getSize() != 6144) return false;
+    const auto* x = static_cast<const uint8_t*>(a.getData());
+    const auto* y = static_cast<const uint8_t*>(b.getData());
+    if (std::memcmp(x, y, 4096) != 0) return false;
+    for (const int address : {0x20a9, 0x20aa, 0x20ab, 0x257d, 0x2311, 0x2312,
+                              0x2328, 0x2329, 0x232e, 0x2330, 0x2332, 0x2334,
+                              0x2336, 0x2338, 0x233a, 0x233c})
+        if (x[address - 0x1000] != y[address - 0x1000]) return false;
+    return true;
+}
+
+static void checkProjectRamOracle(const juce::MemoryBlock& source)
+{
+    require(sameProjectRam(source, source), "project RAM oracle positive control");
+    auto mutant = source;
+    auto* bytes = static_cast<uint8_t*>(mutant.getData());
+    for (int i = 0; i < 4096; ++i)
+    {
+        bytes[i] ^= 1;
+        require(!sameProjectRam(source, mutant), "project RAM oracle missed changed voice byte");
+        bytes[i] ^= 1;
+    }
+    for (const int address : {0x20a9, 0x20aa, 0x20ab, 0x257d, 0x2311, 0x2312,
+                              0x2328, 0x2329, 0x232e, 0x2330, 0x2332, 0x2334,
+                              0x2336, 0x2338, 0x233a, 0x233c})
+    {
+        bytes[address - 0x1000] ^= 1;
+        require(!sameProjectRam(source, mutant), "project RAM oracle missed setting loss");
+        bytes[address - 0x1000] ^= 1;
+    }
+}
+
 static void checkUserLibrary(const juce::File& romFile, const juce::File& imageFolder)
 {
     juce::TemporaryFile temporary;
@@ -92,6 +128,10 @@ static void checkUserLibrary(const juce::File& romFile, const juce::File& imageF
         require(tuning->getComboBoxComponent("channel")->getNumItems() == 17
                 && tuning->getComboBoxComponent("channel")->getSelectedItemIndex() == p.getMidiInputChannel(),
                 "SETTINGS has OMNI plus 16 channels");
+        require(tuning->getComboBoxComponent("monoCorrection")
+                && tuning->getComboBoxComponent("monoCorrection")->getNumItems() == 2
+                && tuning->getComboBoxComponent("monoCorrection")->getSelectedItemIndex() == 0,
+                "SETTINGS exposes native-default MONO correction choice");
         if (imageFolder != juce::File())
         {
             juce::FileOutputStream stream(imageFolder.getChildFile("VDX7-settings.png"));
@@ -484,7 +524,10 @@ int main(int argc, char** argv)
         auto& restored = *restoredStorage;
         restored.setStateInformation(state.getData(), int(state.getSize()));
         require(restored.getCurrentProgram() == 3, "program restore");
-        require(ram(state) == ram(save(restored)), "RAM round trip before rendering");
+        const auto restoredRam = ram(save(restored));
+        const auto savedRam = ram(state);
+        checkProjectRamOracle(savedRam);
+        require(sameProjectRam(savedRam, restoredRam), "persistent RAM round trip before rendering");
         for (auto* parameter : original.getParameters())
         {
             auto* ranged = dynamic_cast<juce::RangedAudioParameter*>(parameter);
@@ -912,7 +955,7 @@ int main(int argc, char** argv)
         juce::MemoryBlock legacyState;
         juce::AudioProcessor::copyXmlToBinary(*legacy.createXml(), legacyState);
         restored.setStateInformation(legacyState.getData(), int(legacyState.getSize()));
-        require(ram(state) == ram(save(restored)), "RAM-only state restoration");
+        require(sameProjectRam(ram(state), ram(save(restored))), "RAM-only persistent state restoration");
 
         // Run a factory voice through real firmware without opening an audio device.
         auto renderStorage = std::make_unique<VDX7AudioProcessor>(false);

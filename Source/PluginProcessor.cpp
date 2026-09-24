@@ -251,6 +251,11 @@ void VDX7AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     processLoadMeasurer_.reset(sampleRate, samplesPerBlock);
     std::unique_lock lock(engineMutex_);
+    // Stopped-device lifecycle supersedes requests already present at entry.
+    // Consume before cleanup, never afterwards: a concurrent newer reset must
+    // remain visible to the next callback. The host must stop processing here.
+    hostResetRequested_.exchange(false, std::memory_order_acq_rel);
+    hostResetPending_ = false;
     currentSampleRate_ = sampleRate;
     deferredMidi_.clear();
     keyboardQueue_.discard();
@@ -279,6 +284,10 @@ void VDX7AudioProcessor::releaseResources()
 {
     processLoadMeasurer_.reset();
     std::scoped_lock lock(engineMutex_);
+    // Retire the old request before lifecycle cleanup; do not erase a reset
+    // arriving during that cleanup with an unconditional store at the end.
+    hostResetRequested_.exchange(false, std::memory_order_acq_rel);
+    hostResetPending_ = false;
     deferredMidi_.clear();
     keyboardQueue_.discard();
     clearKeyboardSnapshot();
@@ -290,6 +299,37 @@ bool VDX7AudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) cons
 {
     const auto out = layouts.getMainOutputChannelSet();
     return out == juce::AudioChannelSet::mono() || out == juce::AudioChannelSet::stereo();
+}
+
+bool VDX7AudioProcessor::observeStateInstall()
+{
+    const auto epoch = midiTimelineEpoch_.load(std::memory_order_acquire);
+    if (epoch == audioMidiTimelineEpoch_) return false;
+    audioMidiTimelineEpoch_ = epoch;
+    deferredMidi_.clear();
+    keyboardQueue_.discard();
+    clearKeyboardSnapshot();
+    stateRestoreReleasePending_ = true;
+    return true;
+}
+
+void VDX7AudioProcessor::processBlockBypassed(juce::AudioBuffer<float>& buffer,
+                                             juce::MidiBuffer& midi)
+{
+    // Synth bypass is silent, but firmware time and MIDI lifecycle continue.
+    // In particular a Note Off or pedal release must not vanish during bypass.
+    // Hosts which suspend callbacks entirely still require host-specific tests.
+    processBlock(buffer, midi);
+    buffer.clear();
+    clearMeters();
+}
+
+void VDX7AudioProcessor::discardStaleCollectedInput(juce::MidiBuffer& midi,
+                                                   std::size_t& keyboardCount)
+{
+    if (!observeStateInstall()) return;
+    keyboardCount = 0;
+    midi.clear();
 }
 
 void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
@@ -312,18 +352,8 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         return true;
     };
     (void) observeHostReset();
-    const auto midiTimelineEpoch = midiTimelineEpoch_.load(std::memory_order_acquire);
-    if (midiTimelineEpoch != audioMidiTimelineEpoch_)
-    {
-        // The state thread must never clear this audio-owned timeline directly.
-        // Discard events queued before the restored project state, including
-        // virtual-keyboard events waiting behind a contended engine transaction.
-        audioMidiTimelineEpoch_ = midiTimelineEpoch;
-        deferredMidi_.clear();
-        keyboardQueue_.discard();
-        clearKeyboardSnapshot();
-        stateRestoreReleasePending_ = true;
-    }
+    // The state thread never touches these audio-owned queues.
+    (void) observeStateInstall();
     const int inputChannel = midiInputChannel_.load();
     if (inputChannel != audioMidiInputChannel_)
     {
@@ -338,8 +368,19 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     while (keyboardCount < keyboardEvents.size() && keyboardQueue_.pop(keyboardEvents[keyboardCount]))
         ++keyboardCount;
     const int total = buffer.getNumSamples();
+#if defined(VDX7_TEST_STATE_BOUNDARY)
+    // Test executable only: pause after collection, before taking engineMutex_.
+    extern void vdx7TestStateBoundary(std::size_t);
+    vdx7TestStateBoundary(keyboardCount);
+#endif
     // A long transaction may silence a block, but never blocks audio.
     std::unique_lock lock(engineMutex_, std::try_to_lock);
+    if (lock.owns_lock())
+    {
+        // State changed after the pre-lock observation: this collected block
+        // belongs to the previous timeline, not the newly installed project.
+        discardStaleCollectedInput(midi, keyboardCount);
+    }
     if (lock.owns_lock() && observeHostReset())
     {
         // A reset overlapping the pre-lock section invalidates that callback's
@@ -367,7 +408,8 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     if (engineLoaded_.load(std::memory_order_acquire) && useDeferred)
     {
         for (std::size_t i = 0; i < keyboardCount; ++i)
-            deferredMidi_.push(keyboardEvents[i].data(), 3, 0);
+            if (VDX7MidiValidation::acceptsHostEvent(keyboardEvents[i].data(), 3, 0))
+                deferredMidi_.push(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
         {
             if (event.numBytes <= 0 || !VDX7MidiValidation::acceptsHostEvent(
@@ -376,9 +418,15 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
             deferredMidi_.push(event.data, static_cast<std::size_t>(event.numBytes),
                                juce::jlimit(0, total, event.samplePosition));
         }
-        // Do not replay an arbitrarily old performance after a long transaction.
+        // Only a callback that reaches renderBlock can advance this timeline.
+        // Reset drain renders muted firmware time, NOT deferred MIDI playback.
+        const bool rendersDeferred = lock.owns_lock() && engine_.isLoaded()
+            && !hostResetPending_ && !engine_.isHostResetInProgress();
+        // Keep the two-second limit on actual accumulated delay. A successful
+        // block (including a large offline block) adds no new delay of its own.
         deferredMidi_.advanceInputBlock(total,
-            static_cast<uint64_t>(std::max(currentSampleRate_ * 2.0, static_cast<double>(total))));
+            static_cast<uint64_t>(currentSampleRate_ * 2.0),
+            rendersDeferred ? VDX7DeferredMidi::Playback::rendering : VDX7DeferredMidi::Playback::paused);
     }
     else if (!engineLoaded_.load(std::memory_order_acquire)) deferredMidi_.clear();
     if (!lock.owns_lock() || !engine_.isLoaded())
@@ -443,7 +491,8 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     else
     {
         for (std::size_t i = 0; i < keyboardCount; ++i)
-            deliver(keyboardEvents[i].data(), 3, 0);
+            if (VDX7MidiValidation::acceptsHostEvent(keyboardEvents[i].data(), 3, 0))
+                deliver(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
             if (event.numBytes > 0 && VDX7MidiValidation::acceptsHostEvent(
                     event.data, static_cast<std::size_t>(event.numBytes), inputChannel))
@@ -485,6 +534,10 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
     }
     const auto bankRevision = engine_.factoryBankLoadRevision();
     if (!VDX7MidiValidation::isChannelMessage(data, static_cast<std::size_t>(size))) return false;
+    const auto messageKind = data[0] & 0xf0;
+    if ((messageKind == 0x80 || messageKind == 0x90)
+        && !VDX7MidiValidation::isSupportedNoteNumber(data[1]))
+        return false;
     engine_.handleMidi(data, size);
     const bool bankChange = engine_.factoryBankLoadRevision() != bankRevision;
     if (bankChange) modifiedVoices_.store(0);
@@ -608,18 +661,14 @@ void VDX7AudioProcessor::applyPerformanceControls()
         juce::roundToInt((pitchWheelParameter_->load() + 1.0f) * 63.5f));
     if (pitchMsb != lastPitchMsb_)
     {
-        const uint8_t message[] { 0xE0, 0x00, static_cast<uint8_t>(pitchMsb) };
-        engine_.handleMidi(message, 3);
-        lastPitchMsb_ = pitchMsb;
+        if (engine_.requestPerformanceWheel(0, pitchMsb)) lastPitchMsb_ = pitchMsb;
     }
 
     const int modulation = juce::jlimit(0, 127,
         juce::roundToInt(modWheelParameter_->load() * 127.0f));
     if (modulation != lastModValue_)
     {
-        const uint8_t message[] { 0xB0, 0x01, static_cast<uint8_t>(modulation) };
-        engine_.handleMidi(message, 3);
-        lastModValue_ = modulation;
+        if (engine_.requestPerformanceWheel(1, modulation)) lastModValue_ = modulation;
     }
 }
 
@@ -888,6 +937,63 @@ const juce::String VDX7AudioProcessor::getProgramName(int index)
     return "Program " + juce::String(index + 1);
 }
 
+VDX7AudioProcessor::MonoCorrectionStatus VDX7AudioProcessor::getMonoCorrectionStatus() const
+{
+    std::scoped_lock lock(engineMutex_);
+    return {engine_.isMonoCorrectionRequested(), engine_.isMonoCorrectionActive(), engine_.isLoaded()};
+}
+
+bool VDX7AudioProcessor::setMonoCorrectionFromUi(bool enabled)
+{
+    {
+        std::unique_lock lock(engineMutex_);
+        if (enabled == engine_.isMonoCorrectionRequested()) return true;
+        if (!engine_.isLoaded())
+        {
+            if (!engine_.configureMonoCorrectionBeforeLoad(enabled)) return false;
+            if (pendingRestore_.isValid())
+                pendingRestore_.setProperty("monoNoteZeroCorrection", enabled, nullptr);
+            lock.unlock();
+            updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+            return true;
+        }
+        if (pendingRestore_.isValid()) return false; // Do not interrupt a project restore.
+        if (applyOperatorParameters() | applyVoiceParameters()) engine_.reloadCurrentProgram();
+        applyPendingCommands();
+        applyPendingPerformanceSettings();
+        std::vector<uint8_t> ram;
+        if (!engine_.saveRam(ram)) return false;
+        const int bank = engine_.currentBank(), program = engine_.currentProgram();
+        const int tuning = engine_.masterTune();
+        std::array<int, 4> play;
+        std::array<int, 2> bend;
+        std::array<int, 16> controllers;
+        for (int i = 0; i < 4; ++i) play[i] = engine_.getPlaySetting(i);
+        for (int i = 0; i < 2; ++i) bend[i] = engine_.getPitchBendSetting(i);
+        for (int i = 0; i < 16; ++i) controllers[i] = engine_.getControllerSetting(i / 4, i % 4);
+        if (!engine_.configureMonoCorrectionForStateRestore(enabled)) return false;
+        // Runtime ownership must come from the new boot, not the held-note
+        // snapshot. Preserve the packed bank and explicit persistent settings.
+        std::vector<uint8_t> clean;
+        if (!engine_.saveRam(clean)) return false;
+        std::copy_n(ram.begin(), 4096, clean.begin());
+        if (!engine_.restoreRam(clean)) return false;
+        engine_.setCurrentBankMarker(bank);
+        engine_.selectProgram(program);
+        engine_.setMasterTune(tuning);
+        for (int i = 0; i < 4; ++i) engine_.setPlaySetting(i, play[i]);
+        for (int i = 0; i < 2; ++i) engine_.setPitchBendSetting(i, bend[i]);
+        for (int i = 0; i < 16; ++i) engine_.setControllerSetting(i / 4, i % 4, controllers[i]);
+        midiTimelineEpoch_.fetch_add(1, std::memory_order_release);
+        lastPitchMsb_ = -1;
+        lastModValue_ = -1;
+        updateEngineSnapshot();
+    }
+    synchroniseOperatorParametersFromEngine();
+    updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    return true;
+}
+
 void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     synchroniseOperatorParametersFromEngine();
@@ -895,6 +1001,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     std::array<int, VDX7VoiceData::kOperatorCount * VDX7VoiceData::kParameterCount> operatorValues {};
     std::array<int, VDX7VoiceData::kVoiceParameterCount> voiceValues {};
     bool loaded = false;
+    bool monoCorrection = false;
     juce::ValueTree pendingCopy;
     std::vector<uint8_t> ram;
     int bank = -1, program = 0, inputChannel = 0;
@@ -903,6 +1010,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     {
         std::scoped_lock lock(engineMutex_);
         // A project saved while its firmware is missing must retain its sound.
+        monoCorrection = engine_.isMonoCorrectionRequested();
         if (pendingRestore_.isValid())
         {
             pendingRestore_.setProperty("midiInputChannel", midiInputChannel_.load(), nullptr);
@@ -943,6 +1051,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         return;
     }
     state.setProperty("bank", bank, nullptr);
+    state.setProperty("monoNoteZeroCorrection", monoCorrection, nullptr);
     state.setProperty("midiInputChannel", inputChannel, nullptr);
     state.setProperty("program", program, nullptr);
     state.setProperty("modifiedVoices", static_cast<juce::int64>(modified), nullptr);
@@ -997,8 +1106,15 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     }
 
     auto pendingCopy = state.createCopy();
+    // Missing property is deliberately native for legacy projects. Reject
+    // malformed policies rather than interpreting arbitrary strings as enabled.
+    const auto correction = state.getProperty("monoNoteZeroCorrection", false);
+    if (!correction.isBool() && correction.toString() != "0" && correction.toString() != "1")
+        return;
     {
         std::scoped_lock lock(engineMutex_);
+        if (!engine_.configureMonoCorrectionForStateRestore(static_cast<bool>(correction)))
+            return;
         pendingRestore_ = pendingCopy;
         // The audio callback owns deferredMidi_. Publishing an epoch lets it
         // discard pre-restore events without racing this state-thread update.
@@ -1088,7 +1204,7 @@ void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
             {
                 std::vector<uint8_t> ram(block.getSize());
                 std::memcpy(ram.data(), block.getData(), block.getSize());
-                if (engine_.restoreRam(ram))
+                if (engine_.restoreProjectRam(ram))
                     engine_.setCurrentBankMarker(bank);
             }
         }
@@ -1130,6 +1246,9 @@ void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
         lastPitchMsb_ = -1;
         lastModValue_ = -1;
         updateEngineSnapshot();
+        // Publish the actual installation, not only the earlier request.
+        // Input deferred during parameter/ROM preparation is now stale too.
+        midiTimelineEpoch_.fetch_add(1, std::memory_order_release);
 }
 
 bool VDX7AudioProcessor::readFile(const juce::File& file, std::vector<uint8_t>& data)
@@ -1452,6 +1571,11 @@ bool VDX7AudioProcessor::exportSyx(const juce::File& file, bool entireBank, juce
 
 void VDX7AudioProcessor::publishPerformanceDisplay() noexcept
 {
+    performanceDisplay_.publish([this] { return capturePerformanceDisplay(); });
+}
+
+uint64_t VDX7AudioProcessor::capturePerformanceDisplay() const noexcept
+{
     // 4 * (7-bit range + 3 assignments), 3 play flags + 7-bit time,
     // and two 4-bit bend values: one coherent 58-bit display frame.
     uint64_t packed = 0;
@@ -1499,30 +1623,26 @@ void VDX7AudioProcessor::publishPerformanceDisplay() noexcept
                    | ((uint64_t(pendingPitchBendSettings_[field].load(std::memory_order_relaxed)) & 0xf) << shift);
         }
     }
-    performanceDisplay_.store(packed, std::memory_order_release);
+    return packed;
 }
 
 void VDX7AudioProcessor::publishMasterTune() noexcept
+{
+    masterTuneSnapshot_.publish([this] { return captureMasterTuneDisplay(); });
+}
+
+uint64_t VDX7AudioProcessor::captureMasterTuneDisplay() const noexcept
 {
     const auto pending = pendingPerformanceDirty_.load(std::memory_order_acquire);
     const auto value = (pending & kMasterTunePerformanceMask) != 0
         ? pendingMasterTune_.load(std::memory_order_relaxed)
         : engine_.masterTune();
-    masterTuneSnapshot_.store(value, std::memory_order_release);
+    return static_cast<uint64_t>(value + 256);
 }
 
 void VDX7AudioProcessor::setPerformanceDisplayBits(uint64_t mask, uint64_t value) noexcept
 {
-    auto current = performanceDisplay_.load(std::memory_order_acquire);
-    do
-    {
-        const auto replacement = (current & ~mask) | (value & mask);
-        if (performanceDisplay_.compare_exchange_weak(current, replacement,
-                                                       std::memory_order_acq_rel,
-                                                       std::memory_order_acquire))
-            return;
-    }
-    while (true);
+    performanceDisplay_.update(mask, value);
 }
 
 void VDX7AudioProcessor::applyPendingPerformanceSettings() noexcept
@@ -1540,15 +1660,9 @@ void VDX7AudioProcessor::applyPendingPerformanceSettings() noexcept
         if ((pending & (uint32_t {1} << (15 + field))) != 0)
         {
             const auto value = pendingPlaySettings_[field - 1].load(std::memory_order_relaxed);
-            if (!engine_.setPlaySetting(field, value) && field == 3)
-            {
-                // A saturated firmware serial FIFO begins its recovery on the
-                // audio thread. Keep the latest requested time dirty so it is
-                // retried after that recovery instead of leaving the display
-                // ahead of the firmware state.
-                pendingPerformanceDirty_.fetch_or(uint32_t {1} << (15 + field),
-                                                  std::memory_order_release);
-            }
+            // The engine retains accepted time requests across serial recovery;
+            // unlike firmware work RAM, that intent is immediately saveable.
+            engine_.setPlaySetting(field, value);
         }
 
     for (int field = 0; field < 2; ++field)
@@ -1564,7 +1678,7 @@ void VDX7AudioProcessor::applyPendingPerformanceSettings() noexcept
 
 VDX7AudioProcessor::PerformanceDisplay VDX7AudioProcessor::getPerformanceDisplay() const noexcept
 {
-    const auto packed = performanceDisplay_.load(std::memory_order_acquire);
+    const auto packed = performanceDisplay_.read();
     PerformanceDisplay result;
     for (int c = 0; c < 4; ++c) {
         result.controllers[c * 4] = int((packed >> (c * 10)) & 127);
@@ -1642,7 +1756,7 @@ bool VDX7AudioProcessor::setPlaySettingFromUi(int field, int value)
 
 int VDX7AudioProcessor::getMasterTune() const
 {
-    return masterTuneSnapshot_.load(std::memory_order_acquire);
+    return static_cast<int>(masterTuneSnapshot_.read()) - 256;
 }
 
 bool VDX7AudioProcessor::setMidiInputChannelFromUi(int channel)
@@ -1657,9 +1771,11 @@ bool VDX7AudioProcessor::setMasterTuneFromUi(int value)
 {
     if (value < -256 || value > 255 || !engineLoaded_.load(std::memory_order_acquire))
         return false;
-    const auto previous = masterTuneSnapshot_.exchange(value, std::memory_order_acq_rel);
     pendingMasterTune_.store(value, std::memory_order_relaxed);
     pendingPerformanceDirty_.fetch_or(kMasterTunePerformanceMask, std::memory_order_release);
+    // Publish the display edit last, like the other coalesced settings. An
+    // engine publisher observing it must also observe the pending request.
+    const auto previous = static_cast<int>(masterTuneSnapshot_.update(0x1ff, uint64_t(value + 256))) - 256;
     if (previous != value) updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
     return true;
 }

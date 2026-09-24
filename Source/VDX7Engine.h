@@ -27,12 +27,27 @@ public:
                       std::size_t optionalVoicesSize = 0);
 
     bool isLoaded() const noexcept { return loaded_; }
+    // Integration-stage opt-in, engine-owner only, BEFORE loading any ROM.
+    // Live switching is rejected; project restore uses its separate boundary.
+    bool configureMonoCorrectionBeforeLoad(bool enabled) noexcept
+    {
+        if (loaded_) return false;
+        monoCorrectionRequested_ = enabled;
+        return true;
+    }
+    bool isMonoCorrectionActive() const noexcept { return monoCorrectionActive_; }
+    bool isMonoCorrectionRequested() const noexcept { return monoCorrectionRequested_; }
+    // Non-RT, engine-owner only, at destructive project restore boundary.
+    // Changing policy reboots the current image; caller must restore project RAM.
+    bool configureMonoCorrectionForStateRestore(bool enabled);
     bool hasFactoryVoices() const noexcept { return factoryVoices_.size() >= kFactoryVoicesSize; }
 
     void prepare(double hostSampleRate);
     int latencySamples() const noexcept { return resampler_.latency(); }
     void resetAudioState();
-    void resetMidiLifecycle(); // Non-RT; host has stopped processBlock.
+    // Non-RT; host has stopped processBlock. An unfinished bounded drain
+    // remains in progress and resumes muted on subsequent audio callbacks.
+    void resetMidiLifecycle();
     // Engine-owner-only host reset. No allocation or extra warm-up render.
     // The processor mutes output and defers incoming MIDI while this drains.
     void beginHostReset();
@@ -42,7 +57,7 @@ public:
 
     void handleMidi(const uint8_t* data, int size);
     bool handleSysex(const uint8_t* data, std::size_t size);
-    void allNotesOff();
+    void allNotesOff(bool useRunningStatus = false);
     bool hasHeldMidiNotes() const noexcept;
     uint64_t midiOverloadCount() const noexcept { return midiOverloadCount_; }
     bool isMidiRecovering() const noexcept { return midiRecovering_; }
@@ -67,6 +82,11 @@ public:
 
     bool saveRam(std::vector<uint8_t>& out) const;
     bool restoreRam(const std::vector<uint8_t>& in);
+    // Owner-thread only. 0=pitch, 1=mod; true means durable intent accepted,
+    // not that the firmware already consumed the analog message.
+    bool requestPerformanceWheel(int wheel, int value) noexcept;
+    // Project load only: never revive transient voice ownership from a snapshot.
+    bool restoreProjectRam(const std::vector<uint8_t>& in);
 
     // Global battery-RAM controller settings, NOT voice/SysEx parameters.
     // Controller order: wheel, foot, breath, aftertouch. Field 0: range 0-99;
@@ -85,9 +105,15 @@ private:
     uint64_t factoryBankLoadRevision_ = 0;
     friend struct VDX7RegressionAccess;
     void boot();
+    void stepFirmware();
+    bool verifyMonoCorrectionProfile() const noexcept;
+    bool monoCorrectionRequested_ = false;
+    bool monoCorrectionActive_ = false;
+    void beginMidiReset(bool releaseEveryPitch);
     void processQueuedMessage(dx7Emu::Message msg);
     void parseMidiBytes(const uint8_t* data, int size);
     bool reserveMidi(int bytes);
+    void queuePortamentoRefresh(); // Caller has reserved three serial bytes.
     void recoverMidiOverflow();
     int generateNative(float* out);
     float nextNativeSample();
@@ -120,15 +146,29 @@ private:
     static constexpr uint8_t kMaxRepeatedNotes = 16;
     std::array<uint8_t, 128> activeMidiNotes_{};
     // Conservative release budget: queued offs may be flushed before firmware
-    // consumes them. Keep peak multiplicity since ROM load (bounded at 16).
+    // consumes them. Keep peak multiplicity (bounded at 16) until a verified
+    // normal-playback per-pitch release boundary; unknown ROMs retain it
+    // since ROM load. Input queues must be idle even if other pitches are held.
     std::array<uint8_t, 128> midiReleaseBudget_{};
+    // Only the locally validated v1.8 image has a known dispatch/RAM profile.
+    bool releaseRetirementProfile_ = false;
+    bool releaseHistoryDirty_ = false;
+    static bool isReleaseRetirementFirmware(const uint8_t* data, std::size_t size);
+    void retireCompletedReleaseHistory();
     bool sustainDown_ = false;
     bool midiRecovering_ = false;
     uint64_t midiOverloadCount_ = 0;
     unsigned controllerRefreshMessages_ = 0;
     bool pitchBendRefresh_ = false;
     bool portamentoRefresh_ = false;
+    // Requested setting, not an acknowledgement or a derived firmware rate.
+    // Native CC5 may still be executing older requests. Every accepted UI/CC5
+    // input replaces this value; save/display must not read transient work RAM.
+    // -1 uses boot RAM until the first request/restore.
+    int portamentoTimeSetting_ = -1;
     uint8_t lastPitchBendInput_ = 64;
+    std::array<int, 2> wheelIntent_ {-1, -1}; // pitch, modulation; latest accepted input
+    std::array<bool, 2> wheelPending_ {};
 
     bool hostResetInProgress_ = false;
     bool hostResetMuted_ = false; // Runtime-only; cleared by an accepted fresh Note On.
