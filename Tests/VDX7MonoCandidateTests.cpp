@@ -5,6 +5,7 @@
 #include "dx7.h"
 #include "VDX7VoiceData.h"
 #include "VDX7MonoTrace.h"
+#include "VDX7MonoCorrection.h"
 #include <array>
 #include <cmath>
 #include <fstream>
@@ -176,6 +177,28 @@ private:
         const auto x = machine.IX;
         const bool slot = x >= 0x20b0 && x < 0x20d0 && (x & 1) == 0;
         const bool occupied = slot && (machine.memory[x + 1] & 2) != 0;
+        if (candidate == Candidate::withLegato)
+        {
+            if (machine.PC == 0xd593 || machine.PC == 0xd6bb
+                || machine.PC == 0xd6ce || machine.PC == 0xd6e0)
+                require(slot, "candidate allocation/legato pointer");
+            // Image/map was verified before boot. Only safe table reads are
+            // passed to the shared, ROM-free-testable integration policy.
+            VDX7MonoCorrection::Input input;
+            input.enabled = input.profile = input.mono = true;
+            input.nativeZ = machine.Z;
+            input.pc = machine.PC; input.slotAddress = x;
+            input.key = slot ? machine.memory[x] : 0;
+            input.flags = slot ? machine.memory[x + 1] : 0;
+            input.a = machine.A; input.b = machine.B;
+            input.requestedKey = machine.memory[0x81];
+            const auto decision = VDX7MonoCorrection::evaluate(input);
+            if (decision.site < 0) return;
+            overrides += decision.z != machine.Z;
+            completeDecisionChanges[decision.site] += decision.z != machine.Z;
+            machine.Z = decision.z;
+            return;
+        }
         bool z = machine.Z;
         int site = -1;
         switch (machine.PC)

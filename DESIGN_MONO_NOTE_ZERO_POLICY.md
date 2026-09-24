@@ -69,6 +69,11 @@ for native MONO ownership either.
   must fail the SAME rendered-audio comparison and tolerance. Key/target metadata
   mismatch or a setup failure cannot substitute for frequency rejection. This
   negative control is test-only and never rewrites production MIDI.
+  Run this same positive/negative pair through the explicitly enabled corrected
+  processor path, not only the isolated experiment. Record tested commit/tree,
+  expected and both measured frequencies, patch transposition and tolerance.
+  Report negative-control PASS (expected audio rejection) separately from the
+  mutant pitch-check FAIL and the still-independent native product acceptance.
 - Notes 0/1/60/127, normal Off and velocity-zero On, sequential and stacked
   repeats, 1/16 and over-capacity histories; inspect actual ownership and counts.
 - Mixed-note legato, release order, voice replacement, sustain and portamento;
@@ -80,6 +85,11 @@ for native MONO ownership either.
   and real-host validation. Independent hardware evidence stays distinct.
 
 ## Experimental scope and visible acceptance gate
+
+Integration preparation (2026-09-24): the complete experiment now uses a shared
+pure six-site decision helper, `VDX7MonoCorrection.h`, covered by ROM-free CI.
+Neither the engine nor processor calls it yet; option/state/lifecycle integration
+remains pending. See the latest validation section for exact test scope.
 
 `Tests/VDX7MonoCandidateTests.cpp` is a separately compiled test executable, not
 linked into VDX7. With explicit known-image preflight it overrides only the Z

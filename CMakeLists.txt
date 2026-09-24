@@ -256,6 +256,11 @@ add_dependencies(vdx7_ci_checks vdx7_host_reset_tests)
 add_executable(vdx7_mono_candidate_tests EXCLUDE_FROM_ALL Tests/VDX7MonoCandidateTests.cpp)
 target_link_libraries(vdx7_mono_candidate_tests PRIVATE vdx7_core vdx7_voice_data)
 add_dependencies(vdx7_ci_checks vdx7_mono_candidate_tests)
+add_executable(vdx7_mono_correction_tests Tests/VDX7MonoCorrectionTests.cpp)
+target_include_directories(vdx7_mono_correction_tests PRIVATE Source)
+add_test(NAME vdx7_mono_correction COMMAND vdx7_mono_correction_tests)
+set_tests_properties(vdx7_mono_correction PROPERTIES TIMEOUT 20 LABELS "rom-free;correction-policy-not-product-fix")
+add_dependencies(vdx7_ci_checks vdx7_mono_correction_tests)
 if(VDX7_ENABLE_ROM_TESTS)
     # These regressions inspect the locally validated v1.8 ownership map.
     # A wrong image is a failed precondition, never silent SKIP or success.

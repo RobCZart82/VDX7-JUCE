@@ -188,6 +188,9 @@ passes; deliberate test-only Note 1 input while expecting Note 0 fails the same
 audio-frequency check. `--pitch-oracle-only` runs the pair;
 `--pitch-oracle-note-one-mutant` exposes the mutant's failure directly (exit 1).
 This expected negative control does not invert the real plugin acceptance gate.
+The complete experiment shares `VDX7MonoCorrection.h` with a ROM-free six-site
+decision-policy test (`vdx7_mono_correction`). This is integration preparation;
+the engine does not enable or call the correction yet.
 The separate `vdx7_deferred_partition` (`--deferred-partition-only`) regression
 checks real-processor note playback/release across small and oversized successful
 blocks, plus true-delay expiry under contention and reset. Its queue-only portion

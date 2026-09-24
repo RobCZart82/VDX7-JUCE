@@ -136,7 +136,90 @@ Follow-up validation after the final oracle changes:
   its earlier result is recorded separately below. No production source, CMake,
   ROM or installed plugin was changed. P1 remains OPEN.
 
+### Reproducible result classification (2026-09-24 confirmation)
+
+This confirmation reruns the existing binaries without changing test code or
+production behavior. Tested local source commit:
+`ea0fcde63cdee510be627c70b71ee0d0eb48c2b8`; equivalent uploaded #47 commit:
+`b9b2a7cd5590de7e069c5587ae11801f31735619`; identical source tree:
+`6776eeac393dd0feb2c423f37f1d21ac7e0d3fc8`. The checkout was clean.
+Local macOS arm64 Release candidate executable SHA-256:
+`089f81d4890c7865fb9de69527ad325b2818809a09f034c4f45badfc10455040`.
+The private known-v1.8 image prerequisite remains enforced; no ROM is published.
+
+Fixture: our single-sine fast-release voice, **patch transpose +12 semitones**,
+98,192 native samples per note at 49,096 Hz; frequency is measured from
+interpolated positive zero crossings in the second half. The reference is
+native POLY Note 0; both experimental MONO inputs use that same reference and
+the same **0.2%** relative-frequency tolerance. This establishes discrimination
+only for this fixture, not every voice, original hardware or an integrated mode.
+
+| Control | Expected Hz | Measured Hz | Relative error | Pitch check | Control result |
+|---|---:|---:|---:|---|---|
+| Positive: unchanged Note 0 | ~16.3525 | ~16.3525 | ~0.000356% | PASS | PASS |
+| Negative: Note 1, still expecting Note 0 | ~16.3525 | ~17.3358 | ~6.01296% | FAIL: audio pitch | PASS: expected rejection |
+
+The negative mismatch is about **30.06 times** the allowed tolerance. Displayed
+frequencies are rounded; errors are computed from unrounded measured values.
+Raw pair output (relativeError is a fraction, not a percentage), **exit 0**:
+
+```text
+PITCH ORACLE expectedNote=0 inputNote=0 transpose=12 referenceHz=16.3525 actualHz=16.3525 relativeError=3.55625e-06
+PASS: unchanged Note 0 accepted by audio pitch oracle
+PITCH ORACLE expectedNote=0 inputNote=1 transpose=12 referenceHz=16.3525 actualHz=17.3358 relativeError=0.0601296
+PASS: oracle sensitivity control; Note 1 mutant REJECTED by the same audio check
+```
+
+The standalone mutant command separately returns **exit 1**, with
+`FAIL: rendered audio pitch does not match the expected note`. Thus the negative
+control passes because the wrong audio is rejected, not because the mutant
+itself passes. The independent normal-plugin diagnostic also rerun here returns
+**exit 1**, MIDI/held/MONO **0/1/16**: still a real unresolved product failure.
+Only these focused diagnostics were rerun in this documentation confirmation;
+it is not a new full-suite/build or integrated-plugin acceptance result.
+
+The future explicitly enabled corrected processor path must run this SAME
+positive/negative pair, preserving reference, tolerance and audio-first rejection,
+alongside its ownership and legato tests. Until then, successful discrimination
+in this isolated runner cannot close MONO Note 0 P1.
+
 ## Product gate — not a green characterization substitute
+
+### Shared decision policy: first integration preparation (2026-09-24)
+
+The complete candidate now calls `Source/VDX7MonoCorrection.h` for all six
+decisions. Incomplete two-site/lookup-only experiments remain independent
+counterexamples. The extracted function is pure, bounded and `noexcept`:
+it returns a site and Z decision, without reading machine memory, stepping the
+CPU, allocating, rewriting MIDI or changing ROM/RAM. The experiment validates
+the image/map first and supplies only bounds-checked slot data. Its existing
+allocation/legato pointer assertions remain active.
+
+This header is NOT called by `VDX7Engine` or the processor yet. It is integration
+preparation, not a newly available compatibility option. The native plugin and
+installed binary remain unchanged. A supplied profile boolean is a precondition,
+not itself a ROM verification implementation or security boundary.
+
+New ROM-free `vdx7_mono_correction` checks all 256 state bytes x 128 MIDI keys x
+six sites, release search/key guards, every 16-bit slot address and every 16-bit
+instruction address x eight enable/profile/mode combinations x both native Z
+values. Disabled/unverified/POLY and unrelated-PC cases preserve the native flag.
+Invalid allocation/legato pointers are no-ops; invalid lookup/release cannot
+claim a found occupied key. This validates the decision policy, not host threading,
+firmware-image recognition or real-time cost.
+
+Validation after extraction:
+- ROM-enabled candidate/policy targets and ROM-free `vdx7_ci_checks` build.
+- Public-style ROM-free runtime: **7/7 PASS, 1.54 s**.
+- Local policy + image fixture + full candidate + native acceptance: **3/4 PASS,
+  CTest exit 8, 31.32 s**. Candidate PASS 30.36 s; native acceptance remains FAIL
+  0.15 s with MIDI/held/MONO 0/1/16. The pitch positive/negative pair is included.
+- The standalone Note 1 mutant still fails the audio comparison (~6.01296%).
+- No full 27-test rerun or product-integration acceptance is claimed.
+
+Next: verified-profile lifecycle and engine stepping integration, a disclosed
+persisted option with safe held-note transitions, then actual processor tests.
+Existing native failure must remain separately visible. Keep P1 OPEN and #47 Draft.
 
 The original `--mono-note-zero-only` diagnostic and its assertion are unchanged.
 It is now registered as `vdx7_mono_note_zero_acceptance`, with `release-blocker`
