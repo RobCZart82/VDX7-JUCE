@@ -35,3 +35,27 @@ Final rebuilt targeted run: **5/6 PASS**, exit8. Wheel delivery, portamento,
 deferred-input and corrected MONO groups plus profile all pass. The sole failure
 is processor GUI's desktop/display prerequisite; it is not counted as passed.
 The final header comment only documents API semantics and changes no behaviour.
+
+## Follow-up: real mixed host saturation
+
+Expanded the same registered test with 24 fixtures: native POLY with held Note60
+and opt-in corrected MONO with held Note0, each at 44100/48000/96000 Hz,
+64/256-sample blocks, and flood offsets at the first/last sample of the block.
+Each sends 4096 alternating pitch/mod MIDI messages through the actual processor
+callback, followed by different wheel values, Note Off and sustain release.
+The overload counter must increase; this section does not inject recovery.
+
+After recovery, actual firmware wheel inputs must retain the previously accepted
+48/37 values, not rejected tail values7/9. Adapter and firmware note/pedal ownership
+must clear, audio must be silent, and corrected MONO's active count must be zero.
+Fresh wheel values32/19 and Note72 must then work, sound and release. Callback
+finite-audio and ordinary C++ allocation checks remain enabled.
+
+Rebuilt targeted CTest: **2/2 PASS**, exit0, 10.61s including ROM profile;
+wheel-delivery group9.94s. All 24 new fixtures and the three earlier schedules
+pass. This is a test-only expansion, not a new production fix or full-suite run.
+It covers these two block offsets, not arbitrary sample-accurate ordering or a
+real DAW GUI interaction. Audible-note/silence checks are not frequency or
+modulation-depth measurements. Native MONO Note0 remains open independently.
+The earlier GUI prerequisite failure was subsequently resolved and its stale
+RAM oracle corrected; see VALIDATION_GUI_RESTORE_ORACLE.md for that separate run.

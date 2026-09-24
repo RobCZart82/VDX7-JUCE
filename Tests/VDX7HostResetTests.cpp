@@ -1952,6 +1952,66 @@ static void testWheelDelivery(const juce::File& rom)
                 "recovery replayed stale GUI over newer physical wheel input");
     }
     require(allPassed, "wheel intent lost on rejection or queued-message flush");
+    // Real host traffic saturates the bounded sub-CPU queue; no recovery hook.
+    for (bool correctedMono : {false, true})
+    for (int rate : {44100, 48000, 96000})
+    for (int size : {64, 256})
+    for (int offset : {0, size - 1})
+    {
+        auto owner = std::make_unique<VDX7AudioProcessor>(false);
+        auto& p = *owner;
+        auto& e = VDX7RegressionAccess::engine(p);
+        require(e.configureMonoCorrectionBeforeLoad(correctedMono), "mixed overload policy setup");
+        initialise(p, rom, rate, size);
+        require(e.setPlaySetting(0, correctedMono ? 1 : 0), "mixed overload mode setup");
+        const int heldKey = correctedMono ? 0 : 60;
+        e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+        e.reloadCurrentProgram(); p.synchroniseOperatorParametersFromEngine();
+        juce::AudioBuffer<float> audio(2, size);
+        juce::MidiBuffer midi;
+        auto pump = [&](int samples) {
+            for (int i = 0; i < samples; i += size) processChecked(p, audio, midi);
+        };
+        midi.addEvent(juce::MidiMessage::pitchWheel(1, 48 * 128), 0);
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 1, 37), 0);
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
+        midi.addEvent(juce::MidiMessage::noteOn(1, heldKey, juce::uint8(100)), 1);
+        pump(rate / 2);
+        require(audio.getMagnitude(0, size) > 1e-4f, "mixed overload must start with audible note");
+        const auto overloads = e.midiOverloadCount();
+        for (int i = 0; i < 4096; ++i)
+            midi.addEvent(i % 2 == 0 ? juce::MidiMessage::pitchWheel(1, 48 * 128)
+                                    : juce::MidiMessage::controllerEvent(1, 1, 37), offset);
+        // These arrive in the same block while recovery rejects further input.
+        midi.addEvent(juce::MidiMessage::pitchWheel(1, 7 * 128), offset);
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 1, 9), offset);
+        midi.addEvent(juce::MidiMessage::noteOff(1, heldKey), offset);
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), offset);
+        processChecked(p, audio, midi);
+        require(e.midiOverloadCount() > overloads, "host flood did not trigger genuine overload");
+        pump(rate * 2);
+        const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
+        require(!e.isMidiRecovering() && !e.hasHeldMidiNotes() && fw.midi == 0
+                && fw.held == 0 && fw.sustained == 0 && audio.getMagnitude(0, size) < 1e-5f,
+                "mixed overflow did not release old note/pedal");
+        if (correctedMono)
+            require(VDX7RegressionAccess::monoActiveCount(p) == 0, "mixed overflow retained MONO count");
+        require(VDX7RegressionAccess::wheelInputs(p) == std::array<int, 2>{48, 37},
+                "rejected tail controllers overwrote accepted intent");
+        midi.addEvent(juce::MidiMessage::pitchWheel(1, 32 * 128), offset);
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 1, 19), offset);
+        midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), offset);
+        pump(rate / 2);
+        require(VDX7RegressionAccess::wheelInputs(p) == std::array<int, 2>{32, 19}
+                && audio.getMagnitude(0, size) > 1e-4f, "fresh post-overload controllers/note lost");
+        midi.addEvent(juce::MidiMessage::noteOff(1, 72), offset);
+        pump(rate / 2);
+        require(!e.hasHeldMidiNotes() && audio.getMagnitude(0, size) < 1e-5f,
+                "fresh post-overload release lost");
+        std::cout << "PASS: mixed host overload correctedMono=" << correctedMono
+                  << " rate=" << rate << " block=" << size
+                  << " offset=" << offset << '\n';
+    }
 }
 
 static void testBypassedRelease(const juce::File& rom)
