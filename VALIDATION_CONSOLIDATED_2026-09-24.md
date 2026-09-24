@@ -83,5 +83,25 @@ packaging/signing are not established by these checks. Native versus corrected
 mode publication policy still requires an explicit decision. Do not mark the
 complete release checklist passed from these limited results.
 This pass also does not establish full GUI scaling acceptance, DAW automation,
-play/stop/seek/loop edge cases, or eight-instance saved-project reopening.
+or play/stop/seek/loop edge cases.
 These remain separate work items rather than implied passes.
+
+## Follow-up: eight-instance saved-project reopening
+
+Reopened the saved eight-instance RPP through REAPER's Open project dialog
+in the same host process, with FX online. Rendered again at 44.1 kHz / 512
+samples in Online Render mode. Completed in 15 seconds; subsequent-note
+window peaks 0.3482313156 and 0.3542177677, final tail exactly zero,
+zero clipped samples. This closes the aggregate reopen smoke case, not
+per-instance audio equivalence or a fresh-process eight-instance restart.
+The changed summed peaks are not treated as a bit-identical restore result.
+
+Added `scripts/check_reaper_mono_matrix.py`: explicit required 12-file matrix
+plus reopened render, exact sample-rate/PCM checks, complete fixture duration,
+subsequent-note peaks above -60 dBFS, silent final tail, and no full-scale
+clipping. All 13 local recordings passed (exit 0). Negative controls:
+the retained clipped trial was rejected (34238 clipped samples), an incorrect
+expected sample rate was rejected, and a missing input directory returned
+exit 1 rather than vacuous success. This is a fixture-specific smoke validator,
+not a general audio-quality, pitch, individual-voice or dropout test.
+No production C++ changes or new full CTest run in this follow-up.
