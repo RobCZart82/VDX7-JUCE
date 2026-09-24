@@ -82,6 +82,9 @@ public:
 
     bool saveRam(std::vector<uint8_t>& out) const;
     bool restoreRam(const std::vector<uint8_t>& in);
+    // Owner-thread only. 0=pitch, 1=mod; true means durable intent accepted,
+    // not that the firmware already consumed the analog message.
+    bool requestPerformanceWheel(int wheel, int value) noexcept;
     // Project load only: never revive transient voice ownership from a snapshot.
     bool restoreProjectRam(const std::vector<uint8_t>& in);
 
@@ -164,6 +167,8 @@ private:
     // -1 uses boot RAM until the first request/restore.
     int portamentoTimeSetting_ = -1;
     uint8_t lastPitchBendInput_ = 64;
+    std::array<int, 2> wheelIntent_ {-1, -1}; // pitch, modulation; latest accepted input
+    std::array<bool, 2> wheelPending_ {};
 
     bool hostResetInProgress_ = false;
     bool hostResetMuted_ = false; // Runtime-only; cleared by an accepted fresh Note On.

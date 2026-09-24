@@ -84,6 +84,8 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     portamentoRefresh_ = false;
     portamentoTimeSetting_ = -1;
     lastPitchBendInput_ = 64;
+    wheelIntent_ = {-1, -1};
+    wheelPending_.fill(false);
     midiExpression_ = 1.0f;
     currentBank_ = -1;
     currentProgram_ = 0;
@@ -293,6 +295,7 @@ bool VDX7Engine::reserveMidi(int bytes)
 
 void VDX7Engine::recoverMidiOverflow()
 {
+    for (int i = 0; i < 2; ++i) wheelPending_[i] = wheelIntent_[i] >= 0;
     if (portamentoTimeSetting_ >= 0) portamentoRefresh_ = true;
     ++midiOverloadCount_;
     midiRecovering_ = true;
@@ -352,6 +355,15 @@ int VDX7Engine::generateNative(float* out)
         if (!dx7_.haveMsg)
         {
             if (toSynth_->pop(msg)) processQueuedMessage(msg);
+            else if (!midiRecovering_ && !hostResetInProgress_
+                     && (wheelPending_[0] || wheelPending_[1]))
+            {
+                const int wheel = wheelPending_[0] ? 0 : 1;
+                wheelPending_[wheel] = false;
+                processQueuedMessage({wheel == 0 ? dx7Emu::Message::CtrlID::pitchbend
+                                                : dx7Emu::Message::CtrlID::modulate,
+                                      static_cast<uint8_t>(wheelIntent_[wheel])});
+            }
             else if (pitchBendRefresh_)
             {
                 pitchBendRefresh_ = false;
@@ -604,7 +616,7 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
                 case 0:   return; // Bank MSB
                 case 100: return; // RPN LSB
                 case 101: return; // RPN MSB
-                case 1: toSynth_->analog(dx7Emu::Message::CtrlID::modulate, data[2]); return;
+                case 1: requestPerformanceWheel(1, data[2]); return;
                 case 2: toSynth_->analog(dx7Emu::Message::CtrlID::breath, data[2]); return;
                 case 4: toSynth_->analog(dx7Emu::Message::CtrlID::foot, data[2]); return;
                 case 6: toSynth_->analog(dx7Emu::Message::CtrlID::data, data[2]); return;
@@ -651,7 +663,7 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
         case 0xE0: // Pitch bend. VDX7 adapter uses the MSB.
             if (size >= 3)
             {
-                toSynth_->analog(dx7Emu::Message::CtrlID::pitchbend, data[2]);
+                requestPerformanceWheel(0, data[2]);
                 return;
             }
             break;
@@ -816,6 +828,23 @@ void VDX7Engine::reloadCurrentProgram()
 {
     if (loaded_)
         selectProgram(currentProgram_);
+}
+
+bool VDX7Engine::requestPerformanceWheel(int wheel, int value) noexcept
+{
+    if (!loaded_ || wheel < 0 || wheel >= 2 || value < 0 || value > 127) return false;
+    wheelIntent_[wheel] = value;
+    wheelPending_[wheel] = true;
+    // Preserve ordinary FIFO delivery and overload behaviour. The detached
+    // intent is a retry fallback, not a replacement/coalescer for accepted MIDI.
+    if (reserveMidi(3))
+    {
+        toSynth_->analog(wheel == 0 ? dx7Emu::Message::CtrlID::pitchbend
+                                   : dx7Emu::Message::CtrlID::modulate,
+                         static_cast<uint8_t>(value));
+        wheelPending_[wheel] = false;
+    }
+    return true;
 }
 
 bool VDX7Engine::saveRam(std::vector<uint8_t>& out) const

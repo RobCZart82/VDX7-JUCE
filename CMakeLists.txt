@@ -306,6 +306,10 @@ if(VDX7_ENABLE_ROM_TESTS)
     add_test(NAME vdx7_portamento
         COMMAND vdx7_stress_tests "${VDX7_TEST_ROM_FILE}" --portamento-only)
     set_tests_properties(vdx7_portamento PROPERTIES TIMEOUT 120)
+    add_test(NAME vdx7_wheel_delivery
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --wheel-delivery-only)
+    set_tests_properties(vdx7_wheel_delivery PROPERTIES TIMEOUT 60
+        FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8")
     set_tests_properties(vdx7_host_reset vdx7_reactivation vdx7_reset_history_pair
         vdx7_firmware_ownership vdx7_history_retirement vdx7_overlap_retirement
         vdx7_reset_gate_overflow vdx7_expanded_lifecycle vdx7_mono_boundary_characterization

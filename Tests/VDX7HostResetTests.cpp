@@ -110,6 +110,15 @@ struct VDX7RegressionAccess
         }
     }
     static std::mutex& mutex(VDX7AudioProcessor& p) { return p.engineMutex_; }
+    static void setWheelFixture(VDX7AudioProcessor& p)
+    {
+        p.pitchWheelParameter_->store(1.0f);
+        p.modWheelParameter_->store(0.75f);
+    }
+    static void applyWheels(VDX7AudioProcessor& p) { p.applyPerformanceControls(); }
+    static void recoverMidi(VDX7AudioProcessor& p) { p.engine_.recoverMidiOverflow(); }
+    static std::array<int, 2> wheelInputs(const VDX7AudioProcessor& p)
+    { return {p.engine_.dx7_.memory[0x232a] >> 1, p.engine_.dx7_.memory[0x2337] >> 1}; }
     static void announceRestore(VDX7AudioProcessor& p)
     { p.midiTimelineEpoch_.fetch_add(1, std::memory_order_release); }
     static void installRestore(VDX7AudioProcessor& p, const juce::ValueTree& state)
@@ -1909,6 +1918,42 @@ static std::vector<float> renderDeferredPartition(const juce::File& rom, int rat
     return output;
 }
 
+static void testWheelDelivery(const juce::File& rom)
+{
+    bool allPassed = true;
+    for (int schedule : {0, 1, 2})
+    {
+        auto owner = std::make_unique<VDX7AudioProcessor>(false);
+        auto& p = *owner;
+        initialise(p, rom, 48000, 64);
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+        VDX7RegressionAccess::setWheelFixture(p);
+        if (schedule == 1) VDX7RegressionAccess::recoverMidi(p);
+        VDX7RegressionAccess::applyWheels(p);
+        if (schedule == 2) VDX7RegressionAccess::recoverMidi(p);
+        for (int i = 0; i < 3000; ++i) processChecked(p, audio, midi);
+        const auto actual = VDX7RegressionAccess::wheelInputs(p);
+        const bool passed = actual == std::array<int, 2>{127, 95};
+        std::cout << "Wheel delivery schedule=" << schedule << " pitch/mod="
+                  << actual[0] << '/' << actual[1] << " expected=127/95 "
+                  << (passed ? "PASS" : "FAIL") << std::endl;
+        if (schedule == 0) require(passed, "wheel delivery control fixture invalid");
+        allPassed &= passed;
+        midi.addEvent(juce::MidiMessage::pitchWheel(1, 32 * 128), 0);
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 1, 19), 1);
+        for (int i = 0; i < 750; ++i) processChecked(p, audio, midi);
+        require(VDX7RegressionAccess::wheelInputs(p) == std::array<int, 2>{32, 19},
+                "newer physical wheel input must supersede unchanged GUI values");
+        VDX7RegressionAccess::recoverMidi(p);
+        for (int i = 0; i < 3000; ++i) processChecked(p, audio, midi);
+        require(VDX7RegressionAccess::wheelInputs(p) == std::array<int, 2>{32, 19},
+                "recovery replayed stale GUI over newer physical wheel input");
+    }
+    require(allPassed, "wheel intent lost on rejection or queued-message flush");
+}
+
 static void testBypassedRelease(const juce::File& rom)
 {
     for (bool pedal : {false, true})
@@ -2145,13 +2190,15 @@ int main(int argc, char** argv)
         const bool monoTraceOnly = argc == 3 && juce::String(argv[2]) == "--mono-trace-only";
         const bool profileCheckOnly = argc == 3 && juce::String(argv[2]) == "--profile-check-only";
         const bool deferredPartitionOnly = argc == 3 && juce::String(argv[2]) == "--deferred-partition-only";
-        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !monoNoteZeroOnly && !monoCorrectedOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly && !deferredPartitionOnly) || !juce::File(argv[1]).existsAsFile())
+        const bool wheelDeliveryOnly = argc == 3 && juce::String(argv[2]) == "--wheel-delivery-only";
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !monoNoteZeroOnly && !monoCorrectedOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly && !deferredPartitionOnly && !wheelDeliveryOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
         juce::MemoryBlock image;
         require(juce::File(argv[1]).loadFileAsData(image), "read explicit local ROM fixture");
         require(VDX7RegressionAccess::knownFirmwareImage(image),
                 "These ownership tests require the validated v1.8 firmware (FNV1a64 20dd25e47a496ba0); other images are not validated by this suite");
         if (monoCorrectedOnly) { testCorrectedProcessor(juce::File(argv[1])); return 0; }
+        if (wheelDeliveryOnly) { testWheelDelivery(juce::File(argv[1])); return 0; }
         if (deferredPartitionOnly)
         {
             testDeferredPartitions(juce::File(argv[1]));

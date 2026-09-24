@@ -650,18 +650,14 @@ void VDX7AudioProcessor::applyPerformanceControls()
         juce::roundToInt((pitchWheelParameter_->load() + 1.0f) * 63.5f));
     if (pitchMsb != lastPitchMsb_)
     {
-        const uint8_t message[] { 0xE0, 0x00, static_cast<uint8_t>(pitchMsb) };
-        engine_.handleMidi(message, 3);
-        lastPitchMsb_ = pitchMsb;
+        if (engine_.requestPerformanceWheel(0, pitchMsb)) lastPitchMsb_ = pitchMsb;
     }
 
     const int modulation = juce::jlimit(0, 127,
         juce::roundToInt(modWheelParameter_->load() * 127.0f));
     if (modulation != lastModValue_)
     {
-        const uint8_t message[] { 0xB0, 0x01, static_cast<uint8_t>(modulation) };
-        engine_.handleMidi(message, 3);
-        lastModValue_ = modulation;
+        if (engine_.requestPerformanceWheel(1, modulation)) lastModValue_ = modulation;
     }
 }
 
