@@ -1314,6 +1314,12 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         }
         else
             updateEngineSnapshot();
+
+        // A successful firmware image install is a MIDI timeline boundary:
+        // deferred input captured while the engine lock was unavailable must
+        // not be delivered to the newly installed image on a later callback.
+        // Failed loads return above and intentionally leave the epoch unchanged.
+        midiTimelineEpoch_.fetch_add(1, std::memory_order_release);
     }
 
     {
