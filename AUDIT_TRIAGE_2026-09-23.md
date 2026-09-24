@@ -15,6 +15,12 @@ verified v1.8 image. Native/default Note0 acceptance still fails; do not equate
 the corrected path's success with native firmware repair or release acceptance.
 See VALIDATION_MONO_SETTINGS.md and VALIDATION_MONO_PERSISTENCE.md.
 
+Desktop processor regression now completes successfully in a separate run.
+The historical raw6144-byte restore assertion was replaced by the persistent
+contract with exhaustive single-byte negative controls; see
+VALIDATION_GUI_RESTORE_ORACLE.md. Prior full-suite counts are not retroactively
+changed. No production change in that follow-up.
+
 Subsequent audit findings reproduced and targeted fixes implemented:
 - A2 held-note snapshot restoration: VALIDATION_HELD_SNAPSHOT.md.
 - A1 ignored CC admission: VALIDATION_IGNORED_CC_ADMISSION.md.

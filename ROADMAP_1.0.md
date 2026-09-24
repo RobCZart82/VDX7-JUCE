@@ -13,7 +13,8 @@ indices compatible with saved projects.
    ignored-CC, installation-boundary, bypass and wheel-delivery fixes. Report
    native Note0 failure and desktop prerequisites separately, never as PASS.
 2. Broaden concurrent public restore, mixed controller/overflow timing and host
-   bypass/suspension coverage; check GUI in an actual accessible desktop session.
+   bypass/suspension coverage. Desktop GUI/processor follow-up now passes;
+   see VALIDATION_GUI_RESTORE_ORACLE.md for the persistent-state oracle change.
 3. Real DAW acceptance, remaining GUI finish/scale checks and release packaging.
    Keep #47 Draft until review; publishing remains a separate approval.
 
