@@ -46,7 +46,8 @@ Audit disposition refreshed against main `3791325` on 2026-09-24:
 - N1 reset-history oracle correction is proposed in open PR #50; not merged.
   The ROM-enabled reset-history/full CTest acceptance remains NOT RUN.
 - U2 malformed checksum-valid detune round-trip is a reproduced component-level
-  defect candidate; add a regression and decide reject-versus-normalize.
+  defect candidate. PR #52 proposes rejecting detune nibble 15 and adds a
+  six-operator checksum-valid regression; await CI and review before closing it.
 - N2 state/ROM identity mixing, U1 direct-ROM-reload stale MIDI, and U3
   conditional CC32 queue pressure remain unconfirmed processor-level candidates.
 - T1 is a characterization-coverage gap; N3 bounded file-read and N4 public
