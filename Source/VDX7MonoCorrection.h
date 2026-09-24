@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-// Candidate compatibility policy, NOT enabled by the engine yet. Pure decision
+// Opt-in compatibility policy; the engine remains native by default. Pure decision
 // logic: no ROM/RAM writes, MIDI rewriting, allocation, CPU stepping or locks.
 // The caller must verify the image/instruction map before setting profile=true.
 namespace VDX7MonoCorrection

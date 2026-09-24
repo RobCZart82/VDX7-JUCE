@@ -11,6 +11,8 @@ by this checklist. No proprietary firmware belongs in source, CI or artifacts.
   `vdx7_mono_note_zero_acceptance` is a currently failing, non-inverted local
   CTest release blocker. Passing characterization/candidate experiments or
   ROM-free CI are NOT a replacement. See `VALIDATION_MONO_CANDIDATE.md`.
+  Initial engine-opt-in processor coverage is in `VALIDATION_MONO_ENGINE_OPTIN.md`;
+  persisted selection, transitions and broader corrected-mode acceptance remain.
 - [ ] Program/edit and bank/edit ordering in both directions, including stopped transport/save.
 - [ ] Audio callback has no direct host parameter notification; ownership audit of all call sites.
 - [ ] Deferred MIDI preserves an explicit multi-block timeline policy; overflow reconciliation.

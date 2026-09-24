@@ -323,4 +323,8 @@ if(VDX7_ENABLE_ROM_TESTS)
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --mono-note-zero-only)
     set_tests_properties(vdx7_mono_note_zero_acceptance PROPERTIES
         TIMEOUT 60 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;release-blocker")
+    add_test(NAME vdx7_mono_corrected_processor
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --mono-corrected-processor-only)
+    set_tests_properties(vdx7_mono_corrected_processor PROPERTIES
+        TIMEOUT 120 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;integration-stage")
 endif()

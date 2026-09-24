@@ -1,5 +1,9 @@
 # MONO Note 0: isolated corrective experiment and visible product gate
 
+Latest follow-up: `VALIDATION_MONO_ENGINE_OPTIN.md` records the subsequent
+engine/processor integration stage. The historical experiment-only and
+not-integrated statements below describe the earlier revisions, not that stage.
+
 2026-09-23. Baseline local `e8bb6914fe2169f44ad1ecf5d81c4ad1191e1bdb`,
 remote Draft #47 `aa5fc05eddd6dfc477af0ddb45880dfc166ea8af`, matching tree
 `5be1b35d58154e30a3475b33437b30db9a144f32`.

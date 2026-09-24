@@ -8,7 +8,9 @@ User decision (2026-09-23 follow-up): targeted corrective development is approve
 while preserving the original/default path. This approves investigation and a
 separately tested correction, not a particular implementation, automatic mode
 cycling, silent pitch substitution, arbitrary ROM/RAM patches, or publication.
-No corrected product mode is implemented yet. The independent portamento
+An engine-only pre-load opt-in is now implemented and exercised through the
+processor; a user-selectable/persisted product mode is NOT complete. See
+`VALIDATION_MONO_ENGINE_OPTIN.md`. The independent portamento
 request/save fix is complete within its documented test scope; it does not close
 MONO acceptance. The isolated branch-decision experiment described in
 `VALIDATION_MONO_CANDIDATE.md` is the next design evidence, NOT a product fix.
@@ -45,8 +47,9 @@ must not be disguised as a CPU fix.
    must address allocation occupancy AND found/not-found release status, count
    consistency, legato priority and subsequent notes. It must be scoped to a
    verified compatible image; unknown images must not receive an assumed RAM
-   or instruction patch. An implementation method has not yet been selected or
-   validated. Do not modify/distribute ROM bytes as part of the present work.
+   or instruction patch. The branch-decision hook has initial engine/processor
+   validation; complete product-option/lifecycle acceptance is still pending.
+   Do not modify/distribute ROM bytes as part of the present work.
 
 An explicit user-requested native mode cycle can clear ownership in the measured
 fixture, but interrupts/reconfigures voices. It is recovery, not transparent
@@ -86,10 +89,11 @@ for native MONO ownership either.
 
 ## Experimental scope and visible acceptance gate
 
-Integration preparation (2026-09-24): the complete experiment now uses a shared
-pure six-site decision helper, `VDX7MonoCorrection.h`, covered by ROM-free CI.
-Neither the engine nor processor calls it yet; option/state/lifecycle integration
-remains pending. See the latest validation section for exact test scope.
+Integration (2026-09-24): the experiment and engine share the pure six-site
+decision helper, `VDX7MonoCorrection.h`, covered by ROM-free CI. Engine use is
+explicitly opt-in before ROM load and guarded by image/map verification.
+The processor test opts in before initialization; ordinary plugin construction
+stays native. Live switching and option/state integration remain pending.
 
 `Tests/VDX7MonoCandidateTests.cpp` is a separately compiled test executable, not
 linked into VDX7. With explicit known-image preflight it overrides only the Z

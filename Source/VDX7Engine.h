@@ -27,6 +27,15 @@ public:
                       std::size_t optionalVoicesSize = 0);
 
     bool isLoaded() const noexcept { return loaded_; }
+    // Integration-stage opt-in, engine-owner only, BEFORE loading any ROM.
+    // No live switching or project persistence/UI is exposed yet.
+    bool configureMonoCorrectionBeforeLoad(bool enabled) noexcept
+    {
+        if (loaded_) return false;
+        monoCorrectionRequested_ = enabled;
+        return true;
+    }
+    bool isMonoCorrectionActive() const noexcept { return monoCorrectionActive_; }
     bool hasFactoryVoices() const noexcept { return factoryVoices_.size() >= kFactoryVoicesSize; }
 
     void prepare(double hostSampleRate);
@@ -87,6 +96,10 @@ private:
     uint64_t factoryBankLoadRevision_ = 0;
     friend struct VDX7RegressionAccess;
     void boot();
+    void stepFirmware();
+    bool verifyMonoCorrectionProfile() const noexcept;
+    bool monoCorrectionRequested_ = false;
+    bool monoCorrectionActive_ = false;
     void beginMidiReset(bool releaseEveryPitch);
     void processQueuedMessage(dx7Emu::Message msg);
     void parseMidiBytes(const uint8_t* data, int size);

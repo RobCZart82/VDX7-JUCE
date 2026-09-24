@@ -8,6 +8,14 @@ or release until separately approved. Never upload ROMs.
 
 ## Active reset work
 
+- Latest MONO engine integration (2026-09-24): a known-image/map-guarded,
+  pre-ROM-load opt-in now applies the shared six-site policy in both engine
+  stepping paths. Ordinary plugin construction remains native. Actual processor
+  tests cover repetition, legato return, audio pitch controls and release.
+  No live switching or persisted/UI option exists yet; P1 remains open.
+  See VALIDATION_MONO_ENGINE_OPTIN.md. Earlier experiment-only status below is
+  historical, superseded only within this limited integration scope.
+
 - MONO candidate / gate follow-up: separate test-only branch-decision experiment
   exposes incomplete two-decision and lookup-only proposals; common occupancy
   rules must cover allocation, lookup, release and first/minimum/maximum legato

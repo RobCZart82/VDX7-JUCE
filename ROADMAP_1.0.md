@@ -113,13 +113,17 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
   `VALIDATION_MONO_INSTRUCTION_TRACE.md`.
   Native/corrected-path options and required acceptance are separated in
   `DESIGN_MONO_NOTE_ZERO_POLICY.md`. Targeted corrective development is now
-  approved, but no optional correction is implemented/validated; default
-  firmware fidelity is unchanged and MONO acceptance remains open.
+  approved. An engine-only pre-load opt-in now exists; persisted/user-facing
+  selection is still pending. Default firmware fidelity is unchanged and
+  MONO product acceptance remains open.
 - [ ] MONO Note 0 product correction and acceptance: isolated raw-core candidate
   experiment addresses occupied-slot decisions across allocation, lookup,
   release and legato traversal. It is not linked into VDX7. Protect Note 0's own
   key/pitch/audio, both Off encodings, subsequent notes, sustain/portamento and
   native/POLY compatibility. See `VALIDATION_MONO_CANDIDATE.md` and the policy.
+  Integration follow-up: `VALIDATION_MONO_ENGINE_OPTIN.md` records shared-policy
+  engine stepping and actual processor checks. This is not a completed UI/state
+  option or corrected-mode lifecycle/host acceptance.
   The unchanged production diagnostic is now a registered `release-blocker`
   CTest; the full local suite must remain failing until product acceptance is
   actually met. Passing characterization/experiment and public ROM-free CI

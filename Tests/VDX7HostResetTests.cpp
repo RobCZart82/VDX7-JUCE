@@ -54,6 +54,20 @@ struct VDX7RegressionAccess
                 || d.memory[0xf6] != 0 ? 4u : 0u);
     }
     static VDX7Engine& engine(VDX7AudioProcessor& p) { return p.engine_; }
+    static void checkCorrectionProfile(VDX7AudioProcessor& p)
+    {
+        auto& e = p.engine_;
+        require(e.verifyMonoCorrectionProfile(), "six correction sites verified");
+        for (const auto pc : {0xd593, 0xd645, 0xd6a8, 0xd6bb, 0xd6ce, 0xd6e0})
+        {
+            // Verification-only mutation, restored before any CPU execution.
+            const auto saved = e.dx7_.memory[pc + 1];
+            e.dx7_.memory[pc + 1] ^= 1;
+            const bool accepted = e.verifyMonoCorrectionProfile();
+            e.dx7_.memory[pc + 1] = saved;
+            require(!accepted, "changed branch target rejected");
+        }
+    }
     static int monoActiveCount(const VDX7AudioProcessor& p)
     { return p.engine_.dx7_.memory[0x8e]; }
     static int monoTargetPitch(const VDX7AudioProcessor& p)
@@ -462,6 +476,106 @@ static void testExpandedLifecycle(const juce::File& rom, int mode, int path)
     require(released.midi == 0 && released.held == 0 && released.sustained == 0
             && audio.getMagnitude(0, 64) < 1e-5f, "expanded lifecycle fresh note failed to release");
     unchanged(before, capture(p));
+}
+
+static double correctedProcessorPitch(const juce::File& rom, bool corrected, int key, bool mono = true)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    auto& e = VDX7RegressionAccess::engine(p);
+    require(!e.isMonoCorrectionActive(), "correction inactive before image validation");
+    require(e.configureMonoCorrectionBeforeLoad(corrected), "pre-load correction selection");
+    initialise(p, rom, 48000, 64);
+    require(e.isMonoCorrectionActive() == corrected, "verified correction activation");
+    VDX7RegressionAccess::checkCorrectionProfile(p);
+    require(!e.configureMonoCorrectionBeforeLoad(!corrected)
+            && e.isMonoCorrectionActive() == corrected, "reject live correction switching");
+    e.setMasterTune(0);
+    e.setVoiceParameter(VDX7VoiceData::VoiceParameter::transpose, 12);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    p.synchroniseOperatorParametersFromEngine();
+    require(e.setPlaySetting(0, corrected && mono ? 1 : 0), "corrected MONO/native POLY fixture");
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    auto pump = [&](int blocks) {
+        float peak = 0;
+        for (int i = 0; i < blocks; ++i)
+        {
+            processChecked(p, audio, midi);
+            if (i > blocks / 2) peak = std::max(peak, audio.getMagnitude(0, 64));
+        }
+        return peak;
+    };
+    auto note = [&](int n, bool on) {
+        midi.addEvent(on ? juce::MidiMessage::noteOn(1, n, juce::uint8(100))
+                         : juce::MidiMessage::noteOff(1, n), 0);
+    };
+    auto empty = [&] {
+        const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
+        require(fw.midi == 0 && fw.held == 0 && fw.sustained == 0
+                && VDX7RegressionAccess::monoActiveCount(p) == 0, "integrated ownership clears");
+    };
+    pump(375);
+    if (corrected && mono)
+    {
+        // No reset or mode recovery between repeated zero notes and new input.
+        for (int repeat = 0; repeat < 32; ++repeat)
+        {
+            note(0, true); pump(75);
+            require(VDX7RegressionAccess::monoActiveCount(p) == 1, "one actual zero allocation");
+            note(0, false); pump(75); empty();
+        }
+        note(0, true); pump(375);
+        const auto zeroTarget = VDX7RegressionAccess::monoTargetPitch(p);
+        note(60, true); pump(375); note(60, false); pump(375);
+        require(VDX7RegressionAccess::monoTargetPitch(p) == zeroTarget
+                && VDX7RegressionAccess::monoActiveCount(p) == 1, "integrated legato returns to zero");
+        note(0, false); require(pump(375) < 1e-5f, "legato final silence"); empty();
+    }
+    note(key, true);
+    double first = 0, last = 0;
+    float previous = 0, peak = 0;
+    int crossings = 0;
+    for (int block = 0; block < 1500; ++block)
+    {
+        processChecked(p, audio, midi);
+        if (block < 750) continue;
+        for (int i = 0; i < 64; ++i)
+        {
+            const float value = audio.getSample(0, i);
+            peak = std::max(peak, std::abs(value));
+            if (previous <= 0 && value > 0 && (block != 750 || i != 0))
+            {
+                const double crossing = block * 64 + i - 1 + (-previous / (value - previous));
+                if (crossings++ == 0) first = crossing;
+                last = crossing;
+            }
+            previous = value;
+        }
+    }
+    require(peak > 1e-4f && crossings > 2, "processor measurable audio pitch");
+    const double hz = (crossings - 1) * 48000.0 / (last - first);
+    require(VDX7RegressionAccess::firmwareMidiOwnershipFor(p, key) == 1, "original input key owned");
+    note(key, false); require(pump(375) < 1e-5f, "measured note releases to silence");
+    empty();
+    VDX7RegressionAccess::checkFirmwareProfile(p);
+    std::cout << "PROCESSOR corrected=" << corrected << " mono=" << (corrected && mono)
+              << " key=" << key << " transpose=12 hz=" << hz << '\n';
+    return hz;
+}
+
+static void testCorrectedProcessor(const juce::File& rom)
+{
+    const double reference = correctedProcessorPitch(rom, false, 0);
+    const auto pitchMatches = [reference](double actual) { return std::abs(actual / reference - 1) < 0.002; };
+    require(pitchMatches(correctedProcessorPitch(rom, true, 0)), "integrated genuine zero pitch");
+    require(!pitchMatches(correctedProcessorPitch(rom, true, 1)), "integrated negative pitch control must reject Note1");
+    require(pitchMatches(correctedProcessorPitch(rom, true, 0, false)), "enabled POLY pitch control");
+    const double reference72 = correctedProcessorPitch(rom, false, 72);
+    require(std::abs(correctedProcessorPitch(rom, true, 72) / reference72 - 1) < 0.002,
+            "subsequent 72 after zero history must match genuine reference");
+    std::cout << "PASS: engine-opt-in processor zero repetition, legato, pitch controls and release (not persisted/UI-ready)\n";
 }
 
 static void diagnoseMonoNoteZero(const juce::File& rom)
@@ -1556,16 +1670,18 @@ int main(int argc, char** argv)
         const bool gateOverflowOnly = argc == 3 && juce::String(argv[2]) == "--gate-overflow-only";
         const bool expandedLifecycleOnly = argc == 3 && juce::String(argv[2]) == "--expanded-lifecycle-only";
         const bool monoNoteZeroOnly = argc == 3 && juce::String(argv[2]) == "--mono-note-zero-only";
+        const bool monoCorrectedOnly = argc == 3 && juce::String(argv[2]) == "--mono-corrected-processor-only";
         const bool monoBoundaryOnly = argc == 3 && juce::String(argv[2]) == "--mono-boundary-only";
         const bool monoTraceOnly = argc == 3 && juce::String(argv[2]) == "--mono-trace-only";
         const bool profileCheckOnly = argc == 3 && juce::String(argv[2]) == "--profile-check-only";
         const bool deferredPartitionOnly = argc == 3 && juce::String(argv[2]) == "--deferred-partition-only";
-        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !monoNoteZeroOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly && !deferredPartitionOnly) || !juce::File(argv[1]).existsAsFile())
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !monoNoteZeroOnly && !monoCorrectedOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly && !deferredPartitionOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
         juce::MemoryBlock image;
         require(juce::File(argv[1]).loadFileAsData(image), "read explicit local ROM fixture");
         require(VDX7RegressionAccess::knownFirmwareImage(image),
                 "These ownership tests require the validated v1.8 firmware (FNV1a64 20dd25e47a496ba0); other images are not validated by this suite");
+        if (monoCorrectedOnly) { testCorrectedProcessor(juce::File(argv[1])); return 0; }
         if (deferredPartitionOnly)
         {
             testDeferredPartitions(juce::File(argv[1]));

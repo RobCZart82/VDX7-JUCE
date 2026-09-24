@@ -1,5 +1,6 @@
 #include "VDX7Engine.h"
 #include "VDX7MidiValidation.h"
+#include "VDX7MonoCorrection.h"
 
 #include <algorithm>
 #include <cmath>
@@ -62,6 +63,8 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
         return false;
 
     releaseRetirementProfile_ = isReleaseRetirementFirmware(firmware, kFirmwareSize);
+    monoCorrectionActive_ = monoCorrectionRequested_ && releaseRetirementProfile_
+        && verifyMonoCorrectionProfile();
     releaseHistoryDirty_ = false;
 
     // loadVoices(nullptr, 0) does NOT clear the core's previous pointer.
@@ -114,7 +117,7 @@ void VDX7Engine::boot()
 
     // Retromulator's VDX7 adapter performs the same firmware warm-up.
     for (int i = 0; i < 3000000; ++i)
-        dx7_.run();
+        stepFirmware();
 
     dx7_.initControllers();
     dx7_.midiFilter.set_f(static_cast<float>(10.6 / kNativeSampleRate));
@@ -352,13 +355,62 @@ int VDX7Engine::generateNative(float* out)
         }
 
         retireCompletedReleaseHistory();
-        dx7_.run();
+        stepFirmware();
         const int cycles = (dx7_.inst != nullptr && dx7_.inst->cycles > 0) ? dx7_.inst->cycles : 1;
 
         dx7_.egs.clock(out, outCount, 4 * cycles);
     }
 
     return outCount;
+}
+
+bool VDX7Engine::verifyMonoCorrectionProfile() const noexcept
+{
+    // Called once per ROM load, after whole-firmware fingerprint recognition.
+    struct Site { uint16_t pc; const char* op; uint8_t displacement; };
+    for (const auto site : {Site{0xd593, "beq ", 6}, Site{0xd645, "beq ", 31},
+                           Site{0xd6a8, "beq ", 7}, Site{0xd6bb, "bne ", 6},
+                           Site{0xd6ce, "beq ", 6}, Site{0xd6e0, "beq ", 6}})
+    {
+        const auto& instruction = dx7_.instructions[dx7_.memory[site.pc]];
+        if (!instruction.op || !instruction.mode || instruction.bytes != 2
+            || std::strcmp(instruction.op, site.op) != 0
+            || std::strcmp(instruction.mode, "im") != 0
+            || dx7_.memory[site.pc + 1] != site.displacement) return false;
+    }
+    return true;
+}
+
+void VDX7Engine::stepFirmware()
+{
+    // Native path stays an ordinary core step. No locks, queue operations,
+    // image hashing, allocation or additional CPU steps in this hook.
+    if (monoCorrectionActive_ && dx7_.memory[0x20a9] == 1)
+    {
+        switch (dx7_.PC)
+        {
+            case 0xd593: case 0xd645: case 0xd6a8:
+            case 0xd6bb: case 0xd6ce: case 0xd6e0:
+            {
+                VDX7MonoCorrection::Input input;
+                input.enabled = input.profile = input.mono = true;
+                input.nativeZ = dx7_.Z;
+                input.pc = dx7_.PC; input.slotAddress = dx7_.IX;
+                if (VDX7MonoCorrection::validSlot(dx7_.IX))
+                {
+                    input.key = dx7_.memory[dx7_.IX];
+                    input.flags = dx7_.memory[dx7_.IX + 1];
+                }
+                input.a = dx7_.A; input.b = dx7_.B;
+                input.requestedKey = dx7_.memory[0x81];
+                const auto decision = VDX7MonoCorrection::evaluate(input);
+                if (decision.site >= 0) dx7_.Z = decision.z;
+                break;
+            }
+            default: break;
+        }
+    }
+    dx7_.run();
 }
 
 bool VDX7Engine::isReleaseRetirementFirmware(const uint8_t* data, std::size_t size)
