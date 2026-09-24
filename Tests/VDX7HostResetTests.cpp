@@ -1377,11 +1377,13 @@ static MonoFreshReference characterizeMonoContinuation(const juce::File& rom, in
     const auto send = [&](int note, int n, bool on)
     {
         raw->notes(note, n, on, zeroVelocityOff);
-        if (VDX7MidiValidation::isSupportedNoteNumber(static_cast<uint8_t>(note)))
-            for (int i = 0; i < n; ++i)
-                midi.addEvent(on || zeroVelocityOff
-                    ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
-                    : juce::MidiMessage::noteOff(1, note), 0);
+        // Deliberately send every proposed note through the real processor
+        // boundary. The processor's admission guard, not this fixture, must
+        // exclude pitches outside the product-supported range.
+        for (int i = 0; i < n; ++i)
+            midi.addEvent(on || zeroVelocityOff
+                ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
+                : juce::MidiMessage::noteOff(1, note), 0);
         Sound sound;
         int crossings = 0, frames = 0;
         float previous = 0;
@@ -1507,11 +1509,12 @@ static void characterizeMonoBoundary(const juce::File& rom, int mode, int note,
     for (bool on : {true, false})
     {
         raw->notes(note, repeats, on, zeroVelocityOff);
-        if (VDX7MidiValidation::isSupportedNoteNumber(static_cast<uint8_t>(note)))
-            for (int i = 0; i < repeats; ++i)
-                midi.addEvent(on || zeroVelocityOff
-                    ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
-                    : juce::MidiMessage::noteOff(1, note), 0);
+        // Keep raw-core characterization independent, but always offer the
+        // same event to the plugin so its production MIDI filter is exercised.
+        for (int i = 0; i < repeats; ++i)
+            midi.addEvent(on || zeroVelocityOff
+                ? juce::MidiMessage::noteOn(1, note, juce::uint8(on ? 100 : 0))
+                : juce::MidiMessage::noteOff(1, note), 0);
         pump();
         const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
         const std::array<int, 4> actual {fw.midi, fw.held, fw.sustained,
