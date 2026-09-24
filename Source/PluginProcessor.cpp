@@ -910,6 +910,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     std::array<int, VDX7VoiceData::kOperatorCount * VDX7VoiceData::kParameterCount> operatorValues {};
     std::array<int, VDX7VoiceData::kVoiceParameterCount> voiceValues {};
     bool loaded = false;
+    bool monoCorrection = false;
     juce::ValueTree pendingCopy;
     std::vector<uint8_t> ram;
     int bank = -1, program = 0, inputChannel = 0;
@@ -918,6 +919,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     {
         std::scoped_lock lock(engineMutex_);
         // A project saved while its firmware is missing must retain its sound.
+        monoCorrection = engine_.isMonoCorrectionRequested();
         if (pendingRestore_.isValid())
         {
             pendingRestore_.setProperty("midiInputChannel", midiInputChannel_.load(), nullptr);
@@ -958,6 +960,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         return;
     }
     state.setProperty("bank", bank, nullptr);
+    state.setProperty("monoNoteZeroCorrection", monoCorrection, nullptr);
     state.setProperty("midiInputChannel", inputChannel, nullptr);
     state.setProperty("program", program, nullptr);
     state.setProperty("modifiedVoices", static_cast<juce::int64>(modified), nullptr);
@@ -1012,8 +1015,15 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     }
 
     auto pendingCopy = state.createCopy();
+    // Missing property is deliberately native for legacy projects. Reject
+    // malformed policies rather than interpreting arbitrary strings as enabled.
+    const auto correction = state.getProperty("monoNoteZeroCorrection", false);
+    if (!correction.isBool() && correction.toString() != "0" && correction.toString() != "1")
+        return;
     {
         std::scoped_lock lock(engineMutex_);
+        if (!engine_.configureMonoCorrectionForStateRestore(static_cast<bool>(correction)))
+            return;
         pendingRestore_ = pendingCopy;
         // The audio callback owns deferredMidi_. Publishing an epoch lets it
         // discard pre-restore events without racing this state-thread update.

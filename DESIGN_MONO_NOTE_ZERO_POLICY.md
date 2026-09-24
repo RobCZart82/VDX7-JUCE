@@ -1,5 +1,10 @@
 # MONO note-zero: fidelity boundary and corrective-design decision
 
+Latest integration: project-state persistence now retains explicit correction
+intent, including missing-ROM saves and legacy-native fallback. See
+`VALIDATION_MONO_PERSISTENCE.md`. GUI selection is still pending; the following
+historical design/experiment sections are not a current implementation inventory.
+
 2026-09-23. Design note, **not an implemented fix or permission to patch firmware**.
 The default remains firmware-faithful operation. Keep Draft #47;
 MONO note-zero acceptance and release approval are still open.

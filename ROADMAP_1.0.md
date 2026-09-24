@@ -122,8 +122,9 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
   key/pitch/audio, both Off encodings, subsequent notes, sustain/portamento and
   native/POLY compatibility. See `VALIDATION_MONO_CANDIDATE.md` and the policy.
   Integration follow-up: `VALIDATION_MONO_ENGINE_OPTIN.md` records shared-policy
-  engine stepping and actual processor checks. This is not a completed UI/state
-  option or corrected-mode lifecycle/host acceptance.
+  engine stepping and actual processor checks. `VALIDATION_MONO_PERSISTENCE.md`
+  adds serialized intent, new-instance/deferred-ROM restore and legacy fallback.
+  UI selection and complete corrected-mode lifecycle/host acceptance remain.
   The unchanged production diagnostic is now a registered `release-blocker`
   CTest; the full local suite must remain failing until product acceptance is
   actually met. Passing characterization/experiment and public ROM-free CI

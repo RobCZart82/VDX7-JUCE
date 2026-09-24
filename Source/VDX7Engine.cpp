@@ -109,6 +109,22 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     return loaded_;
 }
 
+bool VDX7Engine::configureMonoCorrectionForStateRestore(bool enabled)
+{
+    if (!loaded_) return configureMonoCorrectionBeforeLoad(enabled);
+    if (enabled == monoCorrectionRequested_) return true;
+    // Never change branch policy underneath occupied native/corrected slots.
+    // Retain owned copies because loadRomImage replaces the image/bank storage.
+    const std::vector<uint8_t> firmware(dx7_.memory + 0xc000, dx7_.memory + 0x10000);
+    const auto voices = factoryVoices_;
+    const bool previous = monoCorrectionRequested_;
+    monoCorrectionRequested_ = enabled;
+    if (loadRomImage(firmware.data(), firmware.size(),
+                     voices.empty() ? nullptr : voices.data(), voices.size())) return true;
+    monoCorrectionRequested_ = previous;
+    return false;
+}
+
 void VDX7Engine::boot()
 {
     dx7_.start();

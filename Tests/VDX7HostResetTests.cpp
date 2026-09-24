@@ -630,8 +630,79 @@ static void testCorrectedLifecycle(const juce::File& rom)
     }
 }
 
+static void testCorrectionPersistence(const juce::File& rom)
+{
+    auto source = std::make_unique<VDX7AudioProcessor>(false);
+    auto& original = VDX7RegressionAccess::engine(*source);
+    require(original.configureMonoCorrectionBeforeLoad(true), "persist opt-in");
+    initialise(*source, rom, 48000, 64);
+    original.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    original.reloadCurrentProgram();
+    require(original.setPlaySetting(0, 1), "persist MONO");
+    source->synchroniseOperatorParametersFromEngine();
+    juce::MemoryBlock saved;
+    source->getStateInformation(saved);
+    auto xml = juce::AudioProcessor::getXmlFromBinary(saved.getData(), int(saved.getSize()));
+    auto tree = juce::ValueTree::fromXml(*xml);
+    require(bool(tree.getProperty("monoNoteZeroCorrection", false)), "saved correction intent");
+    for (bool missingRom : {false, true})
+    {
+        auto state = tree.createCopy();
+        if (missingRom) state.setProperty("romPath", "", nullptr);
+        juce::MemoryBlock bytes;
+        juce::AudioProcessor::copyXmlToBinary(*state.createXml(), bytes);
+        auto target = std::make_unique<VDX7AudioProcessor>(false);
+        auto& p = *target;
+        auto& e = VDX7RegressionAccess::engine(p);
+        p.setStateInformation(bytes.getData(), int(bytes.getSize()));
+        require(e.isMonoCorrectionRequested(), "new instance retained intent");
+        if (missingRom)
+        {
+            require(!e.isLoaded() && !e.isMonoCorrectionActive(), "missing ROM cannot activate");
+            juce::MemoryBlock again;
+            p.getStateInformation(again);
+            auto held = juce::AudioProcessor::getXmlFromBinary(again.getData(), int(again.getSize()));
+            require(held->getBoolAttribute("monoNoteZeroCorrection"), "missing ROM resave intent");
+            require(p.loadRomFromFile(rom), "deferred correction load");
+        }
+        p.prepareToPlay(48000, 64);
+        require(e.isMonoCorrectionActive(), "restored correction activation");
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        auto pump = [&] { for (int i = 0; i < 750; ++i) processChecked(p, audio, midi); };
+        pump();
+        midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0); pump();
+        require(VDX7RegressionAccess::monoActiveCount(p) == 1
+                && audio.getMagnitude(0, 64) > 1e-4f, "restored zero sounds");
+        midi.addEvent(juce::MidiMessage::noteOff(1, 0), 0); pump();
+        require(VDX7RegressionAccess::monoActiveCount(p) == 0
+                && VDX7RegressionAccess::firmwareOwnership(p).held == 0
+                && audio.getMagnitude(0, 64) < 1e-5f, "restored zero releases");
+        // A legacy project must revert a corrected instance, even with a held
+        // zero and no accessible saved path. The current image is revalidated.
+        midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 0); pump();
+        auto legacy = tree.createCopy();
+        legacy.removeProperty("monoNoteZeroCorrection", nullptr);
+        legacy.setProperty("romPath", "", nullptr);
+        juce::AudioProcessor::copyXmlToBinary(*legacy.createXml(), bytes);
+        p.setStateInformation(bytes.getData(), int(bytes.getSize())); pump();
+        require(!e.isMonoCorrectionRequested() && !e.isMonoCorrectionActive()
+                && VDX7RegressionAccess::monoActiveCount(p) == 0,
+                "legacy restore must clear held correction and select native");
+        p.setStateInformation(saved.getData(), int(saved.getSize())); pump();
+        require(e.isMonoCorrectionActive(), "restore corrected mode again");
+        auto malformed = tree.createCopy();
+        malformed.setProperty("monoNoteZeroCorrection", "invalid", nullptr);
+        juce::AudioProcessor::copyXmlToBinary(*malformed.createXml(), bytes);
+        p.setStateInformation(bytes.getData(), int(bytes.getSize()));
+        require(e.isMonoCorrectionRequested() && e.isMonoCorrectionActive(), "reject malformed policy");
+    }
+    std::cout << "PASS: correction persistence, deferred ROM, legacy fallback and malformed policy\n";
+}
+
 static void testCorrectedProcessor(const juce::File& rom)
 {
+    testCorrectionPersistence(rom);
     testCorrectedLifecycle(rom);
     for (double rate : {44100.0, 48000.0, 96000.0})
     for (int size : {64, 256})

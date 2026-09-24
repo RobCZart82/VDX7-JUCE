@@ -28,7 +28,7 @@ public:
 
     bool isLoaded() const noexcept { return loaded_; }
     // Integration-stage opt-in, engine-owner only, BEFORE loading any ROM.
-    // No live switching or project persistence/UI is exposed yet.
+    // Live switching is rejected; project restore uses its separate boundary.
     bool configureMonoCorrectionBeforeLoad(bool enabled) noexcept
     {
         if (loaded_) return false;
@@ -36,6 +36,10 @@ public:
         return true;
     }
     bool isMonoCorrectionActive() const noexcept { return monoCorrectionActive_; }
+    bool isMonoCorrectionRequested() const noexcept { return monoCorrectionRequested_; }
+    // Non-RT, engine-owner only, at destructive project restore boundary.
+    // Changing policy reboots the current image; caller must restore project RAM.
+    bool configureMonoCorrectionForStateRestore(bool enabled);
     bool hasFactoryVoices() const noexcept { return factoryVoices_.size() >= kFactoryVoicesSize; }
 
     void prepare(double hostSampleRate);
