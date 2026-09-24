@@ -52,8 +52,10 @@ Audit disposition refreshed against main `3791325` on 2026-09-24:
   characterization and adds a direct-engine Note 127 guard-bypass sensitivity
   control; macOS/Windows CI passed on `a5cb765`. Local ROM-enabled execution
   remains NOT RUN before closing T1.
-- N2 state/ROM identity mixing, U1 direct-ROM-reload stale MIDI, and U3
-  conditional CC32 queue pressure remain unconfirmed processor-level candidates.
+- N2 state/ROM identity mixing and U3 conditional CC32 queue pressure remain
+  unconfirmed processor-level candidates. U1 is under test in open PR #54:
+  macOS/Windows CI passed on `f08baff`; the new local-ROM regression has not
+  yet run, so direct-ROM stale-MIDI behavior is not closed.
 - N3 bounded file-read and N4 public keyboard-queue admission are lower-priority
   hardening tasks.
 - MIDI Note 12–120 policy is consistent in product admission; internal 0–127
@@ -90,12 +92,13 @@ Audit disposition refreshed against main `3791325` on 2026-09-24:
    publication generation-consistent. Keep XML/base64 work outside long audio
    engine-lock sections; do not treat an extra reader lock alone as a fix.
 
-4. **U1 — test direct ROM reload against deferred MIDI separately.**
-   Create a real processor test with an older deferred PC/Note On, perform a
-   direct successful ROM reload, and prove the old event cannot reach the new
-   engine on the next callback. This is distinct from the already-covered
-   project-state restore boundary. Only report a fix after the direct-load path
-   and normal Note 60/72 controls pass.
+4. **U1 — direct ROM reload / deferred MIDI (open PR #54).**
+   A processor regression now creates real engine-lock contention with a
+   deferred Note On, performs a direct successful ROM reload, and checks that
+   stale input cannot reach the new engine, followed by fresh Note 72 playback
+   and release. macOS/Windows CI passed on `f08baff`; local v1.8 ROM execution
+   remains NOT RUN. Keep this distinct from project-state restore coverage and
+   do not close U1 until the local test passes.
 
 5. **U2 — make packed-detune import/export contracts consistent.**
    The component probe accepts a checksum-valid bank containing out-of-range
