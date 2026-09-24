@@ -53,6 +53,11 @@ Audit disposition refreshed against main `3791325` on 2026-09-24:
   keyboard-queue admission are lower-priority hardening tasks.
 - MIDI Note 12–120 policy is consistent in product admission; internal 0–127
   cleanup/release loops are intentional. No new tests were run by this refresh.
+- N5 — host tail metadata remains a P2 validation candidate: `getTailLengthSeconds()`
+  still returns 0.0 although voices can release after Note Off. Verify JUCE/host
+  offline-render tail behavior and add a Note-Off release-tail regression before
+  choosing a conservative non-zero or dynamic estimate. No host truncation has
+  been reproduced yet; do not describe it as a confirmed audible defect.
 
 1. **N1 — repair the reset-history test oracle first.** In
    `testExpandedHistory(measurePair)`, keep sending the full 0–127 proposal
