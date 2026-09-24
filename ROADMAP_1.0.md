@@ -48,10 +48,13 @@ Audit disposition refreshed against main `3791325` on 2026-09-24:
 - U2 malformed checksum-valid detune round-trip is a reproduced component-level
   defect candidate. PR #52 proposes rejecting detune nibble 15 and adds a
   six-operator checksum-valid regression; await CI and review before closing it.
+- PR #53 sends excluded pitches through the real processor in MONO
+  characterization; T1 remains open for its deliberate guard-bypass sensitivity
+  control and local ROM-enabled execution.
 - N2 state/ROM identity mixing, U1 direct-ROM-reload stale MIDI, and U3
   conditional CC32 queue pressure remain unconfirmed processor-level candidates.
-- T1 is a characterization-coverage gap; N3 bounded file-read and N4 public
-  keyboard-queue admission are lower-priority hardening tasks.
+- N3 bounded file-read and N4 public keyboard-queue admission are lower-priority
+  hardening tasks.
 - MIDI Note 12–120 policy is consistent in product admission; internal 0–127
   cleanup/release loops are intentional. No new tests were run by this refresh.
 - N5 — host tail metadata remains a P2 validation candidate: `getTailLengthSeconds()`
