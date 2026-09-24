@@ -1027,8 +1027,61 @@ static void testCorrectedInstanceIsolation(const juce::File& rom)
     std::cout << "PASS: corrected two-instance reset isolation (interleaved)\n";
 }
 
+static void testCorrectedRepeatedReset(const juce::File& rom)
+{
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    auto& e = VDX7RegressionAccess::engine(p);
+    require(e.configureMonoCorrectionBeforeLoad(true), "repeated reset opt-in");
+    initialise(p, rom, 48000, 64);
+    e.setOperatorParameter(0, VDX7VoiceData::Parameter::rate4, 99);
+    e.reloadCurrentProgram();
+    require(e.setPlaySetting(0, 1), "repeated reset MONO");
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    auto pump = [&] { for (int i = 0; i < 375; ++i) processChecked(p, audio, midi); };
+    auto empty = [&] {
+        const auto fw = VDX7RegressionAccess::firmwareOwnership(p);
+        require(fw.midi == 0 && fw.held == 0 && fw.sustained == 0
+                && VDX7RegressionAccess::monoActiveCount(p) == 0,
+                "repeated reset leaked ownership");
+        require(audio.getMagnitude(0, 64) < 1e-5f, "repeated reset leaked audio");
+    };
+    pump();
+    for (int cycle = 0; cycle < 12; ++cycle)
+    {
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
+        midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(100)), 63);
+        pump();
+        require(VDX7RegressionAccess::monoActiveCount(p) == 1
+                && audio.getMagnitude(0, 64) > 1e-4f, "reset cycle needs sounding zero");
+        midi.addEvent(juce::MidiMessage::noteOn(1, 0, juce::uint8(0)), 63);
+        pump();
+        require(audio.getMagnitude(0, 64) > 1e-4f, "reset cycle needs pedal hold");
+        resetChecked(p);
+        pump(); empty();
+        // Late releases from the interrupted history must not poison fresh input.
+        midi.addEvent(juce::MidiMessage::noteOff(1, 0), 0);
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), 63);
+        pump(); empty();
+        for (int key : {0, 72})
+        {
+            midi.addEvent(juce::MidiMessage::noteOn(1, key, juce::uint8(100)), 63);
+            pump();
+            require(VDX7RegressionAccess::monoActiveCount(p) == 1
+                    && VDX7RegressionAccess::firmwareMidiOwnershipFor(p, key) == 1
+                    && audio.getMagnitude(0, 64) > 1e-4f, "reset cycle lost fresh note");
+            midi.addEvent(juce::MidiMessage::noteOff(1, key), 0);
+            pump(); empty();
+        }
+    }
+    require(e.isMonoCorrectionActive(), "repeated reset lost correction");
+    std::cout << "PASS: corrected 12 repeated reset/pedal/late-release cycles (not DAW transport)\n";
+}
+
 static void testCorrectedProcessor(const juce::File& rom)
 {
+    testCorrectedRepeatedReset(rom);
     testCorrectedInstanceIsolation(rom);
     testCorrectionNonzeroDifferential(rom);
     testCorrectedCapacityAndOrder(rom);
