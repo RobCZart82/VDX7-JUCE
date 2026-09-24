@@ -9,7 +9,7 @@ indices compatible with saved projects.
 
 ### Current next steps — 2026-09-24
 
-Latest checkpoint: PR #49 was merged to `main` as `3791325` on 2026-09-24.
+Latest checkpoint: PR #50 was merged to `main` as `675b553` on 2026-09-24; PR #52 was merged immediately before it.
 `VALIDATION_MONO_SOAK.md` records the full 30-test run, separate desktop retry,
 dual-instance soak and remaining host boundaries. The user approved retaining
 both Native and Correct modes. Native remains the recommended default; Correct
@@ -36,22 +36,16 @@ including release, sustain, transport and subsequent normal-register notes.
 
 The audit package `VDX7_AUDIT_WORK_30a3ccbd.zip` examined main
 `30a3ccbd` immediately before PR #48. PR #48 changed documentation and editor
-wording only; PR #49 added roadmap documentation only. The audited processor,
-MIDI validation, keyboard queue, voice and SysEx source files remain unchanged
-on current main `3791325`. The audit's Linux component/model runs are useful
+wording only; PR #49 added roadmap documentation only. Since the audit, PR #50 corrected the reset-history test oracle and PR #52 fixed the malformed detune round-trip at component level. The audit's other processor, MIDI validation, keyboard queue and SysEx findings remain subject to their stated evidence limits on current main `675b553`. The audit's Linux component/model runs are useful
 evidence, but are not a full JUCE, firmware or DAW acceptance run. Preserve each
 finding's evidence class; do not promote a model result into a product pass.
 
-Audit disposition refreshed against main `3791325` on 2026-09-24:
-- N1 reset-history oracle correction is proposed in open PR #50; not merged.
-  The ROM-enabled reset-history/full CTest acceptance remains NOT RUN.
-- U2 malformed checksum-valid detune round-trip is a reproduced component-level
-  defect candidate. PR #52 proposes rejecting detune nibble 15 and adds a
-  six-operator checksum-valid regression; await CI and review before closing it.
+Audit disposition refreshed against main `675b553` on 2026-09-24:
+- N1 reset-history oracle correction merged in PR #50 (`675b553`). The ROM-enabled reset-history/full CTest acceptance remains NOT RUN; the merge fixes the test expectation, not a product audio defect.
+- U2 malformed checksum-valid detune round-trip was fixed in PR #52 (`cc2f4aa`): reject detune nibble 15 and cover all six operators with a checksum-valid regression. Keep the finding scoped to malformed input; do not generalize it to ordinary factory patches or call it a checksum defect.
 - PR #53 sends excluded pitches through the real processor in MONO
   characterization and adds a direct-engine Note 127 guard-bypass sensitivity
-  control; macOS/Windows CI passed on `a5cb765`. Local ROM-enabled execution
-  remains NOT RUN before closing T1.
+  control; macOS/Windows CI passed on its prior head; after synchronization with current main, rerun CI. Local ROM-enabled execution remains NOT RUN before closing T1.
 - N2 state/ROM identity mixing and U3 conditional CC32 queue pressure remain
   unconfirmed processor-level candidates. U1 is under test in open PR #54:
   macOS/Windows CI passed on `f08baff`; the new local-ROM regression has not
@@ -66,15 +60,13 @@ Audit disposition refreshed against main `3791325` on 2026-09-24:
   choosing a conservative non-zero or dynamic estimate. No host truncation has
   been reproduced yet; do not describe it as a confirmed audible defect.
 
-1. **N1 — repair the reset-history test oracle first.** In
-   `testExpandedHistory(measurePair)`, keep sending the full 0–127 proposal
-   through the public processor input, but expect only the 109 admitted notes
-   (12–120). Check both the release count and decoded pitches: for 0/1/16
-   repeats expect 0/219/3489 serial bytes respectively, and the decoded sequence
-   starts at Note 12. Do not re-enable filtered notes. Run
+1. **N1 — reset-history oracle correction merged (PR #50, `675b553`).**
+   The test now sends the full 0–127 proposal through the public processor but
+   expects only the 109 admitted notes (12–120), with the documented release
+   counts and decoded pitches. The code/test correction is merged; run
    `vdx7_reset_history_pair` and the complete local ROM-enabled CTest suite on
-   the same recorded SHA. The audit's source-derived oracle demonstrated the
-   mismatch; the actual ROM CTest remains NOT RUN until executed.
+   one recorded SHA before treating the local acceptance as complete. Those ROM
+   runs remain NOT RUN.
 
 2. **T1 — make the characterization test exercise the production filter.**
    Pass the disallowed MIDI events into the actual processor in the continuation
@@ -100,13 +92,11 @@ Audit disposition refreshed against main `3791325` on 2026-09-24:
    remains NOT RUN. Keep this distinct from project-state restore coverage and
    do not close U1 until the local test passes.
 
-5. **U2 — make packed-detune import/export contracts consistent.**
-   The component probe accepts a checksum-valid bank containing out-of-range
-   detune nibble 15, then produces a single-voice export rejected by its own
-   decoder, across all six operators. Add a regression and choose explicit
-   content rejection or documented normalization; preserve checksum checks and
-   valid round-trip behavior. Do not generalize this malformed-input result to
-   ordinary factory patches or call it a checksum defect.
+5. **U2 — packed-detune malformed-input fix merged (PR #52, `cc2f4aa`).**
+   A checksum-valid bank with detune nibble 15 is rejected consistently across
+   all six operators; the regression landed with the fix. Retain valid round-trip
+   coverage and keep the finding scoped to malformed input, not ordinary factory
+   patches or checksum correctness.
 
 6. **U3 — verify conditional CC32 admission before fixing it.**
    Reproduce the CC32 0–7 deferred-queue pressure in an actual processor
