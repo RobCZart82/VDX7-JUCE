@@ -1,5 +1,6 @@
 #include "PluginEditor.h"
 #include "VDX7AboutPanel.h"
+#include "VDX7Sysex.h"
 #include "VDX7MechanicalDrawing.h"
 #include <iostream>
 #include <memory>
@@ -570,6 +571,56 @@ int main(int argc, char** argv)
         require(restored.hasUnexportedEdits(), "single import preserves other dirty flags");
         require(restored.exportSyx(bankFile.getFile(),true,error), "bank export");
         require(bankFile.getFile().getSize()==4104 && !restored.hasUnexportedEdits(), "bank export acknowledges all voices");
+        // Model the asynchronous file-chooser interval: capture first, then
+        // apply a host automation edit through an audio callback before writing.
+        VDX7AudioProcessor::SyxExportSnapshot patchSnapshot;
+        require(restored.captureSyxExportSnapshot(false, patchSnapshot, error), "capture patch export snapshot");
+        require(patchSnapshot.message().size() == VDX7Sysex::kVoiceMessageSize,
+                "patch snapshot has one complete VCED message");
+        const auto levelId = VDX7ParameterIDs::operatorParameter(0, VDX7VoiceData::Parameter::outputLevel);
+        const auto levelBeforeEdit = juce::roundToInt(value(restored, levelId));
+        set(restored, levelId, levelBeforeEdit == 0 ? 1 : levelBeforeEdit - 1);
+        juce::AudioBuffer<float> exportAudio(2, 256);
+        juce::MidiBuffer exportMidi;
+        restored.prepareToPlay(48000, 256);
+        restored.processBlock(exportAudio, exportMidi);
+        require(restored.getCurrentProgram() == patchSnapshot.program(),
+                "host edit leaves selected program unchanged during export dialog");
+        VDX7AudioProcessor::SyxExportSnapshot editedPatch;
+        require(restored.captureSyxExportSnapshot(false, editedPatch, error)
+                && editedPatch.message() != patchSnapshot.message(),
+                "host automation changes live patch after snapshot capture");
+        juce::TemporaryFile snapshotPatchFile(".syx");
+        require(restored.exportSyxSnapshot(snapshotPatchFile.getFile(), patchSnapshot, error),
+                "write captured patch snapshot");
+        juce::MemoryBlock writtenPatch;
+        require(snapshotPatchFile.getFile().loadFileAsData(writtenPatch)
+                && writtenPatch.getSize() == patchSnapshot.message().size()
+                && std::memcmp(writtenPatch.getData(), patchSnapshot.message().data(), writtenPatch.getSize()) == 0,
+                "patch export writes the pre-dialog snapshot, not live RAM");
+        require(restored.hasUnexportedEdits(), "post-snapshot patch edit remains marked unexported");
+
+        VDX7AudioProcessor::SyxExportSnapshot bankSnapshot;
+        require(restored.captureSyxExportSnapshot(true, bankSnapshot, error), "capture bank export snapshot");
+        require(bankSnapshot.message().size() == VDX7Sysex::kBankMessageSize,
+                "bank snapshot has one complete VMEM message");
+        const auto levelAfterPatchEdit = juce::roundToInt(value(restored, levelId));
+        set(restored, levelId, levelAfterPatchEdit == 0 ? 1 : levelAfterPatchEdit - 1);
+        exportAudio.clear(); exportMidi.clear();
+        restored.processBlock(exportAudio, exportMidi);
+        VDX7AudioProcessor::SyxExportSnapshot editedBank;
+        require(restored.captureSyxExportSnapshot(true, editedBank, error)
+                && editedBank.message() != bankSnapshot.message(),
+                "host automation changes live bank after snapshot capture");
+        juce::TemporaryFile snapshotBankFile(".syx");
+        require(restored.exportSyxSnapshot(snapshotBankFile.getFile(), bankSnapshot, error),
+                "write captured bank snapshot");
+        juce::MemoryBlock writtenBank;
+        require(snapshotBankFile.getFile().loadFileAsData(writtenBank)
+                && writtenBank.getSize() == bankSnapshot.message().size()
+                && std::memcmp(writtenBank.getData(), bankSnapshot.message().data(), writtenBank.getSize()) == 0,
+                "bank export writes the pre-dialog snapshot, not live RAM");
+        require(restored.hasUnexportedEdits(), "post-snapshot bank edit remains marked unexported");
         auto exportedBank=ram(save(restored));
         require(restored.renameVoice("TEMP"), "edit before bank restore");
         require(restored.loadSyxFromFile(bankFile.getFile(),&error), "bank import");

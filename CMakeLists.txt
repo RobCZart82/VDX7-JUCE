@@ -81,6 +81,12 @@ add_executable(vdx7_latest_display_tests Tests/VDX7LatestDisplayTests.cpp)
 target_include_directories(vdx7_latest_display_tests PRIVATE Source)
 add_test(NAME vdx7_latest_display COMMAND vdx7_latest_display_tests)
 set_tests_properties(vdx7_latest_display PROPERTIES TIMEOUT 60)
+add_executable(vdx7_status_priority_tests Tests/VDX7StatusPriorityTests.cpp)
+target_include_directories(vdx7_status_priority_tests PRIVATE Source)
+target_link_libraries(vdx7_status_priority_tests PRIVATE juce::juce_core)
+target_compile_definitions(vdx7_status_priority_tests PRIVATE JUCE_USE_CURL=0 JUCE_WEB_BROWSER=0)
+add_test(NAME vdx7_status_priority COMMAND vdx7_status_priority_tests)
+set_tests_properties(vdx7_status_priority PROPERTIES TIMEOUT 20 LABELS "rom-free")
 add_executable(vdx7_bounded_file_tests Tests/VDX7BoundedFileTests.cpp)
 target_include_directories(vdx7_bounded_file_tests PRIVATE Source)
 target_link_libraries(vdx7_bounded_file_tests PRIVATE juce::juce_core)
@@ -151,6 +157,7 @@ target_sources(VDX7 PRIVATE
     Source/PluginEditor.cpp
     Source/VDX7AboutPanel.h
     Source/VDX7AboutPanel.cpp
+    Source/VDX7StatusPresentation.h
     Source/VDX7Algorithms.h
     Source/VDX7AlgorithmView.h
     Source/VDX7MechanicalDrawing.h
@@ -244,7 +251,8 @@ endif()
 # Shared by normal CI and exact-commit candidates. Every integration runner
 # must compile even without a ROM; execution stays opt-in and local only.
 add_custom_target(vdx7_ci_checks DEPENDS
-    vdx7_user_bank_tests vdx7_deferred_midi_tests vdx7_latest_display_tests vdx7_bounded_file_tests vdx7_voice_data_tests
+    vdx7_user_bank_tests vdx7_deferred_midi_tests vdx7_latest_display_tests vdx7_status_priority_tests
+    vdx7_bounded_file_tests vdx7_voice_data_tests
     vdx7_algorithm_tests vdx7_resampling_tests vdx7_gui_header_tests vdx7_stress_tests
     vdx7_processor_tests vdx7_stability_tests vdx7_midi_range_tests vdx7_timing_tests)
 add_custom_target(vdx7_all_tests DEPENDS vdx7_ci_checks)
