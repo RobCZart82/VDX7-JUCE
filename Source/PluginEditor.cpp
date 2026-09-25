@@ -1261,7 +1261,7 @@ void VDX7AudioProcessorEditor::resized()
         const float x = 52.0f + static_cast<float>(i) * 33.0f;
         pitchEnvelopeCaptions_[i].setBounds(referenceRect(x, 404, 28, 12));
         pitchEnvelopeFaders_[i].setBounds(referenceRect(x, 414, 28, 88));
-        pitchEnvelopeValues_[i].setBounds(referenceRect(x, 502, 28, 18));
+        pitchEnvelopeValues_[i].setBounds(referenceRect(x, 494, 28, 18));
     }
     for (std::size_t i = 0; i < voiceKnobs_.size(); ++i)
     {
