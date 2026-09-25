@@ -193,6 +193,34 @@ struct VDX7RegressionAccess
         }
         require(!p.getMonoCorrectionStatus().requested, "native mode restored after range acceptance");
     }
+    static void checkFactoryCc32DeferredCapacity(VDX7AudioProcessor& p, bool hasFactoryVoices)
+    {
+        require(p.factoryVoicesAvailable_.load(std::memory_order_acquire) == hasFactoryVoices,
+                "factory-image control has expected availability");
+        p.prepareToPlay(48000, 256);
+        juce::AudioBuffer<float> audio(2, 256);
+        juce::MidiBuffer events;
+        const int bankEvents = hasFactoryVoices ? 255 : 256;
+        for (int i = 0; i < bankEvents; ++i)
+            events.addEvent(juce::MidiMessage::controllerEvent(1, 32, i % 8), 0);
+        events.addEvent(juce::MidiMessage::noteOn(1, 60, uint8_t(100)), 0);
+
+        // Hold the actual engine mutex on another thread so processBlock must
+        // decide whether to consume deferred event capacity before engine-side
+        // no-factory rejection can run.
+        contend(p, events);
+        require(p.deferredMidi_.active(), "contended processBlock creates deferred timeline");
+        events.clear();
+        p.processBlock(audio, events);
+        require(p.engine_.activeMidiNotes_[60], hasFactoryVoices
+                    ? "available CC32 flood fits with the following note"
+                    : "unavailable CC32 flood cannot evict the following note");
+        if (hasFactoryVoices)
+            require(p.engine_.currentBank() == 6, "available deferred CC32 requests retain order");
+        events.addEvent(juce::MidiMessage::noteOff(1, 60), 0);
+        p.processBlock(audio, events);
+        require(!p.engine_.hasHeldMidiNotes(), "note releases after deferred CC32 control");
+    }
     static void checkSerialOverflow(VDX7Engine& e)
     {
         e.dx7_.midiSerialRx.flush();
@@ -563,6 +591,7 @@ int main(int argc, char** argv)
             VDX7RegressionAccess::checkSupportedNoteRange(input);
             VDX7RegressionAccess::checkInputChannel(input);
             VDX7RegressionAccess::checkStateRestoreDropsDeferredMidi(input);
+            VDX7RegressionAccess::checkFactoryCc32DeferredCapacity(input, true);
         }
         auto engineStorage = std::make_unique<VDX7Engine>();
         auto& engine = *engineStorage;
@@ -608,6 +637,7 @@ int main(int argc, char** argv)
         require(companionFile.deleteFile(), "remove temporary companion");
         require(companion.loadRomFromFile(firmwareFile) && !companion.hasFactoryVoices(),
                 "absent companion loads firmware only");
+        VDX7RegressionAccess::checkFactoryCc32DeferredCapacity(companion, false);
 
         auto originalStorage = std::make_unique<VDX7AudioProcessor>(false);
         auto& original = *originalStorage;
