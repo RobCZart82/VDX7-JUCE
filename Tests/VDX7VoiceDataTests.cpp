@@ -4,6 +4,8 @@
 #include <array>
 #include <cstdlib>
 #include <iostream>
+#include <utility>
+#include <vector>
 
 namespace
 {
@@ -14,6 +16,14 @@ void require(bool condition, const char* message)
         std::cerr << "FAILED: " << message << '\n';
         std::exit(1);
     }
+}
+
+void updateVmemChecksum(std::vector<uint8_t>& message)
+{
+    unsigned sum = 0;
+    for (std::size_t i = 6; i < message.size() - 2; ++i)
+        sum += message[i];
+    message[message.size() - 2] = static_cast<uint8_t>((128 - (sum & 127)) & 127);
 }
 }
 
@@ -160,6 +170,41 @@ int main()
     auto bankMessage=VDX7Sysex::encode(bank);
     require(bankMessage.size()==4104 && bankMessage[3]==9,"VMEM header");
     require(VDX7Sysex::decode(bankMessage,decoded) && decoded==bank,"VMEM full bank round trip");
+
+    // A valid Yamaha checksum only proves transport integrity; it does not
+    // make semantically out-of-range VMEM parameter bytes valid.
+    std::vector<std::pair<std::size_t, uint8_t>> invalidVmemFields;
+    for (int operatorIndex = 0; operatorIndex < VDX7VoiceData::kOperatorCount; ++operatorIndex)
+    {
+        const auto opOffset = static_cast<std::size_t>(
+            (VDX7VoiceData::kOperatorCount - 1 - operatorIndex)
+            * VDX7VoiceData::kPackedOperatorSize);
+        for (int field = 0; field < 8; ++field)
+            invalidVmemFields.emplace_back(opOffset + static_cast<std::size_t>(field), 100);
+        for (int field : {8, 9, 10, 14, 16})
+            invalidVmemFields.emplace_back(opOffset + static_cast<std::size_t>(field), 100);
+        invalidVmemFields.emplace_back(opOffset + 12, 0x78); // Detune nibble 15.
+    }
+    for (int field = 102; field <= 109; ++field)
+        invalidVmemFields.emplace_back(static_cast<std::size_t>(field), 100);
+    for (int field = 112; field <= 115; ++field)
+        invalidVmemFields.emplace_back(static_cast<std::size_t>(field), 100);
+    invalidVmemFields.emplace_back(116, 0x0c); // LFO waveform 6.
+    invalidVmemFields.emplace_back(117, 49);   // Transpose beyond +24.
+    for (const auto& invalidField : invalidVmemFields)
+    {
+        auto invalidVmem = bankMessage;
+        invalidVmem[6 + invalidField.first] = invalidField.second;
+        updateVmemChecksum(invalidVmem);
+        require(!VDX7Sysex::decode(invalidVmem, decoded),
+                "reject checksum-valid VMEM with an out-of-range semantic field");
+        require(decoded == bank, "semantic-invalid VMEM rejection preserves decoded destination");
+
+        auto invalidPackedBank = bank;
+        invalidPackedBank[invalidField.first] = invalidField.second;
+        require(VDX7Sysex::encode(invalidPackedBank).empty(),
+                "reject out-of-range semantic field when exporting packed VMEM");
+    }
 
     auto invalidPackedVoice = synthetic;
     invalidPackedVoice[12] = static_cast<uint8_t>((invalidPackedVoice[12] & 0x87) | 0x78);

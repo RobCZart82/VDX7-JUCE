@@ -37,7 +37,7 @@ bool decode(const std::vector<uint8_t>& m, std::vector<uint8_t>& packed)
         for (int voice = 0; voice < 32; ++voice)
         {
             const auto* packedVoice = result.data() + voice * VDX7VoiceData::kPackedVoiceSize;
-            if (!VDX7VoiceData::hasValidOperatorDetune(
+            if (!VDX7VoiceData::hasValidPackedVoice(
                     packedVoice, VDX7VoiceData::kPackedVoiceSize))
                 return false;
         }
@@ -73,7 +73,7 @@ std::vector<uint8_t> encode(const std::vector<uint8_t>& packed)
     if (!single && packed.size() != 4096) return {};
     const int voiceCount = single ? 1 : 32;
     for (int voice = 0; voice < voiceCount; ++voice)
-        if (!VDX7VoiceData::hasValidOperatorDetune(
+        if (!VDX7VoiceData::hasValidPackedVoice(
                 packed.data() + voice * VDX7VoiceData::kPackedVoiceSize,
                 VDX7VoiceData::kPackedVoiceSize))
             return {};
