@@ -40,6 +40,42 @@ including release, sustain, transport and subsequent normal-register notes.
 3. Real DAW acceptance, remaining GUI finish/scale checks and release packaging.
    PR #47 is merged; publishing remains a separate approval.
 
+### Current status authority
+
+The milestone narratives further down this file were written over several
+weeks. Their unchecked boxes are not all current: some describe work later
+implemented in source or covered by a validation report. Use this section,
+`RELEASE_CHECKLIST_1.0_RC.md`, and the linked validation records as the current
+release status; reconcile historical checkboxes instead of treating every old
+unchecked item as an unfinished feature.
+
+Implemented in the current source; release acceptance is separate:
+- Native and advanced Correct MONO settings remain available; both filter
+  Note On/Off outside inclusive Notes 12–120 before deferred/engine delivery.
+- PERFORMANCE/SETTINGS controls, project persistence, USER-bank Save As,
+  LCD bank/program navigation, numbered algorithm selection and the three GUI
+  views are implemented. Multiple named USER banks are not supported; decide
+  whether to ship that as a documented 1.0 limitation.
+- The LCD-style previous/next arrows, exact `VDX7 Mk 1.` vector wordmark,
+  two-line header copy, common lower alignment, green/yellow/red meters, operator
+  row divider and three section-tone header accents exist in the current source.
+  The last two details were confirmed/added in PR #63.
+
+Still open and release-relevant:
+- Run the complete ROM-free and opt-in v1.8 ROM CTest suites on one exact
+  release-candidate SHA, preserving logs and separate known-firmware
+  characterization from product acceptance.
+- Perform REAPER Note 11/12 and 120/121 boundary tests in both Settings modes,
+  including every Note Off encoding, sustain, repeated notes, transport/loop,
+  and a subsequent supported note. Then run the full host/platform matrix below.
+- Complete real GUI/audio lock-overlap, suspension/bypass, allocation and
+  deferred-MIDI timing acceptance; test SRC frequency/aliasing/latency and
+  measure offline-render release tails before deciding whether zero host-tail
+  metadata needs a change. No release-tail truncation is currently confirmed.
+- Finish whole-interface visual/HiDPI acceptance and package/legal/version
+  gates. The current four manually compiled component tests and green PR builds
+  are not substitutes for these items.
+
 ### Audit follow-up — 2026-09-24 (reviewed against current main)
 
 The audit package `VDX7_AUDIT_WORK_30a3ccbd.zip` examined main
@@ -61,11 +97,11 @@ Audit disposition refreshed against main `176b757` on 2026-09-25:
   `VALIDATION_1.0_KEYBOARD_RANGE_ADMISSION.md`; PR #61 macOS/Windows CI passed
   and the change is merged in main `210b9b9`. ROM-backed processor acceptance
   remains NOT RUN.
-- N2 save/ROM identity: a deterministic opt-in processor interleaving regression
-  and engine-generation-bound path snapshot are now prepared in the current
-  change. The local ROM-backed execution is NOT RUN here (CMake/CTest unavailable),
-  so do not yet label runtime reproduction or acceptance PASS. The check is
-  registered only when the user supplies/enables the local ROM suite.
+- N2 save/ROM identity: the engine-generation-bound path snapshot and
+  deterministic opt-in processor interleaving regression merged in PR #62
+  (`9d1970a`). Local ROM-backed execution is still NOT RUN here
+  (CMake/CTest unavailable); run it with the complete local ROM suite before
+  declaring runtime acceptance.
 - MIDI Note 12–120 policy is consistent in product admission; internal 0–127
   cleanup/release loops are intentional. ROM-backed and DAW acceptance items
   remain NOT RUN unless separately recorded in their validation reports.
@@ -172,10 +208,10 @@ macOS sanitizer run are component evidence only.
 
 7. **Lower-priority hardening:** N3 bounded import reads merged in PR #60;
    processor-level failed-import preservation remains to verify with ROM.
-   N4 pre-admission for the programmatic keyboard API is implemented in the
-   current candidate. Keep it scoped to that API: the visible keyboard is 36–96
-   and normal host MIDI is already filtered. Neither item is a reported normal-
-   GUI crash.
+   N4 pre-admission for the programmatic keyboard API merged in PR #61
+   (`210b9b9`). Keep it scoped to that API: the visible keyboard is 36–96 and
+   normal host MIDI is already filtered. Neither item is a reported normal-GUI
+   crash.
 
 8. **Release validation:** after fixes, run the full local suite on the final
    source SHA and retain separate test logs. Recheck REAPER boundaries 11/12 and
@@ -316,8 +352,9 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
   REAPER validation at Note 11/12 and 120/121 is still required before release.
 - [x] Configure PR ROM-free CI and opt-in local ROM integration CTest gate.
   All integration runners now compile through the shared CI target. Known-v1.8
-  ownership groups have a separately labelled, required firmware prerequisite;
-  public CI executes six ROM-free tests, including the Q2 publication helper.
+  ownership groups have a separately labelled, required firmware prerequisite.
+  The current CMake configuration registers nine ROM-free CTest cases; CI build
+  success does not establish that the private-ROM cases ran.
 - [x] Run the development CI configuration on GitHub: macOS and Windows passed
   on `5164fabd36c8fdd745e272fc1f493c0c352c1ced`. Every subsequent change needs
   fresh checks; this does not constitute RC or host acceptance.
@@ -331,16 +368,19 @@ development to the agreed GUI/function integration and Save As workflow below.
 Release publication remains outside this authorization. Each chapter still needs
 fresh PR checks and user merge before the next chapter.
 
-- [ ] PERFORMANCE/SETTINGS scope implemented and tested: pitch range, controller
-      assignments, MIDI input channel and tuning, preserving state compatibility.
-- [ ] Decide mono/portamento scope from firmware capabilities and host tests.
+- [x] PERFORMANCE/SETTINGS scope implemented with project-state and compatibility
+      regressions: pitch-bend range/step, controller assignments, MIDI channel
+      filtering and master tuning. Physical host/controller acceptance remains open.
+- [x] Product scope decision: Native firmware is the recommended default and
+      Correct MONO Note 0 remains an advanced option; both modes support only
+      Notes 12–120. Firmware/REAPER acceptance is still open.
 - [ ] Measure resampling/aliasing; quality implementation accepted against references.
   Milestone 3B adds band-limited SRC, selected spectral limits, exact reported
   latency and CPU diagnostics (`VALIDATION_1.0_BANDLIMITED_SRC.md`). Physical
   reference/host listening and latency-compensation acceptance remain open.
 - [ ] Current documentation matches all shipping features and limitations.
 
-## Agreed GUI direction — 2026-09-20 (not implemented)
+## Agreed GUI direction — 2026-09-20 (partly implemented; acceptance pending)
 
 First implementation pass: warm enclosure/panels, yellow-green LCD, matte knobs,
 restrained active buttons, ON/OFF performance switches, GYR mark in ABOUT and
@@ -353,10 +393,11 @@ Short field labels and grouped control bounds are checked at three editor sizes.
 
 The three GUI visual concepts remain layout references, not a finished skin.
 The approved hardware-inspired material/colour direction is specified below.
-The following functional/layout requirements were explicitly agreed with the
-user. Record them now; implementation follows the stabilization work.
+The requirements below remain the design contract. Implementation checkboxes
+are updated where verified in source; real-host and HiDPI acceptance remains
+separate.
 
-- [ ] Make the LCD the single bank/patch navigation centre: bank selector,
+- [x] Make the LCD the single bank/patch navigation centre: bank selector,
   direct program selector, current program number/name and modified-state `*`.
 - [x] LCD left/right arrows provide the same previous/next preset behavior as
   the existing header quick switch. Remove that header switch and its duplicate
@@ -366,10 +407,10 @@ user. Record them now; implementation follows the stabilization work.
   algorithm diagram. Selection updates the diagram immediately. Remove the
   duplicate GLOBAL ALGO encoder, while retaining the existing underlying host
   parameter ID/index and saved-project/automation compatibility.
-- [ ] Output level-meter LEDs run predominantly GREEN from the bottom upward,
+- [x] Output level-meter LEDs run predominantly GREEN from the bottom upward,
   then YELLOW near the top and RED at the very top. No blue/cyan lower LEDs.
-  Exact level thresholds and clipping indication remain implementation details
-  to specify and validate; the concepts do not define a calibrated meter scale.
+  The current renderer implements green/yellow/red segments; calibrated meter
+  thresholds and clipping interpretation still need host/listening acceptance.
 
 Magyar összefoglaló: állandó LCD-s bank-/hangszínkezelés bal–jobb léptetéssel;
 a felső gyorsváltó megszűnik. Az algoritmusábra mellett 1–32-es lenyíló lista
@@ -420,7 +461,8 @@ nélkül. Ez elfogadott tervezési irány, nem már elkészült GUI vagy jogi mi
 
 ### Header alignment and section dividers — approved 2026-09-20
 
-These are recorded design requirements, not completed implementation.
+These design requirements are partly implemented; refer to the checklist below
+for implementation status and keep final visual/host acceptance open.
 
 ### Operator space and vector control finish — implementation chapter
 
@@ -460,20 +502,18 @@ physical HiDPI and Windows host checks remain; no stable-version claim is made.
   28-unit UTILITY/frame clearance. Local GUI tests pass at 960/1440/1600 widths.
   Planned percentage-size settings and real-host HiDPI acceptance remain open.
 
-- [ ] LCD previous/next arrow buttons must look like graphics drawn by the LCD,
-  matching the BANK and PATCH dropdowns: yellow-green display background, dark
-  arrows and restrained dark outlines. No raised hardware-button treatment,
-  metallic bezel or external glowing turquoise button skin. Keep both arrows
-  inside the display layout with clear spacing from the selectors and patch text.
-  Provide readable LCD-style hover, pressed and keyboard-focus states, adequate
-  hit areas, and retain the existing previous/next preset behaviour across views.
+- [x] LCD previous/next arrow buttons use LCD-colour backgrounds, dark arrows and
+  restrained outlines, with hover/pressed/focus states and retained navigation.
+  Verify hit targets and visual clearance at supported sizes/hosts.
 
-- [ ] Header wordmark text is exactly `VDX7 Mk 1.`. Align the bottom of the
+- [x] Header wordmark text is exactly `VDX7 Mk 1.`. Align the bottom of the
   `Mk 1.` lettering with the VDX7 wordmark, as in the corrected vector draft.
-- [ ] Place `HARDWARE EMULATION` and, underneath it, `Original firmware required.`
+- [x] Place `HARDWARE EMULATION` and, underneath it, `Original firmware required.`
   beside the logo. The logo block, the two-line text block and the right-hand
   action-button row share a common lower alignment guide. Keep button bottoms
   aligned, button heights consistent, and labels vertically centred within buttons.
+  Source geometry aligns their visible lower edges; final visual/host confirmation
+  remains part of the GUI acceptance gate.
 - [ ] Use consistent horizontal/vertical guides, spacing and panel padding
   throughout the GUI. No action button may intrude into the LCD, its frame or
   navigation controls; neither visible bounds nor interactive hit areas may overlap.
@@ -497,7 +537,7 @@ vagy egymást fedő gomb. Az operátor két potmétersora közé teljes al-szekc
 elválasztó kerüljön; minden szeparátor az érintett szekció teljes belső szélességén
 fusson végig, egységes margókkal.
 
-## GUI/function integration chapters — approved 2026-09-20
+## GUI/function integration — status reconciled 2026-09-25
 
 - [x] SETTINGS host MIDI input channel: OMNI or 1-16, legacy/missing-field
   projects default to OMNI. Switching releases old notes/sustain and discards
@@ -512,77 +552,19 @@ fusson végig, egységes margókkal.
   next separate slice and must preserve legacy project behavior by default.
   See `VALIDATION_1.0_MASTER_TUNE.md`; final skin/host acceptance remain open.
 
-The PERFORMANCE concept based on visual concept 3 is the agreed layout direction,
-not a specification of implemented functionality or controller default values.
-Implement real bindings, persistence and round-trip tests alongside each control.
-The existing skin remains in use during the first functional integration chapter.
+The approved PERFORMANCE layout and controls are implemented with project
+persistence; SETTINGS provides input-channel filtering and master tuning. The
+existing 148 host parameter IDs/indices are preserved. USER-bank Save As uses a
+single persistent 32-slot library, explicit overwrite confirmation and LCD
+load-copy; multiple named libraries are not implemented. SysEx export remains
+separate from project-level PERFORMANCE state.
 
-1. **Navigation/export wiring (merged PR #11):** move preset arrows to the LCD,
-   replace the algorithm encoder with its numbered dropdown using the unchanged
-   host parameter, expose existing single-voice and 32-voice SysEx export through
-   a persistent SAVE AS... header button. This is file export, NOT yet a USER
-   library. Existing UTILITY export remains available. Factory ROM is never written.
-2. **Firmware-backed PERFORMANCE:** establish parameter ranges and behavior from
-   the core/firmware, then connect the approved play mode, pitch bend, portamento
-   and four controller-assignment panels. No decorative active controls. Keep LCD,
-   algorithm, output, Save As and keyboard available across views. Test both GUI
-   and MIDI paths, project restore and compatibility with the 148 existing IDs/indices.
-   SETTINGS MIDI channel/tuning are included in this functional work.
-   First slice: four controller range/assignment panels connected to firmware
-   battery RAM, persistent project recall and EDIT/PERFORMANCE switching.
-   No new host automation IDs; these are message-thread global controls.
-   Pitch-bend range/step now have firmware-backed PERFORMANCE selectors (0-12)
-   and project persistence. The extra wrapper pitch offset was removed: zero
-   range is respected and nonzero step follows the firmware's own quantisation.
-   Next functional slice adds POLY/MONO, mode-dependent portamento choices,
-   glissando and time 0-99. Mode switching ends notes through native firmware CC
-   processing; time updates/recalled time refresh the firmware's derived rate.
-   Physical pedal/host acceptance and SETTINGS channel/tuning remain open.
-3. **USER preset storage / Save As:** default destination is a USER bank + slot,
-   with name entry and explicit occupied-slot overwrite confirmation. Preserve
-   factory originals; make saved USER banks selectable from the LCD. Also support
-   single-patch export and whole-bank export. Separate voice payload from global
-   PERFORMANCE settings; ordinary voice SysEx must not silently claim to contain
-   controller/global state. DAW project save remains independent. Verify exact
-   export/import, cancellation, failed writes, changes while dialogs are open,
-   missing files, bank switching and session restart before marking complete.
-   Approved save logic: ONE header SAVE AS... button opens a shared dialog with
-   **Patch -> USER bank** as the default, **Export Patch...** and **Export Bank...**
-   as explicit alternatives. A persistent custom bank can be populated one patch
-   at a time; saving a patch replaces only the chosen slot. Ask for the patch name
-   and destination slot, show the existing occupant before overwrite confirmation,
-   and retain all other slots. Factory originals remain unchanged.
-   UTILITY is for editing/organisation (rename, operator copy/paste, later bank
-   organisation), not a second save workflow. Remove its duplicate export items
-   only when the complete shared Save As dialog replaces them. No additional
-   Save Patch / Save Bank header buttons. Global PERFORMANCE settings remain
-   project state, never silently included in voice SysEx.
-   First storage slice implements a versioned, checked 32-slot bank file and
-   conflict-aware patch updates. This backend is tested independently without
-   ROM. The next integration slice connects the backend to a shared SAVE AS dialog
-   (default USER action, name, 32 destination slots and overwrite confirmation),
-   a per-user library folder, and LCD `USER (load copy)` selection. Loading opens
-   an independent CUSTOM working copy, selecting its first occupied slot; edits
-   never automatically overwrite the library file. Save-copy retains working-bank
-   dirty markers conservatively. UTILITY now contains editing tools only.
-   Remaining acceptance: real DAW interaction, Windows GUI validation, multi-instance
-   library usage, and final visual styling. Multiple named USER banks are not yet implemented.
-4. **Visual integration and acceptance:** combine concept 3's approved layout
-   with the hardware-inspired material/colour direction above for
-   EDIT/PERFORMANCE/UTILITY, green-yellow-red meters, resize/readability
-   checks and real host interaction checks. Generated mockup is reference only,
-   not a screenshot of the shipping plugin. No release until all release gates pass.
-
-- [x] First-stage SAVE AS... button exposes real voice/bank SysEx file export.
-- [ ] USER bank library, destination slot and non-destructive Save As workflow.
-- [x] USER-bank storage foundation: persistent 32-slot file, single-slot update,
-  overwrite/conflict protection, checked temporary-file replacement and ROM-free CI tests.
-- [x] Initial USER GUI wiring: shared Save As dialog, immutable patch capture,
-  per-user USER bank, LCD load-copy action and processor/session regression tests.
-- [ ] PERFORMANCE panel layout with firmware-backed bindings and project recall.
-- [x] First PERFORMANCE slice: four controller ranges and 12 assignment switches,
-  project/missing-ROM recall, real MIDI/audio regression and persistent LCD/header.
-- [ ] Final hardware-inspired visual treatment, original VDX7 identity and host usability acceptance.
+The LCD bank/program selectors and previous/next arrows, algorithm dropdown,
+output controls, Save As and keyboard remain available as designed. The GUI's
+warm hardware-inspired direction, vector VDX7/GYR identity and About content are
+implemented to varying degrees, but full visual, host, HiDPI and Windows
+acceptance remains open. Retain the agreed design requirements above as the
+visual contract; do not treat the original concept images as production assets.
 
 ## Reviewed audit follow-up (2026-09-21)
 
@@ -642,6 +624,5 @@ Work in separate reviewed PRs; no final release/tag or firmware upload.
 - [ ] Final release notes and package installation instructions approved.
 - [ ] Publish stable release only after the preceding gates; never clobber old assets.
 
-The installed plugin and the original local development checkout are preserved.
-Local full-range development commit 80ebf54 and reviewed main 483daf7 have been
-merged into the isolated codex/1.0-stabilization branch.
+The detailed milestones above include historical project context; do not use
+their older branch/commit descriptions as the current checkout or release SHA.
