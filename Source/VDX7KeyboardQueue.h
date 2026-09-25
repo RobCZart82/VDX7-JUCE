@@ -2,6 +2,7 @@
 #include <array>
 #include <atomic>
 #include <cstdint>
+#include "VDX7MidiValidation.h"
 
 // Producer calls are serialized by MidiKeyboardState's own lock. Audio is
 // the only consumer. Never acquire that UI lock from the audio callback.
@@ -10,6 +11,16 @@ class VDX7KeyboardQueue
 public:
     using Event = std::array<uint8_t, 3>;
     static constexpr uint32_t capacity = 256;
+    static bool isSupportedNoteEvent(const Event& event) noexcept
+    {
+        const auto kind = event[0] & 0xf0;
+        return (kind == 0x80 || kind == 0x90)
+            && VDX7MidiValidation::isSupportedNoteNumber(event[1]);
+    }
+    bool pushNote(Event event) noexcept
+    {
+        return isSupportedNoteEvent(event) && push(event);
+    }
     bool push(Event event) noexcept
     {
         if (overflow_.load(std::memory_order_acquire)) return false;

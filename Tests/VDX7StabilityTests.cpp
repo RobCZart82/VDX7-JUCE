@@ -168,6 +168,26 @@ struct VDX7RegressionAccess
             p.processBlock(audio, midi);
             require(!p.engine_.hasHeldMidiNotes(), "unsupported GUI key release remains inert");
 
+            // Public keyboardState() callers can submit all 128 MIDI pitches;
+            // unsupported UI events must be rejected before the 256-event
+            // queue, or their flood can discard the next supported key.
+            for (int i = 0; i < 160; ++i)
+            {
+                const int unsupported = i % 2 == 0 ? i % 12 : 121 + (i % 7);
+                p.keyboardState_.noteOn(1, unsupported, 1.0f);
+                p.keyboardState_.noteOff(1, unsupported, 0.0f);
+            }
+            p.keyboardState_.noteOn(1, 60, 1.0f);
+            midi.clear();
+            p.processBlock(audio, midi);
+            require(p.engine_.activeMidiNotes_[60],
+                    "unsupported programmatic keyboard flood cannot displace a supported note");
+            p.keyboardState_.noteOff(1, 60, 0.0f);
+            midi.clear();
+            p.processBlock(audio, midi);
+            require(!p.engine_.hasHeldMidiNotes(),
+                    "supported keyboard note releases after unsupported-event flood");
+
             // Also flood out-of-range events while rendering is deferred: they
             // must not consume deferred capacity or trigger its overflow panic.
             midi.clear();
