@@ -161,6 +161,25 @@ int main()
     require(bankMessage.size()==4104 && bankMessage[3]==9,"VMEM header");
     require(VDX7Sysex::decode(bankMessage,decoded) && decoded==bank,"VMEM full bank round trip");
 
+    auto invalidPackedVoice = synthetic;
+    invalidPackedVoice[12] = static_cast<uint8_t>((invalidPackedVoice[12] & 0x87) | 0x78);
+    require(!VDX7VoiceData::hasValidOperatorDetune(invalidPackedVoice.data(), invalidPackedVoice.size()),
+            "packed voice rejects invalid detune nibble");
+    require(VDX7Sysex::encode(invalidPackedVoice).empty(),
+            "VCED encoder rejects invalid packed detune");
+    for (int voiceIndex = 0; voiceIndex < 32; ++voiceIndex)
+        for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
+        {
+            auto invalidPackedBank = bank;
+            const auto offset = static_cast<std::size_t>(
+                voiceIndex * VDX7VoiceData::kPackedVoiceSize
+                + (VDX7VoiceData::kOperatorCount - 1 - op)
+                    * VDX7VoiceData::kPackedOperatorSize + 12);
+            invalidPackedBank[offset] = static_cast<uint8_t>((invalidPackedBank[offset] & 0x87) | 0x78);
+            require(VDX7Sysex::encode(invalidPackedBank).empty(),
+                    "VMEM encoder rejects invalid detune in every voice/operator slot");
+        }
+
     // A bulk-bank checksum does not make every packed voice field valid.
     // Probe the invalid detune code on all six operators and ensure rejection
     // is transactional (the previous decoded output remains unchanged).

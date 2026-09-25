@@ -66,16 +66,16 @@ ran the probe against the current source with Apple Clang 21 + ASan/UBSan; all
 stated observations reproduced, and no sanitizer diagnostic occurred. This was
 not a JUCE/plugin, firmware, DAW, or full CTest run.
 
-- **U2 live-path follow-up — reproduced component/source mismatch.** PR #52
-  rejects invalid detune nibble 15 during file decode, but the live-bank
-  validator checks framing/checksum only and the live engine path copies the
-  packed VMEM bytes after that validation. The probe reproduced all 192
-  voice/operator placements passing live admission while failing file decode;
-  the encoder also produces a single-voice export that its decoder cannot
-  re-import. Add tests for live admission and export/import consistency, then
-  validate a checksum-valid six-operator bank through the real processor path.
-  Keep this distinct from the already-merged file-import fix; no firmware or
-  factory-patch defect is implied.
+- **U2 live-path follow-up — targeted code/tests added; processor acceptance pending.**
+  PR #52 rejects invalid detune nibble 15 during file decode, but the live-bank
+  validator checked framing/checksum only, and the encoder could emit malformed
+  packed input. This follow-up shares a packed-voice detune validator across
+  live admission and SysEx decode/encode. Standalone sanitizer tests reject all
+  192 voice/operator placements at both live admission and bank export, plus
+  malformed single-voice export; valid round-trip controls pass. The actual
+  processor live-bank path still needs an integration regression. Keep this
+  distinct from the already-merged file-import fix; no firmware or factory-
+  patch defect is implied.
 - **N6 deferred-event capacity — component reproduction.** With the same
   64-sample initial timeline lag, 257 CC events in one 16,448-sample callback
   trigger one panic and deliver none; the same event sequence spread over 257
@@ -126,11 +126,12 @@ macOS sanitizer run are component evidence only.
    on the merge commit. Local v1.8 ROM execution and the full ROM suite remain
    NOT RUN; keep runtime acceptance open and distinct from project-state restore.
 
-5. **U2 — packed-detune malformed-input fix merged (PR #52, `cc2f4aa`).**
-   A checksum-valid bank with detune nibble 15 is rejected consistently across
-   all six operators; the regression landed with the fix. Retain valid round-trip
-   coverage and keep the finding scoped to malformed input, not ordinary factory
-   patches or checksum correctness.
+5. **U2 — packed-detune malformed-input fix merged (PR #52, `cc2f4aa`); live/export
+   follow-up prepared.** The current follow-up rejects nibble 15 in live bank
+   admission and in single-voice/bank SysEx encoding, with all 192 slots covered
+   by standalone sanitizer tests. Full processor-route acceptance remains open.
+   Keep the finding scoped to malformed input, not ordinary factory patches or
+   checksum correctness.
 
 6. **U3 — conditional CC32 admission: component case reproduced; processor test pending.**
    The 2026-09-24 audit probe showed 256 factory-bank-select messages plus a

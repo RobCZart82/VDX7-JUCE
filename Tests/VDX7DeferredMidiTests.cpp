@@ -161,6 +161,27 @@ static void checkSysExAdmission()
     corruptBank[128] = 0x80;
     require(!VDX7MidiValidation::isLiveBankSysex(corruptBank.data(), corruptBank.size()));
 
+    // Checksum-valid packets with an impossible +8 detune are rejected at the
+    // live boundary, in every voice/operator slot, before engine import.
+    for (int voice = 0; voice < 32; ++voice)
+        for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
+        {
+            corruptBank = validBank;
+            const auto detuneByte = static_cast<std::size_t>(
+                6 + voice * VDX7VoiceData::kPackedVoiceSize
+                + (VDX7VoiceData::kOperatorCount - 1 - op)
+                    * VDX7VoiceData::kPackedOperatorSize + 12);
+            corruptBank[detuneByte] = static_cast<uint8_t>((corruptBank[detuneByte] & 0x87) | 0x78);
+            int sum = 0;
+            for (std::size_t i = 6; i < 4102; ++i) sum += corruptBank[i];
+            corruptBank[4102] = static_cast<uint8_t>((128 - (sum & 0x7f)) & 0x7f);
+            sum = 0;
+            for (std::size_t i = 6; i <= 4102; ++i) sum += corruptBank[i];
+            require((sum & 0x7f) == 0, "invalid-detune test packet has valid checksum");
+            require(!VDX7MidiValidation::isLiveBankSysex(corruptBank.data(), corruptBank.size()),
+                    "live validation rejects invalid detune in every voice/operator slot");
+        }
+
     const auto survivingNote = [&](const uint8_t* invalid, std::size_t invalidSize, int repetitions)
     {
         VDX7DeferredMidi queue;
