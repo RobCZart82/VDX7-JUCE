@@ -9,9 +9,15 @@ indices compatible with saved projects.
 
 ### Current next steps — 2026-09-25
 
-Latest checkpoint: PR #60 was merged to `main` as `f57b072` after macOS and
-Windows Actions passed. It bounds ROM/SysEx import file reads. Private-ROM
-acceptance remains a separate gate.
+Latest checkpoint: PR #63 was merged to `main` as `cbbd213` after macOS and
+Windows Actions passed. It adds the approved three header accent lines and a
+ROM-free pixel regression at 75/100/125% editor sizes. The operator-row
+separator was confirmed already implemented and its stale unchecked item was
+corrected in that PR. Four additional ROM-free source-level test executables
+were manually compiled and passed on source commit `3d6218797a1af2fd09e8484fe0b42ae2f3f956e4`;
+see `VALIDATION_1.0_ROM_FREE_TESTS_2026-09-25.md`. This was not a CMake/CTest,
+plugin, GUI-host or firmware-backed run.
+Private-ROM acceptance remains a separate gate.
 `VALIDATION_MONO_SOAK.md` records the full 30-test run, separate desktop retry,
 dual-instance soak and remaining host boundaries. The user approved retaining
 both Native and Correct modes. Native remains the recommended default; Correct

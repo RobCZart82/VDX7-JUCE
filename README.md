@@ -8,6 +8,13 @@ This documentation describes current 1.0.0-dev functionality. The image below is
 
 [Magyar dokumentáció](README_HU.md)
 
+> **Development status — 25 September 2026:** the latest merged checkpoint is
+> `main` commit `cbbd213` (PR #63). macOS and Windows CI passed for that change.
+> VDX7 is still a development build, not an accepted 1.0.0 release. The 1.0.0
+> host, ROM-backed, platform and final GUI acceptance gates remain open; see
+> [the current status](DEVELOPMENT_1.0_HU_EN.md) and
+> [release checklist](ROADMAP_1.0.md).
+
 ![VDX7-JUCE v0.6.6 editor preview](docs/VDX7-v0.6.6.png)
 
 VDX7-JUCE is a six-operator FM instrument built around the VDX7 DX7 Mk I hardware-emulation core, using the portable Retromulator dx7Lib adaptation and JUCE. It is not a Dexed-based reimplementation.
@@ -93,9 +100,16 @@ A star beside the name indicates unexported edits. Saving the DAW project and ex
 
 Manual bank/ROM/SYX replacement warns about unexported edits. MIDI-driven bank changes do not open dialogs and can replace the bank: export important edits first. The marker is not undo history.
 
-## 8. What changed in this interface milestone
+## 8. Current interface development
 
-The v0.6 series adds clickable algorithm diagrams, mechanical wheel graphics, an OUTPUT fader, integrated LCD bank/program selectors, two-position sync switches, improved keyboard contrast/red felt, full-frame envelope grids and refined spacing. In v0.6.6, knob hover is subtler, OSC MODE becomes horizontal with a combined readout, and preset navigation is tightened.
+The current development interface has a vector `VDX7 Mk 1.` header, three
+divider-tone accent lines, LCD-based bank/program navigation, EDIT/PERFORMANCE/
+UTILITY views, an adjacent 1–32 algorithm selector, enlarged operator envelope
+controls and value-driven ribbed pitch/modulation wheels. The three header lines
+have a pixel regression at 75%, 100% and 125% editor widths. That check does not
+certify every control, display scale or host window at those sizes. The final
+hardware-inspired surface treatment and complete HiDPI/host visual acceptance
+are still in progress. The image above is only a historical v0.6.6 preview.
 
 ## 9. Known limitations
 
@@ -122,7 +136,16 @@ The v0.6 series adds clickable algorithm diagrams, mechanical wheel graphics, an
 
 ## 10. Validation and reporting
 
-Local Apple Silicon VST3/AU/Standalone builds and ad-hoc signature checks passed. Automated checks cover voice data, SysEx, state round trips, legacy parameter ordering, algorithm routing, switch bindings and editor bounds at three sizes. Offline rendering was finite and non-silent at 44.1/48/96 kHz with 64/128/256-sample buffers.
+The latest merged checkpoint `cbbd213` passed the macOS Universal and Windows x64
+GitHub Actions builds. On the source tree for PR #63, four additional standalone
+ROM-free C++ regression programs were manually built and run successfully:
+deferred MIDI, latest-display publication, the MONO correction policy component,
+and voice-data/SysEx. Those direct builds are not a full CMake/CTest or plug-in
+run; the precise scope and limitations are in
+[the validation note](VALIDATION_1.0_ROM_FREE_TESTS_2026-09-25.md). ROM-backed
+Note 12–120 boundary acceptance and current REAPER/platform acceptance remain
+open. Earlier local Apple Silicon builds and offline renders are historical
+evidence, not a substitute for those gates.
 
 Earlier iterations received user REAPER testing. These historical checks do not establish current 1.0.0 host certification. Please test preset recall after restart, automation, held notes, switches and resizing.
 
@@ -150,10 +173,10 @@ cmake --build build-local --config Release --target vdx7_all_tests
 ctest --test-dir build-local -C Release --output-on-failure
 ```
 
-By default CTest runs six ROM-free tests. Both `vdx7_ci_checks` and
-`vdx7_all_tests` also compile all six integration runners (processor, stability,
-MIDI range, timing, stress and host reset), plus the isolated MONO candidate
-experiment, without executing them or needing a ROM. For the full local suite, configure with
+The current CMake configuration registers nine ROM-free CTest tests. The
+`vdx7_ci_checks` and `vdx7_all_tests` targets also compile the firmware-dependent
+integration runners and isolated MONO candidate experiment without executing
+them or needing a ROM. For the full local suite, configure with
 `-DVDX7_ENABLE_ROM_TESTS=ON -DVDX7_TEST_ROM_FILE=/absolute/path/to/your/dx7.bin`,
 then rebuild `vdx7_all_tests` and rerun CTest. Never upload the ROM. The processor
 runner opens no audio device and optionally accepts an existing absolute directory
@@ -222,5 +245,7 @@ The release provides complete corresponding source including pinned JUCE and dx7
 
 Thanks to [VDX7/chiaccona](https://github.com/chiaccona/VDX7), [Retromulator/dx7Lib](https://github.com/reales/retromulator) and [JUCE](https://github.com/juce-framework/JUCE). Only the portable DX7 core is integrated, not the complete Retromulator application.
 
-Next priorities are transaction/concurrency regression tests, held-note MIDI behaviour,
-GUI finishing, and real-host/platform acceptance. See ROADMAP_1.0.md.
+Next priorities are the local ROM-enabled regression suite; targeted REAPER
+boundary/transport tests; real-host, concurrency and platform acceptance; final
+GUI/HiDPI review; and release packaging. No 1.0.0 publication is authorized.
+See ROADMAP_1.0.md.

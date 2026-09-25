@@ -8,6 +8,13 @@ Ez a leírás az aktuális 1.0.0-dev funkcióit ismerteti. Az alábbi kép tört
 
 [English documentation](README.md)
 
+> **Fejlesztési állapot — 2026. szeptember 25.:** a legfrissebb beolvadt
+> mérföldkő a `cbbd213` main commit (#63 PR). A módosításhoz a macOS és Windows
+> Actions sikeres volt. A VDX7 továbbra is fejlesztői build, nem elfogadott
+> 1.0.0 kiadás. A ROM-os, host-, platform- és végleges GUI-elfogadás még nyitott;
+> lásd az [aktuális állapotot](DEVELOPMENT_1.0_HU_EN.md) és a
+> [kiadási ellenőrzőlistát](ROADMAP_1.0.md).
+
 ![VDX7-JUCE v0.6.6 kezelőfelület-előnézet](docs/VDX7-v0.6.6.png)
 
 A VDX7-JUCE hatoperátoros FM hangszer, a VDX7 DX7 Mk I hardveremulációs magjára, annak hordozható Retromulator dx7Lib adaptációjára és JUCE-ra építve. Nem Dexed-alapú újraimplementáció.
@@ -94,9 +101,16 @@ A név melletti csillag nem exportált módosítást jelez. A DAW-projekt menté
 
 Kézi bank-/ROM-/SYX-csere előtt figyelmeztetés jelenik meg a nem exportált módosításokra. MIDI-vezérelt bankváltás nem nyit párbeszédablakot, és lecserélheti a bankot: előtte exportáld a fontos módosításokat. A jelzés nem visszavonási előzmény.
 
-## 8. A kezelőfelületi mérföldkő újdonságai
+## 8. A jelenlegi GUI-fejlesztés
 
-A v0.6 sorozat kattintható algoritmusábrát, mechanikus kerékgrafikát, OUTPUT fadert, LCD-be épített bank-/programválasztókat, kétállású szinkronkapcsolókat, jobb billentyűkontrasztot/piros filcet, teljes keretet kitöltő envelope-rácsokat és finomított elrendezést hozott. A v0.6.6-ban enyhébb a tekerők hover-kiemelése, vízszintes az OSC MODE összevont kijelzéssel, és szorosabb a presetváltó elrendezése.
+A jelenlegi fejlesztői felületen vektoros `VDX7 Mk 1.` fejléc, három szeparáló
+díszvonal, LCD-s bank-/programnavigáció, EDIT/PERFORMANCE/UTILITY nézetek, az
+ábra melletti 1–32 algoritmusválasztó, nagyobb operátor-envelope kezelők és
+értékkövető, bordázott pitch/modulation kerekek találhatók. A három fejlécvonalat
+75%, 100% és 125% szerkesztőszélességnél pixelteszt ellenőrzi. Ez nem igazolja
+önmagában az összes kezelőszerv, kijelzőméret vagy hostablak méretezését. A végső
+hardveres felületpolír és a teljes HiDPI/host vizuális elfogadás még hátravan.
+A fenti kép csak történeti v0.6.6 előnézet.
 
 ## 9. Ismert korlátok
 
@@ -126,7 +140,16 @@ A v0.6 sorozat kattintható algoritmusábrát, mechanikus kerékgrafikát, OUTPU
 
 ## 10. Ellenőrzés és hibajelentés
 
-A helyi Apple Silicon VST3/AU/Standalone fordítások és ad-hoc aláírás-ellenőrzések sikeresek. Az automatizált tesztek hangadatot, SysEx-et, állapot-visszatöltést, korábbi paramétersorrendet, algoritmuskapcsolásokat, kapcsolóbekötéseket és három méretben a vezérlők elhelyezését ellenőrzik. Az offline hang 44,1/48/96 kHz-en, 64/128/256 mintás pufferekkel véges és nem néma volt.
+A legfrissebb beolvadt `cbbd213` mérföldkő macOS Universal és Windows x64
+GitHub Actions fordításai sikeresek. A #63 PR forrásfájából négy további önálló,
+ROM-mentes C++ regressziós programot kézzel lefordítottunk és sikeresen
+lefuttattunk: deferred MIDI, latest-display publikálás, a MONO-korrekciós
+szabálykomponens, valamint voice-data/SysEx. Ez nem teljes CMake/CTest- vagy
+pluginfuttatás; a pontos hatókört és korlátokat a
+[validációs jegyzet](VALIDATION_1.0_ROM_FREE_TESTS_2026-09-25.md) rögzíti.
+A ROM-os Note 12–120 határtesztek és az aktuális REAPER/platform-elfogadás még
+nyitott. A korábbi Apple Silicon build- és offline rendereredmények korábbi
+ellenőrzések, nem helyettesítik ezeket a kiadási kapukat.
 
 Korábbi változatokat a felhasználó REAPERben tesztelt. Ezek a korábbi ellenőrzések nem jelentenek aktuális 1.0.0 hostminősítést. Kérjük, próbáld ki az újraindítás utáni preset-visszaállítást, automatizálást, tartott hangokat, kapcsolókat és átméretezést.
 
@@ -154,8 +177,10 @@ cmake --build build-local --config Release --target vdx7_all_tests
 ctest --test-dir build-local -C Release --output-on-failure
 ```
 
-Alapból öt ROM-mentes teszt fut. A közös cél a stressztesztet is lefordítja, de ROM
-nélkül nem futtatja. A teljes helyi tesztsorhoz konfigurálj
+Az aktuális CMake-beállítás kilenc ROM-mentes CTestet regisztrál. A
+`vdx7_ci_checks` és `vdx7_all_tests` cél ezen felül a firmware-függő integrációs
+futtatókat és az elkülönített MONO-kísérletet is lefordítja, de ROM nélkül nem
+futtatja őket. A teljes helyi tesztsorhoz konfigurálj
 `-DVDX7_ENABLE_ROM_TESTS=ON -DVDX7_TEST_ROM_FILE=/abszolut/utvonal/dx7.bin`
 opciókkal, majd fordítsd újra a `vdx7_all_tests` célt, és indítsd a CTestet.
 A ROM-ot ne töltsd fel. A processor teszt nem nyit audioeszközt, és opcionálisan
@@ -171,5 +196,7 @@ A kiadás a bináris mellett teljes forrást biztosít a rögzített JUCE- és d
 
 Köszönet a [VDX7/chiaccona](https://github.com/chiaccona/VDX7), [Retromulator/dx7Lib](https://github.com/reales/retromulator) és [JUCE](https://github.com/juce-framework/JUCE) fejlesztőinek. Csak a hordozható DX7-mag épül be, nem a teljes Retromulator alkalmazás.
 
-Következő prioritások: állapotváltási és párhuzamossági regressziók, tartott MIDI-hangok,
-GUI-véglegesítés és valódi host-/platformelfogadás. Lásd: ROADMAP_1.0.md.
+Következő prioritások: teljes helyi ROM-os regressziós kör; célzott REAPER
+hangtartomány- és transportteszt; valódi host-, konkurencia- és platformelfogadás;
+GUI/HiDPI végső ellenőrzés; majd kiadási csomagolás. Az 1.0.0 publikálására
+nincs jóváhagyás. Részletek: ROADMAP_1.0.md.

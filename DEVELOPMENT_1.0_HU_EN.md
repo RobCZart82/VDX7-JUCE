@@ -1,12 +1,28 @@
 # VDX7 1.0.0-dev — development build / fejlesztői változat
 
-## Current status / Aktuális állapot (2026-09-21)
+## Current status / Aktuális állapot (2026-09-25)
+
+Latest merged main checkpoint: `cbbd213` (PR #63); macOS and Windows CI passed.
+Four standalone ROM-free C++ regression programs were additionally compiled
+and passed on the PR #63 source tree. This was not a CMake/CTest, JUCE plug-in,
+firmware-backed or host run. The development tree is not a final 1.0.0 release.
+ROM-backed Note 12–120 boundary acceptance, targeted REAPER/Windows/Intel Mac
+host checks, complete GUI/HiDPI review and packaging remain open. See
+`ROADMAP_1.0.md` and `VALIDATION_1.0_ROM_FREE_TESTS_2026-09-25.md`.
+
+Legfrissebb beolvadt main mérföldkő: `cbbd213` (#63 PR); a macOS és Windows CI
+sikeres volt. A #63 forrásfáján további négy önálló, ROM-mentes C++ regressziós
+program fordítása és futtatása sikerült. Ez nem teljes CMake/CTest-, JUCE
+plugin-, firmware- vagy hostfuttatás. A fejlesztői változat nem végleges 1.0.0.
+Nyitott a ROM-os Note 12–120 határellenőrzés, a célzott REAPER/Windows/Intel Mac
+hostteszt, a teljes GUI/HiDPI-ellenőrzés és a csomagolás. Részletek:
+`ROADMAP_1.0.md` és `VALIDATION_1.0_ROM_FREE_TESTS_2026-09-25.md`.
 
 Implemented since the initial snapshot below: persistent 32-slot USER bank and
 Save As, firmware-backed PERFORMANCE controls, SETTINGS tuning/channel filter,
 windowed-sinc resampling, warm GUI and vector-branded About. See README.md and
 README_HU.md for current usage. Normal CI and exact-commit candidates share
-`vdx7_ci_checks`: five ROM-free tests plus a compile-only stress runner.
+`vdx7_ci_checks`: ROM-free tests and compile-only firmware-dependent runners.
 Candidates target macOS Universal and Windows x64; compilation is not host acceptance.
 
 Az alábbi induló állapot óta elkészült a 32 helyes USER-bank és Save As,
