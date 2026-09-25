@@ -1023,9 +1023,11 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     std::vector<uint8_t> ram;
     int bank = -1, program = 0, inputChannel = 0;
     uint32_t modified = 0;
+    juce::String loadedRomPath;
 
     {
         std::scoped_lock lock(engineMutex_);
+        loadedRomPath = loadedRomPath_;
         // A project saved while its firmware is missing must retain its sound.
         monoCorrection = engine_.isMonoCorrectionRequested();
         if (pendingRestore_.isValid())
@@ -1060,6 +1062,13 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         }
     }
 
+#if defined(VDX7_TEST_STATE_BOUNDARY)
+    // Test-only deterministic scheduling point: engine snapshot is detached,
+    // while subsequent state serialization has not yet read metadata.
+    extern void vdx7TestRomStateBoundary();
+    vdx7TestRomStateBoundary();
+#endif
+
     // Encode only detached data: XML/base64 work must not keep audio's engine
     // mutex occupied. The RAM, selection and voice parameters share one capture.
     if (pendingCopy.isValid())
@@ -1078,10 +1087,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         state.setProperty("ram", block.toBase64Encoding(), nullptr);
     }
 
-    {
-        std::scoped_lock lock(metadataMutex_);
-        state.setProperty("romPath", romFile_.getFullPathName(), nullptr);
-    }
+    state.setProperty("romPath", loadedRomPath, nullptr);
 
     auto parameterState = parameters_.copyState();
     // A headless/reentrant save must not serialize a half-published host view.
@@ -1305,6 +1311,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
             if (error != nullptr) *error = statusText_;
             return false;
         }
+        loadedRomPath_ = file.getFullPathName();
 
         engine_.prepare(currentSampleRate_);
         modifiedVoices_.store(0);

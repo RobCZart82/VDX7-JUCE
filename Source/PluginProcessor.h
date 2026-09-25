@@ -233,6 +233,9 @@ private:
     int lastModValue_ = -1;
 
     double currentSampleRate_ = 48000.0;
+    // Protected by engineMutex_: the path belonging to the engine image whose
+    // RAM/state is captured by getStateInformation(). romFile_ remains UI metadata.
+    juce::String loadedRomPath_;
     juce::File romFile_;
     juce::String statusText_ { "ROM not loaded" };
 

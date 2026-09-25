@@ -52,8 +52,14 @@ Audit disposition refreshed against main `176b757` on 2026-09-25:
   ROM-free regression; local CMake/CTest execution remains NOT RUN.
 - N4 public keyboard-queue admission now filters unsupported programmatic
   keyboard events before queue capacity is consumed. See
-  `VALIDATION_1.0_KEYBOARD_RANGE_ADMISSION.md`; CI and ROM-backed processor
-  acceptance are pending.
+  `VALIDATION_1.0_KEYBOARD_RANGE_ADMISSION.md`; PR #61 macOS/Windows CI passed
+  and the change is merged in main `210b9b9`. ROM-backed processor acceptance
+  remains NOT RUN.
+- N2 save/ROM identity: a deterministic opt-in processor interleaving regression
+  and engine-generation-bound path snapshot are now prepared in the current
+  change. The local ROM-backed execution is NOT RUN here (CMake/CTest unavailable),
+  so do not yet label runtime reproduction or acceptance PASS. The check is
+  registered only when the user supplies/enables the local ROM suite.
 - MIDI Note 12–120 policy is consistent in product admission; internal 0–127
   cleanup/release loops are intentional. ROM-backed and DAW acceptance items
   remain NOT RUN unless separately recorded in their validation reports.
@@ -126,13 +132,14 @@ macOS sanitizer run are component evidence only.
    Synchronized macOS/Windows CI passed. The local ROM-enabled characterization
    remains NOT RUN; preserve it as a validation item, not an unimplemented code change.
 
-3. **N2 — reproduce state/ROM identity mixing before changing synchronization.**
-   Add deterministic processor-level save-versus-ROM-load interleavings and
-   assert that RAM and saved ROM identity belong to the same engine generation.
-   The audit reproduced mixed pairs only in protocol models, not in JUCE. If the
-   real processor test confirms the race, make snapshot capture and ROM identity
-   publication generation-consistent. Keep XML/base64 work outside long audio
-   engine-lock sections; do not treat an extra reader lock alone as a fix.
+3. **N2 — save/ROM identity generation consistency.** A deterministic
+   processor-level save-versus-ROM-load interleaving now checks that the saved
+   ROM path belongs to the same engine generation as the detached RAM snapshot.
+   The processor records the successfully installed image path under
+   `engineMutex_` and captures it with RAM; it does not extend the lock over
+   XML/base64 work. The ROM-backed regression must still run locally before
+   calling this candidate runtime-confirmed or accepted. Keep the earlier
+   protocol-model evidence distinct from processor execution.
 
 4. **U1 — direct ROM reload / deferred MIDI fix merged (PR #54, `9d57069`).**
    A processor regression creates real engine-lock contention with deferred
