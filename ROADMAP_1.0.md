@@ -76,15 +76,17 @@ not a JUCE/plugin, firmware, DAW, or full CTest run.
   processor live-bank path still needs an integration regression. Keep this
   distinct from the already-merged file-import fix; no firmware or factory-
   patch defect is implied.
-- **N6 deferred-event capacity — component reproduction.** With the same
-  64-sample initial timeline lag, 257 CC events in one 16,448-sample callback
-  trigger one panic and deliver none; the same event sequence spread over 257
-  64-sample callbacks delivers all 257 without panic. This shows a callback-
-  partition-dependent component boundary at the 256-event capacity, not yet a
-  full processor defect. Add a deterministic processor integration regression
-  that enters deferral through real lock contention, compares equivalent event
-  timelines/block partitions, and characterizes intentional panic/recovery
-  semantics before changing storage or overflow policy.
+- **N6 deferred-event capacity — processor regression added; ROM execution pending.**
+  The component probe showed that 257 CC events after a 64-sample lag overflow
+  when batched into one 16,448-sample callback, while time-partitioned rendering
+  drains them successfully. An opt-in processor test now compares this same
+  time-spaced stream after actual mutex contention: an over-capacity callback
+  must drop the batch atomically, release an already-held note, avoid stale
+  replay, and accept fresh MIDI afterward; 257 successful 64-sample callbacks
+  must deliver every CC in order without panic. This characterizes the bounded
+  256-event safety policy and partition sensitivity; it does not yet establish
+  a product defect or justify changing the capacity. The ROM-backed processor
+  test is added but not run locally.
 - **U3 — conditional CC32 deferred pressure — fix and paired processor regression added.**
   The probe admitted CC32 bank values 0–7 without factory-image context; 256
   such messages plus one supported note panicked the deferred queue. Host-event

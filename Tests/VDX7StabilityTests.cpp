@@ -221,6 +221,75 @@ struct VDX7RegressionAccess
         p.processBlock(audio, events);
         require(!p.engine_.hasHeldMidiNotes(), "note releases after deferred CC32 control");
     }
+    static void checkDeferredPartitionCapacity(VDX7AudioProcessor& p)
+    {
+        constexpr int eventCount = 257;
+        constexpr int blockSize = 64;
+        constexpr int aggregateBlockSize = eventCount * blockSize;
+        juce::AudioBuffer<float> shortAudio(2, blockSize);
+        juce::AudioBuffer<float> aggregateAudio(2, aggregateBlockSize);
+        juce::MidiBuffer events;
+
+        // Both scenarios start with the same held voice and one skipped
+        // 64-sample callback. Compare one large contended event batch with the
+        // identical time-spaced CC stream delivered over successful blocks.
+        p.prepareToPlay(48000, blockSize);
+        events.addEvent(juce::MidiMessage::controllerEvent(1, 11, 25), 0);
+        events.addEvent(juce::MidiMessage::noteOn(1, 60, uint8_t(100)), 0);
+        p.processBlock(shortAudio, events);
+        require(p.engine_.activeMidiNotes_[60], "partition test starts with a held note");
+        const float baselineExpression = 25.0f / 127.0f;
+        events.clear();
+        contend(p, events, blockSize);
+        require(p.deferredMidi_.active(), "initial skipped block establishes deferred timeline");
+
+        events.clear();
+        for (int i = 0; i < eventCount; ++i)
+            events.addEvent(juce::MidiMessage::controllerEvent(1, 11, i % 128), i * blockSize);
+        contend(p, events, aggregateBlockSize);
+        require(p.deferredMidi_.active(), "oversized delayed batch enters bounded overflow state");
+        events.clear();
+        p.processBlock(aggregateAudio, events);
+        require(!p.engine_.hasHeldMidiNotes(), "overflow recovery releases the pre-existing held note");
+        require(!p.deferredMidi_.active(), "overflow panic is retired without replaying stale events");
+        require(std::abs(p.engine_.midiExpression_ - baselineExpression) < 0.00001f,
+                "oversized batch is dropped atomically rather than partly delivered");
+
+        // Capacity overflow is recoverable; fresh input works normally.
+        events.addEvent(juce::MidiMessage::controllerEvent(1, 11, 42), 0);
+        events.addEvent(juce::MidiMessage::noteOn(1, 61, uint8_t(100)), 0);
+        p.processBlock(shortAudio, events);
+        require(p.engine_.activeMidiNotes_[61]
+                    && std::abs(p.engine_.midiExpression_ - 42.0f / 127.0f) < 0.00001f,
+                "normal MIDI recovers after deferred queue overflow");
+        events.clear();
+        events.addEvent(juce::MidiMessage::noteOff(1, 61), 0);
+        p.processBlock(shortAudio, events);
+        require(!p.engine_.hasHeldMidiNotes(), "post-overflow recovery note releases");
+
+        // The same time-spaced CC sequence remains below capacity when each
+        // successful callback can render the delayed timeline.
+        p.prepareToPlay(48000, blockSize);
+        events.clear();
+        events.addEvent(juce::MidiMessage::noteOn(1, 60, uint8_t(100)), 0);
+        p.processBlock(shortAudio, events);
+        events.clear();
+        contend(p, events, blockSize);
+        require(p.deferredMidi_.active(), "partitioned control starts with same deferred lag");
+        for (int i = 0; i < eventCount; ++i)
+        {
+            events.clear();
+            events.addEvent(juce::MidiMessage::controllerEvent(1, 11, i % 128), 0);
+            p.processBlock(shortAudio, events);
+            require(std::abs(p.engine_.midiExpression_ - (i % 128) / 127.0f) < 0.00001f,
+                    "each partitioned CC is delivered in order without panic");
+        }
+        events.clear();
+        events.addEvent(juce::MidiMessage::noteOff(1, 60), 0);
+        p.processBlock(shortAudio, events);
+        require(!p.engine_.hasHeldMidiNotes(), "partitioned control releases held voice");
+        require(!p.deferredMidi_.active(), "partitioned control drains without recovery panic");
+    }
     static void checkSerialOverflow(VDX7Engine& e)
     {
         e.dx7_.midiSerialRx.flush();
@@ -337,7 +406,7 @@ struct VDX7RegressionAccess
         }
         e.resetAudioState();
     }
-    static void contend(VDX7AudioProcessor& p, juce::MidiBuffer& events)
+    static void contend(VDX7AudioProcessor& p, juce::MidiBuffer& events, int blockSize = 256)
     {
         std::promise<void> locked, release;
         auto untilRelease = release.get_future();
@@ -348,7 +417,7 @@ struct VDX7RegressionAccess
             untilRelease.wait();
         });
         locked.get_future().wait();
-        juce::AudioBuffer<float> audio(2, 256);
+        juce::AudioBuffer<float> audio(2, blockSize);
         p.processBlock(audio, events);
         release.set_value();
         worker.join();
@@ -592,6 +661,7 @@ int main(int argc, char** argv)
             VDX7RegressionAccess::checkInputChannel(input);
             VDX7RegressionAccess::checkStateRestoreDropsDeferredMidi(input);
             VDX7RegressionAccess::checkFactoryCc32DeferredCapacity(input, true);
+            VDX7RegressionAccess::checkDeferredPartitionCapacity(input);
         }
         auto engineStorage = std::make_unique<VDX7Engine>();
         auto& engine = *engineStorage;
