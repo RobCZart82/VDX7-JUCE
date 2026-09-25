@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include "VDX7VoiceData.h"
 
 namespace VDX7MidiValidation
 {
@@ -63,7 +64,17 @@ inline bool isLiveBankSysex(const uint8_t* data, std::size_t size) noexcept
             return false;
         checksum += data[i];
     }
-    return (checksum & 0x7f) == 0;
+    if ((checksum & 0x7f) != 0)
+        return false;
+
+    // Match file-import admission: a valid SysEx checksum alone does not
+    // make the packed detune nibble valid. Reject before it enters live state.
+    for (int voice = 0; voice < 32; ++voice)
+        if (!VDX7VoiceData::hasValidOperatorDetune(
+                data + 6 + voice * VDX7VoiceData::kPackedVoiceSize,
+                VDX7VoiceData::kPackedVoiceSize))
+            return false;
+    return true;
 }
 
 // Channel selection is a host-input filter, not a change to firmware routing.

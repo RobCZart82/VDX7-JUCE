@@ -65,6 +65,21 @@ constexpr int kVoiceParameterCount = static_cast<int>(VoiceParameter::count);
 
 int parameterMinimum(Parameter) noexcept;
 int parameterMaximum(Parameter) noexcept;
+// Rejects packed voices with detune nibble 15, which encodes the invalid +8 value.
+inline bool hasValidOperatorDetune(const uint8_t* packedVoice, std::size_t size) noexcept
+{
+    if (packedVoice == nullptr || size < kPackedVoiceSize)
+        return false;
+
+    for (int operatorIndex = 0; operatorIndex < kOperatorCount; ++operatorIndex)
+    {
+        const auto packedOffset = static_cast<std::size_t>(
+            (kOperatorCount - 1 - operatorIndex) * kPackedOperatorSize);
+        if (((packedVoice[packedOffset + 12] >> 3) & 0x0f) == 0x0f)
+            return false;
+    }
+    return true;
+}
 int getOperatorParameter(const uint8_t* packedVoice, std::size_t size,
                          int operatorIndex, Parameter) noexcept;
 bool setOperatorParameter(uint8_t* packedVoice, std::size_t size,
