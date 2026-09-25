@@ -134,7 +134,8 @@ private:
     bool handleMidiEventLocked(const uint8_t*, int);
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     bool autoDetectRom();
-    static bool readFile(const juce::File& file, std::vector<uint8_t>& data);
+    static bool readFile(const juce::File& file, std::size_t maxBytes,
+                         std::vector<uint8_t>& data);
     bool loadRomData(const juce::File& file, const std::vector<uint8_t>& rom, juce::String* error);
     static juce::String bankName(int index);
     void applyPendingCommands();

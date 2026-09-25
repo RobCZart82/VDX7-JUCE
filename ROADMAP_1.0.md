@@ -7,9 +7,12 @@ indices compatible with saved projects.
 
 ## Stabilization
 
-### Current next steps — 2026-09-24
+### Current next steps — 2026-09-25
 
-Latest checkpoint: PR #55 roadmap refresh was merged to `main` as `2624097` on 2026-09-25; PRs #50–#54 contain the code/test changes summarized below. Private-ROM acceptance remains a separate gate.
+Latest checkpoint: PR #59 was merged to `main` as
+`176b75705014cac7b44242c46666b84773666656`; PR #58 contains the conditional
+CC32 admission fix. No PR is currently open. Private-ROM acceptance remains a
+separate gate.
 `VALIDATION_MONO_SOAK.md` records the full 30-test run, separate desktop retry,
 dual-instance soak and remaining host boundaries. The user approved retaining
 both Native and Correct modes. Native remains the recommended default; Correct
@@ -40,15 +43,18 @@ wording only; PR #49 added roadmap documentation only. Since the audit, PR #50 c
 evidence, but are not a full JUCE, firmware or DAW acceptance run. Preserve each
 finding's evidence class; do not promote a model result into a product pass.
 
-Audit disposition refreshed against main `44ea97a` on 2026-09-25:
+Audit disposition refreshed against main `176b757` on 2026-09-25:
 - N1 reset-history oracle correction merged in PR #50 (`675b553`). The ROM-enabled reset-history/full CTest acceptance remains NOT RUN; the merge fixes the test expectation, not a product audio defect.
 - U2 malformed checksum-valid detune round-trip was fixed in PR #52 (`cc2f4aa`); PR #57 (`44ea97a`) extends the same validation to live bulk admission and single/bank export, with all 192 voice/operator slots covered by sanitizer tests. ROM-backed processor-path acceptance remains NOT RUN. Keep the finding scoped to malformed input; do not generalize it to ordinary factory patches or call it a checksum defect.
 - T1 processor-boundary characterization and Note 127 guard-bypass sensitivity control merged in PR #53 (`7bb7af9`); synchronized macOS/Windows CI passed. The ROM-enabled characterization itself remains NOT RUN.
-- U1 direct ROM reload/deferred-MIDI boundary fix and opt-in processor regression merged in PR #54 (`9d57069`); macOS/Windows Actions passed on the merge commit. The local v1.8 ROM regression and full ROM-enabled suite remain NOT RUN, so runtime acceptance is pending. N2 state/ROM identity mixing remains an unconfirmed processor-level candidate. U3 has a targeted admission fix and paired processor regression in progress; ROM-backed execution remains pending.
-- N3 bounded file-read and N4 public keyboard-queue admission are lower-priority
-  hardening tasks.
+- U1 direct ROM reload/deferred-MIDI boundary fix and opt-in processor regression merged in PR #54 (`9d57069`); macOS/Windows Actions passed on the merge commit. The local v1.8 ROM regression and full ROM-enabled suite remain NOT RUN, so runtime acceptance is pending. N2 state/ROM identity mixing remains an unconfirmed processor-level candidate. U3's conditional CC32 admission fix and paired processor regression merged in PR #58 (`312a221`); ROM-backed execution remains pending.
+- N6 deferred-event capacity/partition characterization merged in PR #59 (`176b757`). Its opt-in processor test is present; local ROM-backed execution remains NOT RUN. It documents the bounded queue policy and does not justify increasing capacity.
+- N3 bounded ROM/SysEx file reading has a targeted implementation and
+  ROM-free regression test in progress; N4 public keyboard-queue admission
+  remains lower-priority hardening.
 - MIDI Note 12–120 policy is consistent in product admission; internal 0–127
-  cleanup/release loops are intentional. The 2026-09-25 post-PR-54 roadmap refresh ran no tests; it records the merged commits and current NOT RUN boundary.
+  cleanup/release loops are intentional. ROM-backed and DAW acceptance items
+  remain NOT RUN unless separately recorded in their validation reports.
 - N5 — host tail metadata remains a P2 validation candidate: `getTailLengthSeconds()`
   still returns 0.0 although voices can release after Note Off. Verify JUCE/host
   offline-render tail behavior and add a Note-Off release-tail regression before
@@ -149,9 +155,11 @@ macOS sanitizer run are component evidence only.
    plus a note with factory voices, both under real mutex contention. Local
    full-ROM execution remains pending.
 
-7. **Lower-priority hardening:** N3, bound ROM/SysEx file reads before allocating
-   full payload copies and verify failed imports do not mutate the loaded
-   engine; N4, pre-admit events on the public keyboard API before its bounded
+7. **Lower-priority hardening:** N3 ROM/SysEx file reads are now bounded before
+   allocation with an extra-byte check for concurrent file growth and a ROM-free
+   boundary test. See `VALIDATION_1.0_BOUNDED_FILE_READS.md`; CI is pending.
+   Verify failed imports preserve a loaded engine in the processor integration
+   suite. N4 remains: pre-admit events on the public keyboard API before its bounded
    queue. Keep N4 scoped to the programmatic API: the visible keyboard is
    36–96 and normal host MIDI is already filtered. Neither item is a reproduced
    normal-GUI crash.

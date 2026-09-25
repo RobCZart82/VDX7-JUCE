@@ -17,8 +17,8 @@ constexpr std::array<P, 21> fields {
 
 bool decode(const std::vector<uint8_t>& m, std::vector<uint8_t>& packed)
 {
-    const bool single = m.size() == 163;
-    if ((!single && m.size() != 4104) || m[0] != 0xf0 || m[1] != 0x43
+    const bool single = m.size() == kVoiceMessageSize;
+    if ((!single && m.size() != kBankMessageSize) || m[0] != 0xf0 || m[1] != 0x43
         || m[2] > 15 || m.back() != 0xf7
         || m[3] != (single ? 0 : 9) || m[4] != (single ? 1 : 32)
         || m[5] != (single ? 27 : 0)) return false;
@@ -77,7 +77,7 @@ std::vector<uint8_t> encode(const std::vector<uint8_t>& packed)
                 packed.data() + voice * VDX7VoiceData::kPackedVoiceSize,
                 VDX7VoiceData::kPackedVoiceSize))
             return {};
-    std::vector<uint8_t> m(single ? 163 : 4104,0);
+    std::vector<uint8_t> m(single ? kVoiceMessageSize : kBankMessageSize,0);
     m[0]=0xf0; m[1]=0x43; m[3]=single ? 0 : 9;
     m[4]=single ? 1 : 32; m[5]=single ? 27 : 0;
     if (!single) std::copy(packed.begin(),packed.end(),m.begin()+6);
