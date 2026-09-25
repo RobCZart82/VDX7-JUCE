@@ -341,6 +341,10 @@ if(VDX7_ENABLE_ROM_TESTS)
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --direct-rom-reload-only)
     set_tests_properties(vdx7_direct_rom_reload_boundary PROPERTIES
         TIMEOUT 120 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;state-boundary")
+    add_test(NAME vdx7_state_rom_identity
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --state-rom-identity-only)
+    set_tests_properties(vdx7_state_rom_identity PROPERTIES
+        TIMEOUT 120 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;state-boundary;concurrency")
     add_test(NAME vdx7_mono_corrected_processor
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --mono-corrected-processor-only)
     add_test(NAME vdx7_mono_soak

@@ -36,6 +36,20 @@ void vdx7TestStateBoundary(std::size_t keyboardCount)
     }
 }
 
+struct RomStateBoundaryGate
+{
+    std::atomic<bool> entered {false}, resume {false};
+};
+static thread_local RomStateBoundaryGate* romStateBoundaryGate = nullptr;
+void vdx7TestRomStateBoundary()
+{
+    if (auto* gate = romStateBoundaryGate)
+    {
+        gate->entered.store(true, std::memory_order_release);
+        while (!gate->resume.load(std::memory_order_acquire)) std::this_thread::yield();
+    }
+}
+
 struct VDX7RegressionAccess
 {
     struct FirmwareOwnership
@@ -1264,6 +1278,57 @@ static void testDirectRomReloadDropsDeferredMidi(const juce::File& rom)
             && audio.getMagnitude(0, 64) < 1e-5f,
             "fresh post-reload control note failed to release");
     std::cout << "PASS: direct successful ROM reload drops pre-install deferred MIDI; fresh Note 72 plays/releases\n";
+}
+
+static void testStateRomIdentityInterleaving(const juce::File& rom)
+{
+    const auto tempFolder = juce::File::getSpecialLocation(juce::File::tempDirectory)
+        .getChildFile("vdx7-state-rom-identity-" + juce::String::toHexString(
+            static_cast<juce::int64>(juce::Time::getHighResolutionTicks())));
+    require(tempFolder.createDirectory(), "create isolated ROM identity test directory");
+    const auto secondRom = tempFolder.getChildFile("second-image.bin");
+    require(rom.copyFileTo(secondRom), "copy ROM to distinct identity path");
+
+    auto owner = std::make_unique<VDX7AudioProcessor>(false);
+    auto& p = *owner;
+    initialise(p, rom, 48000, 64);
+
+    RomStateBoundaryGate gate;
+    juce::MemoryBlock savedState;
+    auto saver = std::async(std::launch::async, [&] {
+        romStateBoundaryGate = &gate;
+        p.getStateInformation(savedState);
+        romStateBoundaryGate = nullptr;
+    });
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!gate.entered.load(std::memory_order_acquire)
+           && std::chrono::steady_clock::now() < deadline)
+        std::this_thread::yield();
+    if (!gate.entered.load(std::memory_order_acquire))
+    {
+        gate.resume.store(true, std::memory_order_release);
+        saver.get();
+        tempFolder.deleteRecursively();
+        require(false, "state-save ROM boundary was not reached");
+    }
+
+    // The save has captured engine RAM while ROM A is installed, then pauses
+    // before serializing metadata. A successful B install must not relabel A's
+    // detached RAM snapshot as belonging to B.
+    const bool secondRomLoaded = p.loadRomFromFile(secondRom);
+    gate.resume.store(true, std::memory_order_release);
+    saver.get();
+    require(secondRomLoaded, "install second ROM identity");
+
+    auto xml = juce::AudioProcessor::getXmlFromBinary(
+        savedState.getData(), static_cast<int>(savedState.getSize()));
+    require(xml != nullptr, "decode interleaved project state");
+    const auto tree = juce::ValueTree::fromXml(*xml);
+    require(tree.isValid(), "parse interleaved project state");
+    require(tree.getProperty("romPath").toString() == rom.getFullPathName(),
+            "saved ROM identity must match the engine generation captured with RAM");
+    tempFolder.deleteRecursively();
+    std::cout << "PASS: state RAM and ROM path remain from one engine generation across concurrent reload\n";
 }
 
 // Independent of VDX7Engine/processor MIDI, reset, retirement and resampling.
@@ -2671,6 +2736,7 @@ int main(int argc, char** argv)
         const bool expandedLifecycleOnly = argc == 3 && juce::String(argv[2]) == "--expanded-lifecycle-only";
         const bool supportedNoteRangeOnly = argc == 3 && juce::String(argv[2]) == "--supported-note-range-only";
         const bool directRomReloadBoundaryOnly = argc == 3 && juce::String(argv[2]) == "--direct-rom-reload-only";
+        const bool stateRomIdentityOnly = argc == 3 && juce::String(argv[2]) == "--state-rom-identity-only";
         const bool monoCorrectedOnly = argc == 3 && juce::String(argv[2]) == "--mono-corrected-processor-only";
         if (argc == 3 && juce::String(argv[2]) == "--mono-soak-only")
         { testCorrectedSoak(juce::File(argv[1])); return 0; }
@@ -2679,7 +2745,7 @@ int main(int argc, char** argv)
         const bool profileCheckOnly = argc == 3 && juce::String(argv[2]) == "--profile-check-only";
         const bool deferredPartitionOnly = argc == 3 && juce::String(argv[2]) == "--deferred-partition-only";
         const bool wheelDeliveryOnly = argc == 3 && juce::String(argv[2]) == "--wheel-delivery-only";
-        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !supportedNoteRangeOnly && !directRomReloadBoundaryOnly && !monoCorrectedOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly && !deferredPartitionOnly && !wheelDeliveryOnly) || !juce::File(argv[1]).existsAsFile())
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !supportedNoteRangeOnly && !directRomReloadBoundaryOnly && !stateRomIdentityOnly && !monoCorrectedOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly && !deferredPartitionOnly && !wheelDeliveryOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
         juce::MemoryBlock image;
         require(juce::File(argv[1]).loadFileAsData(image), "read explicit local ROM fixture");
@@ -2736,6 +2802,11 @@ int main(int argc, char** argv)
         if (directRomReloadBoundaryOnly)
         {
             testDirectRomReloadDropsDeferredMidi(juce::File(argv[1]));
+            return 0;
+        }
+        if (stateRomIdentityOnly)
+        {
+            testStateRomIdentityInterleaving(juce::File(argv[1]));
             return 0;
         }
         if (expandedLifecycleOnly)
