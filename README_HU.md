@@ -4,18 +4,20 @@ Ez az ág **1.0.0-dev** változatot készít, nem végleges kiadást. Lásd az
 [aktuális fejlesztői állapotot](DEVELOPMENT_1.0_HU_EN.md) és az
 [1.0 kiadás feltételeit](ROADMAP_1.0.md).
 
-Ez a leírás az aktuális 1.0.0-dev funkcióit ismerteti. Az alábbi kép történeti v0.6.6 előnézet, nem a jelenlegi GUI.
+Ez a leírás az aktuális 1.0.0-dev funkcióit ismerteti. Az alábbi előnézetek az EDIT és PERFORMANCE felületi koncepciót mutatják; nem egy újonnan hostban ellenőrzött build képernyőképei.
 
 [English documentation](README.md)
 
 > **Fejlesztési állapot — 2026. szeptember 25.:** a legfrissebb beolvadt
-> mérföldkő a `cbbd213` main commit (#63 PR). A módosításhoz a macOS és Windows
+> mérföldkő a `0353431` main commit (#64 PR). A módosításhoz a macOS és Windows
 > Actions sikeres volt. A VDX7 továbbra is fejlesztői build, nem elfogadott
 > 1.0.0 kiadás. A ROM-os, host-, platform- és végleges GUI-elfogadás még nyitott;
 > lásd az [aktuális állapotot](DEVELOPMENT_1.0_HU_EN.md) és a
 > [kiadási ellenőrzőlistát](ROADMAP_1.0.md).
 
-![VDX7-JUCE v0.6.6 kezelőfelület-előnézet](docs/VDX7-v0.6.6.png)
+| PERFORMANCE nézet | EDIT nézet |
+| --- | --- |
+| [![VDX7-JUCE 1.0.0-dev PERFORMANCE felületi előnézet](docs/VDX7-1.0.0-dev-performance-preview.jpg)](docs/VDX7-1.0.0-dev-performance-preview.jpg) | [![VDX7-JUCE 1.0.0-dev EDIT felületi előnézet](docs/VDX7-1.0.0-dev-edit-preview.jpg)](docs/VDX7-1.0.0-dev-edit-preview.jpg) |
 
 A VDX7-JUCE hatoperátoros FM hangszer, a VDX7 DX7 Mk I hardveremulációs magjára, annak hordozható Retromulator dx7Lib adaptációjára és JUCE-ra építve. Nem Dexed-alapú újraimplementáció.
 
@@ -110,7 +112,8 @@ díszvonal, LCD-s bank-/programnavigáció, EDIT/PERFORMANCE/UTILITY nézetek, a
 75%, 100% és 125% szerkesztőszélességnél pixelteszt ellenőrzi. Ez nem igazolja
 önmagában az összes kezelőszerv, kijelzőméret vagy hostablak méretezését. A végső
 hardveres felületpolír és a teljes HiDPI/host vizuális elfogadás még hátravan.
-A fenti kép csak történeti v0.6.6 előnézet.
+A fenti képek szemléltető felületi referenciák; nem bizonyítják a végleges
+renderelést, hostkompatibilitást vagy a kiadás elfogadását.
 
 ## 9. Ismert korlátok
 
@@ -140,7 +143,7 @@ A fenti kép csak történeti v0.6.6 előnézet.
 
 ## 10. Ellenőrzés és hibajelentés
 
-A legfrissebb beolvadt `cbbd213` mérföldkő macOS Universal és Windows x64
+A legfrissebb beolvadt `0353431` mérföldkő (#64 PR) macOS Universal és Windows x64
 GitHub Actions fordításai sikeresek. A #63 PR forrásfájából négy további önálló,
 ROM-mentes C++ regressziós programot kézzel lefordítottunk és sikeresen
 lefuttattunk: deferred MIDI, latest-display publikálás, a MONO-korrekciós
