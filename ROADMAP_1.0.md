@@ -40,11 +40,11 @@ wording only; PR #49 added roadmap documentation only. Since the audit, PR #50 c
 evidence, but are not a full JUCE, firmware or DAW acceptance run. Preserve each
 finding's evidence class; do not promote a model result into a product pass.
 
-Audit disposition refreshed against main `2624097` on 2026-09-25:
+Audit disposition refreshed against main `44ea97a` on 2026-09-25:
 - N1 reset-history oracle correction merged in PR #50 (`675b553`). The ROM-enabled reset-history/full CTest acceptance remains NOT RUN; the merge fixes the test expectation, not a product audio defect.
-- U2 malformed checksum-valid detune round-trip was fixed in PR #52 (`cc2f4aa`): reject detune nibble 15 and cover all six operators with a checksum-valid regression. Keep the finding scoped to malformed input; do not generalize it to ordinary factory patches or call it a checksum defect.
+- U2 malformed checksum-valid detune round-trip was fixed in PR #52 (`cc2f4aa`); PR #57 (`44ea97a`) extends the same validation to live bulk admission and single/bank export, with all 192 voice/operator slots covered by sanitizer tests. ROM-backed processor-path acceptance remains NOT RUN. Keep the finding scoped to malformed input; do not generalize it to ordinary factory patches or call it a checksum defect.
 - T1 processor-boundary characterization and Note 127 guard-bypass sensitivity control merged in PR #53 (`7bb7af9`); synchronized macOS/Windows CI passed. The ROM-enabled characterization itself remains NOT RUN.
-- U1 direct ROM reload/deferred-MIDI boundary fix and opt-in processor regression merged in PR #54 (`9d57069`); macOS/Windows Actions passed on the merge commit. The local v1.8 ROM regression and full ROM-enabled suite remain NOT RUN, so runtime acceptance is pending. N2 state/ROM identity mixing remains an unconfirmed processor-level candidate. U3 now has a reproduced deferred-queue component case; actual processor confirmation remains open.
+- U1 direct ROM reload/deferred-MIDI boundary fix and opt-in processor regression merged in PR #54 (`9d57069`); macOS/Windows Actions passed on the merge commit. The local v1.8 ROM regression and full ROM-enabled suite remain NOT RUN, so runtime acceptance is pending. N2 state/ROM identity mixing remains an unconfirmed processor-level candidate. U3 has a targeted admission fix and paired processor regression in progress; ROM-backed execution remains pending.
 - N3 bounded file-read and N4 public keyboard-queue admission are lower-priority
   hardening tasks.
 - MIDI Note 12–120 policy is consistent in product admission; internal 0–127
@@ -85,12 +85,17 @@ not a JUCE/plugin, firmware, DAW, or full CTest run.
   that enters deferral through real lock contention, compares equivalent event
   timelines/block partitions, and characterizes intentional panic/recovery
   semantics before changing storage or overflow policy.
-- **U3 — conditional CC32 deferred pressure.** The probe admits CC32 bank values
-  0–7 without factory-image context; 256 requests plus one supported note panic
-  the deferred queue. The engine's later no-factory rejection is source-verified,
-  not executed against firmware by this probe. Add the processor-level paired
-  controls noted above; classify this as component-reproduced and integration-
-  pending, not a confirmed user-visible bug.
+- **U3 — conditional CC32 deferred pressure — fix and paired processor regression added.**
+  The probe admitted CC32 bank values 0–7 without factory-image context; 256
+  such messages plus one supported note panicked the deferred queue. Host-event
+  admission now consults the processor's atomic factory-image availability
+  snapshot, so impossible CC32 requests are discarded before consuming delayed
+  capacity; engine-side rejection remains as defense in depth. A ROM-backed
+  processor regression compares the no-factory 256-request flood against a
+  factory-present 255-request control, each followed by a note, under actual
+  engine-lock contention. The standalone validator control passes locally;
+  the ROM-backed processor test is added but not run here, so end-to-end
+  acceptance remains pending.
 
 Controls in the probe passed: all 15 valid detune nibbles and ordinary bank
 round-trip; 12,288 note/channel/status/velocity combinations; 10,000 seeded
@@ -133,15 +138,14 @@ macOS sanitizer run are component evidence only.
    Keep the finding scoped to malformed input, not ordinary factory patches or
    checksum correctness.
 
-6. **U3 — conditional CC32 admission: component case reproduced; processor test pending.**
-   The 2026-09-24 audit probe showed 256 factory-bank-select messages plus a
-   supported note can overflow the deferred queue. Source inspection confirms
-   the engine rejects CC32 bank selection when no factory image is loaded, but
-   the shared host validator still admits values 0–7 before deferral. Add a
-   deterministic processor test with lock contention and no factory image,
-   plus a factory-image-present control. If confirmed end-to-end, filter only
-   unserviceable requests before they consume deferred capacity; do not add a
-   blocking engine lock to the input path.
+6. **U3 — conditional CC32 deferred admission — targeted fix and processor test added.**
+   The shared host validator now accepts factory-bank CC32 only when the
+   processor's atomic capability snapshot says factory voices are available.
+   This avoids taking the engine lock in the audio input path; the engine keeps
+   its existing guard. The ROM-backed regression tests 256 filtered CC32
+   requests plus a note without factory voices, and 255 valid CC32 requests
+   plus a note with factory voices, both under real mutex contention. Local
+   full-ROM execution remains pending.
 
 7. **Lower-priority hardening:** N3, bound ROM/SysEx file reads before allocating
    full payload copies and verify failed imports do not mutate the loaded

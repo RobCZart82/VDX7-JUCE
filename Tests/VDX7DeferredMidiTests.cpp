@@ -138,6 +138,7 @@ int main()
 static void checkSysExAdmission()
 {
     const uint8_t note[] {0x90, 60, 100};
+    const uint8_t factoryBankSelect[] {0xb0, 32, 3};
     const uint8_t emptySysEx[] {0xf0, 0xf7};
 
     std::vector<uint8_t> validBank(4104, 0);
@@ -151,6 +152,56 @@ static void checkSysExAdmission()
     // A zero payload has a zero checksum at byte 4102.
     require(VDX7MidiValidation::isLiveBankSysex(validBank.data(), validBank.size()));
     require(VDX7MidiValidation::acceptsHostEvent(validBank.data(), validBank.size(), 16));
+    require(VDX7MidiValidation::acceptsHostEvent(factoryBankSelect,
+                sizeof(factoryBankSelect), 0, true), "factory-bank CC32 remains accepted when available");
+    require(!VDX7MidiValidation::acceptsHostEvent(factoryBankSelect,
+                sizeof(factoryBankSelect), 0, false), "unavailable factory-bank CC32 rejected before deferral");
+
+    VDX7DeferredMidi unavailableFactoryQueue;
+    for (int i = 0; i < 256; ++i)
+        if (VDX7MidiValidation::acceptsHostEvent(factoryBankSelect,
+                sizeof(factoryBankSelect), 0, false))
+            unavailableFactoryQueue.push(factoryBankSelect, sizeof(factoryBankSelect));
+    require(unavailableFactoryQueue.push(note, sizeof(note)),
+            "unavailable CC32 flood leaves deferred capacity for the following note");
+    unavailableFactoryQueue.advanceInputBlock(64, 4096);
+    int deliveredNotes = 0;
+    bool deferredPanic = false;
+    unavailableFactoryQueue.renderBlock(64, [&](const uint8_t* event, std::size_t size, int) {
+        require(size == sizeof(note) && event[0] == 0x90 && event[1] == 60,
+                "deferred no-factory control delivers the note");
+        ++deliveredNotes;
+    }, [&] { deferredPanic = true; });
+    require(!deferredPanic && deliveredNotes == 1,
+            "unavailable CC32 flood does not panic the deferred queue");
+
+    VDX7DeferredMidi unfilteredControl;
+    for (int i = 0; i < 256; ++i)
+        require(unfilteredControl.push(factoryBankSelect, sizeof(factoryBankSelect)),
+                "unfiltered baseline fills the deferred queue");
+    require(!unfilteredControl.push(note, sizeof(note)),
+            "unfiltered CC32 flood reproduces note eviction at queue capacity");
+    unfilteredControl.advanceInputBlock(64, 4096);
+    bool baselinePanic = false;
+    unfilteredControl.renderBlock(64, [](const uint8_t*, std::size_t, int) {
+        require(false, "overflow baseline must discard queued events");
+    }, [&] { baselinePanic = true; });
+    require(baselinePanic, "unfiltered control triggers the expected queue panic");
+
+    VDX7DeferredMidi availableFactoryQueue;
+    for (int i = 0; i < 255; ++i)
+        if (VDX7MidiValidation::acceptsHostEvent(factoryBankSelect,
+                sizeof(factoryBankSelect), 0, true))
+            require(availableFactoryQueue.push(factoryBankSelect, sizeof(factoryBankSelect)),
+                    "valid factory-bank CC32 retains deferred capacity");
+    require(availableFactoryQueue.push(note, sizeof(note)),
+            "valid factory-bank control preserves following note");
+    availableFactoryQueue.advanceInputBlock(64, 4096);
+    int deliveredEvents = 0;
+    availableFactoryQueue.renderBlock(64, [&](const uint8_t*, std::size_t, int) {
+        ++deliveredEvents;
+    }, [] { require(false, "valid factory-bank queue must not panic"); });
+    require(deliveredEvents == 256, "factory-present control retains all admitted events");
     require(!VDX7MidiValidation::isLiveBankSysex(nullptr, validBank.size()));
     require(!VDX7MidiValidation::isLiveBankSysex(validBank.data(), validBank.size() - 1));
 
@@ -218,7 +269,7 @@ static void checkSysExAdmission()
     accepted.renderBlock(64, [&](const uint8_t*, std::size_t size, int) { sizes.push_back(size); },
                          [&] { panic = true; });
     require(!panic && sizes == std::vector<std::size_t>({4104, sizeof(note)}));
-    std::cout << "PASS: malformed SysEx is rejected before deferred capacity; valid bulk bank is retained\n";
+    std::cout << "PASS: SysEx validation and factory-aware deferred MIDI admission\n";
 }
 
 static void checkKeyboardQueue()

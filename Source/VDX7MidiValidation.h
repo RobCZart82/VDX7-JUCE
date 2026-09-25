@@ -79,7 +79,8 @@ inline bool isLiveBankSysex(const uint8_t* data, std::size_t size) noexcept
 
 // Channel selection is a host-input filter, not a change to firmware routing.
 // Validated bulk SysEx remains a global import, not a channel-filtered event.
-inline bool acceptsHostEvent(const uint8_t* data, std::size_t size, int channel) noexcept
+inline bool acceptsHostEvent(const uint8_t* data, std::size_t size, int channel,
+                             bool hasFactoryVoices = true) noexcept
 {
     if (data == nullptr || size == 0) return false;
     if (data[0] == 0xf0) return isLiveBankSysex(data, size);
@@ -88,6 +89,8 @@ inline bool acceptsHostEvent(const uint8_t* data, std::size_t size, int channel)
         return false;
 
     const auto kind = data[0] & 0xf0;
+    if (kind == 0xb0 && data[1] == 32 && !hasFactoryVoices)
+        return false;
     return (kind != 0x80 && kind != 0x90) || isSupportedNoteNumber(data[1]);
 }
 }

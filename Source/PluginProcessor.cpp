@@ -355,6 +355,7 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     // The state thread never touches these audio-owned queues.
     (void) observeStateInstall();
     const int inputChannel = midiInputChannel_.load();
+    const bool hasFactoryVoices = factoryVoicesAvailable_.load(std::memory_order_acquire);
     if (inputChannel != audioMidiInputChannel_)
     {
         audioMidiInputChannel_ = inputChannel;
@@ -408,12 +409,14 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     if (engineLoaded_.load(std::memory_order_acquire) && useDeferred)
     {
         for (std::size_t i = 0; i < keyboardCount; ++i)
-            if (VDX7MidiValidation::acceptsHostEvent(keyboardEvents[i].data(), 3, 0))
+            if (VDX7MidiValidation::acceptsHostEvent(keyboardEvents[i].data(), 3, 0,
+                    hasFactoryVoices))
                 deferredMidi_.push(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
         {
             if (event.numBytes <= 0 || !VDX7MidiValidation::acceptsHostEvent(
-                    event.data, static_cast<std::size_t>(event.numBytes), inputChannel))
+                    event.data, static_cast<std::size_t>(event.numBytes), inputChannel,
+                    hasFactoryVoices))
                 continue;
             deferredMidi_.push(event.data, static_cast<std::size_t>(event.numBytes),
                                juce::jlimit(0, total, event.samplePosition));
@@ -491,11 +494,13 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     else
     {
         for (std::size_t i = 0; i < keyboardCount; ++i)
-            if (VDX7MidiValidation::acceptsHostEvent(keyboardEvents[i].data(), 3, 0))
+            if (VDX7MidiValidation::acceptsHostEvent(keyboardEvents[i].data(), 3, 0,
+                    hasFactoryVoices))
                 deliver(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
             if (event.numBytes > 0 && VDX7MidiValidation::acceptsHostEvent(
-                    event.data, static_cast<std::size_t>(event.numBytes), inputChannel))
+                    event.data, static_cast<std::size_t>(event.numBytes), inputChannel,
+                    hasFactoryVoices))
                 deliver(event.data, static_cast<std::size_t>(event.numBytes),
                         juce::jlimit(0, total, event.samplePosition));
     }
