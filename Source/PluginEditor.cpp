@@ -9,6 +9,47 @@
 
 namespace
 {
+class SettingsLookAndFeel final : public VDX7LookAndFeel
+{
+public:
+    juce::Font getAlertWindowMessageFont() override
+    {
+        return juce::Font(juce::FontOptions(12.5f));
+    }
+};
+
+class SettingsInfoComponent final : public juce::Component
+{
+public:
+    explicit SettingsInfoComponent(juce::StringArray rows) : rows_(std::move(rows))
+    {
+        const juce::Font infoFont(juce::FontOptions(12.5f));
+        int textWidth = 0;
+        for (const auto& row : rows_)
+            textWidth = juce::jmax(textWidth, juce::roundToInt(
+                juce::GlyphArrangement::getStringWidth(infoFont, row)));
+
+        // AlertWindow sizes its controls to 80% of the dialog width and sizes
+        // the dialog from this custom component. Keep both the information
+        // rows and the controls fitted to the longest information line.
+        setSize(textWidth + 24, rows_.size() * rowHeight);
+        setInterceptsMouseClicks(false, false);
+    }
+
+    void paint(juce::Graphics& g) override
+    {
+        g.setColour(juce::Colour(0xffeee9dc));
+        g.setFont(juce::Font(juce::FontOptions(12.5f)));
+        for (int i = 0; i < rows_.size(); ++i)
+            g.drawText(rows_[i], 0, i * rowHeight, getWidth(), rowHeight,
+                       juce::Justification::centred, false);
+    }
+
+private:
+    static constexpr int rowHeight = 24;
+    juce::StringArray rows_;
+};
+
 constexpr float kReferenceWidth = 1440.0f;
 constexpr float kReferenceHeight = 1110.0f;
 constexpr int kTabGroup = 1001;
@@ -16,12 +57,29 @@ constexpr int kOperatorTabGroup = 1002;
 constexpr double kCpuDisplaySmoothing = 0.015;
 constexpr int kCpuTextRefreshFrames = 15;
 
-void drawEnvelopeGrid(juce::Graphics& g, juce::Rectangle<float> bounds)
+void drawEnvelopeGrid(juce::Graphics& g, juce::Rectangle<float> bounds, float scale)
 {
-    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff111b17), bounds.getTopLeft(),
-        juce::Colour(0xff29342b), bounds.getBottomRight(), false));
-    g.fillRoundedRectangle(bounds, 3.0f);
-    const auto grid = bounds.reduced(1.0f);
+    const float bezel = 2.0f * scale;
+    g.setColour(juce::Colour(0xff050605));
+    g.fillRoundedRectangle(bounds, 3.0f * scale);
+    const auto screen = bounds.reduced(bezel);
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff101512), screen.getTopLeft(),
+        juce::Colour(0xff222a22), screen.getBottomRight(), false));
+    g.fillRoundedRectangle(screen, 2.0f * scale);
+    g.setColour(juce::Colour(0xff080a08));
+    g.drawRoundedRectangle(screen, 2.0f * scale, juce::jmax(0.6f, scale - 1.0f));
+    // A restrained top-edge glint and lower shadow make the black rim read as
+    // an inset display rather than a flat line painted over the panel.
+    g.setColour(juce::Colour(0xff697267).withAlpha(0.32f));
+    g.drawLine(screen.getX() + 3.0f * scale, screen.getY() + scale,
+               screen.getRight() - 3.0f * scale, screen.getY() + scale, juce::jmax(0.7f, scale));
+    g.setColour(juce::Colour(0xff050605).withAlpha(0.75f));
+    g.drawLine(screen.getX() + 3.0f * scale, screen.getBottom() - scale,
+               screen.getRight() - 3.0f * scale, screen.getBottom() - scale, juce::jmax(0.7f, scale));
+    g.setColour(juce::Colour(0xff71685b));
+    g.drawRoundedRectangle(bounds.expanded(scale), 3.0f * scale, scale);
+
+    const auto grid = screen.reduced(1.0f * scale);
     g.setColour(juce::Colour(0xff40483a));
     for (int i = 1; i < 10; ++i)
     {
@@ -33,6 +91,21 @@ void drawEnvelopeGrid(juce::Graphics& g, juce::Rectangle<float> bounds)
         const float y = grid.getY() + grid.getHeight() * i / 6.0f;
         g.drawLine(grid.getX(), y, grid.getRight(), y, 0.6f);
     }
+}
+
+void drawChassisScrew(juce::Graphics& g, juce::Point<float> centre, float radius)
+{
+    g.setColour(juce::Colour(0xff111211).withAlpha(0.9f));
+    g.fillEllipse(centre.x - radius, centre.y - radius + 1.0f, radius * 2.0f, radius * 2.0f);
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff85847d), centre.x - radius,
+        centre.y - radius, juce::Colour(0xff343632), centre.x + radius, centre.y + radius, false));
+    g.fillEllipse(centre.x - radius + 1.0f, centre.y - radius + 1.0f,
+                  (radius - 1.0f) * 2.0f, (radius - 1.0f) * 2.0f);
+    g.setColour(juce::Colour(0xff171918));
+    g.drawLine(centre.x - radius * 0.42f, centre.y - radius * 0.42f,
+               centre.x + radius * 0.42f, centre.y + radius * 0.42f, juce::jmax(1.0f, radius * 0.22f));
+    g.drawLine(centre.x + radius * 0.42f, centre.y - radius * 0.42f,
+               centre.x - radius * 0.42f, centre.y + radius * 0.42f, juce::jmax(1.0f, radius * 0.22f));
 }
 
 constexpr std::array<VDX7VoiceData::Parameter, 7> kKnobParameters
@@ -163,11 +236,15 @@ VDX7Keyboard::VDX7Keyboard(juce::MidiKeyboardState& state)
 void VDX7Keyboard::paintOverChildren(juce::Graphics& g)
 {
     // A stationary felt strip above the keys, including pressed/hovered notes.
-    const float thickness = juce::jmax(1.0f, getHeight() * 2.0f / 138.0f);
-    g.setColour(juce::Colour(0xff8e1728));
-    g.fillRect(0.0f, 0.0f, float(getWidth()), thickness);
+    const float line = juce::jmax(1.0f, getHeight() / 138.0f);
+    g.setColour(juce::Colour(0xff080909));
+    g.fillRect(0.0f, 0.0f, float(getWidth()), line);
     g.setColour(juce::Colour(0xffc4454f));
-    g.fillRect(0.0f, 0.0f, float(getWidth()), thickness * 0.35f);
+    g.fillRect(0.0f, line, float(getWidth()), line);
+    g.setColour(juce::Colour(0xff080909));
+    g.fillRect(0.0f, line * 2.0f, float(getWidth()), line);
+    g.setColour(juce::Colour(0xff8e1728));
+    g.fillRect(0.0f, line * 3.0f, float(getWidth()), line);
 }
 
 void VDX7Keyboard::drawWhiteNote(int, juce::Graphics& g, juce::Rectangle<float> area,
@@ -240,7 +317,7 @@ void VDX7LevelMeter::setLevel(float newLevel)
 
 void VDX7LevelMeter::paint(juce::Graphics& g)
 {
-    constexpr int segmentCount = 12;
+    constexpr int segmentCount = 24;
     const auto bounds = getLocalBounds().toFloat();
     g.setColour(juce::Colour(0xff151612));
     g.fillRoundedRectangle(bounds, 3.0f);
@@ -248,7 +325,7 @@ void VDX7LevelMeter::paint(juce::Graphics& g)
     const float db = juce::Decibels::gainToDecibels(level_, -60.0f);
     const int litSegments = juce::jlimit(0, segmentCount,
         static_cast<int>(std::ceil((db + 60.0f) / 60.0f * segmentCount)));
-    const float ledWidth = bounds.getWidth() * 0.50f;
+    const float ledWidth = bounds.getWidth() * 0.42f;
     const float gap = juce::jmax(1.0f, bounds.getHeight() * 0.012f);
     const float ledHeight = (bounds.getHeight() - gap * (segmentCount + 1)) / segmentCount;
 
@@ -258,11 +335,32 @@ void VDX7LevelMeter::paint(juce::Graphics& g)
         const auto ledBounds = juce::Rectangle<float>(ledWidth, ledHeight)
                                    .withCentre({ bounds.getCentreX(), y + ledHeight * 0.5f });
 
-        auto colour = segment >= 10 ? juce::Colour(0xffed5b48)
-            : (segment >= 8 ? juce::Colour(0xffead55b) : juce::Colour(0xff64d653));
-        if (segment >= litSegments) colour = colour.withMultipliedBrightness(0.15f);
-        g.setColour(colour);
-        g.fillRoundedRectangle(ledBounds, 1.0f);
+        const auto colour = segment >= 20 ? juce::Colour(0xffed5b48)
+            : (segment >= 16 ? juce::Colour(0xffead55b) : juce::Colour(0xff64d653));
+        if (segment < litSegments)
+        {
+            const auto glowBounds = ledBounds.expanded(ledWidth * 0.34f, ledHeight * 0.22f);
+            juce::ColourGradient glow(colour.withAlpha(0.38f), ledBounds.getCentreX(), ledBounds.getCentreY(),
+                                      colour.withAlpha(0.0f), glowBounds.getRight(), glowBounds.getBottom(), true);
+            g.setGradientFill(glow);
+            g.fillRoundedRectangle(glowBounds, 2.0f);
+
+            juce::ColourGradient lens(colour.brighter(0.22f), ledBounds.getX(), ledBounds.getY(),
+                                      colour.darker(0.16f), ledBounds.getX(), ledBounds.getBottom(), false);
+            g.setGradientFill(lens);
+            g.fillRoundedRectangle(ledBounds, 1.0f);
+            g.setColour(juce::Colours::white.withAlpha(0.24f));
+            g.fillRoundedRectangle(ledBounds.withHeight(juce::jmax(1.0f, ledHeight * 0.16f)), 0.8f);
+        }
+        else
+        {
+            const auto unlit = segment >= 20 ? juce::Colour(0xff100706)
+                : (segment >= 16 ? juce::Colour(0xff100e05) : juce::Colour(0xff060d08));
+            g.setColour(unlit);
+            g.fillRoundedRectangle(ledBounds, 1.0f);
+            g.setColour(unlit.brighter(0.07f));
+            g.drawRoundedRectangle(ledBounds, 1.0f, 0.55f);
+        }
     }
 }
 
@@ -272,7 +370,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
       keyboard_(processor.keyboardState()),
       performancePanel_(processor),
       chassis_(loadImage(VDX7Assets::mainwindow_png, VDX7Assets::mainwindow_pngSize)),
-      wordmark_(juce::Drawable::createFromImageData(VDX7Assets::vdx7mk1_svg, VDX7Assets::vdx7mk1_svgSize)),
+      wordmark_(juce::Drawable::createFromImageData(VDX7Assets::vdx7silver2_svg, VDX7Assets::vdx7silver2_svgSize)),
       lcdFrame_(loadImage(VDX7Assets::lcdframe_png, VDX7Assets::lcdframe_pngSize)),
       panel_(loadImage(VDX7Assets::panel9slice_png, VDX7Assets::panel9slice_pngSize)),
       valueField_(loadImage(VDX7Assets::valuefield_png, VDX7Assets::valuefield_pngSize)),
@@ -282,18 +380,18 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     setLookAndFeel(&lookAndFeel_);
     setOpaque(true);
     setResizable(true, true);
-    setResizeLimits(960, 740, 1600, 1234);
+    setResizeLimits(600, 463, 1800, 1388);
     if (auto* constrainer = getConstrainer())
         constrainer->setFixedAspectRatio(kReferenceWidth / kReferenceHeight);
     setSize(1200, 925);
 
-    configureLabel(status_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xffbdb8ac));
+    configureLabel(status_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xffcec9bd));
     configureLabel(patch_, 29.0f, juce::Justification::centredLeft, juce::Colour(0xff273019));
-    configureLabel(bankCaption_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xff273019));
+    configureLabel(bankCaption_, 13.0f, juce::Justification::centredLeft, juce::Colour(0xff273019));
     configureLabel(programCaption_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xff273019));
     configureLabel(masterCaption_, 14.0f, juce::Justification::centred);
     configureLabel(masterValue_, 17.0f, juce::Justification::centred, juce::Colour(0xff68c7bb));
-    configureLabel(pitchCaption_, 14.0f, juce::Justification::centred);
+    configureLabel(pitchCaption_, 15.5f, juce::Justification::centred);
     configureLabel(modCaption_, 14.0f, juce::Justification::centred);
     configureLabel(outputCaption_, 19.0f, juce::Justification::centred);
     configureLabel(leftCaption_, 12.0f, juce::Justification::centred);
@@ -302,14 +400,14 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     configureLabel(frequencyValue_, 14.0f, juce::Justification::centredRight,
                    juce::Colour(0xff68c7bb));
     configureLabel(envelopeTitle_, 13.0f, juce::Justification::centredLeft,
-                   juce::Colour(0xffbdb8ac));
+                   juce::Colour(0xffc9c4b8));
     configureLabel(pitchEnvelopeTitle_, 12.0f, juce::Justification::centredLeft,
-                   juce::Colour(0xffbdb8ac));
+                   juce::Colour(0xffc9c4b8));
     configureLabel(voiceLfoTitle_, 12.0f, juce::Justification::centredLeft,
-                   juce::Colour(0xffbdb8ac));
+                   juce::Colour(0xffc9c4b8));
     configureLabel(footerLeft_, 15.0f, juce::Justification::centredLeft);
     configureLabel(footerCentre_, 15.0f, juce::Justification::centred, juce::Colour(0xffb0aa9d));
-    configureLabel(footerRight_, 12.0f, juce::Justification::centredRight, juce::Colour(0xffbdb8ac));
+    configureLabel(footerRight_, 12.0f, juce::Justification::centredRight, juce::Colour(0xffc9c4b8));
 
     masterCaption_.setText("VOLUME", juce::dontSendNotification);
     pitchCaption_.setText("PITCH", juce::dontSendNotification);
@@ -402,14 +500,14 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     {
         configureOperatorSlider(operatorKnobs_[i], false);
         configureLabel(operatorKnobCaptions_[i], 11.0f, juce::Justification::centred,
-                       juce::Colour(0xffbdb8ac));
+                       juce::Colour(0xffc9c4b8));
         configureLabel(operatorKnobValues_[i], 12.0f, juce::Justification::centred,
                        juce::Colour(0xff68c7bb));
         operatorKnobCaptions_[i].setText(kKnobCaptions[i], juce::dontSendNotification);
         operatorKnobValues_[i].setColour(juce::Label::backgroundColourId,
                                          juce::Colour(0xff24221f));
         operatorKnobValues_[i].setColour(juce::Label::outlineColourId,
-                                         juce::Colour(0xff575248));
+                                         juce::Colour(0xff71685b));
         operatorKnobs_[i].onValueChange = [this] { updateOperatorValueLabels(); };
         addAndMakeVisible(operatorKnobs_[i]);
         addAndMakeVisible(operatorKnobCaptions_[i]);
@@ -421,14 +519,14 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
         configureOperatorSlider(envelopeFaders_[i], true);
         envelopeFaders_[i].setName("Operator envelope " + juce::String(kEnvelopeCaptions[i]));
         configureLabel(envelopeCaptions_[i], 11.0f, juce::Justification::centred,
-                       juce::Colour(0xffbdb8ac));
+                       juce::Colour(0xffc9c4b8));
         configureLabel(envelopeValues_[i], 11.0f, juce::Justification::centred,
                        juce::Colour(0xff68c7bb));
         envelopeCaptions_[i].setText(kEnvelopeCaptions[i], juce::dontSendNotification);
         envelopeValues_[i].setColour(juce::Label::backgroundColourId,
                                      juce::Colour(0xff24221f));
         envelopeValues_[i].setColour(juce::Label::outlineColourId,
-                                     juce::Colour(0xff575248));
+                                     juce::Colour(0xff71685b));
         envelopeFaders_[i].onValueChange = [this]
         {
             updateOperatorValueLabels();
@@ -449,14 +547,14 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
             operatorScaleKnobs_[i].getProperties().set("vdx7ModeSwitch", true);
         }
         configureLabel(operatorScaleCaptions_[i], 9.0f, juce::Justification::centred,
-                       juce::Colour(0xffbdb8ac));
+                       juce::Colour(0xffc9c4b8));
         configureLabel(operatorScaleValues_[i], 10.0f, juce::Justification::centred,
                        juce::Colour(0xff68c7bb));
         operatorScaleCaptions_[i].setText(kScaleCaptions[i], juce::dontSendNotification);
         operatorScaleValues_[i].setColour(juce::Label::backgroundColourId,
                                           juce::Colour(0xff24221f));
         operatorScaleValues_[i].setColour(juce::Label::outlineColourId,
-                                          juce::Colour(0xff575248));
+                                          juce::Colour(0xff71685b));
         operatorScaleKnobs_[i].onValueChange = [this] { updateOperatorValueLabels(); };
         addAndMakeVisible(operatorScaleKnobs_[i]);
         addAndMakeVisible(operatorScaleCaptions_[i]);
@@ -466,21 +564,21 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     frequencyValue_.setJustificationType(juce::Justification::centred);
     frequencyValue_.setBorderSize(juce::BorderSize<int>(0));
     frequencyValue_.setColour(juce::Label::backgroundColourId, juce::Colour(0xff24221f));
-    frequencyValue_.setColour(juce::Label::outlineColourId, juce::Colour(0xff575248));
+    frequencyValue_.setColour(juce::Label::outlineColourId, juce::Colour(0xff71685b));
 
     for (std::size_t i = 0; i < pitchEnvelopeFaders_.size(); ++i)
     {
         configureOperatorSlider(pitchEnvelopeFaders_[i], true);
         pitchEnvelopeFaders_[i].setName("Pitch envelope " + juce::String(static_cast<int>(i)));
         configureLabel(pitchEnvelopeCaptions_[i], 9.0f, juce::Justification::centred,
-                       juce::Colour(0xffbdb8ac));
+                       juce::Colour(0xffc9c4b8));
         configureLabel(pitchEnvelopeValues_[i], 9.0f, juce::Justification::centred,
                        juce::Colour(0xff68c7bb));
         pitchEnvelopeCaptions_[i].setText(kEnvelopeCaptions[i], juce::dontSendNotification);
         pitchEnvelopeValues_[i].setColour(juce::Label::backgroundColourId,
                                           juce::Colour(0xff24221f));
         pitchEnvelopeValues_[i].setColour(juce::Label::outlineColourId,
-                                          juce::Colour(0xff575248));
+                                          juce::Colour(0xff71685b));
         pitchEnvelopeFaders_[i].onValueChange = [this]
         {
             updateVoiceValueLabels();
@@ -501,7 +599,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
             voiceKnobs_[i].getProperties().set("vdx7SyncSwitch", true);
         }
         configureLabel(voiceKnobCaptions_[i], 8.5f, juce::Justification::centred,
-                       juce::Colour(0xffbdb8ac));
+                       juce::Colour(0xffc9c4b8));
         configureLabel(voiceKnobValues_[i], 9.0f, juce::Justification::centred,
                        juce::Colour(0xff68c7bb));
         voiceKnobCaptions_[i].setText(kVoiceKnobCaptions[i], juce::dontSendNotification);
@@ -509,7 +607,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
         voiceKnobValues_[i].setColour(juce::Label::backgroundColourId,
                                       juce::Colour(0xff24221f));
         voiceKnobValues_[i].setColour(juce::Label::outlineColourId,
-                                      juce::Colour(0xff575248));
+                                      juce::Colour(0xff71685b));
         voiceKnobs_[i].onValueChange = [this] { updateVoiceValueLabels(); };
         addAndMakeVisible(voiceKnobs_[i]);
         addAndMakeVisible(voiceKnobCaptions_[i]);
@@ -789,10 +887,8 @@ void VDX7AudioProcessorEditor::updateVoiceValueLabels()
 void VDX7AudioProcessorEditor::drawOperatorEnvelope(juce::Graphics& g)
 {
     const float scaleY = static_cast<float>(getHeight()) / kReferenceHeight;
-    const auto graph = referenceRect(1084, 580, 300, 239).toFloat();
-    drawEnvelopeGrid(g, graph);
-    g.setColour(juce::Colour(0xff17343a));
-    g.drawRoundedRectangle(graph, 4.0f * scaleY, juce::jmax(1.0f, scaleY));
+    const auto graph = referenceRect(1084, 585, 300, 239).toFloat();
+    drawEnvelopeGrid(g, graph, scaleY);
 
     std::array<float, 4> rates {};
     std::array<float, 4> levels {};
@@ -848,10 +944,8 @@ void VDX7AudioProcessorEditor::drawOperatorEnvelope(juce::Graphics& g)
 void VDX7AudioProcessorEditor::drawPitchEnvelope(juce::Graphics& g)
 {
     const float scaleY = static_cast<float>(getHeight()) / kReferenceHeight;
-    const auto graph = referenceRect(326, 389, 264, 112).toFloat();
-    drawEnvelopeGrid(g, graph);
-    g.setColour(juce::Colour(0xff17343a));
-    g.drawRoundedRectangle(graph, 3.0f * scaleY, juce::jmax(1.0f, scaleY));
+    const auto graph = referenceRect(326, 394, 264, 112).toFloat();
+    drawEnvelopeGrid(g, graph, scaleY);
 
     std::array<float, 4> rates {};
     std::array<float, 4> levels {};
@@ -908,16 +1002,16 @@ void VDX7AudioProcessorEditor::updateResponsiveTypography()
     const auto setFont = [scale](juce::Label& label, float referenceSize, int style = juce::Font::plain)
     {
         label.setFont(juce::Font(juce::FontOptions(
-            juce::jmax(8.0f, referenceSize * scale), style)));
+            juce::jmax(4.0f, referenceSize * scale), style)));
     };
 
     setFont(status_, 12.0f);
     setFont(patch_, 29.0f, juce::Font::bold);
-    setFont(bankCaption_, 14.0f);
+    setFont(bankCaption_, 15.5f);
     setFont(programCaption_, 14.0f);
     setFont(masterCaption_, 14.0f);
     setFont(masterValue_, 17.0f);
-    setFont(pitchCaption_, 14.0f);
+    setFont(pitchCaption_, 15.5f);
     setFont(modCaption_, 14.0f);
     setFont(outputCaption_, 19.0f);
     setFont(leftCaption_, 12.0f);
@@ -976,7 +1070,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     drawPanel(34, 135, 920, 190);
     drawPanel(968, 135, 220, 190);
     drawPanel(1200, 135, 206, 391);
-    drawPanel(34, 340, 1154, performanceVisible_ ? 210 : 175);
+    drawPanel(34, 340, 1154, performanceVisible_ ? 210 : 185);
     if (performanceVisible_)
         drawPanel(34, 550, 1372, 286);
     else
@@ -987,16 +1081,24 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     // inside their bounds. Use that same visible lower edge for logo and text.
     const float headerBottom = about_.getBottom() - 1.5f;
     const float scaleX = float(getWidth()) / kReferenceWidth;
-    const float logoWidth = 420.0f * scaleX;
-    const float logoHeight = logoWidth * 61.0f / 466.0f;
+    const float logoWidth = 300.0f * scaleX;
+    const float logoHeight = logoWidth * 381.0f / 1947.0f;
     // Three understated header accents reuse the section-divider tone and
     // span the full header inset. Keep them above the brand/action row.
-    g.setColour(juce::Colour(0xff575248));
+    g.setColour(juce::Colour(0xff71685b));
     for (const float y : { 22.0f, 34.0f, 46.0f })
         g.fillRect(referenceRect(34, y, 1372, 1));
     if (wordmark_)
         wordmark_->drawWithin(g, { 44.0f * scaleX, headerBottom - logoHeight,
                                   logoWidth, logoHeight }, juce::RectanglePlacement::stretchToFit, 1.0f);
+    g.setColour(juce::Colour(0xffbdb8ac));
+    juce::GlyphArrangement modelMark;
+    modelMark.addLineOfText(juce::Font(juce::FontOptions(52.0f * scaleY, juce::Font::bold)),
+                            "Mk1.", 0.0f, 0.0f);
+    const auto modelMarkInk = modelMark.getBoundingBox(0, -1, true);
+    modelMark.draw(g, juce::AffineTransform::translation(
+        361.0f * scaleX - modelMarkInk.getX(),
+        headerBottom - modelMarkInk.getBottom() + 5.0f * scaleY));
     const auto headerText = [&g, scaleX, scaleY](const juce::String& text, float bottom,
                                                 float size, int style)
     {
@@ -1006,7 +1108,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
         g.setColour(juce::Colour(0xffd2cdc1));
         glyphs.draw(g, juce::AffineTransform::translation(490.0f * scaleX - ink.getX(), bottom - ink.getBottom()));
     };
-    headerText("HARDWARE EMULATION", headerBottom - 25.0f * scaleY, 21.0f, juce::Font::bold);
+    headerText("HARDWARE EMULATION", headerBottom - 25.0f * scaleY, 19.0f, juce::Font::bold);
     headerText("Original firmware required.", headerBottom, 19.0f, juce::Font::plain);
     g.setColour(juce::Colour(0xff71685b));
     g.fillRect(referenceRect(34, 131, 1372, 1));
@@ -1023,9 +1125,10 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     footerGradient.addColour(0.5, juce::Colour(0xff302d29));
     g.setGradientFill(footerGradient);
     g.fillRoundedRectangle(footerBounds, 3.0f * scaleY);
-    g.setColour(juce::Colour(0xff575248));
+    g.setColour(juce::Colour(0xff71685b));
     g.fillRect(footerBounds.withHeight(juce::jmax(1.0f, scaleY)));
-    g.drawImage(valueField_, referenceRect(1255, 467, 96, 32).toFloat());
+    constexpr float outputContentOffsetY = 10.0f;
+    g.drawImage(valueField_, referenceRect(1255, 467 + outputContentOffsetY, 96, 32).toFloat());
 
     g.setFont(juce::Font(juce::FontOptions(20.0f * scaleY)));
     g.setColour(juce::Colour(0xffeee9dc));
@@ -1034,7 +1137,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
                referenceRect(52, 350, 250, 30), juce::Justification::centredLeft);
     g.drawText("ALGORITHM", referenceRect(980, 145, 126, 30), juce::Justification::centredLeft);
 
-    g.setColour(juce::Colour(0xff575248));
+    g.setColour(juce::Colour(0xff71685b));
     g.fillRect(referenceRect(52, 176, 884, 1));
     g.fillRect(referenceRect(52, 382, 1118, 1));
     if (!performanceVisible_)
@@ -1043,15 +1146,73 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
         g.fillRect(referenceRect(48, 720, 632, 1));
     }
 
+    // Seven subtle Phillips fasteners sit at the four enclosure corners,
+    // halfway down each side, and at the centre of the lower edge.
+    for (const auto p : { juce::Point<float>(23.0f, 23.0f), juce::Point<float>(1417.0f, 23.0f),
+                          juce::Point<float>(23.0f, 555.0f), juce::Point<float>(1417.0f, 555.0f),
+                          juce::Point<float>(23.0f, 1087.0f), juce::Point<float>(720.0f, 1087.0f),
+                          juce::Point<float>(1417.0f, 1087.0f) })
+        drawChassisScrew(g, { p.x * scaleX, p.y * scaleY }, 7.0f * scaleY);
+
+    // Raised metallic lip above the existing keyboard/wheel bay.
+    g.setColour(juce::Colour(0xff89877e));
+    g.fillRect(referenceRect(210, 862, 1184, 1.3f));
+    g.setColour(juce::Colour(0xff151715));
+    g.fillRect(referenceRect(210, 864, 1184, 2.0f));
+
+    // Wheel scales follow the hardware reference: opposing pitch arrows
+    // separated by zero, and a simple max/min modulation guide.
+    const auto wheelScalePoint = [scaleX, scaleY](float x, float y)
+    {
+        return juce::Point<float>(x * scaleX, y * scaleY);
+    };
+    g.setColour(juce::Colour(0xffd0cec3));
+    constexpr float pitchControlOffsetX = -6.0f;
+    const auto pitchScalePoint = [&wheelScalePoint](float x, float y)
+    {
+        return wheelScalePoint(x + pitchControlOffsetX, y);
+    };
+    juce::Path pitchUp;
+    pitchUp.startNewSubPath(pitchScalePoint(121.5f, 889));
+    pitchUp.lineTo(pitchScalePoint(128, 927));
+    pitchUp.lineTo(pitchScalePoint(115, 927));
+    pitchUp.closeSubPath();
+    g.fillPath(pitchUp);
+    juce::Path pitchDown;
+    pitchDown.startNewSubPath(pitchScalePoint(115, 951));
+    pitchDown.lineTo(pitchScalePoint(128, 951));
+    pitchDown.lineTo(pitchScalePoint(121.5f, 989));
+    pitchDown.closeSubPath();
+    g.fillPath(pitchDown);
+
+    const float modulationScaleX = 195.5f * scaleX;
+    g.drawLine(modulationScaleX, 889.0f * scaleY, modulationScaleX, 932.0f * scaleY,
+               juce::jmax(1.0f, scaleY));
+    g.drawLine(modulationScaleX, 947.0f * scaleY, modulationScaleX, 989.0f * scaleY,
+               juce::jmax(1.0f, scaleY));
+    g.drawLine(191.0f * scaleX, 889.0f * scaleY, 200.0f * scaleX, 889.0f * scaleY,
+               juce::jmax(1.0f, scaleY));
+    g.drawLine(191.0f * scaleX, 989.0f * scaleY, 200.0f * scaleX, 989.0f * scaleY,
+               juce::jmax(1.0f, scaleY));
+
+    g.setColour(juce::Colour(0xffd0cec3));
+    g.setFont(juce::Font(juce::FontOptions(8.0f * scaleY)));
+    g.drawFittedText("UP", referenceRect(105 + pitchControlOffsetX, 873, 33, 13), juce::Justification::centred, 1);
+    g.drawFittedText("0", referenceRect(105 + pitchControlOffsetX, 933, 33, 13), juce::Justification::centred, 1);
+    g.drawFittedText("DOWN", referenceRect(105 + pitchControlOffsetX, 993, 33, 13), juce::Justification::centred, 1);
+    g.drawFittedText("MAX", referenceRect(181, 873, 29, 13), juce::Justification::centred, 1);
+    g.drawFittedText("0", referenceRect(181, 933, 29, 13), juce::Justification::centred, 1);
+    g.drawFittedText("MIN", referenceRect(181, 993, 29, 13), juce::Justification::centred, 1);
+
     if (performanceVisible_)
     {
         return;
     }
 
     g.setFont(juce::Font(juce::FontOptions(11.0f * scaleY)));
-    g.setColour(juce::Colour(0xffbdb8ac));
+    g.setColour(juce::Colour(0xffc9c4b8));
 
-    g.setColour(juce::Colour(0xff575248));
+    g.setColour(juce::Colour(0xff71685b));
     g.fillRect(referenceRect(594, 390, 1, 116));
     drawPitchEnvelope(g);
     drawOperatorEnvelope(g);
@@ -1078,18 +1239,19 @@ void VDX7AudioProcessorEditor::resized()
     utilityTab_.setBounds(referenceRect(284, 190, 100, 42));
     patch_.setBounds(referenceRect(472, 190, 412, 40));
     bankCaption_.setBounds(referenceRect(472, 238, 52, 24));
-    bank_.setBounds(referenceRect(524, 238, 94, 24));
+    bank_.setBounds(referenceRect(516, 238, 94, 24));
     programCaption_.setBounds(referenceRect(625, 238, 76, 24));
-    program_.setBounds(referenceRect(701, 238, 72, 24));
+    program_.setBounds(referenceRect(693, 238, 72, 24));
 
     outputCaption_.setBounds(referenceRect(1210, 146, 186, 30));
-    leftCaption_.setBounds(referenceRect(1210, 178, 58, 22));
-    masterCaption_.setBounds(referenceRect(1270, 178, 66, 22));
-    rightCaption_.setBounds(referenceRect(1338, 178, 58, 22));
-    leftMeter_.setBounds(referenceRect(1220, 202, 38, 232));
-    masterVolume_.setBounds(referenceRect(1274, 202, 58, 232));
-    rightMeter_.setBounds(referenceRect(1348, 202, 38, 232));
-    masterValue_.setBounds(referenceRect(1255, 467, 96, 32));
+    constexpr float outputContentOffsetY = 10.0f;
+    leftCaption_.setBounds(referenceRect(1210, 178 + outputContentOffsetY, 58, 22));
+    masterCaption_.setBounds(referenceRect(1270, 178 + outputContentOffsetY, 66, 22));
+    rightCaption_.setBounds(referenceRect(1338, 178 + outputContentOffsetY, 58, 22));
+    leftMeter_.setBounds(referenceRect(1220, 202 + outputContentOffsetY, 38, 232));
+    masterVolume_.setBounds(referenceRect(1274, 202 + outputContentOffsetY, 58, 232));
+    rightMeter_.setBounds(referenceRect(1348, 202 + outputContentOffsetY, 38, 232));
+    masterValue_.setBounds(referenceRect(1255, 467 + outputContentOffsetY, 96, 32));
     algorithm_.setBounds(referenceRect(1109, 145, 68, 30));
     algorithmView_.setBounds(referenceRect(980, 180, 200, 124));
     pitchEnvelopeTitle_.setBounds(referenceRect(52, 384, 260, 20));
@@ -1098,8 +1260,8 @@ void VDX7AudioProcessorEditor::resized()
     {
         const float x = 52.0f + static_cast<float>(i) * 33.0f;
         pitchEnvelopeCaptions_[i].setBounds(referenceRect(x, 404, 28, 12));
-        pitchEnvelopeFaders_[i].setBounds(referenceRect(x, 416, 28, 74));
-        pitchEnvelopeValues_[i].setBounds(referenceRect(x, 492, 28, 18));
+        pitchEnvelopeFaders_[i].setBounds(referenceRect(x, 414, 28, 88));
+        pitchEnvelopeValues_[i].setBounds(referenceRect(x, 502, 28, 18));
     }
     for (std::size_t i = 0; i < voiceKnobs_.size(); ++i)
     {
@@ -1141,9 +1303,10 @@ void VDX7AudioProcessorEditor::resized()
         envelopeValues_[i].setBounds(referenceRect(x, 799, 36, 20));
     }
 
-    pitchCaption_.setBounds(referenceRect(48, 847, 72, 24));
+    constexpr float pitchControlOffsetX = -6.0f;
+    pitchCaption_.setBounds(referenceRect(48 + pitchControlOffsetX, 847, 72, 24));
     modCaption_.setBounds(referenceRect(124, 847, 72, 24));
-    pitchWheel_.setBounds(referenceRect(64.75f, 870, 40.5f, 138));
+    pitchWheel_.setBounds(referenceRect(64.75f + pitchControlOffsetX, 870, 40.5f, 138));
     modWheel_.setBounds(referenceRect(140.75f, 870, 40.5f, 138));
     keyboard_.setBounds(referenceRect(210, 870, 1184, 138));
     keyboard_.setKeyWidth(static_cast<float>(keyboard_.getWidth()) / 36.0f);
@@ -1429,38 +1592,66 @@ void VDX7AudioProcessorEditor::showUtilityMenu()
 
 void VDX7AudioProcessorEditor::showSettings()
 {
+    static SettingsLookAndFeel settingsLookAndFeel;
     const int initial = processor_.getMasterTune();
     const int initialChannel = processor_.getMidiInputChannel();
     const auto initialCorrection = processor_.getMonoCorrectionStatus();
+    constexpr std::array<int, 5> guiScalePercentages { 50, 75, 100, 125, 150 };
+    const float currentPercent = static_cast<float>(getWidth()) * 100.0f / 1200.0f;
+    int initialScaleIndex = 0;
+    for (int i = 1; i < static_cast<int>(guiScalePercentages.size()); ++i)
+        if (std::abs(guiScalePercentages[static_cast<std::size_t>(i)] - currentPercent)
+            < std::abs(guiScalePercentages[static_cast<std::size_t>(initialScaleIndex)] - currentPercent))
+            initialScaleIndex = i;
     const juce::String correctionStatus = initialCorrection.active ? "Active (verified firmware)"
         : initialCorrection.requested ? (initialCorrection.loaded ? "Unavailable for this firmware: native behavior"
                                                                    : "Waiting for compatible firmware")
                                       : "Native firmware behavior";
-    auto* dialog = new juce::AlertWindow("SETTINGS",
-        "Master tuning: -256 to +255 firmware units (not cents). 0 = default tuning.\n"
-        "Saved in the DAW project, not voice/bank SysEx.\n"
-        "Channel changes release held notes/sustain on the next audio block.\n"
-        "On-screen keyboard and bank SysEx import are not channel-filtered.\n"
-        "Advanced MONO compatibility is normally best left at Native firmware.\n"
-        "Both modes accept MIDI Notes 12–120 only.\n"
-        "Changing MONO correction restarts the engine and stops playing notes.\n"
-        "MONO correction: " + correctionStatus,
-        juce::MessageBoxIconType::NoIcon);
+    auto* dialog = new juce::AlertWindow("SETTINGS", {}, juce::MessageBoxIconType::NoIcon);
+    dialog->setLookAndFeel(&settingsLookAndFeel);
+    juce::StringArray settingsInfoRows
+    {
+        "Master tuning: -256 to +255 firmware units (not cents). 0 = default tuning.",
+        "Saved in the DAW project, not voice/bank SysEx.",
+        "Channel changes release held notes/sustain on the next audio block.",
+        "On-screen keyboard and bank SysEx import are not channel-filtered.",
+        "Advanced MONO compatibility is normally best left at Native firmware.",
+        "Both modes accept MIDI Notes 12-120 only.",
+        "Changing MONO correction restarts the engine and stops playing notes.",
+        "MONO correction: " + correctionStatus
+    };
+    dialog->addCustomComponent(new SettingsInfoComponent(std::move(settingsInfoRows)));
+    juce::StringArray guiScaleChoices;
+    for (const auto percentage : guiScalePercentages)
+        guiScaleChoices.add(juce::String(percentage) + "%");
     dialog->addTextEditor("tuning", juce::String(initial), "Master tuning:");
     dialog->getTextEditor("tuning")->setInputRestrictions(4, "-0123456789");
+    dialog->addComboBox("guiScale", guiScaleChoices, "GUI size:");
+    auto* scaleCombo = dialog->getComboBoxComponent("guiScale");
+    scaleCombo->getProperties().set("vdx7SettingsCombo", true);
+    scaleCombo->setLookAndFeel(&settingsLookAndFeel);
+    scaleCombo->setSelectedItemIndex(initialScaleIndex);
     juce::StringArray channels {"OMNI (all channels)"};
     for (int channel = 1; channel <= 16; ++channel) channels.add(juce::String(channel));
     dialog->addComboBox("channel", channels, "Host MIDI input:");
-    dialog->getComboBoxComponent("channel")->setSelectedItemIndex(initialChannel);
+    auto* channelCombo = dialog->getComboBoxComponent("channel");
+    channelCombo->getProperties().set("vdx7SettingsCombo", true);
+    channelCombo->setLookAndFeel(&settingsLookAndFeel);
+    channelCombo->setSelectedItemIndex(initialChannel);
     dialog->addComboBox("monoCorrection", {"Native firmware (recommended)", "Correct MONO Note 0 (advanced)"},
                         "Advanced MONO engine mode:");
-    dialog->getComboBoxComponent("monoCorrection")->setSelectedItemIndex(initialCorrection.requested ? 1 : 0);
+    auto* correctionCombo = dialog->getComboBoxComponent("monoCorrection");
+    correctionCombo->getProperties().set("vdx7SettingsCombo", true);
+    correctionCombo->setLookAndFeel(&settingsLookAndFeel);
+    correctionCombo->setSelectedItemIndex(initialCorrection.requested ? 1 : 0);
     dialog->addButton("Apply", 1, juce::KeyPress(juce::KeyPress::returnKey));
     dialog->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
     juce::Component::SafePointer<VDX7AudioProcessorEditor> safe(this);
     dialog->enterModalState(true, juce::ModalCallbackFunction::create(
-        [safe, dialog, initial, initialChannel, initialCorrection](int result)
+            [safe, dialog, initial, initialChannel, initialCorrection](int result)
         {
+            if (dialog->getNumCustomComponents() > 0)
+                delete dialog->removeCustomComponent(0);
             if (safe == nullptr || result != 1) return;
             const auto text = dialog->getTextEditorContents("tuning").trim();
             const auto digits = text.startsWithChar('-') ? text.substring(1) : text;
@@ -1476,7 +1667,16 @@ void VDX7AudioProcessorEditor::showSettings()
             safe->processor_.setMidiInputChannelFromUi(dialog->getComboBoxComponent("channel")->getSelectedItemIndex());
             if (!safe->processor_.setMonoCorrectionFromUi(
                     dialog->getComboBoxComponent("monoCorrection")->getSelectedItemIndex() == 1))
+            {
                 safe->showError("Correction unavailable", "A project restore may be in progress. Reopen SETTINGS.");
+                return;
+            }
+            constexpr std::array<int, 5> scaleWidths { 600, 900, 1200, 1500, 1800 };
+            constexpr std::array<int, 5> scaleHeights { 463, 694, 925, 1156, 1388 };
+            const int scaleIndex = juce::jlimit(0, 4,
+                dialog->getComboBoxComponent("guiScale")->getSelectedItemIndex());
+            safe->setSize(scaleWidths[static_cast<std::size_t>(scaleIndex)],
+                          scaleHeights[static_cast<std::size_t>(scaleIndex)]);
         }), true);
 }
 

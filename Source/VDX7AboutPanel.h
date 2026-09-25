@@ -14,8 +14,8 @@ public:
 
 private:
     VDX7LookAndFeel lookAndFeel_;
-    std::unique_ptr<juce::Drawable> wordmark_, gyr_;
-    juce::Label subtitle_, developerCaption_, developer_, version_, licenses_, firmware_;
+    std::unique_ptr<juce::Drawable> wordmark_, gyr_, signature_;
+    juce::Label subtitle_, developerCaption_, version_, licenses_, firmware_;
     juce::HyperlinkButton source_;
     juce::TextButton close_ { "OK" };
 };
