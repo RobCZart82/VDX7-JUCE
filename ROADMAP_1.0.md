@@ -9,7 +9,7 @@ indices compatible with saved projects.
 
 ### Current next steps — 2026-09-24
 
-Latest checkpoint: PR #50 was merged to `main` as `675b553` on 2026-09-24; PR #52 was merged immediately before it.
+Latest checkpoint: PR #54 was merged to `main` as `9d57069` on 2026-09-24. PRs #50–#54 are merged; this does not mean their private-ROM acceptance has all run.
 `VALIDATION_MONO_SOAK.md` records the full 30-test run, separate desktop retry,
 dual-instance soak and remaining host boundaries. The user approved retaining
 both Native and Correct modes. Native remains the recommended default; Correct
@@ -40,20 +40,15 @@ wording only; PR #49 added roadmap documentation only. Since the audit, PR #50 c
 evidence, but are not a full JUCE, firmware or DAW acceptance run. Preserve each
 finding's evidence class; do not promote a model result into a product pass.
 
-Audit disposition refreshed against main `675b553` on 2026-09-24:
+Audit disposition refreshed against main `9d57069` on 2026-09-25:
 - N1 reset-history oracle correction merged in PR #50 (`675b553`). The ROM-enabled reset-history/full CTest acceptance remains NOT RUN; the merge fixes the test expectation, not a product audio defect.
 - U2 malformed checksum-valid detune round-trip was fixed in PR #52 (`cc2f4aa`): reject detune nibble 15 and cover all six operators with a checksum-valid regression. Keep the finding scoped to malformed input; do not generalize it to ordinary factory patches or call it a checksum defect.
-- PR #53 sends excluded pitches through the real processor in MONO
-  characterization and adds a direct-engine Note 127 guard-bypass sensitivity
-  control; macOS/Windows CI passed on its prior head; after synchronization with current main, rerun CI. Local ROM-enabled execution remains NOT RUN before closing T1.
-- N2 state/ROM identity mixing and U3 conditional CC32 queue pressure remain
-  unconfirmed processor-level candidates. U1 is under test in open PR #54:
-  macOS/Windows CI passed on `f08baff`; the new local-ROM regression has not
-  yet run, so direct-ROM stale-MIDI behavior is not closed.
+- T1 processor-boundary characterization and Note 127 guard-bypass sensitivity control merged in PR #53 (`7bb7af9`); synchronized macOS/Windows CI passed. The ROM-enabled characterization itself remains NOT RUN.
+- U1 direct ROM reload/deferred-MIDI boundary fix and opt-in processor regression merged in PR #54 (`9d57069`); macOS/Windows Actions passed on the merge commit. The local v1.8 ROM regression and full ROM-enabled suite remain NOT RUN, so runtime acceptance is pending. N2 state/ROM identity mixing and U3 conditional CC32 queue pressure remain unconfirmed processor-level candidates.
 - N3 bounded file-read and N4 public keyboard-queue admission are lower-priority
   hardening tasks.
 - MIDI Note 12–120 policy is consistent in product admission; internal 0–127
-  cleanup/release loops are intentional. No new tests were run by this refresh.
+  cleanup/release loops are intentional. The 2026-09-25 documentation refresh ran no tests; it records the merged commits and current NOT RUN boundary.
 - N5 — host tail metadata remains a P2 validation candidate: `getTailLengthSeconds()`
   still returns 0.0 although voices can release after Note Off. Verify JUCE/host
   offline-render tail behavior and add a Note-Off release-tail regression before
@@ -68,13 +63,11 @@ Audit disposition refreshed against main `675b553` on 2026-09-24:
    one recorded SHA before treating the local acceptance as complete. Those ROM
    runs remain NOT RUN.
 
-2. **T1 — make the characterization test exercise the production filter.**
-   Pass the disallowed MIDI events into the actual processor in the continuation
-   and boundary histories, then verify they are rejected and a later supported
-   note still sounds and releases. Add a sensitivity control showing the test
-   detects a deliberately bypassed guard. Retain separate raw-firmware
-   characterization; never let test-side prefiltering stand in for production
-   behavior.
+2. **T1 — production-filter characterization merged (PR #53, `7bb7af9`).**
+   Excluded MIDI events now enter the real processor in continuation and
+   boundary histories, with a direct-engine Note 127 sensitivity control.
+   Synchronized macOS/Windows CI passed. The local ROM-enabled characterization
+   remains NOT RUN; preserve it as a validation item, not an unimplemented code change.
 
 3. **N2 — reproduce state/ROM identity mixing before changing synchronization.**
    Add deterministic processor-level save-versus-ROM-load interleavings and
@@ -84,13 +77,12 @@ Audit disposition refreshed against main `675b553` on 2026-09-24:
    publication generation-consistent. Keep XML/base64 work outside long audio
    engine-lock sections; do not treat an extra reader lock alone as a fix.
 
-4. **U1 — direct ROM reload / deferred MIDI (open PR #54).**
-   A processor regression now creates real engine-lock contention with a
-   deferred Note On, performs a direct successful ROM reload, and checks that
-   stale input cannot reach the new engine, followed by fresh Note 72 playback
-   and release. macOS/Windows CI passed on `f08baff`; local v1.8 ROM execution
-   remains NOT RUN. Keep this distinct from project-state restore coverage and
-   do not close U1 until the local test passes.
+4. **U1 — direct ROM reload / deferred MIDI fix merged (PR #54, `9d57069`).**
+   A processor regression creates real engine-lock contention with deferred
+   input, performs a successful direct ROM reload, checks stale input is dropped,
+   and verifies a fresh Note 72 plays and releases. macOS/Windows Actions passed
+   on the merge commit. Local v1.8 ROM execution and the full ROM suite remain
+   NOT RUN; keep runtime acceptance open and distinct from project-state restore.
 
 5. **U2 — packed-detune malformed-input fix merged (PR #52, `cc2f4aa`).**
    A checksum-valid bank with detune nibble 15 is rejected consistently across
