@@ -61,6 +61,20 @@ public:
     bool loadSyxFromFile(const juce::File& file, juce::String* error = nullptr);
     bool selectFactoryBank(int bank);
     void selectProgramFromUi(int program);
+    class SyxExportSnapshot
+    {
+    public:
+        const std::vector<uint8_t>& message() const noexcept { return message_; }
+        int program() const noexcept { return program_; }
+        bool entireBank() const noexcept { return entireBank_; }
+    private:
+        friend class VDX7AudioProcessor;
+        std::vector<uint8_t> message_;
+        int program_ = 0;
+        bool entireBank_ = false;
+    };
+    bool captureSyxExportSnapshot(bool entireBank, SyxExportSnapshot&, juce::String& error);
+    bool exportSyxSnapshot(const juce::File&, const SyxExportSnapshot&, juce::String& error);
     bool exportSyx(const juce::File&, bool entireBank, juce::String& error);
     // Message-thread library operations. Capture is immutable across open dialogs.
     bool captureUserPatch(VDX7UserBank::Voice&, juce::String& error);
@@ -98,6 +112,7 @@ public:
     juce::String getCurrentPatchName() const;
     juce::String getRomPath() const;
     juce::String getStatusText() const;
+    juce::String getCriticalStatusText() const;
 
     juce::File getSuggestedRomFolder() const;
 

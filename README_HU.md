@@ -177,7 +177,7 @@ cmake --build build-local --config Release --target vdx7_all_tests
 ctest --test-dir build-local -C Release --output-on-failure
 ```
 
-Az aktuális CMake-beállítás kilenc ROM-mentes CTestet regisztrál. A
+Az aktuális CMake-beállítás tíz ROM-mentes CTestet regisztrál. A
 `vdx7_ci_checks` és `vdx7_all_tests` cél ezen felül a firmware-függő integrációs
 futtatókat és az elkülönített MONO-kísérletet is lefordítja, de ROM nélkül nem
 futtatja őket. A teljes helyi tesztsorhoz konfigurálj

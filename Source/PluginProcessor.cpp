@@ -1548,7 +1548,8 @@ bool VDX7AudioProcessor::pasteOperator(int op)
     return true;
 }
 
-bool VDX7AudioProcessor::exportSyx(const juce::File& file, bool entireBank, juce::String& error)
+bool VDX7AudioProcessor::captureSyxExportSnapshot(bool entireBank, SyxExportSnapshot& snapshot,
+                                                   juce::String& error)
 {
     std::vector<uint8_t> packed;
     int program = 0;
@@ -1564,9 +1565,27 @@ bool VDX7AudioProcessor::exportSyx(const juce::File& file, bool entireBank, juce
     }
     auto data = VDX7Sysex::encode(packed);
     if (data.empty()) { error = "Voice data cannot be encoded as 7-bit SysEx."; return false; }
+    snapshot.message_ = std::move(data);
+    snapshot.program_ = program;
+    snapshot.entireBank_ = entireBank;
+    return true;
+}
+
+bool VDX7AudioProcessor::exportSyxSnapshot(const juce::File& file, const SyxExportSnapshot& snapshot,
+                                            juce::String& error)
+{
+    const auto expectedSize = snapshot.entireBank_ ? VDX7Sysex::kBankMessageSize : VDX7Sysex::kVoiceMessageSize;
+    std::vector<uint8_t> packed;
+    if (snapshot.program_ < 0 || snapshot.program_ >= 32 || snapshot.message_.size() != expectedSize
+        || !VDX7Sysex::decode(snapshot.message_, packed))
+    {
+        error = "The captured SysEx snapshot is invalid. Capture it again and retry.";
+        return false;
+    }
     // Never truncate the destination before the complete replacement is ready.
     juce::TemporaryFile temp(file);
-    if (!temp.getFile().replaceWithData(data.data(),data.size()) || !temp.overwriteTargetFileWithTemporary())
+    if (!temp.getFile().replaceWithData(snapshot.message_.data(), snapshot.message_.size())
+        || !temp.overwriteTargetFileWithTemporary())
     { error = "Could not save the SysEx file. Check the destination and permissions."; return false; }
     {
         std::scoped_lock lock(engineMutex_);
@@ -1574,11 +1593,12 @@ bool VDX7AudioProcessor::exportSyx(const juce::File& file, bool entireBank, juce
         std::vector<uint8_t> current;
         if (engine_.saveRam(current))
         {
-            const int offset = entireBank ? 0 : program*128;
-            if (std::equal(packed.begin(),packed.end(),current.begin()+offset))
+            const int offset = snapshot.entireBank_ ? 0 : snapshot.program_ * 128;
+            if (offset >= 0 && static_cast<std::size_t>(offset) + packed.size() <= current.size()
+                && std::equal(packed.begin(), packed.end(), current.begin() + offset))
             {
-                if (entireBank) modifiedVoices_.store(0);
-                else modifiedVoices_.fetch_and(~(uint32_t(1)<<program));
+                if (snapshot.entireBank_) modifiedVoices_.store(0);
+                else modifiedVoices_.fetch_and(~(uint32_t(1) << snapshot.program_));
             }
         }
     }
@@ -1588,6 +1608,13 @@ bool VDX7AudioProcessor::exportSyx(const juce::File& file, bool entireBank, juce
     }
     updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
     return true;
+}
+
+bool VDX7AudioProcessor::exportSyx(const juce::File& file, bool entireBank, juce::String& error)
+{
+    SyxExportSnapshot snapshot;
+    return captureSyxExportSnapshot(entireBank, snapshot, error)
+        && exportSyxSnapshot(file, snapshot, error);
 }
 
 void VDX7AudioProcessor::publishPerformanceDisplay() noexcept
@@ -1901,12 +1928,19 @@ juce::String VDX7AudioProcessor::getRomPath() const
 
 juce::String VDX7AudioProcessor::getStatusText() const
 {
+    const auto critical = getCriticalStatusText();
+    if (critical.isNotEmpty()) return critical;
+    std::scoped_lock lock(metadataMutex_);
+    return statusText_;
+}
+
+juce::String VDX7AudioProcessor::getCriticalStatusText() const
+{
     if (editQueue_.overflowed())
         return "Edit queue full: further edits blocked; save/export accepted edits, then reload the project";
     if (midiOverloadSnapshot_.load(std::memory_order_relaxed) != 0)
         return "MIDI overload recovered: events dropped and notes released; reduce MIDI/automation density";
-    std::scoped_lock lock(metadataMutex_);
-    return statusText_;
+    return {};
 }
 
 juce::File VDX7AudioProcessor::getSuggestedRomFolder() const

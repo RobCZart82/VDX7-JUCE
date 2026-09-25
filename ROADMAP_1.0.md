@@ -353,7 +353,7 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
 - [x] Configure PR ROM-free CI and opt-in local ROM integration CTest gate.
   All integration runners now compile through the shared CI target. Known-v1.8
   ownership groups have a separately labelled, required firmware prerequisite.
-  The current CMake configuration registers nine ROM-free CTest cases; CI build
+  The current CMake configuration registers ten ROM-free CTest cases; CI build
   success does not establish that the private-ROM cases ran.
 - [x] Run the development CI configuration on GitHub: macOS and Windows passed
   on `5164fabd36c8fdd745e272fc1f493c0c352c1ced`. Every subsequent change needs

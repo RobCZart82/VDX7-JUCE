@@ -1,5 +1,6 @@
 #include "PluginEditor.h"
 #include "VDX7AboutPanel.h"
+#include "VDX7StatusPresentation.h"
 
 #include <BinaryData.h>
 
@@ -1235,8 +1236,9 @@ void VDX7AudioProcessorEditor::refresh(bool refreshMetadata)
     if (refreshMetadata)
     {
         if (performanceVisible_) performancePanel_.refresh();
-        status_.setText(processor_.hasUnexportedEdits() ? "Bank has unexported edits\nSAVE AS... to export"
-                        : processor_.getStatusText(), juce::dontSendNotification);
+        status_.setText(VDX7StatusPresentation::choose(processor_.getCriticalStatusText(),
+                            processor_.hasUnexportedEdits(), processor_.getStatusText()),
+                        juce::dontSendNotification);
         loadRom_.setTooltip(processor_.getRomPath());
     }
 
@@ -1504,8 +1506,13 @@ void VDX7AudioProcessorEditor::renameVoice()
 
 void VDX7AudioProcessorEditor::chooseExport(bool entireBank)
 {
-    const int program = processor_.getCurrentProgram();
-    const auto revision = processor_.getOperatorVoiceRevision();
+    VDX7AudioProcessor::SyxExportSnapshot snapshot;
+    juce::String error;
+    if (!processor_.captureSyxExportSnapshot(entireBank, snapshot, error))
+    {
+        showError("Save failed", error);
+        return;
+    }
     chooser_ = std::make_unique<juce::FileChooser>(
         entireBank ? "Save current 32-voice bank" : "Save current voice",
         juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile(
@@ -1513,17 +1520,12 @@ void VDX7AudioProcessorEditor::chooseExport(bool entireBank)
         "*.syx");
     chooser_->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles
                           | juce::FileBrowserComponent::warnAboutOverwriting,
-        [this, entireBank, program, revision](const juce::FileChooser& chooser)
+        [this, snapshot = std::move(snapshot)](const juce::FileChooser& chooser)
         {
             const auto file = chooser.getResult();
             if (file == juce::File()) return;
-            if (processor_.getCurrentProgram() != program || processor_.getOperatorVoiceRevision() != revision)
-            {
-                showError("Voice changed", "The voice/bank changed while the save dialog was open. Please try again.");
-                return;
-            }
             juce::String error;
-            if (!processor_.exportSyx(file, entireBank, error)) showError("Save failed", error);
+            if (!processor_.exportSyxSnapshot(file, snapshot, error)) showError("Save failed", error);
             refresh(true);
         });
 }

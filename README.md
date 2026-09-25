@@ -173,7 +173,7 @@ cmake --build build-local --config Release --target vdx7_all_tests
 ctest --test-dir build-local -C Release --output-on-failure
 ```
 
-The current CMake configuration registers nine ROM-free CTest tests. The
+The current CMake configuration registers ten ROM-free CTest tests. The
 `vdx7_ci_checks` and `vdx7_all_tests` targets also compile the firmware-dependent
 integration runners and isolated MONO candidate experiment without executing
 them or needing a ROM. For the full local suite, configure with
