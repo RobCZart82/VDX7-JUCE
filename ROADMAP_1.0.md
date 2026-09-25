@@ -111,6 +111,49 @@ Audit disposition refreshed against main `176b757` on 2026-09-25:
   choosing a conservative non-zero or dynamic estimate. No host truncation has
   been reproduced yet; do not describe it as a confirmed audible defect.
 
+### Audit disposition refreshed against main `b849285` — 2026-09-25
+
+The two highest-priority production findings in the supplied deep audit are
+already fixed in PR #67; do not reopen them without a new reproducer:
+
+- **Export dialog stale-content — FIXED.** `chooseExport()` captures an
+  immutable patch/bank SysEx snapshot before opening the asynchronous file
+  chooser, then writes that exact snapshot. `VDX7ProcessorTests` models a host
+  parameter edit and audio flush during the chooser interval for both patch and
+  bank export, verifies the exported bytes remain the captured bytes, and keeps
+  the subsequent edit marked unexported.
+- **Critical status hidden by dirty-bank text — FIXED.** The editor delegates
+  status selection to `VDX7StatusPresentation::choose()`, which gives critical
+  queue-overflow/MIDI-recovery messages precedence over dirty-bank and ordinary
+  informational text. `VDX7StatusPriorityTests` covers queue overflow with
+  dirty and clean banks, MIDI overload with a dirty bank, and both fallback
+  presentation cases.
+
+Remaining items from that audit are validation candidates, not confirmed
+production defects:
+
+- **Pitch-wheel spring-return automation — HOST-DEPENDENT / NOT RUN here.**
+  Verify Write, Touch and Latch gesture recording in REAPER before changing the
+  JUCE mouse-up/parameter-notification order.
+- **Offline-render engine-lock contention — SOURCE-DERIVED CANDIDATE.** The
+  deterministic processor fixture asserts that a callback which misses
+  `engineMutex_` returns a silent block (3 × 256 samples, 16 ms at 48 kHz).
+  That is the deliberate realtime non-blocking behavior; it does not establish
+  that an offline REAPER render actually encounters contention or becomes
+  nondeterministic. Compare repeated offline renders and a deterministic
+  contention fixture before considering a distinct offline synchronization
+  contract. Do not replace the try-lock with a blocking lock without a deadlock
+  analysis.
+- **Deferred-MIDI partition sensitivity — CHARACTERIZED.** PR #59 records the
+  bounded queue behavior; measure realistic host pressure before proposing an
+  architectural change or larger capacity.
+- **Tail metadata — P2 VALIDATION CANDIDATE.** `getTailLengthSeconds()` remains
+  zero. Measure actual release/render-tail behavior in REAPER before changing
+  the host metadata; no truncation has been reproduced.
+
+This disposition is a source/test review of the merged main tree, not a new
+local build, CTest, REAPER automation run, or offline-render acceptance run.
+
 ### Targeted audit reproduction — 2026-09-25 (based on 7bb7af9)
 
 The supplied `VDX7_audit_repro_7bb7af95.zip` is a characterization probe, not
