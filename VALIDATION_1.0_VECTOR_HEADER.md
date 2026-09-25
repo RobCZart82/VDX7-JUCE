@@ -6,6 +6,11 @@ the 7. The current SVG applies restrained metallic horizontal scanlines to the
 same original paths, retaining vector sharpness without a raster/glitch asset.
 CMake embeds SVG alongside existing PNG resources.
 
+The approved three thin decorative lines are rendered across the top header
+in the same `0xff575248` tone as the section dividers, at reference y=22, 34
+and 46. A ROM-free pixel regression checks the line pixels against a divider
+pixel at 1080, 1440 and 1800 editor widths (75%, 100% and 125%).
+
 Two separate text lines remain vector-rendered glyphs, not raster logo content.
 Logo bottom and lower text ink bottom use the header buttons' visible bottom
 (component bottom minus 1.5px). Separator spans the full inner width below them.

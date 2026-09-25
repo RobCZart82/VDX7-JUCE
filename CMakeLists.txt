@@ -195,6 +195,16 @@ target_link_libraries(vdx7_resampling_tests PRIVATE vdx7_core vdx7_voice_data)
 add_test(NAME vdx7_resampling COMMAND vdx7_resampling_tests)
 set_tests_properties(vdx7_resampling PROPERTIES TIMEOUT 60)
 
+# GUI-only pixel regression for the approved three-line header decoration.
+add_executable(vdx7_gui_header_tests Tests/VDX7GuiHeaderTests.cpp)
+target_link_libraries(vdx7_gui_header_tests PRIVATE VDX7)
+target_include_directories(vdx7_gui_header_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,INCLUDE_DIRECTORIES>)
+target_compile_definitions(vdx7_gui_header_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
+add_test(NAME vdx7_gui_header COMMAND vdx7_gui_header_tests)
+set_tests_properties(vdx7_gui_header PROPERTIES TIMEOUT 30 LABELS "gui;rom-free")
+
 add_executable(vdx7_processor_tests EXCLUDE_FROM_ALL Tests/VDX7ProcessorTests.cpp)
 target_link_libraries(vdx7_processor_tests PRIVATE VDX7)
 target_include_directories(vdx7_processor_tests PRIVATE
@@ -235,7 +245,7 @@ endif()
 # must compile even without a ROM; execution stays opt-in and local only.
 add_custom_target(vdx7_ci_checks DEPENDS
     vdx7_user_bank_tests vdx7_deferred_midi_tests vdx7_latest_display_tests vdx7_bounded_file_tests vdx7_voice_data_tests
-    vdx7_algorithm_tests vdx7_resampling_tests vdx7_stress_tests
+    vdx7_algorithm_tests vdx7_resampling_tests vdx7_gui_header_tests vdx7_stress_tests
     vdx7_processor_tests vdx7_stability_tests vdx7_midi_range_tests vdx7_timing_tests)
 add_custom_target(vdx7_all_tests DEPENDS vdx7_ci_checks)
 

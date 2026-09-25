@@ -988,6 +988,11 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     const float scaleX = float(getWidth()) / kReferenceWidth;
     const float logoWidth = 420.0f * scaleX;
     const float logoHeight = logoWidth * 61.0f / 466.0f;
+    // Three understated header accents reuse the section-divider tone and
+    // span the full header inset. Keep them above the brand/action row.
+    g.setColour(juce::Colour(0xff575248));
+    for (const float y : { 22.0f, 34.0f, 46.0f })
+        g.fillRect(referenceRect(34, y, 1372, 1));
     if (wordmark_)
         wordmark_->drawWithin(g, { 44.0f * scaleX, headerBottom - logoHeight,
                                   logoWidth, logoHeight }, juce::RectanglePlacement::stretchToFit, 1.0f);

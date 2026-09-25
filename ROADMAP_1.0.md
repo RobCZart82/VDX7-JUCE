@@ -471,9 +471,14 @@ physical HiDPI and Windows host checks remain; no stable-version claim is made.
 - [ ] Use consistent horizontal/vertical guides, spacing and panel padding
   throughout the GUI. No action button may intrude into the LCD, its frame or
   navigation controls; neither visible bounds nor interactive hit areas may overlap.
-- [ ] Add a horizontal separator between the two rotary-control rows in the
+- [x] Add a horizontal separator between the two rotary-control rows in the
   operator section. Span the full width of that rotary-control subsection,
   respecting equal left/right padding; do not cross into the neighbouring envelope.
+  Already present at reference y=720 in the section-divider tone; the 632-unit
+  span matches the two row bounds and stops before the adjacent envelope.
+- [x] Add three thin horizontal decorative lines across the header top in the
+  same restrained tone as the section dividers. Implemented at y=22/34/46 over
+  the shared 34-unit inset, with a ROM-free pixel regression at 75/100/125% sizes.
 - [ ] Every section divider spans its entire associated section's inner width,
   not just half of it. Use consistent inset, thickness and contrast, and leave
   clearance around labels and controls.
