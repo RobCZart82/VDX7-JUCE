@@ -137,7 +137,7 @@ void VDX7LookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button
 
 juce::Font VDX7LookAndFeel::getTextButtonFont(juce::TextButton&, int buttonHeight)
 {
-    return juce::Font(juce::FontOptions(juce::jlimit(8.0f, 18.0f, buttonHeight * 0.34f),
+    return juce::Font(juce::FontOptions(juce::jmax(4.0f, buttonHeight * 0.34f),
                                          juce::Font::bold));
 }
 
@@ -152,20 +152,35 @@ void VDX7LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int widt
                             .reduced(2.0f);
     const float unit = diameter / 52.0f;
     const bool highlighted = slider.isMouseOverOrDragging() || slider.hasKeyboardFocus(false);
+    const auto faceBounds = bounds.reduced(diameter * 0.14f);
+    // Restrained three-quarter dotted scale; the editable numeric field remains
+    // the component below the rotary control, in its existing layout slot.
+    for (int dot = 0; dot <= 30; ++dot)
+    {
+        // Leave the bottom quarter open: the dotted arc runs from lower-left,
+        // over the top, to lower-right in screen coordinates.
+        const float a = juce::degreesToRadians(135.0f + dot * 9.0f);
+        const float radius = diameter * 0.47f;
+        const float d = juce::jmax(1.15f * unit, diameter * 0.027f);
+        const auto p = juce::Point<float>(bounds.getCentreX() + std::cos(a) * radius,
+                                         bounds.getCentreY() + std::sin(a) * radius);
+        g.setColour(highlighted ? juce::Colour(0xffb9c99e) : juce::Colour(0xff89917e));
+        g.fillEllipse(p.x - d * 0.5f, p.y - d * 0.5f, d, d);
+    }
     // Recess, bevel and a knurled perimeter are vector geometry at every scale.
     g.setColour(juce::Colour(0xff11110f));
-    g.fillEllipse(bounds.translated(0, 1.5f * unit));
-    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff817b6e), bounds.getTopLeft(),
-        juce::Colour(0xff121310), bounds.getBottomRight(), false));
-    g.fillEllipse(bounds.reduced(unit));
-    const auto face = bounds.reduced(3.0f * unit);
+    g.fillEllipse(faceBounds.translated(0, 1.5f * unit));
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff817b6e), faceBounds.getTopLeft(),
+        juce::Colour(0xff121310), faceBounds.getBottomRight(), false));
+    g.fillEllipse(faceBounds.reduced(unit));
+    const auto face = faceBounds.reduced(3.0f * unit);
     juce::ColourGradient material(juce::Colour(0xff5c5b52), face.getTopLeft(),
         juce::Colour(0xff161915), face.getBottomRight(), false);
     material.addColour(0.42, juce::Colour(0xff343a32));
     g.setGradientFill(material);
     g.fillEllipse(face);
-    const float cx = bounds.getCentreX(), cy = bounds.getCentreY();
-    const float outer = bounds.getWidth() * 0.5f - 1.5f * unit;
+    const float cx = faceBounds.getCentreX(), cy = faceBounds.getCentreY();
+    const float outer = faceBounds.getWidth() * 0.5f - 1.5f * unit;
     g.setColour(juce::Colour(0xff0e100d).withAlpha(0.65f));
     for (int rib = 0; rib < 32; ++rib)
     {
@@ -175,15 +190,15 @@ void VDX7LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int widt
                    cy + std::cos(a) * (outer - 1.2f * unit), 0.65f * unit);
     }
     g.setColour(juce::Colour(highlighted ? 0xff68c7bb : 0xff817b6e).withAlpha(highlighted ? 1.0f : 0.45f));
-    g.drawEllipse(bounds.reduced(unit), unit);
+    g.drawEllipse(faceBounds.reduced(unit), unit);
 
     const float angle = startAngle + sliderPos * (endAngle - startAngle);
-    const float radius = bounds.getWidth() * 0.39f;
+    const float radius = faceBounds.getWidth() * 0.39f;
     juce::Path marker;
     marker.addRoundedRectangle(-1.2f * unit, -radius, 2.4f * unit, radius * 0.42f, unit);
     marker.applyTransform(juce::AffineTransform::rotation(angle)
                               .translated(bounds.getCentreX(), bounds.getCentreY()));
-    g.setColour(juce::Colour(0xff68c7bb));
+    g.setColour(juce::Colour(0xffa6b98b));
     g.fillPath(marker);
 }
 
@@ -236,7 +251,10 @@ void VDX7LookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int widt
                                               juce::Colour(0xff19262d), lever.getBottomLeft(), false));
         g.fillRoundedRectangle(lever, 2.0f);
         g.setColour(on ? juce::Colour(0xff68c7bb) : juce::Colour(0xff90a4aa));
-        g.fillRect(lever.reduced(2.0f).withHeight(2.0f).withY(lever.getCentreY()));
+        if (horizontal)
+            g.fillRect(lever.reduced(2.0f).withWidth(2.0f).withX(lever.getCentreX()));
+        else
+            g.fillRect(lever.reduced(2.0f).withHeight(2.0f).withY(lever.getCentreY()));
         return;
     }
     if (style != juce::Slider::LinearVertical)
@@ -269,6 +287,8 @@ void VDX7LookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int widt
             const float length = (tick % 5 == 0 ? 7.0f : 4.0f) * unit;
             g.setColour(juce::Colour(tick % 5 == 0 ? 0xffa39c8c : 0xff625f53));
             g.drawLine(slot.getX() - 3 * unit - length, yy, slot.getX() - 3 * unit, yy, 0.7f * unit);
+            g.drawLine(slot.getRight() + 3 * unit, yy,
+                       slot.getRight() + 3 * unit + length, yy, 0.7f * unit);
         }
 
         const float thumbCentreY = juce::jlimit(bounds.getY() + thumbHeight * 0.5f,
@@ -314,6 +334,8 @@ void VDX7LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, boo
 
 juce::Font VDX7LookAndFeel::getComboBoxFont(juce::ComboBox& box)
 {
+    if (static_cast<bool>(box.getProperties().getWithDefault("vdx7SettingsCombo", false)))
+        return juce::Font(juce::FontOptions(juce::jlimit(12.0f, 20.0f, box.getHeight() * 0.62f)));
     if (static_cast<bool>(box.getProperties().getWithDefault("vdx7LcdCombo",false)))
         return juce::Font(juce::FontOptions(juce::jlimit(8.0f,18.0f,box.getHeight()*0.58f)));
     return juce::Font(juce::FontOptions(juce::jlimit(8.0f, 18.0f, box.getHeight() * 0.42f)));

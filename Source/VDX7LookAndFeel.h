@@ -2,7 +2,7 @@
 
 #include <JuceHeader.h>
 
-class VDX7LookAndFeel final : public juce::LookAndFeel_V4
+class VDX7LookAndFeel : public juce::LookAndFeel_V4
 {
 public:
     VDX7LookAndFeel();

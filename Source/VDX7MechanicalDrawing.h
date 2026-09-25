@@ -10,17 +10,17 @@ inline void wheel(juce::Graphics& g, juce::Rectangle<float> b, float value, bool
     juce::Graphics::ScopedSaveState save(g);
     const float w = b.getWidth(), h = b.getHeight(), cx = b.getCentreX();
     const float unit = w / 48.0f;
-    const auto outer = b.reduced(0.45f * unit);
+    const auto outer = b.withWidth(w - 4.0f * unit).withCentre(b.getCentre()).reduced(0.45f * unit);
 
-    g.setColour(juce::Colours::black.withAlpha(0.76f));
-    g.fillRoundedRectangle(outer.translated(1.15f * unit, 2.2f * unit), 3.8f * unit);
-    juce::ColourGradient bezel(juce::Colour(0xff10191c), outer.getX(), outer.getCentreY(),
-                               juce::Colour(0xff080c0e), outer.getRight(), outer.getCentreY(), false);
-    bezel.addColour(0.10, juce::Colour(0xff65757a));
-    bezel.addColour(0.20, juce::Colour(0xff1d292d));
-    bezel.addColour(0.48, juce::Colour(0xff93a0a0));
-    bezel.addColour(0.57, juce::Colour(0xff253136));
-    bezel.addColour(0.86, juce::Colour(0xff526166));
+    g.setColour(juce::Colours::black.withAlpha(0.48f));
+    g.fillRoundedRectangle(outer.translated(0.7f * unit, 1.35f * unit), 3.8f * unit);
+    juce::ColourGradient bezel(juce::Colour(0xff151b1d), outer.getX(), outer.getCentreY(),
+                               juce::Colour(0xff0d1112), outer.getRight(), outer.getCentreY(), false);
+    bezel.addColour(0.10, juce::Colour(0xff465052));
+    bezel.addColour(0.20, juce::Colour(0xff202829));
+    bezel.addColour(0.48, juce::Colour(0xff606969));
+    bezel.addColour(0.57, juce::Colour(0xff252c2d));
+    bezel.addColour(0.86, juce::Colour(0xff414a4b));
     g.setGradientFill(bezel);
     g.fillRoundedRectangle(outer, 3.8f * unit);
     g.setColour(juce::Colour(hover ? 0xff7d9798 : 0xff687a7d));
@@ -43,8 +43,8 @@ inline void wheel(juce::Graphics& g, juce::Rectangle<float> b, float value, bool
     rubber.addColour(0.94, juce::Colour(0xff090d0e));
     g.setGradientFill(rubber);
     g.fillRoundedRectangle(body, 2.4f * unit);
-    g.setColour(juce::Colour(0xff8a9189).withAlpha(0.28f));
-    g.drawRoundedRectangle(body.reduced(0.7f * unit), 1.8f * unit, 0.55f * unit);
+    g.setColour(juce::Colour(0xff8a9189).withAlpha(0.16f));
+    g.drawRoundedRectangle(body.reduced(0.7f * unit), 1.8f * unit, 0.45f * unit);
 
     g.reduceClipRegion(body.toNearestInt());
     const float rotation = (0.5f - juce::jlimit(0.0f, 1.0f, value)) * 2.16f;
@@ -60,31 +60,31 @@ inline void wheel(juce::Graphics& g, juce::Rectangle<float> b, float value, bool
         const float thickness = juce::jmax(0.45f, 1.55f * unit * depth);
         g.setColour(juce::Colour(0xff030605).withAlpha(0.8f));
         g.fillRect(body.getX() + inset, y, body.getWidth() - 2.0f * inset, thickness);
-        g.setColour(juce::Colour(0xffb4b8af).withAlpha(0.38f * depth));
-        g.fillRect(body.getX() + inset, y - thickness * 0.65f,
-                   body.getWidth() - 2.0f * inset, thickness * 0.55f);
+        g.setColour(juce::Colour(0xffa7ada5).withAlpha(0.22f * depth));
+        g.fillRect(body.getX() + inset, y - thickness * 0.55f,
+                   body.getWidth() - 2.0f * inset, thickness * 0.38f);
     }
 
     // The ridge phase and indicator share one value: mouse drag or wheel input
     // visibly turns the cylinder rather than merely moving an unrelated marker.
     const float markerY = cy + radius * std::sin(rotation);
     const float markerH = juce::jmax(1.35f, 2.45f * unit * std::cos(rotation));
-    juce::ColourGradient shade(juce::Colours::black.withAlpha(0.92f), cx, body.getY(),
-                               juce::Colours::black.withAlpha(0.92f), cx, body.getBottom(), false);
-    shade.addColour(0.22,juce::Colours::transparentBlack);
-    shade.addColour(0.68,juce::Colours::transparentBlack);
+    juce::ColourGradient shade(juce::Colours::black.withAlpha(0.68f), cx, body.getY(),
+                               juce::Colours::black.withAlpha(0.68f), cx, body.getBottom(), false);
+    shade.addColour(0.22,juce::Colours::black.withAlpha(0.04f));
+    shade.addColour(0.68,juce::Colours::black.withAlpha(0.04f));
     g.setGradientFill(shade);
     g.fillRect(body);
     const auto marker = juce::Rectangle<float>(body.getX() + 2.0f * unit,
                                                 markerY - markerH * 0.5f,
                                                 body.getWidth() - 4.0f * unit, markerH);
-    g.setColour(juce::Colour(0xff006d73).withAlpha(0.95f));
+    g.setColour(juce::Colour(0xff087b82).withAlpha(0.9f));
     g.fillRoundedRectangle(marker.expanded(0.9f * unit, 0.5f * unit), 0.8f * unit);
-    juce::ColourGradient markerFace(juce::Colour(0xffbcffff), marker.getX(), marker.getY(),
-                                    juce::Colour(0xff00aeb7), marker.getX(), marker.getBottom(), false);
+    juce::ColourGradient markerFace(juce::Colour(0xff68c7bb), marker.getX(), marker.getY(),
+                                    juce::Colour(0xff368f88), marker.getX(), marker.getBottom(), false);
     g.setGradientFill(markerFace);
     g.fillRoundedRectangle(marker, 0.55f * unit);
-    g.setColour(juce::Colour(0xffd5ffff).withAlpha(0.72f));
+    g.setColour(juce::Colour(0xff68c7bb).withAlpha(0.78f));
     g.drawLine(marker.getX() + unit, marker.getY() + 0.55f * unit,
                marker.getRight() - unit, marker.getY() + 0.55f * unit, 0.55f * unit);
 }

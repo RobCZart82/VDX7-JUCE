@@ -23,7 +23,7 @@ int main()
         std::unique_ptr<juce::AudioProcessorEditor> editor(processor.createEditor());
         require(editor != nullptr, "editor creation without firmware");
 
-        const juce::Colour accent(0xff575248);
+        const juce::Colour accent(0xff71685b);
         constexpr std::array<float, 3> decorationY { 22.0f, 34.0f, 46.0f };
         for (const int width : { 1080, 1440, 1800 })
         {
