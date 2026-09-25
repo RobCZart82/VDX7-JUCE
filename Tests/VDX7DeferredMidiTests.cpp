@@ -274,8 +274,20 @@ static void checkSysExAdmission()
 
 static void checkKeyboardQueue()
 {
-    VDX7KeyboardQueue q;
+    VDX7KeyboardQueue filtered;
     VDX7KeyboardQueue::Event event;
+    for (int i = 0; i < 160; ++i)
+    {
+        const auto note = static_cast<uint8_t>(i % 2 == 0 ? i % 12 : 121 + (i % 7));
+        require(!filtered.pushNote({0x90, note, 100})
+                && !filtered.pushNote({0x80, note, 0}),
+                "unsupported keyboard pitches are rejected before the bounded queue");
+    }
+    require(filtered.pushNote({0x90, 60, 100}) && filtered.pop(event)
+            && event[1] == 60 && !filtered.recoverOverflow(),
+            "unsupported keyboard flood cannot displace the next playable note");
+
+    VDX7KeyboardQueue q;
     for (int round = 0; round < 100; ++round)
     {
         for (int i = 0; i < 256; ++i) require(q.push({0x90, static_cast<uint8_t>(i), 100}));

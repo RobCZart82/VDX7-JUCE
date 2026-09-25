@@ -825,16 +825,27 @@ namespace { thread_local const VDX7AudioProcessor* mirroringKeyboard = nullptr; 
 void VDX7AudioProcessor::handleNoteOn(juce::MidiKeyboardState*, int channel, int note, float velocity)
 {
     if (mirroringKeyboard == this) return;
+    // The public/programmatic keyboard API can address the full MIDI range,
+    // unlike the visible 36-96 keybed. Filter before occupying its bounded
+    // producer queue so unsupported pitches cannot crowd out playable notes.
+    if (!VDX7MidiValidation::isSupportedNoteNumber(note)) return;
+    const VDX7KeyboardQueue::Event event {
+        static_cast<uint8_t>(0x90 | (channel - 1)), static_cast<uint8_t>(note),
+        static_cast<uint8_t>(juce::jlimit(1, 127, juce::roundToInt(velocity * 127)))};
+    if (!VDX7KeyboardQueue::isSupportedNoteEvent(event)) return;
     keyboardUiHeld_[static_cast<std::size_t>(note)].fetch_or(static_cast<uint16_t>(1u << (channel - 1)));
-    keyboardQueue_.push({static_cast<uint8_t>(0x90 | (channel - 1)),
-        static_cast<uint8_t>(note), static_cast<uint8_t>(juce::jlimit(1, 127, juce::roundToInt(velocity * 127)))});
+    keyboardQueue_.pushNote(event);
 }
 
 void VDX7AudioProcessor::handleNoteOff(juce::MidiKeyboardState*, int channel, int note, float)
 {
     if (mirroringKeyboard == this) return;
+    if (!VDX7MidiValidation::isSupportedNoteNumber(note)) return;
+    const VDX7KeyboardQueue::Event event {
+        static_cast<uint8_t>(0x80 | (channel - 1)), static_cast<uint8_t>(note), 0};
+    if (!VDX7KeyboardQueue::isSupportedNoteEvent(event)) return;
     keyboardUiHeld_[static_cast<std::size_t>(note)].fetch_and(static_cast<uint16_t>(~(1u << (channel - 1))));
-    keyboardQueue_.push({static_cast<uint8_t>(0x80 | (channel - 1)), static_cast<uint8_t>(note), 0});
+    keyboardQueue_.pushNote(event);
 }
 
 void VDX7AudioProcessor::clearKeyboardSnapshot() noexcept

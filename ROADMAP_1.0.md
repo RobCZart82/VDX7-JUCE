@@ -9,10 +9,9 @@ indices compatible with saved projects.
 
 ### Current next steps — 2026-09-25
 
-Latest checkpoint: PR #59 was merged to `main` as
-`176b75705014cac7b44242c46666b84773666656`; PR #58 contains the conditional
-CC32 admission fix. No PR is currently open. Private-ROM acceptance remains a
-separate gate.
+Latest checkpoint: PR #60 was merged to `main` as `f57b072` after macOS and
+Windows Actions passed. It bounds ROM/SysEx import file reads. Private-ROM
+acceptance remains a separate gate.
 `VALIDATION_MONO_SOAK.md` records the full 30-test run, separate desktop retry,
 dual-instance soak and remaining host boundaries. The user approved retaining
 both Native and Correct modes. Native remains the recommended default; Correct
@@ -49,9 +48,12 @@ Audit disposition refreshed against main `176b757` on 2026-09-25:
 - T1 processor-boundary characterization and Note 127 guard-bypass sensitivity control merged in PR #53 (`7bb7af9`); synchronized macOS/Windows CI passed. The ROM-enabled characterization itself remains NOT RUN.
 - U1 direct ROM reload/deferred-MIDI boundary fix and opt-in processor regression merged in PR #54 (`9d57069`); macOS/Windows Actions passed on the merge commit. The local v1.8 ROM regression and full ROM-enabled suite remain NOT RUN, so runtime acceptance is pending. N2 state/ROM identity mixing remains an unconfirmed processor-level candidate. U3's conditional CC32 admission fix and paired processor regression merged in PR #58 (`312a221`); ROM-backed execution remains pending.
 - N6 deferred-event capacity/partition characterization merged in PR #59 (`176b757`). Its opt-in processor test is present; local ROM-backed execution remains NOT RUN. It documents the bounded queue policy and does not justify increasing capacity.
-- N3 bounded ROM/SysEx file reading has a targeted implementation and
-  ROM-free regression test in progress; N4 public keyboard-queue admission
-  remains lower-priority hardening.
+- N3 bounded ROM/SysEx file reading merged in PR #60 (`f57b072`) with a
+  ROM-free regression; local CMake/CTest execution remains NOT RUN.
+- N4 public keyboard-queue admission now filters unsupported programmatic
+  keyboard events before queue capacity is consumed. See
+  `VALIDATION_1.0_KEYBOARD_RANGE_ADMISSION.md`; CI and ROM-backed processor
+  acceptance are pending.
 - MIDI Note 12–120 policy is consistent in product admission; internal 0–127
   cleanup/release loops are intentional. ROM-backed and DAW acceptance items
   remain NOT RUN unless separately recorded in their validation reports.
@@ -155,14 +157,12 @@ macOS sanitizer run are component evidence only.
    plus a note with factory voices, both under real mutex contention. Local
    full-ROM execution remains pending.
 
-7. **Lower-priority hardening:** N3 ROM/SysEx file reads are now bounded before
-   allocation with an extra-byte check for concurrent file growth and a ROM-free
-   boundary test. See `VALIDATION_1.0_BOUNDED_FILE_READS.md`; CI is pending.
-   Verify failed imports preserve a loaded engine in the processor integration
-   suite. N4 remains: pre-admit events on the public keyboard API before its bounded
-   queue. Keep N4 scoped to the programmatic API: the visible keyboard is
-   36–96 and normal host MIDI is already filtered. Neither item is a reproduced
-   normal-GUI crash.
+7. **Lower-priority hardening:** N3 bounded import reads merged in PR #60;
+   processor-level failed-import preservation remains to verify with ROM.
+   N4 pre-admission for the programmatic keyboard API is implemented in the
+   current candidate. Keep it scoped to that API: the visible keyboard is 36–96
+   and normal host MIDI is already filtered. Neither item is a reported normal-
+   GUI crash.
 
 8. **Release validation:** after fixes, run the full local suite on the final
    source SHA and retain separate test logs. Recheck REAPER boundaries 11/12 and

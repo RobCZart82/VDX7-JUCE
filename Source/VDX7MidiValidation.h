@@ -12,7 +12,7 @@ namespace VDX7MidiValidation
 inline constexpr uint8_t firstSupportedNote = 12;
 inline constexpr uint8_t lastSupportedNote = 120;
 
-inline constexpr bool isSupportedNoteNumber(uint8_t note) noexcept
+inline constexpr bool isSupportedNoteNumber(int note) noexcept
 {
     return note >= firstSupportedNote && note <= lastSupportedNote;
 }
