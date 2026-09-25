@@ -4,18 +4,20 @@ This branch builds **1.0.0-dev**, not the final release. See the
 [current development status](DEVELOPMENT_1.0_HU_EN.md) and
 [1.0 release gates](ROADMAP_1.0.md).
 
-This documentation describes current 1.0.0-dev functionality. The image below is a historical v0.6.6 preview, not the current GUI.
+This documentation describes current 1.0.0-dev functionality. The previews below show the EDIT and PERFORMANCE interface concepts; they are not screenshots from a newly host-verified build.
 
 [Magyar dokumentáció](README_HU.md)
 
 > **Development status — 25 September 2026:** the latest merged checkpoint is
-> `main` commit `cbbd213` (PR #63). macOS and Windows CI passed for that change.
+> `main` commit `0353431` (PR #64). macOS and Windows CI passed for that change.
 > VDX7 is still a development build, not an accepted 1.0.0 release. The 1.0.0
 > host, ROM-backed, platform and final GUI acceptance gates remain open; see
 > [the current status](DEVELOPMENT_1.0_HU_EN.md) and
 > [release checklist](ROADMAP_1.0.md).
 
-![VDX7-JUCE v0.6.6 editor preview](docs/VDX7-v0.6.6.png)
+| PERFORMANCE view | EDIT view |
+| --- | --- |
+| [![VDX7-JUCE 1.0.0-dev PERFORMANCE interface preview](docs/VDX7-1.0.0-dev-performance-preview.jpg)](docs/VDX7-1.0.0-dev-performance-preview.jpg) | [![VDX7-JUCE 1.0.0-dev EDIT interface preview](docs/VDX7-1.0.0-dev-edit-preview.jpg)](docs/VDX7-1.0.0-dev-edit-preview.jpg) |
 
 VDX7-JUCE is a six-operator FM instrument built around the VDX7 DX7 Mk I hardware-emulation core, using the portable Retromulator dx7Lib adaptation and JUCE. It is not a Dexed-based reimplementation.
 
@@ -109,7 +111,8 @@ controls and value-driven ribbed pitch/modulation wheels. The three header lines
 have a pixel regression at 75%, 100% and 125% editor widths. That check does not
 certify every control, display scale or host window at those sizes. The final
 hardware-inspired surface treatment and complete HiDPI/host visual acceptance
-are still in progress. The image above is only a historical v0.6.6 preview.
+are still in progress. The previews above are illustrative interface references,
+not proof of final rendering, host compatibility or release acceptance.
 
 ## 9. Known limitations
 
@@ -136,8 +139,8 @@ are still in progress. The image above is only a historical v0.6.6 preview.
 
 ## 10. Validation and reporting
 
-The latest merged checkpoint `cbbd213` passed the macOS Universal and Windows x64
-GitHub Actions builds. On the source tree for PR #63, four additional standalone
+The latest merged checkpoint `0353431` (PR #64) passed the macOS Universal and
+Windows x64 GitHub Actions builds. On the source tree for PR #63, four additional standalone
 ROM-free C++ regression programs were manually built and run successfully:
 deferred MIDI, latest-display publication, the MONO correction policy component,
 and voice-data/SysEx. Those direct builds are not a full CMake/CTest or plug-in
