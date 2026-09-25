@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "VDX7BoundedFile.h"
 #include "VDX7Sysex.h"
 #include "VDX7MidiValidation.h"
 #include "PluginEditor.h"
@@ -1256,19 +1257,10 @@ void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
         midiTimelineEpoch_.fetch_add(1, std::memory_order_release);
 }
 
-bool VDX7AudioProcessor::readFile(const juce::File& file, std::vector<uint8_t>& data)
+bool VDX7AudioProcessor::readFile(const juce::File& file, std::size_t maxBytes,
+                                  std::vector<uint8_t>& data)
 {
-    data.clear();
-    if (!file.existsAsFile())
-        return false;
-
-    juce::MemoryBlock block;
-    if (!file.loadFileAsData(block))
-        return false;
-
-    const auto* begin = static_cast<const uint8_t*>(block.getData());
-    data.assign(begin, begin + block.getSize());
-    return true;
+    return VDX7BoundedFile::read(file, maxBytes, data);
 }
 
 bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<uint8_t>& rom, juce::String* error)
@@ -1284,7 +1276,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         {
             ignoredCompanion = !companion.existsAsFile()
                 || companion.getSize() != VDX7Engine::kFactoryVoicesSize
-                || !readFile(companion, voices)
+                || !readFile(companion, VDX7Engine::kFactoryVoicesSize, voices)
                 || voices.size() != VDX7Engine::kFactoryVoicesSize;
             if (ignoredCompanion) voices.clear();
         }
@@ -1343,7 +1335,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
 bool VDX7AudioProcessor::loadRomFromFile(const juce::File& file, juce::String* error)
 {
     std::vector<uint8_t> data;
-    if (!readFile(file, data))
+    if (!readFile(file, VDX7Engine::kCombinedRomSize, data))
     {
         if (error != nullptr) *error = "Could not read ROM file";
         return false;
@@ -1354,7 +1346,7 @@ bool VDX7AudioProcessor::loadRomFromFile(const juce::File& file, juce::String* e
 bool VDX7AudioProcessor::loadSyxFromFile(const juce::File& file, juce::String* error)
 {
     std::vector<uint8_t> data;
-    if (!readFile(file, data))
+    if (!readFile(file, VDX7Sysex::kBankMessageSize, data))
     {
         if (error != nullptr) *error = "Could not read SysEx file";
         return false;
