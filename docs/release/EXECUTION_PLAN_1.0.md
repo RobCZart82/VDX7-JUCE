@@ -94,10 +94,18 @@ historical records, not instructions to reopen completed GUI work.
 - [ ] F8/F9 — SOURCE-DERIVED CANDIDATES: establish supported concurrent/reentrant
   state-call contract, then barrier-test whole restore and engine/APVTS lock
   order. Demonstrate a reachable inversion before claiming deadlock. Never
-  solve it with an unanalysed audio-thread blocking lock.
-- [ ] F10 — SOURCE-DERIVED CANDIDATE: force a Settings Apply failure after
-  earlier fields changed; verify whether partial application is observable.
-  If reproduced, define atomicity/rollback or explicit partial-result behavior.
+  solve it with an unanalysed audio-thread blocking lock. Source inspection
+  confirms host parameter callbacks occur after releasing `engineMutex_`, and
+  the existing reentrant-save regression passes; a whole-restore barrier test
+  and supported host-call concurrency contract remain outstanding.
+- [ ] F10 — REPRODUCED: the former Settings Apply order partially committed
+  tuning before a pending-restore MONO failure. `applySettingsFromUi` now
+  validates first and performs the fallible MONO operation before committing
+  tuning/channel; a v1.8 ROM-backed regression reproduces the former behavior
+  and verifies the corrected all-or-none failure result. `vdx7_ci_checks` and
+  35/35 ROM-backed/ROM-free CTest cases pass locally (the desktop-dependent
+  SAVE AS integration test is excluded); Windows/macOS CI and merge remain
+  pending. Details: `docs/validation/VALIDATION_1.0_SETTINGS_APPLY.md`.
 
 ## 3. Original audio and DAW acceptance — still required
 

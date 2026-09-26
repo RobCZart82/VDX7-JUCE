@@ -102,6 +102,12 @@ public:
     // Non-RT, explicit user action: changing mode releases all playing notes.
     bool setMonoCorrectionFromUi(bool enabled);
     bool setMasterTuneFromUi(int value);
+    enum class SettingsApplyResult { applied, invalidTuning, tuningUnavailable, invalidChannel,
+                                     monoCorrectionUnavailable };
+    // Apply one validated Settings dialog selection. Operations which can fail
+    // are attempted before committing the simple channel/tuning changes.
+    SettingsApplyResult applySettingsFromUi(int tuning, int midiInputChannel,
+                                            bool monoCorrection);
     bool setPlaySettingFromUi(int field, int value);
     bool setPitchBendSettingFromUi(int field, int value);
     bool setControllerSettingFromUi(int controller, int field, int value);

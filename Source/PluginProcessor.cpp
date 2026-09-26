@@ -1925,6 +1925,33 @@ bool VDX7AudioProcessor::setMasterTuneFromUi(int value)
     return true;
 }
 
+VDX7AudioProcessor::SettingsApplyResult VDX7AudioProcessor::applySettingsFromUi(
+    int tuning, int midiInputChannel, bool monoCorrection)
+{
+    if (tuning < -256 || tuning > 255)
+        return SettingsApplyResult::invalidTuning;
+    if (midiInputChannel < 0 || midiInputChannel > 16)
+        return SettingsApplyResult::invalidChannel;
+
+    const bool tuningChanged = tuning != getMasterTune();
+    // Validate this before the MONO operation: when no ROM is loaded, changing
+    // MONO policy is allowed but master tuning is not.
+    if (tuningChanged && !engineLoaded_.load(std::memory_order_acquire))
+        return SettingsApplyResult::tuningUnavailable;
+
+    // MONO correction can fail while a project restore is pending. Run this
+    // potentially failing operation first so a failed Apply cannot leave the
+    // dialog's earlier tuning/channel selections partially committed.
+    if (!setMonoCorrectionFromUi(monoCorrection))
+        return SettingsApplyResult::monoCorrectionUnavailable;
+
+    if (tuningChanged && !setMasterTuneFromUi(tuning))
+        return SettingsApplyResult::tuningUnavailable;
+    if (!setMidiInputChannelFromUi(midiInputChannel))
+        return SettingsApplyResult::invalidChannel;
+    return SettingsApplyResult::applied;
+}
+
 bool VDX7AudioProcessor::setPitchBendSettingFromUi(int field, int value)
 {
     if (field < 0 || field > 1 || value < 0 || value > 12

@@ -487,6 +487,58 @@ static juce::MemoryBlock encode(const juce::ValueTree& s)
     return result;
 }
 
+static juce::MemoryBlock makeMismatchedPendingState(VDX7AudioProcessor& p)
+{
+    auto state = decode(save(p));
+    const auto missingRom = juce::File::getSpecialLocation(juce::File::tempDirectory)
+        .getChildFile("vdx7-settings-restore-" + juce::Uuid().toString() + ".bin");
+    state.setProperty("romPath", missingRom.getFullPathName(), nullptr);
+    state.setProperty("romIdentity", "deliberate-test-mismatch", nullptr);
+    return encode(state);
+}
+
+static void checkSettingsApplyAtomicity(const juce::File& romFile)
+{
+    auto oldOrderStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& oldOrder = *oldOrderStorage;
+    require(oldOrder.loadRomFromFile(romFile), "settings-order fixture ROM");
+    oldOrder.prepareToPlay(48000, 64);
+    const int requestedTune = 37;
+    const int requestedChannel = 9;
+    const auto pendingState = makeMismatchedPendingState(oldOrder);
+
+    // Reproduce the previous Settings callback order with a project restore
+    // arriving after the easy setters but before the fallible MONO operation.
+    require(oldOrder.setMasterTuneFromUi(requestedTune), "old-order tune request");
+    require(oldOrder.setMidiInputChannelFromUi(requestedChannel), "old-order channel request");
+    oldOrder.setStateInformation(pendingState.getData(), static_cast<int>(pendingState.getSize()));
+    require(!oldOrder.setMonoCorrectionFromUi(true), "pending restore rejects MONO change");
+    require(oldOrder.getMasterTune() == requestedTune,
+            "repro: old Settings order leaves tuning applied after Apply failure");
+
+    auto atomicStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& atomic = *atomicStorage;
+    require(atomic.loadRomFromFile(romFile), "atomic settings fixture ROM");
+    atomic.prepareToPlay(48000, 64);
+    const auto atomicPendingState = makeMismatchedPendingState(atomic);
+    atomic.setStateInformation(atomicPendingState.getData(),
+                               static_cast<int>(atomicPendingState.getSize()));
+    const auto result = atomic.applySettingsFromUi(requestedTune, requestedChannel, true);
+    require(result == VDX7AudioProcessor::SettingsApplyResult::monoCorrectionUnavailable,
+            "atomic Apply reports pending restore");
+    require(atomic.getMasterTune() == 0 && atomic.getMidiInputChannel() == 0
+                && !atomic.getMonoCorrectionStatus().requested,
+            "failed atomic Apply leaves all settings unchanged");
+
+    VDX7AudioProcessor noRom(false);
+    const auto unavailable = noRom.applySettingsFromUi(requestedTune, requestedChannel, true);
+    require(unavailable == VDX7AudioProcessor::SettingsApplyResult::tuningUnavailable
+                && noRom.getMasterTune() == 0 && noRom.getMidiInputChannel() == 0
+                && !noRom.getMonoCorrectionStatus().requested,
+            "unavailable tuning rejects Apply before changing MONO or channel");
+    std::cout << "PASS: reproduced partial Settings Apply and verified all-or-none failure behavior\n";
+}
+
 static void checkEditOrdering(const juce::File& romFile)
 {
     for (bool bankSwitch : {false, true})
@@ -681,6 +733,7 @@ int main(int argc, char** argv)
         juce::File romFile(juce::String::fromUTF8(argv[1]));
         juce::MemoryBlock rom;
         require(romFile.loadFileAsData(rom), "read local ROM");
+        checkSettingsApplyAtomicity(romFile);
         checkAudioPublication(romFile);
         checkEditOrdering(romFile);
         {
