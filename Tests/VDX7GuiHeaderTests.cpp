@@ -14,7 +14,7 @@ void require(bool condition, const char* message)
 }
 }
 
-int main()
+int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
     try
@@ -33,7 +33,8 @@ int main()
             require(image.isValid(), "header snapshot at supported scale");
             const float scaleX = float(width) / 1440.0f;
             const float scaleY = float(height) / 1110.0f;
-            const int headerX = juce::roundToInt(720.0f * scaleX);
+            // The top accent now has an intentional gap for the centre screw.
+            const int headerX = juce::roundToInt(100.0f * scaleX);
             const int dividerX = juce::roundToInt(100.0f * scaleX);
             const int dividerY = juce::roundToInt(176.0f * scaleY);
             require(image.getPixelAt(dividerX, dividerY).getARGB() == accent.getARGB(),
@@ -44,6 +45,12 @@ int main()
                 const int pixelY = static_cast<int>(std::floor(y * scaleY));
                 require(image.getPixelAt(headerX, pixelY).getARGB() == accent.getARGB(),
                         "all three header accents are visible in divider color");
+            }
+            if (argc == 2 && width == 1440)
+            {
+                juce::FileOutputStream stream { juce::File(argv[1]) };
+                require(stream.openedOk() && juce::PNGImageFormat().writeImageToStream(image, stream),
+                        "write optional GUI preview");
             }
         }
         std::cout << "PASS: three header accents match divider color at 75/100/125% sizes\n";

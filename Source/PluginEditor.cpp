@@ -228,13 +228,18 @@ VDX7Keyboard::VDX7Keyboard(juce::MidiKeyboardState& state)
     setWantsKeyboardFocus(false);
     setColour(mouseOverKeyOverlayColourId, juce::Colour(0x2400e7e7));
     setColour(keyDownOverlayColourId, juce::Colours::transparentBlack);
-    setColour(whiteNoteColourId, juce::Colour(0xff24221f));
+    setColour(whiteNoteColourId, juce::Colour(0xff0b0c0b));
     setBlackNoteLengthProportion(84.0f / 132.0f);
     setBlackNoteWidthProportion(24.0f / 36.0f);
 }
 
 void VDX7Keyboard::paintOverChildren(juce::Graphics& g)
 {
+    // Paint-only recess shadow: key geometry and MIDI hit areas stay unchanged.
+    const float shadowHeight = getHeight() * 0.12f;
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0x88000000), 0.0f, 0.0f,
+                                          juce::Colour(0x00000000), 0.0f, shadowHeight, false));
+    g.fillRect(0.0f, 0.0f, float(getWidth()), shadowHeight);
     // A stationary felt strip above the keys, including pressed/hovered notes.
     const float line = juce::jmax(1.0f, getHeight() / 138.0f);
     g.setColour(juce::Colour(0xff080909));
@@ -254,6 +259,13 @@ void VDX7Keyboard::drawWhiteNote(int, juce::Graphics& g, juce::Rectangle<float> 
     g.setColour(juce::Colour(0xffeeeae2));
     g.fillRoundedRectangle(keyBody, 1.5f);
     g.drawImage(isDown ? whitePressed_ : whiteNormal_, area);
+    // Restrained ivory shading retains the original bitmap's bevel and silhouette.
+    auto ivory = juce::ColourGradient(juce::Colour(0x183c352b), keyBody.getX(), keyBody.getY(),
+                                      juce::Colour(0x103c352b), keyBody.getX(), keyBody.getBottom(), false);
+    ivory.addColour(0.55, juce::Colour(0x00ffffff));
+    ivory.addColour(0.88, juce::Colour(0x16ffffff));
+    g.setGradientFill(ivory);
+    g.fillRoundedRectangle(keyBody.reduced(1.0f), 1.5f);
     if (isOver && !isDown)
     {
         g.setColour(juce::Colour(0x2600e7e7));
@@ -271,6 +283,9 @@ void VDX7Keyboard::drawBlackNote(int, juce::Graphics& g, juce::Rectangle<float> 
     {
         g.setColour(juce::Colour(0x52000000));
         g.fillRoundedRectangle(area.reduced(1.0f), 1.5f);
+        g.setGradientFill(juce::ColourGradient(juce::Colour(0x147b8589), area.getX(), area.getY(),
+                                              juce::Colour(0x00000000), area.getRight(), area.getY(), false));
+        g.fillRoundedRectangle(area.reduced(area.getWidth() * 0.14f, area.getHeight() * 0.06f), 1.0f);
     }
     if (isOver && !isDown)
     {
@@ -1158,6 +1173,12 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
                           juce::Point<float>(23.0f, 1087.0f), juce::Point<float>(720.0f, 1087.0f),
                           juce::Point<float>(1417.0f, 1087.0f) })
         drawChassisScrew(g, { p.x * scaleX, p.y * scaleY }, 7.0f * scaleY);
+
+    // Recess stays inside the keyboard span, clear of both wheel controls.
+    const auto keyWell = referenceRect(210, 864, 1184, 148).toFloat();
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff070808), keyWell.getX(), keyWell.getY(),
+                                          juce::Colour(0xff111210), keyWell.getX(), keyWell.getBottom(), false));
+    g.fillRect(keyWell);
 
     // Raised metallic lip above the existing keyboard/wheel bay.
     g.setColour(juce::Colour(0xff89877e));
