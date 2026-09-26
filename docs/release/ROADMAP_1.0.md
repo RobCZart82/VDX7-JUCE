@@ -5,9 +5,18 @@ not final releases. Do not publish or replace existing release assets until
 the acceptance checklist is complete. Keep plugin IDs and existing parameter
 indices compatible with saved projects.
 
+## Current execution authority — 2026-09-26
+
+Use [the consolidated 1.0 execution plan](EXECUTION_PLAN_1.0.md) for current
+priority, closed GUI scope and audit F1–F19 disposition against main `b12bd12`.
+It preserves the original release gates and local unmerged validation work.
+Older dated sections below are historical evidence; their stale GUI checkboxes
+or "next chapter" wording must not reopen the approved design. The RC checklist
+remains the final release gate, not a publication authorization.
+
 ## Stabilization
 
-### Current next steps — 2026-09-25
+### Historical next steps — 2026-09-25 (superseded by consolidated plan)
 
 Latest checkpoint: PR #63 was merged to `main` as `cbbd213` after macOS and
 Windows Actions passed. It adds the approved three header accent lines and a
@@ -15,10 +24,10 @@ ROM-free pixel regression at 75/100/125% editor sizes. The operator-row
 separator was confirmed already implemented and its stale unchecked item was
 corrected in that PR. Four additional ROM-free source-level test executables
 were manually compiled and passed on source commit `3d6218797a1af2fd09e8484fe0b42ae2f3f956e4`;
-see `VALIDATION_1.0_ROM_FREE_TESTS_2026-09-25.md`. This was not a CMake/CTest,
+see `docs/validation/VALIDATION_1.0_ROM_FREE_TESTS_2026-09-25.md`. This was not a CMake/CTest,
 plugin, GUI-host or firmware-backed run.
 Private-ROM acceptance remains a separate gate.
-`VALIDATION_MONO_SOAK.md` records the full 30-test run, separate desktop retry,
+`docs/validation/VALIDATION_MONO_SOAK.md` records the full 30-test run, separate desktop retry,
 dual-instance soak and remaining host boundaries. The user approved retaining
 both Native and Correct modes. Native remains the recommended default; Correct
 is an advanced compatibility setting. No 1.0.0 publication is authorized.
@@ -36,7 +45,7 @@ including release, sustain, transport and subsequent normal-register notes.
    acceptance; report unavailable desktop prerequisites as NOT RUN.
 2. Broaden concurrent public restore, mixed controller/overflow timing and host
    bypass/suspension coverage. Desktop GUI/processor follow-up now passes;
-   see VALIDATION_GUI_RESTORE_ORACLE.md for the persistent-state oracle change.
+   see docs/validation/VALIDATION_GUI_RESTORE_ORACLE.md for the persistent-state oracle change.
 3. Real DAW acceptance, remaining GUI finish/scale checks and release packaging.
    PR #47 is merged; publishing remains a separate approval.
 
@@ -45,7 +54,7 @@ including release, sustain, transport and subsequent normal-register notes.
 The milestone narratives further down this file were written over several
 weeks. Their unchecked boxes are not all current: some describe work later
 implemented in source or covered by a validation report. Use this section,
-`RELEASE_CHECKLIST_1.0_RC.md`, and the linked validation records as the current
+`docs/release/RELEASE_CHECKLIST_1.0_RC.md`, and the linked validation records as the current
 release status; reconcile historical checkboxes instead of treating every old
 unchecked item as an unfinished feature.
 
@@ -94,7 +103,7 @@ Audit disposition refreshed against main `176b757` on 2026-09-25:
   ROM-free regression; local CMake/CTest execution remains NOT RUN.
 - N4 public keyboard-queue admission now filters unsupported programmatic
   keyboard events before queue capacity is consumed. See
-  `VALIDATION_1.0_KEYBOARD_RANGE_ADMISSION.md`; PR #61 macOS/Windows CI passed
+  `docs/validation/VALIDATION_1.0_KEYBOARD_RANGE_ADMISSION.md`; PR #61 macOS/Windows CI passed
   and the change is merged in main `210b9b9`. ROM-backed processor acceptance
   remains NOT RUN.
 - N2 save/ROM identity: the engine-generation-bound path snapshot and
@@ -277,7 +286,7 @@ order. Current audit disposition is in AUDIT_TRIAGE_2026-09-23.md.
   wrapping. Only a successful accepted factory-bank load may clear unexported
   voice markers or publish a bank-change result. Test 0/7 and ignored 8/15/127,
   preserving patch RAM and dirty flags in edited CUSTOM/USER working copies.
-  See `VALIDATION_1.0_BANK_SELECT.md` for implementation and local test scope.
+  See `docs/validation/VALIDATION_1.0_BANK_SELECT.md` for implementation and local test scope.
   Existing CC0-ignore / immediate CC32 behavior remains unchanged; a different
   MSB/LSB policy needs an explicit compatibility decision and host acceptance.
 - [x] Follow-up static-review validation: malformed MIDI status/length/data-byte
@@ -285,7 +294,7 @@ order. Current audit disposition is in AUDIT_TRIAGE_2026-09-23.md.
   and keyboard UI-held state after overflow. Malformed SysEx is rejected before
   it can exhaust deferred event/byte storage; the engine shares the admission
   validator. The processor integration renderer requires its explicit local ROM
-  fixture. See `VALIDATION_1.0_MIDI_INPUT.md`.
+  fixture. See `docs/validation/VALIDATION_1.0_MIDI_INPUT.md`.
   Remaining acceptance: live-host bulk-SysEx stress and broader UI contention.
   Historical review note: keyboard UI-held state after overflow was reproduced.
   Reproduce before claiming stuck audio; mirroring suppresses MIDI feedback and
@@ -304,21 +313,21 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
 - [x] Shared complete channel-message validation before engine/GUI mutation and
   deferred storage; ROM-free exhaustive status/length/data-byte tests and local
   integration regressions. Unsupported system common/realtime traffic is ignored;
-  validated bank SysEx stays on its dedicated path. See `VALIDATION_1.0_MIDI_INPUT.md`.
+  validated bank SysEx stays on its dedicated path. See `docs/validation/VALIDATION_1.0_MIDI_INPUT.md`.
 - [x] Reproduce the reported overflow + lost UI Note Off scenario: local test
   confirms release and no mirror-triggered note. No speculative UI reset applied.
   Broader simultaneous-held-key/host-contention acceptance remains open.
 
 - [x] Deferred multi-block MIDI timeline, restart cleanup and consistent program
-  normalization implemented; see `VALIDATION_1.0_MIDI_LIFECYCLE.md` for policy
+  normalization implemented; see `docs/validation/VALIDATION_1.0_MIDI_LIFECYCLE.md` for policy
   and local tests. Actual host transport acceptance remains open.
   Q1 follow-up corrects false age expiry in large successful callbacks, with
   real-processor before/after reproduction, waveform comparison and true-delay
   expiry tests. The two-second actual-lag limit remains; see
-  `VALIDATION_DEFERRED_PARTITION.md`. Queue-capacity and real-host limits remain.
+  `docs/validation/VALIDATION_DEFERRED_PARTITION.md`. Queue-capacity and real-host limits remain.
 
 - [x] Ordered program/bank/voice/operator edit queue with local save/audio
-  regressions; see `VALIDATION_1.0_EDIT_ORDER.md` for scope and overload policy.
+  regressions; see `docs/validation/VALIDATION_1.0_EDIT_ORDER.md` for scope and overload policy.
 
 - [x] Missing-ROM deferred project restore, including re-save/restart (local automated tests).
 - [x] Valid project-state restore creates an audio-owned MIDI timeline boundary:
@@ -336,13 +345,13 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
 - [x] Remove 512-sample lookahead; measure onset and host-block invariance.
 - [ ] Physical MIDI timing, dense chords and automation acceptance in hosts.
 - [x] Move direct voice-parameter notifications outside the audio callback and
-  engine lock; editorless/reentrant state tests (see `VALIDATION_1.0_HOST_PUBLICATION.md`).
+  engine lock; editorless/reentrant state tests (see `docs/validation/VALIDATION_1.0_HOST_PUBLICATION.md`).
 - [x] Coalesce frequent non-disruptive PERFORMANCE/SETTINGS writes outside
   `engineMutex_`: controller range/assignments, pitch-bend range/step, master
   tuning, portamento mode, glissando and bounded portamento time. A held-lock regression and a
   concurrent 1,000-write/audio test confirm prompt UI snapshots, save-time
   commit and zero measured contention from this path. See
-  `VALIDATION_1.0_CONTENTION.md`.
+  `docs/validation/VALIDATION_1.0_CONTENTION.md`.
 - [ ] Keep the deliberate POLY/MONO firmware transaction in the real
   GUI/audio-overlap audit. It must retain its firmware reset and note-release
   behavior; do not move it to the callback without a bounded transaction design
@@ -350,20 +359,20 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
 - [ ] Complete remaining audio-thread allocation/locking audit and contention stress test.
 - [x] Guard firmware serial/controller saturation; validate recovery with a
   60-second simulated load and callback ordinary-C++ heap probe
-  (`VALIDATION_1.0_MIDI_OVERLOAD.md`). Direct-C/aligned heap profiling and live
+  (`docs/validation/VALIDATION_1.0_MIDI_OVERLOAD.md`). Direct-C/aligned heap profiling and live
   host soak acceptance remain open; this is not a hard-realtime guarantee.
 - [x] Remove keyboard-state locking/listeners from audio; bounded UI MIDI handoff
-  and 12-configuration local stress grid (see `VALIDATION_1.0_REALTIME_BASELINE.md`).
+  and 12-configuration local stress grid (see `docs/validation/VALIDATION_1.0_REALTIME_BASELINE.md`).
   Full allocation/overload audit and host acceptance are still open.
 - [x] Q2 stale PERFORMANCE/tuning display publication: guard the commit against
   newer UI edits (including same-value/ABA) without audio waiting/retry. Real
   processor before/after reproduction and public-CI helper regression; see
-  `VALIDATION_PERFORMANCE_PUBLICATION.md`. Restore/write epochs remain separate
+  `docs/validation/VALIDATION_PERFORMANCE_PUBLICATION.md`. Restore/write epochs remain separate
   open work; the portamento follow-up below is independently reproduced/tested.
 - [x] Retain the latest accepted portamento setting separately from transient
   firmware work RAM. Immediate save during recovery, queued CC5 display rollback,
   flushed-command replay and later accepted physical CC5 are covered by
-  `VALIDATION_PORTAMENTO_INTENT.md`. Native CC5 still computes the actual rate;
+  `docs/validation/VALIDATION_PORTAMENTO_INTENT.md`. Native CC5 still computes the actual rate;
   there is no synthetic acknowledgement or extra callback render budget.
 - [x] Historical full 0–127 note range and pitch/release regressions (local ROM).
   Superseding product policy (2026-09-24): filter Note On/Off outside 12–120
@@ -376,14 +385,14 @@ normalisation or remove implemented play controls. PR/CI/user-merge gates remain
   and processor. The new 32-case boundary characterization documents it; the
   original failing diagnostic is preserved, not counted as a passing release
   test. Firmware-fidelity policy and broader MONO/reset acceptance remain open.
-  See `VALIDATION_MONO_BOUNDARY_AND_CI.md` and `AUDIT_TRIAGE_2026-09-23.md`.
+  See `docs/validation/VALIDATION_MONO_BOUNDARY_AND_CI.md` and `docs/archive/AUDIT_TRIAGE_2026-09-23.md`.
   Follow-up: local instruction trace now identifies the failing allocation and
   release branches. Subsequent-note loss/retained output without recovery is
   reproduced, including sequential On/Off pairs and both Off encodings. This is
   diagnosis/test coverage, not a production fix or hardware confirmation; see
-  `VALIDATION_MONO_INSTRUCTION_TRACE.md`.
+  `docs/validation/VALIDATION_MONO_INSTRUCTION_TRACE.md`.
   Native/corrected-path options and required acceptance are separated in
-  `DESIGN_MONO_NOTE_ZERO_POLICY.md`. Targeted corrective development is now
+  `docs/design/DESIGN_MONO_NOTE_ZERO_POLICY.md`. Targeted corrective development is now
   approved. The earlier engine-only stage is superseded: the optional correction
   is integrated, persisted and selectable in SETTINGS. Default firmware fidelity
   is unchanged; full corrected-mode product acceptance remains open.
@@ -419,7 +428,7 @@ fresh PR checks and user merge before the next chapter.
       Notes 12–120. Firmware/REAPER acceptance is still open.
 - [ ] Measure resampling/aliasing; quality implementation accepted against references.
   Milestone 3B adds band-limited SRC, selected spectral limits, exact reported
-  latency and CPU diagnostics (`VALIDATION_1.0_BANDLIMITED_SRC.md`). Physical
+  latency and CPU diagnostics (`docs/validation/VALIDATION_1.0_BANDLIMITED_SRC.md`). Physical
   reference/host listening and latency-compensation acceptance remain open.
 - [ ] Current documentation matches all shipping features and limitations.
 
@@ -427,7 +436,7 @@ fresh PR checks and user merge before the next chapter.
 
 First implementation pass: warm enclosure/panels, yellow-green LCD, matte knobs,
 restrained active buttons, ON/OFF performance switches, GYR mark in ABOUT and
-green/yellow/red meters. See `VALIDATION_1.0_WARM_GUI.md`. Remaining checklist
+green/yellow/red meters. See `docs/validation/VALIDATION_1.0_WARM_GUI.md`. Remaining checklist
 items below still require final visual and host acceptance; this is not a final skin.
 
 Second visual slice groups PERFORMANCE into PLAY MODE, PITCH BEND and PORTAMENTO
@@ -488,7 +497,7 @@ VDX7 interface with a restrained vintage hardware feel, not a replica front pane
 - [x] Original VDX7 wordmark, icons and newly drawn interface assets. The own
   VDX7 Mk I. SVG uses a restrained metallic scanline treatment; no Yamaha logo,
   original product lettering or traced front-panel artwork is used. See
-  `VALIDATION_1.0_WHEEL_LOGO_POLISH.md`.
+  `docs/validation/VALIDATION_1.0_WHEEL_LOGO_POLISH.md`.
 - [ ] Preserve the approved EDIT/PERFORMANCE structure and functional LCD,
   SAVE AS..., algorithm, output and keyboard controls across views. The colour
   redesign must not remove, duplicate or disconnect implemented functionality.
@@ -585,7 +594,7 @@ fusson végig, egységes margókkal.
 - [x] SETTINGS host MIDI input channel: OMNI or 1-16, legacy/missing-field
   projects default to OMNI. Switching releases old notes/sustain and discards
   stale delayed input; UI keyboard and bank SysEx remain global. Project and
-  missing-ROM resave regressions added. See `VALIDATION_1.0_MIDI_CHANNEL.md`.
+  missing-ROM resave regressions added. See `docs/validation/VALIDATION_1.0_MIDI_CHANNEL.md`.
   Physical controller/DAW acceptance remains open before final GUI polish.
 
 - [x] First SETTINGS slice: master tuning -256..255 using the core's existing
@@ -593,7 +602,7 @@ fusson végig, egységes margókkal.
   SETTINGS opens a functional Apply/Cancel dialog; these are native units, not
   cents. MIDI input remains OMNI for compatibility. Channel filtering is the
   next separate slice and must preserve legacy project behavior by default.
-  See `VALIDATION_1.0_MASTER_TUNE.md`; final skin/host acceptance remain open.
+  See `docs/validation/VALIDATION_1.0_MASTER_TUNE.md`; final skin/host acceptance remain open.
 
 The approved PERFORMANCE layout and controls are implemented with project
 persistence; SETTINGS provides input-channel filtering and master tuning. The
@@ -639,8 +648,8 @@ Work in separate reviewed PRs; no final release/tag or firmware upload.
   a dropout fix.
   PERFORMANCE periodic reads, including legacy-shaped controller/play/bend
   accessors, now decode one coherent lock-free display snapshot instead of
-  acquiring engine locks (VALIDATION_1.0_PERFORMANCE_SNAPSHOT.md and
-  VALIDATION_1.0_CONTENTION.md). Settings writes, voice publication and
+  acquiring engine locks (docs/validation/VALIDATION_1.0_PERFORMANCE_SNAPSHOT.md and
+  docs/validation/VALIDATION_1.0_CONTENTION.md). Settings writes, voice publication and
   ROM/state transactions and the POLY/MONO reset remain separate contention paths; complete real-host
   continuity acceptance is still open.
   State serialization now encodes detached snapshots outside engineMutex_;

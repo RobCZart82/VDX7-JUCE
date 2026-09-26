@@ -1,6 +1,6 @@
 # Per-pitch retirement during overlapping playback
 
-Follow-up to `VALIDATION_HISTORY_RETIREMENT.md`, on the same locally validated
+Follow-up to `docs/validation/VALIDATION_HISTORY_RETIREMENT.md`, on the same locally validated
 v1.8 firmware/POLY path. #47 remains Draft; this does not close P1 or authorize
 release publication. Firmware bytes and the installed plugin are not changed.
 

@@ -36,4 +36,4 @@ modified by the compilation; temporary binaries were written under `/tmp`.
   **NOT RUN** (private v1.8 ROM unavailable in this environment).
 
 The macOS/Windows GitHub Actions for PR #63 passed; those checks do not replace
-the local ROM-backed and real-host acceptance gates listed in `ROADMAP_1.0.md`.
+the local ROM-backed and real-host acceptance gates listed in `docs/release/ROADMAP_1.0.md`.

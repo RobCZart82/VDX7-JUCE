@@ -48,4 +48,4 @@ the separate four-case reactivation test also passes (0.76 s in the full run).
 This is NOT a fully green suite or release acceptance.
 
 Audit follow-ups, including the latest mute-gate finding and the older pending
-portamento-save issue, are retained in `AUDIT_TRIAGE_2026-09-23.md`.
+portamento-save issue, are retained in `docs/archive/AUDIT_TRIAGE_2026-09-23.md`.

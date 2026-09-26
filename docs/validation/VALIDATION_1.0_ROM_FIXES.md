@@ -43,4 +43,4 @@ open. This passing suite must not be interpreted as validation of those issues.
 
 New-source GitHub CI and exact-commit RC workflow are pending, not claimed PASS.
 The earlier main commit's CI results are recorded separately in
-`VALIDATION_1.0_DEV.md`. Use `RELEASE_CHECKLIST_1.0_RC.md` for the remaining gates.
+`docs/validation/VALIDATION_1.0_DEV.md`. Use `docs/release/RELEASE_CHECKLIST_1.0_RC.md` for the remaining gates.

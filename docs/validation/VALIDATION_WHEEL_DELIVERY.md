@@ -58,4 +58,4 @@ It covers these two block offsets, not arbitrary sample-accurate ordering or a
 real DAW GUI interaction. Audible-note/silence checks are not frequency or
 modulation-depth measurements. Native MONO Note0 remains open independently.
 The earlier GUI prerequisite failure was subsequently resolved and its stale
-RAM oracle corrected; see VALIDATION_GUI_RESTORE_ORACLE.md for that separate run.
+RAM oracle corrected; see docs/validation/VALIDATION_GUI_RESTORE_ORACLE.md for that separate run.

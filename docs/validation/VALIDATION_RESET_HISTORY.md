@@ -1,7 +1,7 @@
 # DRAFT: reset history exceeds deferred MIDI age limit
 
 Historical baseline evidence below. The subsequent running-status mitigation
-and passing expanded matrix are in `VALIDATION_RESET_RUNNING_STATUS.md`; this
+and passing expanded matrix are in `docs/validation/VALIDATION_RESET_RUNNING_STATUS.md`; this
 original failure record is retained, not a statement that the new tree fails.
 
 2026-09-23. Baseline: `659bc0b498f8e48171175b97f1634ba4c6c23909`

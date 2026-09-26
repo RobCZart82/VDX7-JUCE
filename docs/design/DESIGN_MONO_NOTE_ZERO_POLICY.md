@@ -1,8 +1,8 @@
 # MONO note-zero: fidelity boundary and corrective-design decision
 
 Current status (2026-09-24): the optional correction is integrated, selectable
-and project-persisted; see `VALIDATION_MONO_PERSISTENCE.md` and
-`VALIDATION_MONO_SETTINGS.md`. PR #47 is merged to `main` as `30a3ccbd`.
+and project-persisted; see `docs/validation/VALIDATION_MONO_PERSISTENCE.md` and
+`docs/validation/VALIDATION_MONO_SETTINGS.md`. PR #47 is merged to `main` as `30a3ccbd`.
 The common 12–120 input filter is active in both modes. macOS/Windows CI passed;
 full local ROM-enabled and exact-boundary REAPER acceptance remain outstanding.
 The native raw-firmware Note 0 limitation is still documented, not claimed fixed.
@@ -26,7 +26,7 @@ implementation and are superseded by the current status above.
 ## What is established
 
 The local known-v1.8 instruction trace identifies both zero-key allocation and
-release failures; see `VALIDATION_MONO_INSTRUCTION_TRACE.md`. The failure also
+release failures; see `docs/validation/VALIDATION_MONO_INSTRUCTION_TRACE.md`. The failure also
 occurs in the raw pinned core, without the plugin adapter. After one zero-note
 pair, the next note can fail to release; after sixteen, its native allocation
 can be rejected. These are not merely stale GUI values or reset bookkeeping.
@@ -155,6 +155,6 @@ condition intervention is not authorization for an undisclosed production hook.
 
 Fix independent, reproduced wrapper errors without changing firmware policy.
 The next such item, Q1 deferred-MIDI block-partition loss, is implemented and
-tested separately in `VALIDATION_DEFERRED_PARTITION.md`. Q2/publication races,
+tested separately in `docs/validation/VALIDATION_DEFERRED_PARTITION.md`. Q2/publication races,
 state epochs, bypass/controller handling and host acceptance remain tracked in
-`AUDIT_TRIAGE_2026-09-23.md`. None closes MONO note-zero by implication.
+`docs/archive/AUDIT_TRIAGE_2026-09-23.md`. None closes MONO note-zero by implication.

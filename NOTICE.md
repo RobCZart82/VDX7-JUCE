@@ -22,7 +22,7 @@ Complete corresponding source for the shipped executable is provided as
 VDX7-JUCE-v0.6.6-PreBeta2-corresponding-source.zip alongside the binary.
 It includes the wrapper, GUI resources, build scripts, exact JUCE sources
 and the portable dx7Lib source subset used by the build. See
-SOURCE_DEPENDENCIES.md for pinned revisions and offline build instructions.
+docs/guides/SOURCE_DEPENDENCIES.md for pinned revisions and offline build instructions.
 
 Source: https://github.com/RobCZart82/VDX7-JUCE
 

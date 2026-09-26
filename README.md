@@ -59,7 +59,7 @@ acceptance remain release gates. Standalone runs without a DAW when built locall
 
 **A compatible DX7 Mk I ROM is required for sound.** Supported layouts and
 optional external factory-bank data are described in the
-[firmware guide](GUIDE_EN.md#3-firmware-and-banks).
+[firmware guide](docs/guides/GUIDE_EN.md#3-firmware-and-banks).
 Supported MIDI notes are **12–120** in both Native and Correct MONO modes.
 
 Users of prebuilt artifacts do not need a compiler or CMake. Development packages
@@ -77,24 +77,26 @@ are not notarised/Developer ID signed; see the guide before responding to OS pro
 5. Select a program or load a compatible SysEx file, enable MIDI monitoring and play.
 
 Avoid duplicate plug-in installations. Never disable system-wide security protections.
-See [first sound and firmware setup](GUIDE_EN.md#2-installation-and-first-sound).
+See [first sound and firmware setup](docs/guides/GUIDE_EN.md#2-installation-and-first-sound).
 
 ## Documentation
 
-- [Detailed English guide](GUIDE_EN.md)
-- [Magyar útmutató](GUIDE_HU.md)
-- [1.0 release checklist and remaining acceptance work](ROADMAP_1.0.md)
-- [Source dependencies](SOURCE_DEPENDENCIES.md)
+- [Documentation index and archive](docs/README.md)
+
+- [Detailed English guide](docs/guides/GUIDE_EN.md)
+- [Magyar útmutató](docs/guides/GUIDE_HU.md)
+- [1.0 release checklist and remaining acceptance work](docs/release/ROADMAP_1.0.md)
+- [Source dependencies](docs/guides/SOURCE_DEPENDENCIES.md)
 - [License and third-party notices](NOTICE.md)
 
 No live MIDI Out/SysEx transmission is implemented. Envelope graphs illustrate
 shape rather than calibrated timing. Full firmware, offline-render, automation
 and cross-platform acceptance must not be inferred from GUI approval or green CI.
-See [known limitations](GUIDE_EN.md#9-known-limitations).
+See [known limitations](docs/guides/GUIDE_EN.md#9-known-limitations).
 
 ## Building from source
 
-See [Building from source](GUIDE_EN.md#11-building-from-source) for C++20,
+See [Building from source](docs/guides/GUIDE_EN.md#11-building-from-source) for C++20,
 CMake 3.22+, platform tools, pinned dependencies and test commands.
 Public CI runs ROM-free regressions; firmware-dependent tests require a legally
 available local ROM that must never be committed or packaged.

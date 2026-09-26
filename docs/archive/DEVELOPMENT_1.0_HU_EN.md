@@ -8,7 +8,7 @@ and passed on the PR #63 source tree. This was not a CMake/CTest, JUCE plug-in,
 firmware-backed or host run. The development tree is not a final 1.0.0 release.
 ROM-backed Note 12–120 boundary acceptance, targeted REAPER/Windows/Intel Mac
 host checks, complete GUI/HiDPI review and packaging remain open. See
-`ROADMAP_1.0.md` and `VALIDATION_1.0_ROM_FREE_TESTS_2026-09-25.md`.
+`docs/release/ROADMAP_1.0.md` and `docs/validation/VALIDATION_1.0_ROM_FREE_TESTS_2026-09-25.md`.
 
 Legfrissebb beolvadt main mérföldkő: `cbbd213` (#63 PR); a macOS és Windows CI
 sikeres volt. A #63 forrásfáján további négy önálló, ROM-mentes C++ regressziós
@@ -16,7 +16,7 @@ program fordítása és futtatása sikerült. Ez nem teljes CMake/CTest-, JUCE
 plugin-, firmware- vagy hostfuttatás. A fejlesztői változat nem végleges 1.0.0.
 Nyitott a ROM-os Note 12–120 határellenőrzés, a célzott REAPER/Windows/Intel Mac
 hostteszt, a teljes GUI/HiDPI-ellenőrzés és a csomagolás. Részletek:
-`ROADMAP_1.0.md` és `VALIDATION_1.0_ROM_FREE_TESTS_2026-09-25.md`.
+`docs/release/ROADMAP_1.0.md` és `docs/validation/VALIDATION_1.0_ROM_FREE_TESTS_2026-09-25.md`.
 
 Implemented since the initial snapshot below: persistent 32-slot USER bank and
 Save As, firmware-backed PERFORMANCE controls, SETTINGS tuning/channel filter,
@@ -43,7 +43,7 @@ nem a jelenlegi main állapotát vagy annak elfogadottságát jelölik.
 
 Ez nem végleges 1.0.0 kiadás. A kiadott v0.6.6 változat és csomagjai változatlanok.
 A fejlesztés alapja a main 483daf7 és a korábbi, helyi 80ebf54 MIDI-tartomány-bővítés.
-A végleges kiadás feltételei a ROADMAP_1.0.md fájlban szerepelnek.
+A végleges kiadás feltételei a docs/release/ROADMAP_1.0.md fájlban szerepelnek.
 
 Az első stabilizáló változtatások:
 

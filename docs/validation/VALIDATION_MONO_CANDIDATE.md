@@ -1,6 +1,6 @@
 # MONO Note 0: isolated corrective experiment and visible product gate
 
-Latest follow-up: `VALIDATION_MONO_ENGINE_OPTIN.md` records the subsequent
+Latest follow-up: `docs/validation/VALIDATION_MONO_ENGINE_OPTIN.md` records the subsequent
 engine/processor integration stage. The historical experiment-only and
 not-integrated statements below describe the earlier revisions, not that stage.
 
@@ -267,4 +267,4 @@ option transitions, every production CPU stepping path, save/restore/reset/mode
 changes and unknown/missing-image behavior. Then run the corrected **actual
 processor** through playback, ordering, capacity and lifecycle acceptance, plus
 callback-cost/real-host checks. Raw-core candidate success alone cannot close P1
-or authorize main merge/release. See `DESIGN_MONO_NOTE_ZERO_POLICY.md`.
+or authorize main merge/release. See `docs/design/DESIGN_MONO_NOTE_ZERO_POLICY.md`.
