@@ -113,7 +113,13 @@ historical records, not instructions to reopen completed GUI work.
   timing/stability/stress, ownership/history/overlap retirement, reset overflow,
   deferred partition, portamento, wheel delivery, direct reload, state-ROM
   identity and corrected MONO. Record SHA, OS/compiler, command, rates and result.
-  ROM stays local; public ROM-free CI is not firmware-runtime PASS.
+  ROM stays local; public ROM-free CI is not firmware-runtime PASS. On
+  2026-09-26, 35/35 ROM-backed/ROM-free tests passed after rebuilding all
+  `vdx7_ci_checks` binaries; the single `vdx7_processor` test is excluded from
+  the pass count because its SAVE AS dialog requires desktop/display access.
+  The full run exposed an initial-UI-note epoch bug in `prepareToPlay`; it is
+  fixed and `vdx7_stress` now passes. Cross-platform CI after that source fix
+  and the desktop-dependent processor test remain outstanding.
 - [x] Owner-reported REAPER PASS (2026-09-26): Native and Correct MONO note
   boundaries (11/12 and 120/121), Note Off, sustain and repeated-note behavior,
   automation and project reopen, transport, bypass, device restarts, physical

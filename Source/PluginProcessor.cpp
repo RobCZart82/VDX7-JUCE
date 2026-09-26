@@ -304,6 +304,12 @@ void VDX7AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     clearKeyboardSnapshot();
     engine_.resetMidiLifecycle();
     engine_.prepare(sampleRate);
+    // This stopped-device reset supersedes timeline boundaries which predate
+    // preparation (for example, the initial ROM load). Consume those epochs
+    // now so a fresh keyboard note queued after prepare is not mistaken for
+    // stale pre-install input by the first audio callback.
+    audioMidiTimelineEpoch_ = midiTimelineEpoch_.load(std::memory_order_acquire);
+    stateRestoreReleasePending_ = false;
     outputGain_.reset(sampleRate, 0.02);
     outputGain_.setCurrentAndTargetValue(
         juce::Decibels::decibelsToGain(masterVolumeParameter_->load()));
