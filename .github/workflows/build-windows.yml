@@ -1,4 +1,4 @@
-name: Build Windows VST3
+name: Build Windows VST3 and Standalone
 
 on:
   pull_request:
@@ -23,12 +23,12 @@ jobs:
           -A x64
           -DCMAKE_BUILD_TYPE=Release
 
-      - name: Build VST3
+      - name: Build VST3 and Standalone
         shell: cmd
         run: >
           cmake --build build
           --config Release
-          --target VDX7_VST3 vdx7_ci_checks
+          --target VDX7_VST3 VDX7_Standalone vdx7_ci_checks
 
       - name: ROM-free regression tests
         run: ctest --test-dir build -C Release --output-on-failure --no-tests=error
