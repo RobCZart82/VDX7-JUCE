@@ -75,18 +75,18 @@ target_include_directories(vdx7_user_bank_tests PRIVATE Source)
 target_link_libraries(vdx7_user_bank_tests PRIVATE juce::juce_core vdx7_voice_data)
 target_compile_definitions(vdx7_user_bank_tests PRIVATE JUCE_USE_CURL=0 JUCE_WEB_BROWSER=0)
 add_test(NAME vdx7_user_bank COMMAND vdx7_user_bank_tests)
-set_tests_properties(vdx7_user_bank PROPERTIES TIMEOUT 20)
+set_tests_properties(vdx7_user_bank PROPERTIES TIMEOUT 20 LABELS "rom-free")
 
 add_executable(vdx7_deferred_midi_tests Tests/VDX7DeferredMidiTests.cpp)
 target_include_directories(vdx7_deferred_midi_tests PRIVATE Source)
 target_link_libraries(vdx7_deferred_midi_tests PRIVATE vdx7_voice_data)
 add_test(NAME vdx7_deferred_midi COMMAND vdx7_deferred_midi_tests)
-set_tests_properties(vdx7_deferred_midi PROPERTIES TIMEOUT 60)
+set_tests_properties(vdx7_deferred_midi PROPERTIES TIMEOUT 60 LABELS "rom-free")
 
 add_executable(vdx7_latest_display_tests Tests/VDX7LatestDisplayTests.cpp)
 target_include_directories(vdx7_latest_display_tests PRIVATE Source)
 add_test(NAME vdx7_latest_display COMMAND vdx7_latest_display_tests)
-set_tests_properties(vdx7_latest_display PROPERTIES TIMEOUT 60)
+set_tests_properties(vdx7_latest_display PROPERTIES TIMEOUT 60 LABELS "rom-free")
 
 add_executable(vdx7_status_priority_tests Tests/VDX7StatusPriorityTests.cpp)
 target_include_directories(vdx7_status_priority_tests PRIVATE Source)
@@ -100,15 +100,17 @@ target_include_directories(vdx7_bounded_file_tests PRIVATE Source)
 target_link_libraries(vdx7_bounded_file_tests PRIVATE juce::juce_core)
 target_compile_definitions(vdx7_bounded_file_tests PRIVATE JUCE_USE_CURL=0 JUCE_WEB_BROWSER=0)
 add_test(NAME vdx7_bounded_file COMMAND vdx7_bounded_file_tests)
-set_tests_properties(vdx7_bounded_file PROPERTIES TIMEOUT 20)
+set_tests_properties(vdx7_bounded_file PROPERTIES TIMEOUT 20 LABELS "rom-free")
 
 add_executable(vdx7_voice_data_tests Tests/VDX7VoiceDataTests.cpp)
 target_link_libraries(vdx7_voice_data_tests PRIVATE vdx7_voice_data)
 add_test(NAME vdx7_voice_data COMMAND vdx7_voice_data_tests)
+set_tests_properties(vdx7_voice_data PROPERTIES LABELS "rom-free")
 
 add_executable(vdx7_algorithm_tests Tests/VDX7AlgorithmsTests.cpp)
 target_include_directories(vdx7_algorithm_tests PRIVATE Source)
 add_test(NAME vdx7_algorithms COMMAND vdx7_algorithm_tests "${VDX7_CORE_DIR}/OPS.h")
+set_tests_properties(vdx7_algorithms PROPERTIES LABELS "rom-free")
 
 target_include_directories(vdx7_core PUBLIC "${VDX7_CORE_DIR}")
 target_compile_features(vdx7_core PUBLIC cxx_std_20)
@@ -192,6 +194,7 @@ target_link_libraries(VDX7 PRIVATE
     vdx7_voice_data
     VDX7Assets
     juce::juce_audio_utils
+    juce::juce_cryptography
     juce::juce_gui_extra
 )
 
@@ -214,7 +217,7 @@ add_executable(vdx7_resampling_tests Tests/VDX7ResamplingTests.cpp Source/VDX7En
 target_include_directories(vdx7_resampling_tests PRIVATE Source)
 target_link_libraries(vdx7_resampling_tests PRIVATE vdx7_core vdx7_voice_data)
 add_test(NAME vdx7_resampling COMMAND vdx7_resampling_tests)
-set_tests_properties(vdx7_resampling PROPERTIES TIMEOUT 60)
+set_tests_properties(vdx7_resampling PROPERTIES TIMEOUT 60 LABELS "rom-free")
 
 # GUI-only pixel regression for the approved three-line header decoration.
 add_executable(vdx7_gui_header_tests Tests/VDX7GuiHeaderTests.cpp)
@@ -419,6 +422,11 @@ if(VDX7_ENABLE_ROM_TESTS)
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --state-rom-identity-only)
     set_tests_properties(vdx7_state_rom_identity PROPERTIES
         TIMEOUT 120 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;state-boundary;concurrency")
+
+    add_test(NAME vdx7_pending_rom_content_identity
+        COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --pending-rom-identity-only)
+    set_tests_properties(vdx7_pending_rom_content_identity PROPERTIES
+        TIMEOUT 60 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;project-state;rom-identity")
 
     add_test(NAME vdx7_mono_corrected_processor
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --mono-corrected-processor-only)

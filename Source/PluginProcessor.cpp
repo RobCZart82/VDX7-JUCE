@@ -3,6 +3,7 @@
 #include "VDX7Sysex.h"
 #include "VDX7MidiValidation.h"
 #include "PluginEditor.h"
+#include <juce_cryptography/juce_cryptography.h>
 
 #include <chrono>
 #include <cstring>
@@ -12,6 +13,46 @@ namespace
 {
 constexpr const char* kStateType = "VDX7STATE";
 constexpr const char* kParameterStateType = "PARAMETERS";
+
+juce::String makeRomContentIdentity(const std::vector<uint8_t>& rom,
+                                    const std::vector<uint8_t>& companionVoices)
+{
+    if (rom.size() != VDX7Engine::kFirmwareSize && rom.size() != VDX7Engine::kCombinedRomSize)
+        return {};
+
+    juce::MemoryBlock identityData;
+    static constexpr char domain[] = "VDX7-ROM-CONTENT-v1";
+    identityData.append(domain, sizeof(domain));
+    identityData.append(rom.data(), VDX7Engine::kFirmwareSize);
+
+    const uint8_t* factoryVoices = nullptr;
+    if (rom.size() == VDX7Engine::kCombinedRomSize)
+        factoryVoices = rom.data() + VDX7Engine::kFirmwareSize;
+    else if (companionVoices.size() == VDX7Engine::kFactoryVoicesSize)
+        factoryVoices = companionVoices.data();
+
+    const uint8_t hasFactoryVoices = factoryVoices != nullptr ? 1 : 0;
+    identityData.append(&hasFactoryVoices, sizeof(hasFactoryVoices));
+    if (factoryVoices != nullptr)
+        identityData.append(factoryVoices, VDX7Engine::kFactoryVoicesSize);
+
+    return "sha256:" + juce::SHA256(identityData).toHexString();
+}
+
+bool savedStateMatchesRom(const juce::ValueTree& state, const juce::String& identity,
+                          const juce::String& loadedPath)
+{
+    const auto savedIdentity = state.getProperty("romIdentity").toString();
+    if (savedIdentity.isNotEmpty())
+        return savedIdentity == identity;
+
+    // Older states remain path-based for compatibility. If they recorded a
+    // path, do not restore into another already-loaded image merely because
+    // they predate content identities. Pathless legacy states retain their
+    // historical behavior because there is no identity to compare.
+    const auto savedPath = state.getProperty("romPath").toString();
+    return savedPath.isEmpty() || savedPath == loadedPath;
+}
 // Suppress only callbacks caused by this thread's patch publication. Host
 // automation arriving on another thread must still enter the edit mailbox.
 thread_local const VDX7AudioProcessor* publishingVoice = nullptr;
@@ -1024,10 +1065,12 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     int bank = -1, program = 0, inputChannel = 0;
     uint32_t modified = 0;
     juce::String loadedRomPath;
+    juce::String loadedRomIdentity;
 
     {
         std::scoped_lock lock(engineMutex_);
         loadedRomPath = loadedRomPath_;
+        loadedRomIdentity = loadedRomIdentity_;
         // A project saved while its firmware is missing must retain its sound.
         monoCorrection = engine_.isMonoCorrectionRequested();
         if (pendingRestore_.isValid())
@@ -1088,6 +1131,8 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     }
 
     state.setProperty("romPath", loadedRomPath, nullptr);
+    if (loadedRomIdentity.isNotEmpty())
+        state.setProperty("romIdentity", loadedRomIdentity, nullptr);
 
     auto parameterState = parameters_.copyState();
     // A headless/reentrant save must not serialize a half-published host view.
@@ -1165,18 +1210,29 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     else if (!isRomLoaded() && detectRom_)
         autoDetectRom();
 
+    bool pendingRomIdentityMismatch = false;
     {
         std::scoped_lock lock(engineMutex_);
-        if (engine_.isLoaded() && pendingRestore_.isValid())
+        if (engine_.isLoaded() && pendingRestore_.isValid()
+            && savedStateMatchesRom(pendingRestore_, loadedRomIdentity_, loadedRomPath_))
         {
             restoreSavedStateLocked(pendingRestore_);
             pendingRestore_ = {};
+        }
+        else if (engine_.isLoaded() && pendingRestore_.isValid())
+        {
+            pendingRomIdentityMismatch = true;
         }
     }
     if (!isRomLoaded())
     {
         std::scoped_lock lock(metadataMutex_);
         statusText_ = "Project preserved: load compatible ROM to restore its sound";
+    }
+    else if (pendingRomIdentityMismatch)
+    {
+        std::scoped_lock lock(metadataMutex_);
+        statusText_ = "Project preserved: loaded ROM differs from the saved ROM";
     }
     synchroniseOperatorParametersFromEngine();
 }
@@ -1284,6 +1340,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
 {
     std::vector<uint8_t> voices;
     bool ignoredCompanion = false;
+    bool pendingIdentityMismatch = false;
 
     if (rom.size() == VDX7Engine::kFirmwareSize)
     {
@@ -1312,20 +1369,41 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
             return false;
         }
         loadedRomPath_ = file.getFullPathName();
+        loadedRomIdentity_ = makeRomContentIdentity(rom, voices);
 
         engine_.prepare(currentSampleRate_);
         modifiedVoices_.store(0);
-        operatorParameterDirty_[0].store(0, std::memory_order_release);
-        operatorParameterDirty_[1].store(0, std::memory_order_release);
-        voiceParameterDirty_.store(0, std::memory_order_release);
+        if (pendingRestore_.isValid())
+        {
+            // A saved project's packed RAM remains authoritative; explicit
+            // edits made while its ROM was unavailable were captured above.
+            operatorParameterDirty_[0].store(0, std::memory_order_release);
+            operatorParameterDirty_[1].store(0, std::memory_order_release);
+            voiceParameterDirty_.store(0, std::memory_order_release);
+        }
+        else if (applyOperatorParameters() | applyVoiceParameters())
+        {
+            // A fresh no-ROM instance has no packed project state to restore.
+            // Keep any explicit host edits made before its first ROM load and
+            // apply them over the newly loaded initial voice.
+            engine_.reloadCurrentProgram();
+        }
         pendingPerformanceDirty_.store(0, std::memory_order_release);
         editQueue_.discard();
         lastPitchMsb_ = -1;
         lastModValue_ = -1;
         if (pendingRestore_.isValid())
         {
-            restoreSavedStateLocked(pendingRestore_);
-            pendingRestore_ = {};
+            if (savedStateMatchesRom(pendingRestore_, loadedRomIdentity_, loadedRomPath_))
+            {
+                restoreSavedStateLocked(pendingRestore_);
+                pendingRestore_ = {};
+            }
+            else
+            {
+                pendingIdentityMismatch = true;
+                updateEngineSnapshot();
+            }
         }
         else
             updateEngineSnapshot();
@@ -1340,9 +1418,11 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
     {
         std::scoped_lock lock(metadataMutex_);
         romFile_ = file;
-        statusText_ = factoryVoicesAvailable_.load(std::memory_order_acquire)
-            ? "DX7 firmware loaded + 8 factory banks"
-            : "DX7 firmware loaded (factory voice image not found)";
+        statusText_ = pendingIdentityMismatch
+            ? "Project preserved: loaded ROM differs from the saved ROM"
+            : (factoryVoicesAvailable_.load(std::memory_order_acquire)
+                ? "DX7 firmware loaded + 8 factory banks"
+                : "DX7 firmware loaded (factory voice image not found)");
         if (ignoredCompanion)
             statusText_ = "DX7 firmware loaded; invalid or unreadable optional factory voice image ignored";
     }

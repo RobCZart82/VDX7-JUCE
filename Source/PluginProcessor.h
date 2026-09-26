@@ -251,6 +251,7 @@ private:
     // Protected by engineMutex_: the path belonging to the engine image whose
     // RAM/state is captured by getStateInformation(). romFile_ remains UI metadata.
     juce::String loadedRomPath_;
+    juce::String loadedRomIdentity_;
     juce::File romFile_;
     juce::String statusText_ { "ROM not loaded" };
 

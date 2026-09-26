@@ -1,7 +1,7 @@
 # 1.0 consolidated execution plan — 2026-09-26
 
-Baseline: main `af763f140c648418d9c95de40ea5a3c38dea149e` (#75 merged atop
-`174de0491423f99799107d21a552309ac76a9031`). The supplied test-system audit
+Baseline: main `29ab5e350019e32f64650b068afcc7709b409607` (#77, including #76).
+The supplied test-system audit
 records 10/10 ROM-free CTest tests on Windows and macOS for its earlier baseline.
 This plan combines the original 1.0 host/audio/release gates with the useful
 findings F1–F19 and the 2026-09-26 test-system review. Planning is not new
@@ -39,33 +39,44 @@ historical records, not instructions to reopen completed GUI work.
 
 ## 1. Input validation and wheel semantics
 
-- [x] F3/F4 — CONFIRMED validation gaps on baseline main; candidate applied to
-  current main `af763f1` as commit `6b929c9`, with live SysEx admission and the
-  internal packed import boundary using the shared semantic validator. Added a
-  CMake link dependency for the ROM-free live-admission regression. Current
-  local `vdx7_ci_checks` build and ROM-free CTest: 10/10 PASS. Public Actions,
-  ROM-backed execution, and host acceptance remain pending; reserved-bit
-  preservation and transactional failure tests are included.
-- [ ] F1 — SOURCE-DERIVED CANDIDATE: reproduce pitch scroll/trackpad nonzero
-  retention with a MOD control case. Check keyboard/accessibility input too.
-  If confirmed, constrain only unintended GUI input; never reset host automation
-  or incoming MIDI pitch bend indiscriminately. Add regression before fixing.
-- [ ] F2 — source ordering confirmed, audible/automation defect HOST-DEPENDENT.
-  Record actual begin/value/end ordering and centre point in REAPER Write,
-  Touch and Latch. Preserve prior owner evidence; no speculative behavior change.
+- [x] F3/F4 — FIXED and merged as PR #76 (`3c91f67`): live SysEx admission and
+  internal packed import use the shared semantic validator. Reserved-bit
+  preservation and transactional failures are tested. The current main also
+  includes the later pitch-wheel input fix, PR #77.
+- [x] F1 — FIXED and merged as PR #77 (`29ab5e3`): unintended pitch-wheel
+  scroll input is constrained without changing host automation or incoming
+  MIDI pitch bend; the GUI regression is included. Current main includes it.
+- [x] F2 — general wheel-automation host test PASS (owner-tested in REAPER):
+  both Pitch and Mod wheels record mouse movement and MIDI-keyboard control;
+  manually drawn wheel curves play back, including the Mod Wheel curve.
+  No wheel-automation defect was observed in this test.
+- [ ] F2a — optional mode-boundary characterization: record exact
+  begin/value/end ordering and centre point in REAPER Write, Touch and Latch.
+  This was not part of the owner-reported test above; keep it separate from the
+  passing general wheel-automation result and make no speculative behavior
+  change.
 
 ## 2. ROM and project-state integrity
 
-- [ ] F5 — CONFIRMED missing content-identity guard; alternate-ROM runtime
-  failure NOT RUN. Test missing saved path with another ROM already loaded,
-  changed file contents at the same path, and identical contents at a new path.
-  Decide identity scope (firmware and any relevant factory-bank dependency).
-  If warranted, add optional content identity plus backward-compatible legacy
-  policy; preserve pending RAM on mismatch and accept the matching ROM later.
-  Keep this distinct from the already-fixed save-generation/path pairing race.
-- [ ] F6 — SOURCE-DERIVED CANDIDATE: brand-new no-ROM instance, host voice edit,
-  first ROM load. Compare against existing missing-ROM project-restore tests.
-  Decide preserve/apply versus explicit unavailable-edit behavior before fixing.
+- [ ] F5 — REPRODUCED on baseline `29ab5e3`; fix and focused local-ROM tests
+  are implemented on the current branch, not yet merged/CI-verified. New state
+  records SHA-256 of firmware plus the effective factory voice image (or an
+  explicit no-factory marker), independent of path. Mismatches keep project RAM
+  pending; matching content at a new path resumes restore. Legacy states with
+  no identity remain path-based for backward compatibility; a follow-up source
+  review fixed the missing loaded-path comparison, covered by a passing local
+  ROM-backed regression. Public CI/review remain pending. See
+  `docs/validation/VALIDATION_1.0_ROM_CONTENT_IDENTITY.md`. Keep this distinct
+  from the already-fixed save-generation/path pairing race.
+- [ ] F6 — REPRODUCED on baseline `29ab5e3`; targeted fix and ROM-backed
+  regression are implemented locally, not yet merged/CI-verified. A voice edit
+  in a fresh no-ROM instance was discarded on first ROM load. The chosen
+  behavior preserves explicit edits over the newly loaded initial voice; a
+  pending saved project's packed RAM remains authoritative. See
+  `docs/validation/VALIDATION_1.0_NO_ROM_FIRST_EDIT.md`.
+  Local verification for the current branch: Release Standalone/VST3/AU and
+  `vdx7_ci_checks` compiled; all 10 ROM-free tests passed. F5/F6 runtime
+  regressions remain NOT RUN because this checkout has no user ROM fixture.
 - [ ] F8/F9 — SOURCE-DERIVED CANDIDATES: establish supported concurrent/reentrant
   state-call contract, then barrier-test whole restore and engine/APVTS lock
   order. Demonstrate a reachable inversion before claiming deadlock. Never
@@ -135,23 +146,25 @@ evidence that the shipped instrument currently malfunctions.
 
 ### P1 — close misleading-green and important untested paths
 
-- [ ] CTest labels: apply `rom-free` consistently to every ROM-free test so
-  `ctest -L rom-free` cannot silently select only a subset. Keep `gui` and other
-  useful orthogonal labels where they already apply.
-- [ ] Public-CI processor coverage: split the ROM-independent checks at the
-  start of `VDX7ProcessorTests.cpp` (editor creation, no-ROM control states,
-  hover/render checks) into a ROM-free CTest target. Keep firmware/processor
-  integration separate and opt-in; do not leak ROM data into public CI.
+- [x] CTest labels: apply `rom-free` consistently to every ROM-free test so
+  `ctest -L rom-free` selects the complete ROM-free suite. Keep `gui` and other
+  useful orthogonal labels where they already apply; verified locally with all
+  ten registered ROM-free tests selected and passing.
+- [x] Public-CI processor coverage: the ROM-free `vdx7_gui_header` target
+  checks editor creation, no-ROM Save As/Algorithm disabled states, wheel input
+  behavior, header rendering and white-key hover pixels at 1x/2x. Firmware
+  integration remains separate and opt-in; no ROM data enters public CI.
 - [x] USER-bank semantic corruption: checksum-valid, 7-bit-clean packed voice
   with an invalid semantic field is rejected transactionally (destination
   unchanged); covered by F3/F4 and verified in the local 10-test run.
 - [x] Packed-VMEM invalid-field matrix: tests only fields whose accepted ranges
   are confirmed by the format/product contract; checksum-valid invalid imports
   are rejected and destination output remains unchanged.
-- [ ] GUI input coverage: add ROM-free component-level tests for pitch spring
-  return on release and MOD retention. Scroll/trackpad and host automation
-  gesture boundaries remain separate checks; preserve owner-reported REAPER
-  evidence and do not call a missing test an observed product defect.
+- [x] GUI input coverage: ROM-free component-level tests verify pitch spring
+  return on release, MOD retention, keyboard adjustment and pitch-scroll
+  filtering in `vdx7_gui_header`. Scroll/trackpad and host automation gesture
+  boundaries remain separate checks; preserve owner-reported REAPER evidence
+  and do not call a missing test an observed product defect.
 
 ### P2 — make local, release and alternate build paths explicit
 
@@ -218,9 +231,9 @@ Use CONFIRMED, REPRODUCED, SOURCE-DERIVED CANDIDATE, HOST-DEPENDENT,
 CHARACTERIZATION, NOT RUN, FIXED and PASS accurately. PASS requires execution;
 source inspection, prior runs and owner reports retain their specific scope.
 
-Next concrete development order: obtain public Windows/macOS Actions for the
-F3/F4 candidate; then reproduce pitch scrolling with the MOD control case.
-After those scoped steps, close the remaining P1 coverage items and continue
-the original host/audio acceptance matrix. Local ROM-free PASS is not firmware
-runtime or host acceptance. No main merge, tag, or release publication is
-authorized by this plan.
+Next concrete development order: review and CI must cover both the F5 and F6
+changes together, then proceed to the next evidence-led item. F2's general
+wheel-automation host test is accepted; the optional Write/Touch/Latch boundary
+characterization can be done separately and is not a failure or a blocker for
+that result. Local ROM-free PASS is not firmware-runtime or host acceptance.
+No main merge, tag, or release publication is authorized by this plan.
