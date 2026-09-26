@@ -59,17 +59,19 @@ historical records, not instructions to reopen completed GUI work.
 ## 2. ROM and project-state integrity
 
 - [ ] F5 — REPRODUCED on baseline `29ab5e3`; fix and focused local-ROM tests
-  are implemented on the current branch, not yet merged/CI-verified. New state
+  are implemented on the current branch, public CI passed (details below), and
+  the changes are not yet merged. New state
   records SHA-256 of firmware plus the effective factory voice image (or an
   explicit no-factory marker), independent of path. Mismatches keep project RAM
   pending; matching content at a new path resumes restore. Legacy states with
   no identity remain path-based for backward compatibility; a follow-up source
   review fixed the missing loaded-path comparison, covered by a passing local
-  ROM-backed regression. Public CI/review remain pending. See
+  ROM-backed regression. See
   `docs/validation/VALIDATION_1.0_ROM_CONTENT_IDENTITY.md`. Keep this distinct
   from the already-fixed save-generation/path pairing race.
 - [ ] F6 — REPRODUCED on baseline `29ab5e3`; targeted fix and ROM-backed
-  regression are implemented locally, not yet merged/CI-verified. A voice edit
+  regression are implemented on the current branch, public CI passed (details
+  below), and the changes are not yet merged. A voice edit
   in a fresh no-ROM instance was discarded on first ROM load. The chosen
   behavior preserves explicit edits over the newly loaded initial voice; a
   pending saved project's packed RAM remains authoritative. See
@@ -77,6 +79,11 @@ historical records, not instructions to reopen completed GUI work.
   Local verification for the current branch: Release Standalone/VST3/AU and
   `vdx7_ci_checks` compiled; all 10 ROM-free tests passed. F5/F6 runtime
   regressions remain NOT RUN because this checkout has no user ROM fixture.
+  Public Windows and macOS CI both PASS on `36df778` (2026-09-26), including
+  plugin builds, all 10 ROM-free tests, and local-ROM test registration smoke;
+  Actions does not run the firmware-dependent regressions without the private
+  fixture. Independent code review/merge and exact-candidate ROM-backed
+  verification remain pending. See both F5/F6 validation notes for scope.
 - [ ] F8/F9 — SOURCE-DERIVED CANDIDATES: establish supported concurrent/reentrant
   state-call contract, then barrier-test whole restore and engine/APVTS lock
   order. Demonstrate a reachable inversion before claiming deadlock. Never

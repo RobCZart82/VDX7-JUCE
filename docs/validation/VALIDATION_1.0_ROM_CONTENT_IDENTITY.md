@@ -52,8 +52,15 @@ Using the existing private v1.8 ROM fixture (not copied into the repository):
   `docs/validation/VALIDATION_1.0_NO_ROM_FIRST_EDIT.md`, the complete local-ROM
   stability executable passes.
 
-Still required: review the patch, public Windows/macOS CI, and exact-candidate
-retest. These results are local to the current unmerged branch.
+Still required: independent code review/merge and an exact-candidate ROM-backed
+retest. Windows and macOS public CI later passed on commit `36df778` on
+2026-09-26; both built their plugin targets, passed all 10 ROM-free tests, and
+verified registration of the ROM-dependent regression without executing it.
+The private fixture is intentionally not available to GitHub Actions, so those
+CI runs do not count as firmware-runtime verification.
+
+- [Windows VST3 + Standalone CI run](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36266230724)
+- [macOS VST3 + AU + Standalone CI run](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36266230719)
 
 ## Legacy-path regression follow-up — 2026-09-26
 
@@ -65,5 +72,6 @@ project resumes when its original path becomes available. Using the private
 local ROM fixture, the updated focused pending-identity test, the concurrent
 state/RAM-path interleaving test and the complete ROM-backed stability
 executable all passed. ROM-free CTest also passed 10/10 and `git diff --check`
-is clean. The ROM remains outside the repository. Public CI and review are
+is clean. The ROM remains outside the repository. Public CI is now PASS on
+`36df778`; independent review/merge and exact-candidate ROM-backed retest are
 still required.

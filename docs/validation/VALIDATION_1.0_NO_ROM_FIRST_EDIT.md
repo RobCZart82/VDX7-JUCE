@@ -40,5 +40,8 @@ Using the existing private ROM fixture (not copied into the repository):
 - ROM-free CTest: 10/10 PASS.
 - `git diff --check`: PASS.
 
-These results are local to the current unmerged branch. The private ROM and any
-derived firmware data remain outside the repository and build artifacts.
+The ROM-backed results are local to the current unmerged branch. Public Windows
+and macOS CI passed on commit `36df778` on 2026-09-26: plugin builds, all 10
+ROM-free tests, and ROM-test registration smoke passed, but CI did not execute
+the firmware-dependent regression. The private ROM and any derived firmware
+data remain outside the repository and build artifacts.
