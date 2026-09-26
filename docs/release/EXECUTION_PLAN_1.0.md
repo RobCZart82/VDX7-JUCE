@@ -85,8 +85,11 @@ historical records, not instructions to reopen completed GUI work.
   Public Windows and macOS CI both PASS on `36df778` (2026-09-26), including
   plugin builds, all 10 ROM-free tests, and local-ROM test registration smoke;
   Actions does not run the firmware-dependent regressions without the private
-  fixture. Exact-candidate ROM-backed verification is now complete for F5/F6
-  on the current source tip; independent PR review and merge remain pending.
+  fixture. After the prepare-time epoch fix, Windows run `36269491224` and
+  macOS run `36269491357` also PASS on `fed4721` (2026-09-26), with builds,
+  ROM-free regressions, registration smoke, and packaging. Exact-candidate
+  ROM-backed verification is complete for F5/F6 on the current source tip;
+  independent PR review and merge remain pending.
   See both F5/F6 validation notes for scope and fixture boundaries.
 - [ ] F8/F9 — SOURCE-DERIVED CANDIDATES: establish supported concurrent/reentrant
   state-call contract, then barrier-test whole restore and engine/APVTS lock
@@ -119,7 +122,8 @@ historical records, not instructions to reopen completed GUI work.
   the pass count because its SAVE AS dialog requires desktop/display access.
   The full run exposed an initial-UI-note epoch bug in `prepareToPlay`; it is
   fixed and `vdx7_stress` now passes. Cross-platform CI after that source fix
-  and the desktop-dependent processor test remain outstanding.
+  passed on `fed4721` (runs `36269491224` and `36269491357`). The desktop-
+  dependent `vdx7_processor` test remains outstanding for a GUI-capable host.
 - [x] Owner-reported REAPER PASS (2026-09-26): Native and Correct MONO note
   boundaries (11/12 and 120/121), Note Off, sustain and repeated-note behavior,
   automation and project reopen, transport, bypass, device restarts, physical

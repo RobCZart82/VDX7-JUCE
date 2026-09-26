@@ -30,7 +30,10 @@ real-time `processBlock` path remains non-blocking.
 - The omitted `vdx7_processor` test requires desktop access for its SAVE AS
   dialog and fails in this headless environment before product behavior can be
   assessed. It remains a desktop/host check, not a product-test PASS.
-- `git diff --check`: PASS. Windows/macOS CI for the prepare-time source change
-  remains pending at this checkpoint.
+- `git diff --check`: PASS. Windows CI run `36269491224` and macOS CI run
+  `36269491357` both PASS on commit `fed4721` (2026-09-26), including plugin
+  builds, ROM-free regressions, and the no-execution local-ROM registration
+  smoke. The Actions warning about actions moving from Node.js 20 to 24 is
+  non-failing and unrelated to this source change.
 
 The v1.8 fixture stayed outside the repository and build artifacts.
