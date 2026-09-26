@@ -1,0 +1,224 @@
+# VDX7 Mk1. — detailed development guide
+
+[Back to overview](README.md) · [Magyar útmutató](GUIDE_HU.md)
+
+This guide describes **1.0.0-dev**, not an accepted stable release.
+
+## 1. Platform and package
+
+CI and exact-commit candidates build **macOS Universal (arm64 + x86_64) VST3** and **Windows x64 VST3**. Local arm64 builds remain available. These are development artifacts, not accepted final release packages. Intel Mac and Windows host acceptance remain separate release gates. AU and Standalone are not the primary distribution formats.
+
+The binary is ad-hoc signed, not Developer ID signed or notarised. macOS may require approval. Do not disable system-wide security protections. macOS 11 is the build-script deployment target, not a claim that every supported OS/host combination has been tested.
+
+## 2. Installation and first sound
+
+1. Close the host and back up any existing VDX7 plug-in and projects.
+2. Extract the VST3 ZIP and copy the complete VDX7.vst3 bundle to:
+   `~/Library/Audio/Plug-Ins/VST3/`
+3. In REAPER, rescan under Preferences → Plug-ins → VST, then insert VDX7 as a virtual instrument.
+4. Supply your own compatible firmware using LOAD ROM, or an automatic search location below.
+5. Select a bank/program on the LCD, or import a compatible .syx file with LOAD SYX.
+6. Play MIDI notes or use the on-screen keyboard.
+
+If there is no sound, check firmware status, MIDI routing, track monitoring and the OUTPUT volume. Avoid duplicate VDX7 installations in user/system plug-in folders.
+
+## 3. Firmware and banks
+
+**No Yamaha firmware or factory voice data is included.** Supply files you are entitled to use; project saving does not bundle the firmware.
+
+Accepted ROM layouts:
+
+- 16,384-byte DX7 Mk I firmware, optionally beside `dx7_factory_voices_32KB.bin`.
+- 49,152-byte combined `dx7.bin`: 16 KB firmware plus 32 KB factory data.
+
+Automatic search folders:
+
+| System | Locations |
+| --- | --- |
+| macOS | `~/Library/Application Support/VDX7-JUCE/ROM/`, `~/Library/Application Support/discoDSP/Retromulator/ROM/` |
+| Windows source build | `%USERPROFILE%\Documents\VDX7-JUCE\ROM\`, `%USERPROFILE%\Documents\discoDSP\Retromulator\ROM\` |
+
+Factory data enables ROM1A–ROM4B: eight banks of 32 programs. Without it, supply compatible voice/bank SysEx data. LOAD ROM also allows manual file selection.
+
+## 4. Voice editing
+
+- Six operator tabs: output level, coarse/fine tuning, detune, rate scaling, velocity sensitivity and amplitude-modulation sensitivity.
+- OSC MODE horizontal switch: RATIO or FIXED, with nominal ratio/Hz below it. The value excludes detune and modulation.
+- Operator envelopes: four rates and four levels per operator.
+- Keyboard scaling: breakpoint, left/right depth and four curve types.
+- GLOBAL: four-stage pitch envelope, feedback, oscillator key sync, transpose and LFO controls. Algorithm 1–32 is selected with the dropdown beside its diagram, using the same host automation parameter.
+- LFO: speed, delay, pitch/amplitude modulation depth, key sync, six waveforms and pitch-modulation sensitivity.
+- Graphs show envelope shape; they are not calibrated time/semitone plots.
+
+## 5. Algorithm diagram and performance controls
+
+All 32 algorithm routings are drawn. Click an operator node to select its editor; tabs and diagram selection follow each other. Selection does not mute an operator or edit its sound. OUT identifies carriers; F0–F7 indicates feedback, not a live signal level.
+
+The on-screen keyboard, spring-centred pitch wheel, position-holding modulation wheel and master fader are functional. Wheel ribs move with their values. Stereo meters show output levels; the core's mono signal is sent to both channels.
+
+The footer CPU percentage is a smoothed audio-callback load estimate, not total computer CPU usage and not necessarily identical to REAPER's meter.
+
+## 6. Utility and SysEx
+
+UTILITY provides voice renaming (1–10 printable ASCII characters), single-voice export, bank export and operator copy/paste. Copy/paste includes all 21 operator fields. Its clipboard is local to the plug-in instance and is not stored in projects.
+
+SAVE AS... defaults to saving a captured patch into one of 32 persistent USER bank
+slots, with overwrite confirmation and conflict protection. Select USER (load copy)
+on the LCD to copy that bank into the editable bank. Multiple named USER banks are
+not yet supported. The same dialog offers Export Patch (.syx) and Export Bank (.syx).
+Factory ROM is never overwritten. Back up the USER file as well as your projects.
+Voice SysEx contains voice data, not the complete project or global performance state.
+Previous/next program buttons now sit beside the LCD; the duplicated header
+preset display has been removed. Program navigation wraps within the current bank.
+
+LOAD SYX accepts one complete DX7 single voice (163-byte VCED) or bank (4104-byte VMEM). A single voice replaces the current slot; a bank replaces the editable bank. Concatenated dumps and other instrument formats are unsupported. Imports validate message structure and checksum. Export uses device/channel nibble 0; import accepts 0–15.
+
+## 7. Saving and automation
+
+There are 148 host parameters: 145 voice values plus Master Volume, Pitch and Mod. Previous parameter IDs/order are preserved.
+
+Projects store editable RAM, bank/program state, ROM path and control state. Keep the external ROM available after moving a project. Program changes synchronise editing parameters even with the editor closed.
+
+A star beside the name indicates unexported edits. Saving the DAW project and exporting SysEx are separate operations: project saving does not clear the export marker. Single export acknowledges one voice; bank export acknowledges all slots.
+
+Manual bank/ROM/SYX replacement warns about unexported edits. MIDI-driven bank changes do not open dialogs and can replace the bank: export important edits first. The marker is not undo history.
+
+## 8. Interface and scaling
+
+The owner approved the final 1.0 GUI appearance after local macOS REAPER VST3,
+Standalone and Retina visual checks. GUI size choices are 50%, 75%, 100%, 125%
+and 150%. This visual approval is not full cross-platform release acceptance.
+See the [screenshots](README.md) and [release checklist](ROADMAP_1.0.md).
+
+## 9. Known limitations
+
+- PERFORMANCE now exposes controller range (0–99) and pitch/amplitude/EG-bias
+  assignments for mod wheel, foot (CC4), breath (CC2) and channel aftertouch.
+  These global settings are recalled by the DAW project, not voice/bank SysEx;
+  they are not additional host automation parameters. Changes apply during
+  rendering, including held controller input. Existing 148 parameters are unchanged.
+- PERFORMANCE also exposes firmware-backed POLY/MONO, pitch-bend range/step and
+  portamento controls. Mode changes reset sounding voices. SETTINGS provides master
+  tuning (-256 to +255 firmware units, not cents) and OMNI/channel 1–16 input filtering.
+  These settings are stored in the project, not voice SysEx. Input filtering is a
+  wrapper feature, not multitimbral/MPE operation.
+- Supported MIDI note range is 12–120 inclusive (C0–C9 with REAPER's default
+  octave labels). Notes outside this range are filtered in both MONO
+  compatibility Settings modes and are not transposed.
+- No live MIDI Out/SysEx transmission; SysEx file import/export is available.
+- Sample-rate conversion uses a Blackman-windowed sinc filter with reported host latency.
+  Final host/audio-quality acceptance remains outstanding.
+- Voice edits reload the active program. Dense automation and held-note editing need further host testing.
+- Hardware/third-party SysEx interoperability is not comprehensively verified.
+- No claim of complete DX7 feature parity, calibrated envelope timing or universal host compatibility.
+- Back up valuable work; this pre-beta has no production-stability guarantee.
+
+## 10. Validation and reporting
+
+Public CI runs ROM-free regressions. A successful build is not firmware-runtime
+or complete DAW acceptance. Run the local ROM-backed suite and remaining host
+checks on the exact release candidate; see [release gates](ROADMAP_1.0.md).
+
+Report issues at [GitHub Issues](https://github.com/RobCZart82/VDX7-JUCE/issues)
+with build/commit, OS, architecture, host version, sample rate/buffer, reproduction
+steps and expected/actual results. Never upload proprietary ROMs.
+
+## 11. Building from source
+
+Requirements: C++20 compiler, CMake 3.22+, Xcode/Command Line Tools on macOS. Dependency revisions are pinned; the complete corresponding-source ZIP includes JUCE and dx7Lib for offline builds. A plain Git checkout fetches these dependencies. See [source dependencies](SOURCE_DEPENDENCIES.md).
+
+A build that does not install over your existing plug-in:
+
+```sh
+cmake -S . -B build-local -G Xcode -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+cmake --build build-local --config Release --target VDX7_VST3
+```
+
+Output: `build-local/VDX7_artefacts/Release/VST3/VDX7.vst3`.
+
+The convenience script `scripts/build-macos-arm64.command` builds, ad-hoc signs and strictly verifies the bundle. It does not install or replace any installed VST3. Installation is a separate manual step. Universal and Windows helpers: `scripts/build-macos-universal.command`, `scripts/build-windows.bat`. The macOS GitHub Actions workflow builds Universal artifacts; a successful build is not host validation.
+
+Tests:
+
+```sh
+cmake --build build-local --config Release --target vdx7_all_tests
+ctest --test-dir build-local -C Release --output-on-failure
+```
+
+The current CMake configuration registers ten ROM-free CTest tests. The
+`vdx7_ci_checks` and `vdx7_all_tests` targets also compile the firmware-dependent
+integration runners and isolated MONO candidate experiment without executing
+them or needing a ROM. For the full local suite, configure with
+`-DVDX7_ENABLE_ROM_TESTS=ON -DVDX7_TEST_ROM_FILE=/absolute/path/to/your/dx7.bin`,
+then rebuild `vdx7_all_tests` and rerun CTest. Never upload the ROM. The processor
+runner opens no audio device and optionally accepts an existing absolute directory
+for PNG snapshots.
+
+The host-reset/ownership groups inspect the validated v1.8 firmware memory map.
+They are labelled `local-rom;firmware-v1_8` and require the `vdx7_v18_profile`
+CTest fixture. It verifies the firmware identity before running those groups;
+an incompatible image fails the prerequisite, rather than silently passing or
+being interpreted as a broken unknown-ROM fallback. Other-ROM runtime coverage
+remains separate acceptance work. Select these groups with
+`ctest --test-dir build-local -C Release -L firmware-v1_8 --output-on-failure`.
+
+`vdx7_mono_boundary_characterization` documents a known native MONO pitch-zero
+edge by comparing the raw emulator with the processor. The current product
+filters Note 0–11 and 121–127 before either MONO mode, so this raw firmware issue
+is not reachable through supported plugin MIDI. The local
+`vdx7_supported_note_range_acceptance` CTest verifies both settings modes and
+the 12–120 inclusive boundary. Actual REAPER boundary acceptance remains a
+release check. Older reports below are historical evidence for the raw firmware
+behavior and earlier test naming.
+The follow-up `vdx7_mono_trace_characterization` (`--mono-trace-only`) verifies
+the loaded image's relevant instructions, observes the actual failing branches,
+and tests subsequent notes **without** recovery. It documents retained output
+and rejected native allocation, rather than declaring them fixed. See
+[instruction trace and continuation](VALIDATION_MONO_INSTRUCTION_TRACE.md).
+`vdx7_mono_candidate_experiment` evaluates explicitly changed branch decisions
+in a separate raw-core test machine. It checks real Note 0 playback as well as
+lookup, cleanup and legato; **it is not linked into the plugin**. Its PASS cannot
+close production acceptance. See [experiment and remaining work](VALIDATION_MONO_CANDIDATE.md).
+The experiment includes a pitch-oracle sensitivity control: unchanged Note 0
+passes; deliberate test-only Note 1 input while expecting Note 0 fails the same
+audio-frequency check. `--pitch-oracle-only` runs the pair;
+`--pitch-oracle-note-one-mutant` exposes the mutant's failure directly (exit 1).
+This expected negative control does not invert the real plugin acceptance gate.
+The complete experiment shares `VDX7MonoCorrection.h` with a ROM-free six-site
+decision-policy test (`vdx7_mono_correction`). The optional correction remains
+selectable in SETTINGS and persisted with project state as an advanced compatibility
+option; Native firmware is the recommended default and routine users should
+normally leave it unchanged. Both modes accept only Note 12–120, so the option
+does not enable the excluded low octave. Raw-core tests continue to characterize
+native Note 0 separately. See [engine integration scope](VALIDATION_MONO_ENGINE_OPTIN.md)
+and [the product range policy](MIDI_RANGE_v0.7.0.md).
+The separate `vdx7_deferred_partition` (`--deferred-partition-only`) regression
+checks real-processor note playback/release across small and oversized successful
+blocks, plus true-delay expiry under contention and reset. Its queue-only portion
+also executes in public ROM-free CI. See [Q1 validation](VALIDATION_DEFERRED_PARTITION.md).
+Native MONO compatibility choices remain a separate
+[design decision](DESIGN_MONO_NOTE_ZERO_POLICY.md), not a fix implied by green CI.
+The local `vdx7_portamento` (`vdx7_stress_tests <private-ROM> --portamento-only`)
+checks accepted time intent, immediate save during recovery, restore, physical
+CC5 precedence and actual native time/rate across six rate/block configurations.
+It requires the validated v1.8 firmware fixture; see `VALIDATION_PORTAMENTO_INTENT.md`.
+
+The ROM-free `vdx7_latest_display` and local stress runner's `--publication-only`
+cover stale PERFORMANCE/tuning publication versus newer UI edits, including
+same-value/ABA races. See [Q2 validation and limits](VALIDATION_PERFORMANCE_PUBLICATION.md).
+
+## 12. Licensing and release status
+
+This release uses [GNU AGPLv3](LICENSE.txt). The wrapper and original GUI resources are AGPL-3.0-only; the DX7 core retains GPL-3.0-or-later and its original notices. JUCE is used under AGPLv3. See [NOTICE.md](NOTICE.md) for the combined-work and third-party notices.
+
+The release provides complete corresponding source including pinned JUCE and dx7Lib, build scripts and license notices alongside the binary. This software comes without warranty. Firmware is excluded from the software license. Yamaha branding in descriptive text identifies compatibility, not endorsement; no Yamaha logo is included.
+
+## 13. Credits and next steps
+
+Thanks to [VDX7/chiaccona](https://github.com/chiaccona/VDX7), [Retromulator/dx7Lib](https://github.com/reales/retromulator) and [JUCE](https://github.com/juce-framework/JUCE). Only the portable DX7 core is integrated, not the complete Retromulator application.
+
+Next priorities are the local ROM-enabled regression suite; targeted REAPER
+boundary/transport tests; real-host, concurrency and platform acceptance; remaining
+cross-platform GUI checks; and release packaging. No 1.0.0 publication is authorized.
+See ROADMAP_1.0.md.
+
