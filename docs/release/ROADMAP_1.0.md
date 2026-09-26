@@ -8,8 +8,9 @@ indices compatible with saved projects.
 ## Current execution authority — 2026-09-26
 
 Use [the consolidated 1.0 execution plan](EXECUTION_PLAN_1.0.md) for current
-priority, closed GUI scope and audit F1–F19 disposition against main `b12bd12`.
-It preserves the original release gates and local unmerged validation work.
+priority, closed GUI scope, audit F1–F19 disposition, and test-system follow-up
+against main `af763f1` (#75 merged atop #74). It preserves the original release gates
+and local unmerged validation work.
 Older dated sections below are historical evidence; their stale GUI checkboxes
 or "next chapter" wording must not reopen the approved design. The RC checklist
 remains the final release gate, not a publication authorization.

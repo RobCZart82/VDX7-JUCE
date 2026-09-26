@@ -68,9 +68,9 @@ inline bool isLiveBankSysex(const uint8_t* data, std::size_t size) noexcept
         return false;
 
     // Match file-import admission: a valid SysEx checksum alone does not
-    // make the packed detune nibble valid. Reject before it enters live state.
+    // make each packed voice's semantic fields valid. Reject before live state.
     for (int voice = 0; voice < 32; ++voice)
-        if (!VDX7VoiceData::hasValidOperatorDetune(
+        if (!VDX7VoiceData::hasValidPackedVoice(
                 data + 6 + voice * VDX7VoiceData::kPackedVoiceSize,
                 VDX7VoiceData::kPackedVoiceSize))
             return false;

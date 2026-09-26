@@ -1,4 +1,5 @@
 #include "VDX7UserBank.h"
+#include "VDX7VoiceData.h"
 #include <algorithm>
 #include <mutex>
 #include <vector>
@@ -77,6 +78,23 @@ juce::Result VDX7UserBank::load(const juce::File& file, Snapshot& destination)
     result.exists = true;
     for (int slot = 0; slot < 32; ++slot)
         std::copy_n(bytes + 8 + slot * 128, 128, result.voices[slot].begin());
+
+    for (int slot = 0; slot < 32; ++slot)
+    {
+        if (!result.occupied(slot))
+            continue;
+
+        const auto& voice = result.voices[slot];
+        if (!VDX7VoiceData::hasValidPackedVoice(voice.data(), voice.size()))
+            return fail("USER bank contains semantically invalid voice data.");
+
+        const auto nameBegin = voice.begin() + 118;
+        const auto nameEnd = voice.end();
+        if (std::any_of(nameBegin, nameEnd, [](uint8_t c) { return c < 32 || c > 126; })
+            || std::all_of(nameBegin, nameEnd, [](uint8_t c) { return c == ' '; }))
+            return fail("USER bank contains an invalid patch name.");
+    }
+
     destination = std::move(result);
     return juce::Result::ok();
 }
@@ -90,8 +108,9 @@ juce::Result VDX7UserBank::savePatch(const juce::File& file, const Snapshot& exp
         return fail("Use 1-10 printable ASCII characters for the patch name.");
     for (auto c : name)
         if (c < 32 || c > 126) return fail("Use 1-10 printable ASCII characters for the patch name.");
-    if (std::any_of(patch.begin(), patch.end(), [](uint8_t v) { return v > 127; }))
-        return fail("Invalid seven-bit voice data.");
+    if (std::any_of(patch.begin(), patch.end(), [](uint8_t v) { return v > 127; })
+        || !VDX7VoiceData::hasValidPackedVoice(patch.data(), patch.size()))
+        return fail("Invalid packed voice data.");
     if (file == juce::File() || !file.getParentDirectory().isDirectory() || file.isSymbolicLink())
         return fail("USER bank folder is unavailable.");
 

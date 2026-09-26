@@ -65,6 +65,8 @@ constexpr int kVoiceParameterCount = static_cast<int>(VoiceParameter::count);
 
 int parameterMinimum(Parameter) noexcept;
 int parameterMaximum(Parameter) noexcept;
+// Validates semantic VMEM fields while leaving firmware-reserved bits intact.
+bool hasValidPackedVoice(const uint8_t* packedVoice, std::size_t size) noexcept;
 // Rejects packed voices with detune nibble 15, which encodes the invalid +8 value.
 inline bool hasValidOperatorDetune(const uint8_t* packedVoice, std::size_t size) noexcept
 {
