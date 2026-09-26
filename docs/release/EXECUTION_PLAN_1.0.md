@@ -171,9 +171,11 @@ evidence that the shipped instrument currently malfunctions.
 - [ ] Give every CTest test an intentional timeout; retain longer per-test
   overrides for soak/lifecycle cases. First inventory expected runtimes to avoid
   flaky limits.
-- [ ] Add a no-execution CMake registration smoke (`VDX7_ENABLE_ROM_TESTS=ON`
-  with an existing dummy path, then `ctest -N`) to CI or a documented local
-  check. It validates CMake test names/fixtures only; it is not ROM acceptance.
+- [x] Add a no-execution CMake registration smoke to Windows/macOS CI:
+  configure `VDX7_ENABLE_ROM_TESTS=ON` with a placeholder path, then inspect
+  CTest's JSON listing to assert the pending ROM-identity test and v1.8 fixture
+  are registered. Verified locally; this checks names/fixtures only, not ROM
+  acceptance, and executes no firmware tests.
 - [ ] Compile smoke with `VDX7_RELEASE_BUILD=ON`, with no artifact publication.
 - [ ] Exercise supported compile targets: Standalone on Windows/macOS and AU
   on macOS if AU remains supported. Compilation is not host acceptance.

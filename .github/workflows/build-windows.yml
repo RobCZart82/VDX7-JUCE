@@ -33,6 +33,27 @@ jobs:
       - name: ROM-free regression tests
         run: ctest --test-dir build -C Release --output-on-failure --no-tests=error
 
+      - name: Local-ROM test registration smoke (does not execute tests)
+        shell: pwsh
+        run: |
+          cmake -E make_directory build-rom-registration
+          cmake -E touch build-rom-registration/fixture.placeholder
+          cmake -S . -B build-rom-registration `
+            -G "Visual Studio 17 2022" `
+            -A x64 `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DVDX7_ENABLE_ROM_TESTS=ON `
+            -DVDX7_TEST_ROM_FILE="$PWD/build-rom-registration/fixture.placeholder"
+          $listing = ctest --test-dir build-rom-registration -C Release -N --show-only=json-v1 | Out-String | ConvertFrom-Json
+          $test = $listing.tests | Where-Object { $_.name -eq "vdx7_pending_rom_content_identity" }
+          if (-not $test) {
+            throw "Pending ROM identity regression was not registered"
+          }
+          $fixture = $test.properties | Where-Object { $_.name -eq "FIXTURES_REQUIRED" }
+          if (-not $fixture -or $fixture.value -notcontains "vdx7_v18_rom") {
+            throw "Pending ROM identity regression is missing the v1.8 fixture requirement"
+          }
+
       - name: Locate VST3
         shell: powershell
         run: |
