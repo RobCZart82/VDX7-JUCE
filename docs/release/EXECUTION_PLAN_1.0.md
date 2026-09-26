@@ -168,17 +168,24 @@ evidence that the shipped instrument currently malfunctions.
 
 ### P2 — make local, release and alternate build paths explicit
 
-- [ ] Give every CTest test an intentional timeout; retain longer per-test
-  overrides for soak/lifecycle cases. First inventory expected runtimes to avoid
-  flaky limits.
+- [x] Give every CTest test an intentional timeout. ROM-free checks use
+  20–60s; measured GUI/processor paths have wider limits; lifecycle/stress/soak
+  keep their longer existing overrides. Inventory uses recent recorded runtime
+  evidence (including ~9s GUI, ~26s portamento and ~45s corrected processor) to
+  avoid tight wall-time limits. The ROM-on registration smoke confirmed all
+  36 registered tests expose a timeout.
 - [x] Add a no-execution CMake registration smoke to Windows/macOS CI:
   configure `VDX7_ENABLE_ROM_TESTS=ON` with a placeholder path, then inspect
   CTest's JSON listing to assert the pending ROM-identity test and v1.8 fixture
   are registered. Verified locally; this checks names/fixtures only, not ROM
   acceptance, and executes no firmware tests.
-- [ ] Compile smoke with `VDX7_RELEASE_BUILD=ON`, with no artifact publication.
-- [ ] Exercise supported compile targets: Standalone on Windows/macOS and AU
-  on macOS if AU remains supported. Compilation is not host acceptance.
+- [x] Compile smoke with `VDX7_RELEASE_BUILD=ON`, with no artifact publication:
+  local macOS Release Standalone, VST3 and `vdx7_ci_checks` built; all 10
+  ROM-free tests passed. This is a compile smoke only, not release or host
+  acceptance.
+- [ ] Exercise supported compile targets: macOS Release Standalone, AU and VST3
+  compile locally; Windows Standalone and corresponding Windows/macOS Actions
+  remain to be checked. Compilation is not host acceptance.
 - [ ] Exercise the corresponding-source/offline dependency path using the
   packaged `third_party/` sources with network disabled.
 - [ ] Add `pluginval`/VST3 validation as an optional RC gate; retain real REAPER

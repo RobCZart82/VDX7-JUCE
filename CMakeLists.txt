@@ -105,12 +105,12 @@ set_tests_properties(vdx7_bounded_file PROPERTIES TIMEOUT 20 LABELS "rom-free")
 add_executable(vdx7_voice_data_tests Tests/VDX7VoiceDataTests.cpp)
 target_link_libraries(vdx7_voice_data_tests PRIVATE vdx7_voice_data)
 add_test(NAME vdx7_voice_data COMMAND vdx7_voice_data_tests)
-set_tests_properties(vdx7_voice_data PROPERTIES LABELS "rom-free")
+set_tests_properties(vdx7_voice_data PROPERTIES TIMEOUT 20 LABELS "rom-free")
 
 add_executable(vdx7_algorithm_tests Tests/VDX7AlgorithmsTests.cpp)
 target_include_directories(vdx7_algorithm_tests PRIVATE Source)
 add_test(NAME vdx7_algorithms COMMAND vdx7_algorithm_tests "${VDX7_CORE_DIR}/OPS.h")
-set_tests_properties(vdx7_algorithms PROPERTIES LABELS "rom-free")
+set_tests_properties(vdx7_algorithms PROPERTIES TIMEOUT 20 LABELS "rom-free")
 
 target_include_directories(vdx7_core PUBLIC "${VDX7_CORE_DIR}")
 target_compile_features(vdx7_core PUBLIC cxx_std_20)
@@ -267,8 +267,11 @@ if(VDX7_ENABLE_ROM_TESTS)
     add_test(NAME vdx7_processor COMMAND vdx7_processor_tests)
     add_test(NAME vdx7_stress COMMAND vdx7_stress_tests "${VDX7_TEST_ROM_FILE}")
 
+    set_tests_properties(vdx7_stability PROPERTIES TIMEOUT 180)
+    set_tests_properties(vdx7_midi_range vdx7_timing PROPERTIES TIMEOUT 60)
     set_tests_properties(vdx7_stress PROPERTIES TIMEOUT 120)
     set_tests_properties(vdx7_processor PROPERTIES
+        TIMEOUT 120
         ENVIRONMENT "VDX7_TEST_ROM_PATH=${VDX7_TEST_ROM_FILE}")
     # These tests are registered only after an existing ROM path is supplied.
     # A 77 exit now fails the test instead of hiding a bad or unloadable fixture as SKIPPED.
