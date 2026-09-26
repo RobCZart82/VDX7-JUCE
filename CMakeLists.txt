@@ -116,7 +116,7 @@ if(APPLE)
 endif()
 
 juce_add_plugin(VDX7
-    COMPANY_NAME "VDX7 Open Source"
+    COMPANY_NAME "RobCZart82"
     BUNDLE_ID "org.vdx7.prototype"
     PLUGIN_MANUFACTURER_CODE VdxP
     PLUGIN_CODE VdX7

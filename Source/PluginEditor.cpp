@@ -228,13 +228,23 @@ VDX7Keyboard::VDX7Keyboard(juce::MidiKeyboardState& state)
     setWantsKeyboardFocus(false);
     setColour(mouseOverKeyOverlayColourId, juce::Colour(0x2400e7e7));
     setColour(keyDownOverlayColourId, juce::Colours::transparentBlack);
-    setColour(whiteNoteColourId, juce::Colour(0xff24221f));
+    setColour(whiteNoteColourId, juce::Colour(0xff0b0c0b));
     setBlackNoteLengthProportion(84.0f / 132.0f);
     setBlackNoteWidthProportion(24.0f / 36.0f);
 }
 
 void VDX7Keyboard::paintOverChildren(juce::Graphics& g)
 {
+    // Paint-only recess shadow: key geometry and MIDI hit areas stay unchanged.
+    const float shadowHeight = getHeight() * 0.12f;
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0x88000000), 0.0f, 0.0f,
+                                          juce::Colour(0x00000000), 0.0f, shadowHeight, false));
+    g.fillRect(0.0f, 0.0f, float(getWidth()), shadowHeight);
+    // Continue the key-bed fade into the panel below, without shading the keys.
+    const float unit = getHeight() / 138.0f;
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff0b0c0b), 0.0f, 132.0f * unit,
+                                          juce::Colour(0xff23221e), 0.0f, 138.0f * unit, false));
+    g.fillRect(0.0f, 132.0f * unit, float(getWidth()), 6.0f * unit);
     // A stationary felt strip above the keys, including pressed/hovered notes.
     const float line = juce::jmax(1.0f, getHeight() / 138.0f);
     g.setColour(juce::Colour(0xff080909));
@@ -254,6 +264,13 @@ void VDX7Keyboard::drawWhiteNote(int, juce::Graphics& g, juce::Rectangle<float> 
     g.setColour(juce::Colour(0xffeeeae2));
     g.fillRoundedRectangle(keyBody, 1.5f);
     g.drawImage(isDown ? whitePressed_ : whiteNormal_, area);
+    // Restrained ivory shading retains the original bitmap's bevel and silhouette.
+    auto ivory = juce::ColourGradient(juce::Colour(0x183c352b), keyBody.getX(), keyBody.getY(),
+                                      juce::Colour(0x103c352b), keyBody.getX(), keyBody.getBottom(), false);
+    ivory.addColour(0.55, juce::Colour(0x00ffffff));
+    ivory.addColour(0.88, juce::Colour(0x16ffffff));
+    g.setGradientFill(ivory);
+    g.fillRoundedRectangle(keyBody.reduced(1.0f), 1.5f);
     if (isOver && !isDown)
     {
         g.setColour(juce::Colour(0x2600e7e7));
@@ -271,6 +288,9 @@ void VDX7Keyboard::drawBlackNote(int, juce::Graphics& g, juce::Rectangle<float> 
     {
         g.setColour(juce::Colour(0x52000000));
         g.fillRoundedRectangle(area.reduced(1.0f), 1.5f);
+        g.setGradientFill(juce::ColourGradient(juce::Colour(0x147b8589), area.getX(), area.getY(),
+                                              juce::Colour(0x00000000), area.getRight(), area.getY(), false));
+        g.fillRoundedRectangle(area.reduced(area.getWidth() * 0.14f, area.getHeight() * 0.06f), 1.0f);
     }
     if (isOver && !isDown)
     {
@@ -319,8 +339,10 @@ void VDX7LevelMeter::paint(juce::Graphics& g)
 {
     constexpr int segmentCount = 24;
     const auto bounds = getLocalBounds().toFloat();
+    const auto railBounds = bounds.withSizeKeepingCentre(bounds.getWidth() * 0.72f,
+                                                          bounds.getHeight());
     g.setColour(juce::Colour(0xff151612));
-    g.fillRoundedRectangle(bounds, 3.0f);
+    g.fillRoundedRectangle(railBounds, 3.0f);
 
     const float db = juce::Decibels::gainToDecibels(level_, -60.0f);
     const int litSegments = juce::jlimit(0, segmentCount,
@@ -1084,9 +1106,11 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     const float logoWidth = 300.0f * scaleX;
     const float logoHeight = logoWidth * 381.0f / 1947.0f;
     // Three understated header accents reuse the section-divider tone and
-    // span the full header inset. Keep them above the brand/action row.
+    // sit above the brand/action row. Leave a screw-sized gap in the top line.
     g.setColour(juce::Colour(0xff71685b));
-    for (const float y : { 22.0f, 34.0f, 46.0f })
+    g.fillRect(referenceRect(34, 22, 676, 1));
+    g.fillRect(referenceRect(730, 22, 676, 1));
+    for (const float y : { 34.0f, 46.0f })
         g.fillRect(referenceRect(34, y, 1372, 1));
     if (wordmark_)
         wordmark_->drawWithin(g, { 44.0f * scaleX, headerBottom - logoHeight,
@@ -1118,7 +1142,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     g.setGradientFill(juce::ColourGradient(juce::Colour(0xffc9d68e), lcd.getX(), lcd.getY(),
         juce::Colour(0xffa5b76e), lcd.getX(), lcd.getBottom(), false));
     g.fillRoundedRectangle(lcd, 3.0f);
-    const auto footerBounds = referenceRect(18, 1030, 1404, 44).toFloat();
+    const auto footerBounds = referenceRect(34, 1030, 1372, 44).toFloat();
     juce::ColourGradient footerGradient(juce::Colour(0xff24221f), footerBounds.getX(),
                                         footerBounds.getCentreY(), juce::Colour(0xff24221f),
                                         footerBounds.getRight(), footerBounds.getCentreY(), false);
@@ -1126,7 +1150,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     g.setGradientFill(footerGradient);
     g.fillRoundedRectangle(footerBounds, 3.0f * scaleY);
     g.setColour(juce::Colour(0xff71685b));
-    g.fillRect(footerBounds.withHeight(juce::jmax(1.0f, scaleY)));
+    g.drawRoundedRectangle(footerBounds, 3.0f * scaleY, juce::jmax(0.5f, scaleY));
     constexpr float outputContentOffsetY = 10.0f;
     g.drawImage(valueField_, referenceRect(1255, 467 + outputContentOffsetY, 96, 32).toFloat());
 
@@ -1146,13 +1170,23 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
         g.fillRect(referenceRect(48, 720, 632, 1));
     }
 
-    // Seven subtle Phillips fasteners sit at the four enclosure corners,
-    // halfway down each side, and at the centre of the lower edge.
+    // Eight subtle Phillips fasteners sit at the four enclosure corners,
+    // halfway down each side, and at the centre of the top and lower edges.
     for (const auto p : { juce::Point<float>(23.0f, 23.0f), juce::Point<float>(1417.0f, 23.0f),
+                          juce::Point<float>(720.0f, 23.0f),
                           juce::Point<float>(23.0f, 555.0f), juce::Point<float>(1417.0f, 555.0f),
                           juce::Point<float>(23.0f, 1087.0f), juce::Point<float>(720.0f, 1087.0f),
                           juce::Point<float>(1417.0f, 1087.0f) })
         drawChassisScrew(g, { p.x * scaleX, p.y * scaleY }, 7.0f * scaleY);
+
+    // Recess stays inside the keyboard span, clear of both wheel controls.
+    const auto keyWell = referenceRect(210, 864, 1184, 150).toFloat();
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff070808), keyWell.getX(), keyWell.getY(),
+                                          juce::Colour(0xff111210), keyWell.getX(), keyWell.getBottom(), false));
+    g.fillRect(keyWell);
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff0b0c0b), 0.0f, 1002.0f * scaleY,
+                                          juce::Colour(0xff23221e), 0.0f, 1008.0f * scaleY, false));
+    g.fillRect(referenceRect(210, 1002, 1184, 12));
 
     // Raised metallic lip above the existing keyboard/wheel bay.
     g.setColour(juce::Colour(0xff89877e));
@@ -1260,8 +1294,8 @@ void VDX7AudioProcessorEditor::resized()
     {
         const float x = 52.0f + static_cast<float>(i) * 33.0f;
         pitchEnvelopeCaptions_[i].setBounds(referenceRect(x, 404, 28, 12));
-        pitchEnvelopeFaders_[i].setBounds(referenceRect(x, 414, 28, 88));
-        pitchEnvelopeValues_[i].setBounds(referenceRect(x, 494, 28, 18));
+        pitchEnvelopeFaders_[i].setBounds(referenceRect(x, 408, 28, 88));
+        pitchEnvelopeValues_[i].setBounds(referenceRect(x, 488, 28, 18));
     }
     for (std::size_t i = 0; i < voiceKnobs_.size(); ++i)
     {
