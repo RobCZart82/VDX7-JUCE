@@ -109,10 +109,12 @@ historical records, not instructions to reopen completed GUI work.
   MIDI, multiple instances and sample-rate/buffer checks all worked in the real
   REAPER test on macOS. Tested build SHA and full platform/rate matrix were not
   recorded; replay on the exact release-candidate SHA remains open.
-- [x] Owner-reported Windows 10 x64 REAPER PASS (2026-09-26): the user reports
-  that all functions tested behave as on macOS. Exact build SHA, REAPER version,
-  and detailed rate/block/instance coverage were not recorded; these are not
-  inferred from this report.
+- [x] Owner-reported Windows 10 x64 REAPER PASS (2026-09-26): tested with the
+  Windows VST3 artifact from Actions run `Build Windows VST3 #219`, source
+  `29ab5e350019e32f64650b068afcc7709b409607` (the main baseline). The user
+  reports the tested functions behave as on macOS. REAPER version and detailed
+  rate/block/instance coverage were not recorded. This predates the current
+  branch's Windows Standalone CI addition and does not verify it.
 - [ ] Operator/algorithm/feedback/master/pitch/mod automation; project reopen,
   missing/later ROM, USER/CUSTOM banks, SysEx import/export and dirty/clean state.
 - [ ] Windows x64 and macOS REAPER matrix: 44.1/48/96 kHz, 64/128/256/512/1024
