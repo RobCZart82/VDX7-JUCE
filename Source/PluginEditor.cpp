@@ -319,8 +319,10 @@ void VDX7LevelMeter::paint(juce::Graphics& g)
 {
     constexpr int segmentCount = 24;
     const auto bounds = getLocalBounds().toFloat();
+    const auto railBounds = bounds.withSizeKeepingCentre(bounds.getWidth() * 0.72f,
+                                                          bounds.getHeight());
     g.setColour(juce::Colour(0xff151612));
-    g.fillRoundedRectangle(bounds, 3.0f);
+    g.fillRoundedRectangle(railBounds, 3.0f);
 
     const float db = juce::Decibels::gainToDecibels(level_, -60.0f);
     const int litSegments = juce::jlimit(0, segmentCount,
@@ -1127,6 +1129,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     g.fillRoundedRectangle(footerBounds, 3.0f * scaleY);
     g.setColour(juce::Colour(0xff71685b));
     g.fillRect(footerBounds.withHeight(juce::jmax(1.0f, scaleY)));
+    g.fillRect(referenceRect(18, 1077, 1404, 1));
     constexpr float outputContentOffsetY = 10.0f;
     g.drawImage(valueField_, referenceRect(1255, 467 + outputContentOffsetY, 96, 32).toFloat());
 
@@ -1260,8 +1263,8 @@ void VDX7AudioProcessorEditor::resized()
     {
         const float x = 52.0f + static_cast<float>(i) * 33.0f;
         pitchEnvelopeCaptions_[i].setBounds(referenceRect(x, 404, 28, 12));
-        pitchEnvelopeFaders_[i].setBounds(referenceRect(x, 414, 28, 88));
-        pitchEnvelopeValues_[i].setBounds(referenceRect(x, 494, 28, 18));
+        pitchEnvelopeFaders_[i].setBounds(referenceRect(x, 411, 28, 88));
+        pitchEnvelopeValues_[i].setBounds(referenceRect(x, 491, 28, 18));
     }
     for (std::size_t i = 0; i < voiceKnobs_.size(); ++i)
     {
