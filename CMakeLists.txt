@@ -65,12 +65,11 @@ target_compile_features(vdx7_voice_data PUBLIC cxx_std_20)
 set_target_properties(vdx7_voice_data PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # -----------------------------------------------------------------------------
-# ROM-free component tests
+# Tests: ROM-free component targets and registrations
 # -----------------------------------------------------------------------------
 enable_testing()
 
 # USER-bank persistence can be exercised on CI without firmware or GUI startup.
-
 add_executable(vdx7_user_bank_tests Tests/VDX7UserBankTests.cpp Source/VDX7UserBank.cpp)
 target_include_directories(vdx7_user_bank_tests PRIVATE Source)
 target_link_libraries(vdx7_user_bank_tests PRIVATE juce::juce_core vdx7_voice_data)
@@ -196,11 +195,10 @@ target_link_libraries(VDX7 PRIVATE
 )
 
 # -----------------------------------------------------------------------------
-# Engine / processor test executables
+# Tests: engine and processor targets
 # -----------------------------------------------------------------------------
 
 # Opt-in integration runner: uses the user's ROM locally, never bundles it.
-
 add_executable(vdx7_midi_range_tests EXCLUDE_FROM_ALL
     Tests/VDX7MidiRangeTests.cpp Source/VDX7Engine.cpp)
 target_include_directories(vdx7_midi_range_tests PRIVATE Source)
@@ -218,7 +216,6 @@ add_test(NAME vdx7_resampling COMMAND vdx7_resampling_tests)
 set_tests_properties(vdx7_resampling PROPERTIES TIMEOUT 60)
 
 # GUI-only pixel regression for the approved three-line header decoration.
-
 add_executable(vdx7_gui_header_tests Tests/VDX7GuiHeaderTests.cpp)
 target_link_libraries(vdx7_gui_header_tests PRIVATE VDX7)
 target_include_directories(vdx7_gui_header_tests PRIVATE
@@ -243,7 +240,7 @@ target_compile_definitions(vdx7_stability_tests PRIVATE
     $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
 
 # -----------------------------------------------------------------------------
-# Optional local-ROM tests (disabled by default)
+# Tests: optional local-ROM integration registrations (disabled by default)
 # -----------------------------------------------------------------------------
 option(VDX7_ENABLE_ROM_TESTS "Register local integration tests using your own ROM" OFF)
 
@@ -259,15 +256,13 @@ if(VDX7_ENABLE_ROM_TESTS)
         message(FATAL_ERROR "VDX7_TEST_ROM_FILE must point to your local compatible ROM")
     endif()
 
+    # Core integration runners.
     add_test(NAME vdx7_stability COMMAND vdx7_stability_tests "${VDX7_TEST_ROM_FILE}")
-
     add_test(NAME vdx7_midi_range COMMAND vdx7_midi_range_tests "${VDX7_TEST_ROM_FILE}")
-
     add_test(NAME vdx7_timing COMMAND vdx7_timing_tests "${VDX7_TEST_ROM_FILE}")
-
     add_test(NAME vdx7_processor COMMAND vdx7_processor_tests)
-
     add_test(NAME vdx7_stress COMMAND vdx7_stress_tests "${VDX7_TEST_ROM_FILE}")
+
     set_tests_properties(vdx7_stress PROPERTIES TIMEOUT 120)
     set_tests_properties(vdx7_processor PROPERTIES
         ENVIRONMENT "VDX7_TEST_ROM_PATH=${VDX7_TEST_ROM_FILE}")
@@ -276,7 +271,7 @@ if(VDX7_ENABLE_ROM_TESTS)
 endif()
 
 # -----------------------------------------------------------------------------
-# Aggregate test build targets
+# Tests: aggregate CI build targets
 # -----------------------------------------------------------------------------
 
 # Shared by normal CI and exact-commit candidates. Every integration runner
@@ -298,12 +293,11 @@ if(APPLE)
 endif()
 
 # -----------------------------------------------------------------------------
-# Reset / lifecycle / MONO test executables
+# Tests: reset, lifecycle, and MONO targets
 # -----------------------------------------------------------------------------
 
 # N1 regression: compile on ROM-free CI, execute the firmware test only when
 # the existing local-ROM suite is explicitly enabled.
-
 add_executable(vdx7_host_reset_tests EXCLUDE_FROM_ALL Tests/VDX7HostResetTests.cpp)
 # Recompile the processor only for this executable so deterministic scheduling
 # instrumentation is absent from the plugin/shared-code library.
@@ -318,7 +312,6 @@ add_dependencies(vdx7_ci_checks vdx7_host_reset_tests)
 
 # Compile the isolated counterfactual experiment on public CI; execute only
 # locally with the verified private firmware. Never link it into VDX7.
-
 add_executable(vdx7_mono_candidate_tests EXCLUDE_FROM_ALL Tests/VDX7MonoCandidateTests.cpp)
 target_link_libraries(vdx7_mono_candidate_tests PRIVATE vdx7_core vdx7_voice_data)
 add_dependencies(vdx7_ci_checks vdx7_mono_candidate_tests)
@@ -330,9 +323,9 @@ set_tests_properties(vdx7_mono_correction PROPERTIES TIMEOUT 20 LABELS "rom-free
 add_dependencies(vdx7_ci_checks vdx7_mono_correction_tests)
 
 if(VDX7_ENABLE_ROM_TESTS)
+    # Firmware profile validation and reset/lifecycle regressions.
     # These regressions inspect the locally validated v1.8 ownership map.
     # A wrong image is a failed precondition, never silent SKIP or success.
-
     add_test(NAME vdx7_v18_profile
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --profile-check-only)
     set_tests_properties(vdx7_v18_profile PROPERTIES
@@ -344,7 +337,6 @@ if(VDX7_ENABLE_ROM_TESTS)
         TIMEOUT 180 LABELS "local-rom")
 
     # Keep lifecycle and history-cost diagnostics independently observable.
-
     add_test(NAME vdx7_reactivation
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --reactivation-only)
     set_tests_properties(vdx7_reactivation PROPERTIES TIMEOUT 180 LABELS "local-rom")
@@ -373,6 +365,7 @@ if(VDX7_ENABLE_ROM_TESTS)
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --expanded-lifecycle-only)
     set_tests_properties(vdx7_expanded_lifecycle PROPERTIES TIMEOUT 180 LABELS "local-rom")
 
+    # Native MONO and deferred-MIDI behavior characterization.
     add_test(NAME vdx7_mono_boundary_characterization
         COMMAND vdx7_host_reset_tests "${VDX7_TEST_ROM_FILE}" --mono-boundary-only)
     set_tests_properties(vdx7_mono_boundary_characterization PROPERTIES TIMEOUT 180)
