@@ -104,7 +104,8 @@ historical records, not instructions to reopen completed GUI work.
   tuning/channel; a v1.8 ROM-backed regression reproduces the former behavior
   and verifies the corrected all-or-none failure result. `vdx7_ci_checks` and
   35/35 ROM-backed/ROM-free CTest cases pass locally (the desktop-dependent
-  SAVE AS integration test is excluded); Windows/macOS CI and merge remain
+  SAVE AS integration test is excluded). Windows run `36271282618` and macOS
+  run `36271284143` also PASS on `c108b28`; independent review and merge remain
   pending. Details: `docs/validation/VALIDATION_1.0_SETTINGS_APPLY.md`.
 
 ## 3. Original audio and DAW acceptance — still required

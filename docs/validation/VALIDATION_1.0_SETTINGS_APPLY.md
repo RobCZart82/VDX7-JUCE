@@ -28,7 +28,10 @@ unchanged.
 - ROM-backed CTest excluding `vdx7_processor`: **35/35 PASS**. The excluded
   processor test's SAVE AS integration path requires a desktop/display; that
   unrelated host-GUI check remains outstanding.
-- `git diff --check`: PASS. Windows/macOS CI for this Settings change remains
-  pending.
+- `git diff --check`: PASS. Windows run `36271282618` and macOS run
+  `36271284143` both PASS on commit `c108b28` (2026-09-26), including plugin
+  builds, ROM-free regressions, local-ROM registration smoke, and packaging.
+  The Node.js 20-to-24 Actions notice is non-failing and unrelated to this
+  change.
 
 The private ROM fixture remained outside the repository and CI artifacts.
