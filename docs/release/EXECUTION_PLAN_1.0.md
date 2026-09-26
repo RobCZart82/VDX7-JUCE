@@ -186,8 +186,12 @@ evidence that the shipped instrument currently malfunctions.
 - [ ] Exercise supported compile targets: macOS CI now includes Release
   Standalone, AU and VST3; Windows CI includes VST3 and Standalone. Both Actions
   runs remain to be checked. Compilation is not host acceptance.
-- [ ] Exercise the corresponding-source/offline dependency path using the
-  packaged `third_party/` sources with network disabled.
+- [x] Exercise the corresponding-source/offline dependency path: a clean source
+  snapshot with `third_party/JUCE` and `third_party/dx7Lib` populated from the
+  documented pinned revisions configured with
+  `FETCHCONTENT_FULLY_DISCONNECTED=ON`; VST3, AU, Standalone and CI-test targets
+  built, and all 10 ROM-free tests passed. This validates the extracted source
+  tree layout and offline build path, not archive publication or host acceptance.
 - [ ] Add `pluginval`/VST3 validation as an optional RC gate; retain real REAPER
   and other-host acceptance as separate required evidence.
 - [ ] Clarify the local-ROM contract: distinguish firmware-only, combined
