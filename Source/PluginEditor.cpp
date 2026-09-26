@@ -1086,9 +1086,11 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     const float logoWidth = 300.0f * scaleX;
     const float logoHeight = logoWidth * 381.0f / 1947.0f;
     // Three understated header accents reuse the section-divider tone and
-    // span the full header inset. Keep them above the brand/action row.
+    // sit above the brand/action row. Leave a screw-sized gap in the top line.
     g.setColour(juce::Colour(0xff71685b));
-    for (const float y : { 22.0f, 34.0f, 46.0f })
+    g.fillRect(referenceRect(34, 22, 676, 1));
+    g.fillRect(referenceRect(730, 22, 676, 1));
+    for (const float y : { 34.0f, 46.0f })
         g.fillRect(referenceRect(34, y, 1372, 1));
     if (wordmark_)
         wordmark_->drawWithin(g, { 44.0f * scaleX, headerBottom - logoHeight,
@@ -1148,9 +1150,10 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
         g.fillRect(referenceRect(48, 720, 632, 1));
     }
 
-    // Seven subtle Phillips fasteners sit at the four enclosure corners,
-    // halfway down each side, and at the centre of the lower edge.
+    // Eight subtle Phillips fasteners sit at the four enclosure corners,
+    // halfway down each side, and at the centre of the top and lower edges.
     for (const auto p : { juce::Point<float>(23.0f, 23.0f), juce::Point<float>(1417.0f, 23.0f),
+                          juce::Point<float>(720.0f, 23.0f),
                           juce::Point<float>(23.0f, 555.0f), juce::Point<float>(1417.0f, 555.0f),
                           juce::Point<float>(23.0f, 1087.0f), juce::Point<float>(720.0f, 1087.0f),
                           juce::Point<float>(1417.0f, 1087.0f) })
