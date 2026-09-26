@@ -240,6 +240,11 @@ void VDX7Keyboard::paintOverChildren(juce::Graphics& g)
     g.setGradientFill(juce::ColourGradient(juce::Colour(0x88000000), 0.0f, 0.0f,
                                           juce::Colour(0x00000000), 0.0f, shadowHeight, false));
     g.fillRect(0.0f, 0.0f, float(getWidth()), shadowHeight);
+    // Continue the key-bed fade into the panel below, without shading the keys.
+    const float unit = getHeight() / 138.0f;
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff0b0c0b), 0.0f, 132.0f * unit,
+                                          juce::Colour(0xff23221e), 0.0f, 144.0f * unit, false));
+    g.fillRect(0.0f, 132.0f * unit, float(getWidth()), 6.0f * unit);
     // A stationary felt strip above the keys, including pressed/hovered notes.
     const float line = juce::jmax(1.0f, getHeight() / 138.0f);
     g.setColour(juce::Colour(0xff080909));
@@ -1175,10 +1180,13 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
         drawChassisScrew(g, { p.x * scaleX, p.y * scaleY }, 7.0f * scaleY);
 
     // Recess stays inside the keyboard span, clear of both wheel controls.
-    const auto keyWell = referenceRect(210, 864, 1184, 148).toFloat();
+    const auto keyWell = referenceRect(210, 864, 1184, 150).toFloat();
     g.setGradientFill(juce::ColourGradient(juce::Colour(0xff070808), keyWell.getX(), keyWell.getY(),
                                           juce::Colour(0xff111210), keyWell.getX(), keyWell.getBottom(), false));
     g.fillRect(keyWell);
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff0b0c0b), 0.0f, 1002.0f * scaleY,
+                                          juce::Colour(0xff23221e), 0.0f, 1014.0f * scaleY, false));
+    g.fillRect(referenceRect(210, 1002, 1184, 12));
 
     // Raised metallic lip above the existing keyboard/wheel bay.
     g.setColour(juce::Colour(0xff89877e));
