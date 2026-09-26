@@ -107,13 +107,18 @@ historical records, not instructions to reopen completed GUI work.
   boundaries (11/12 and 120/121), Note Off, sustain and repeated-note behavior,
   automation and project reopen, transport, bypass, device restarts, physical
   MIDI, multiple instances and sample-rate/buffer checks all worked in the real
-  REAPER test. Tested build SHA and full platform/rate matrix were not recorded;
-  replay on the exact release-candidate SHA and Windows counterpart remain open.
+  REAPER test on macOS. Tested build SHA and full platform/rate matrix were not
+  recorded; replay on the exact release-candidate SHA remains open.
+- [x] Owner-reported Windows 10 x64 REAPER PASS (2026-09-26): the user reports
+  that all functions tested behave as on macOS. Exact build SHA, REAPER version,
+  and detailed rate/block/instance coverage were not recorded; these are not
+  inferred from this report.
 - [ ] Operator/algorithm/feedback/master/pitch/mod automation; project reopen,
   missing/later ROM, USER/CUSTOM banks, SysEx import/export and dirty/clean state.
 - [ ] Windows x64 and macOS REAPER matrix: 44.1/48/96 kHz, 64/128/256/512/1024
   samples where host-configurable; 1/4/8 instances, GUI open/closed, dense edits,
-  physical MIDI and device restarts. Intel hardware acceptance or explicit limit.
+  physical MIDI and device restarts on the exact candidate SHA. Intel hardware
+  acceptance or explicit limit.
 - [ ] Retain original SRC frequency/aliasing/latency/listening checks, physical
   MIDI timing, audio allocation/locking audit and long-run overload/CPU tests.
 
