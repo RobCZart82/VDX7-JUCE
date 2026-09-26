@@ -103,9 +103,12 @@ historical records, not instructions to reopen completed GUI work.
   deferred partition, portamento, wheel delivery, direct reload, state-ROM
   identity and corrected MONO. Record SHA, OS/compiler, command, rates and result.
   ROM stays local; public ROM-free CI is not firmware-runtime PASS.
-- [ ] REAPER Native and Correct MONO: 11 reject, 12 accept, 120 accept, 121 reject;
-  both Note Off encodings, repeated notes, sustain, program changes, loop/seek,
-  stop/start, bypass and suspension, followed by a fresh supported note.
+- [x] Owner-reported REAPER PASS (2026-09-26): Native and Correct MONO note
+  boundaries (11/12 and 120/121), Note Off, sustain and repeated-note behavior,
+  automation and project reopen, transport, bypass, device restarts, physical
+  MIDI, multiple instances and sample-rate/buffer checks all worked in the real
+  REAPER test. Tested build SHA and full platform/rate matrix were not recorded;
+  replay on the exact release-candidate SHA and Windows counterpart remain open.
 - [ ] Operator/algorithm/feedback/master/pitch/mod automation; project reopen,
   missing/later ROM, USER/CUSTOM banks, SysEx import/export and dirty/clean state.
 - [ ] Windows x64 and macOS REAPER matrix: 44.1/48/96 kHz, 64/128/256/512/1024
