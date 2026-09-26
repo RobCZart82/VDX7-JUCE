@@ -4,7 +4,16 @@ Keep builds marked development until these gates close. The v0.6.6 checklist
 is historical and must not be used to approve 1.0. No release or tag is created
 by this checklist. No proprietary firmware belongs in source, CI or artifacts.
 
+Current work order and audit disposition: [consolidated plan](EXECUTION_PLAN_1.0.md).
+GUI appearance approval does not close the technical/platform gates below.
+
 ## Correctness and realtime gates
+
+- [ ] Close the consolidated plan's packed-input validation, wheel-input,
+  ROM-identity and pre-ROM-edit findings with scoped regression evidence;
+  explicitly resolve or disposition state/lock/Settings candidates.
+- [ ] Validate all five actual GUI size presets and required About assets;
+  preserve owner-approved graphics during any resource cleanup.
 
 - [ ] MIDI product-range acceptance: Notes 12–120 inclusive reach and release
   correctly; Note On, Note Off, and velocity-zero Note On outside that range are

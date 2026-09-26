@@ -5,9 +5,18 @@ not final releases. Do not publish or replace existing release assets until
 the acceptance checklist is complete. Keep plugin IDs and existing parameter
 indices compatible with saved projects.
 
+## Current execution authority — 2026-09-26
+
+Use [the consolidated 1.0 execution plan](EXECUTION_PLAN_1.0.md) for current
+priority, closed GUI scope and audit F1–F19 disposition against main `b12bd12`.
+It preserves the original release gates and local unmerged validation work.
+Older dated sections below are historical evidence; their stale GUI checkboxes
+or "next chapter" wording must not reopen the approved design. The RC checklist
+remains the final release gate, not a publication authorization.
+
 ## Stabilization
 
-### Current next steps — 2026-09-25
+### Historical next steps — 2026-09-25 (superseded by consolidated plan)
 
 Latest checkpoint: PR #63 was merged to `main` as `cbbd213` after macOS and
 Windows Actions passed. It adds the approved three header accent lines and a
