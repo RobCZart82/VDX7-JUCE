@@ -1120,7 +1120,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     g.setGradientFill(juce::ColourGradient(juce::Colour(0xffc9d68e), lcd.getX(), lcd.getY(),
         juce::Colour(0xffa5b76e), lcd.getX(), lcd.getBottom(), false));
     g.fillRoundedRectangle(lcd, 3.0f);
-    const auto footerBounds = referenceRect(18, 1030, 1404, 44).toFloat();
+    const auto footerBounds = referenceRect(34, 1030, 1372, 44).toFloat();
     juce::ColourGradient footerGradient(juce::Colour(0xff24221f), footerBounds.getX(),
                                         footerBounds.getCentreY(), juce::Colour(0xff24221f),
                                         footerBounds.getRight(), footerBounds.getCentreY(), false);
@@ -1128,8 +1128,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     g.setGradientFill(footerGradient);
     g.fillRoundedRectangle(footerBounds, 3.0f * scaleY);
     g.setColour(juce::Colour(0xff71685b));
-    g.fillRect(footerBounds.withHeight(juce::jmax(1.0f, scaleY)));
-    g.fillRect(referenceRect(18, 1075, 1404, 1));
+    g.drawRoundedRectangle(footerBounds, 3.0f * scaleY, juce::jmax(0.5f, scaleY));
     constexpr float outputContentOffsetY = 10.0f;
     g.drawImage(valueField_, referenceRect(1255, 467 + outputContentOffsetY, 96, 32).toFloat());
 
