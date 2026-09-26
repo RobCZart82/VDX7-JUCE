@@ -158,6 +158,16 @@ opciókkal, majd fordítsd újra a `vdx7_all_tests` célt, és indítsd a CTeste
 A ROM-ot ne töltsd fel. A processor teszt nem nyit audioeszközt, és opcionálisan
 létező abszolút mappát fogad a PNG-előnézetekhez.
 
+A `VDX7_TEST_ROM_FILE` egyetlen, az opt-in tesztekkel közösen használt fájl:
+16 384 bájtos firmware (mellette opcionálisan `dx7_factory_voices_32KB.bin`)
+vagy 49 152 bájtos, firmware-t és gyári hangadatot tartalmazó kombinált kép.
+A gyári hangadat nem szükséges a firmware futtatásához; a nyolc gyári bankhoz
+ad hangszíneket. A teljes opt-in tesztkör része a validált v1.8 firmware
+memóriatérképét ellenőrző tesztcsoport is, ezért a profilteszt fixture-jének
+azt a helyben validált v1.8 firmware-t kell tartalmaznia. A v1.8 profilt nem a
+gyári hangadat payload határozza meg. Ez a privát teszt-fixture elkülönül a
+nyilvános, ROM-mentes CI-től.
+
 ## 12. Licenc és kiadási állapot
 
 Ez a kiadás [GNU AGPLv3](../../LICENSE.txt) szerint érhető el. A wrapper és az eredeti GUI-erőforrások AGPL-3.0-only licencűek; a DX7-mag megőrzi GPL-3.0-or-later licencét és eredeti közléseit. A JUCE-ot AGPLv3 alatt használjuk. Az egyesített mű és a komponensek közlései: [NOTICE.md](../../NOTICE.md).
@@ -172,4 +182,3 @@ Következő prioritások: teljes helyi ROM-os regressziós kör; célzott REAPER
 hangtartomány- és transportteszt; valódi host-, konkurencia- és platformelfogadás;
 hátralévő platformközi GUI-ellenőrzések; majd kiadási csomagolás. Az 1.0.0 publikálására
 nincs jóváhagyás. Részletek: ROADMAP_1.0.md.
-

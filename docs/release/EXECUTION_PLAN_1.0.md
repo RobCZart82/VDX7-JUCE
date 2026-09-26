@@ -194,9 +194,12 @@ evidence that the shipped instrument currently malfunctions.
   tree layout and offline build path, not archive publication or host acceptance.
 - [ ] Add `pluginval`/VST3 validation as an optional RC gate; retain real REAPER
   and other-host acceptance as separate required evidence.
-- [ ] Clarify the local-ROM contract: distinguish firmware-only, combined
-  firmware-plus-factory-voices, and the pinned v1.8 fixture. Either declare the
-  full suite's exact required fixture or label requirements per test.
+- [x] Clarify the local-ROM contract in CMake and the HU/EN guide: one shared
+  fixture may be 16 KB firmware (with optional sibling factory voices) or a
+  48 KB combined image; the full opt-in suite includes v1.8-profile tests, so
+  its fixture must contain the locally validated v1.8 firmware. A no-execution
+  CTest registration smoke confirmed the profile fixture and 26 local-ROM
+  registrations. The placeholder was not used to execute firmware tests.
 
 ### P3 — naming and source-quality polish
 

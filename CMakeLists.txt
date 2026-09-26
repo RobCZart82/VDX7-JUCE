@@ -253,13 +253,18 @@ target_link_libraries(vdx7_stress_tests PRIVATE VDX7)
 target_include_directories(vdx7_stress_tests PRIVATE $<TARGET_PROPERTY:VDX7,INCLUDE_DIRECTORIES>)
 target_compile_definitions(vdx7_stress_tests PRIVATE $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
 
-set(VDX7_TEST_ROM_FILE "" CACHE FILEPATH "Local user-supplied ROM; never packaged")
+set(VDX7_TEST_ROM_FILE "" CACHE FILEPATH
+    "Local 16 KB firmware or 48 KB combined image for opt-in tests; never packaged")
 
 if(VDX7_ENABLE_ROM_TESTS)
     if(NOT EXISTS "${VDX7_TEST_ROM_FILE}")
         message(FATAL_ERROR "VDX7_TEST_ROM_FILE must point to your local compatible ROM")
     endif()
 
+    # One user-supplied fixture feeds the opt-in suite. Tests tagged
+    # firmware-v1_8 additionally require the verified v1.8 firmware profile;
+    # the runtime accepts 16 KB firmware (and its optional sibling voice file)
+    # or a 48 KB combined firmware/voice image.
     # Core integration runners.
     add_test(NAME vdx7_stability COMMAND vdx7_stability_tests "${VDX7_TEST_ROM_FILE}")
     add_test(NAME vdx7_midi_range COMMAND vdx7_midi_range_tests "${VDX7_TEST_ROM_FILE}")
