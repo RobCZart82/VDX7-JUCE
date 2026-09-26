@@ -306,6 +306,10 @@ VDX7WheelSlider::VDX7WheelSlider(bool springToCentre)
     setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     setSliderSnapsToMousePosition(false);
     setMouseDragSensitivity(180);
+    // Scroll/trackpad changes do not produce mouseUp, so a pitch-wheel value
+    // would remain bent. Keep direct dragging while ignoring only scroll input.
+    if (springToCentre_)
+        setScrollWheelEnabled(false);
 }
 
 void VDX7WheelSlider::mouseUp(const juce::MouseEvent& event)
