@@ -266,8 +266,10 @@ if(VDX7_ENABLE_ROM_TESTS)
     set_tests_properties(vdx7_stress PROPERTIES TIMEOUT 120)
     set_tests_properties(vdx7_processor PROPERTIES
         ENVIRONMENT "VDX7_TEST_ROM_PATH=${VDX7_TEST_ROM_FILE}")
+    # These tests are registered only after an existing ROM path is supplied.
+    # A 77 exit now fails the test instead of hiding a bad or unloadable fixture as SKIPPED.
     set_tests_properties(vdx7_stability vdx7_midi_range vdx7_timing vdx7_processor vdx7_stress
-        PROPERTIES SKIP_RETURN_CODE 77 LABELS "local-rom")
+        PROPERTIES LABELS "local-rom")
 endif()
 
 # -----------------------------------------------------------------------------
