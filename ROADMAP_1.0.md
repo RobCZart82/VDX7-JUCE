@@ -650,8 +650,13 @@ Work in separate reviewed PRs; no final release/tag or firmware upload.
   see VALIDATION_1.0_GLOBAL_FADERS.md.
 - [x] Clip white-key hover tint to the visible key body and add visual regression;
   see VALIDATION_1.0_GLOBAL_FADERS.md.
-- [ ] Final surface polish and real-host/HiDPI acceptance. Preserve the approved
-  About and header alignment; their visual arrangement has owner approval.
+- [x] Final GUI surface and layout approved by the owner on 2026-09-26:
+  footer frame, chassis screws, pitch-envelope positioning and recessed keyboard
+  with a short lower fade. The owner tested the macOS arm64 `7dfcade` development
+  build in REAPER (VST3) and Standalone and approved its appearance; earlier
+  Retina visual acceptance was also owner-reported. Preserve this design.
+- [ ] Complete cross-platform/host GUI acceptance; owner visual approval does
+  not replace Windows, Intel Mac or full release acceptance below.
 
 ## Publication gate
 
