@@ -10,6 +10,24 @@ static void require(bool condition, const char* message)
     if (!condition) throw std::runtime_error(message);
 }
 
+static uint32_t testChecksum(const uint8_t* data, size_t size)
+{
+    uint32_t crc = 0xffffffffu;
+    for (size_t i = 0; i < size; ++i)
+    {
+        crc ^= data[i];
+        for (int bit = 0; bit < 8; ++bit)
+            crc = (crc >> 1) ^ ((crc & 1) ? 0xedb88320u : 0u);
+    }
+    return ~crc;
+}
+
+static void setLittleEndian32(uint8_t* data, uint32_t value)
+{
+    for (int i = 0; i < 4; ++i)
+        data[i] = static_cast<uint8_t>(value >> (8 * i));
+}
+
 int main(int argc, char** argv)
 {
     // A separate process is needed: POSIX file locks may be process-scoped.
@@ -61,6 +79,50 @@ int main(int argc, char** argv)
 
         juce::MemoryBlock goodBytes;
         require(file.loadFileAsData(goodBytes), "capture valid file");
+        VDX7UserBank::Snapshot validSnapshot;
+        require(VDX7UserBank::load(file, validSnapshot).wasOk(), "capture valid bank snapshot");
+
+        // CRC-valid files still have to obey packed voice semantics. Change
+        // occupied slot 04, recompute CRC, and ensure failure is transactional.
+        for (const auto& invalidField : std::array<std::pair<int, uint8_t>, 6> {{
+                 {0, 100},       // operator rate
+                 {14, 100},      // operator output level
+                 {16, 100},      // operator fine frequency
+                 {12, 0x78},     // detune nibble 15 (+8)
+                 {116, 0x0c},    // LFO waveform 6
+                 {117, 49}       // transpose beyond +24
+             }})
+        {
+            auto malformed = goodBytes;
+            auto* bytes = static_cast<uint8_t*>(malformed.getData());
+            bytes[8 + 3 * 128 + invalidField.first] = invalidField.second;
+            setLittleEndian32(bytes + malformed.getSize() - 4,
+                              testChecksum(bytes, malformed.getSize() - 4));
+            require(file.replaceWithData(bytes, malformed.getSize()), "write semantic-invalid fixture");
+            auto destination = validSnapshot;
+            require(VDX7UserBank::load(file, destination).failed(),
+                    "reject CRC-valid USER bank with invalid packed voice field");
+            require(destination.voices == validSnapshot.voices
+                    && destination.occupiedMask == validSnapshot.occupiedMask,
+                    "semantic-invalid USER bank leaves caller snapshot unchanged");
+        }
+
+        // Occupied patch names are printable ASCII, just like names accepted
+        // by savePatch; control characters must not enter the GUI via import.
+        {
+            auto malformed = goodBytes;
+            auto* bytes = static_cast<uint8_t*>(malformed.getData());
+            bytes[8 + 3 * 128 + 118] = '\n';
+            setLittleEndian32(bytes + malformed.getSize() - 4,
+                              testChecksum(bytes, malformed.getSize() - 4));
+            require(file.replaceWithData(bytes, malformed.getSize()), "write invalid-name fixture");
+            auto destination = validSnapshot;
+            require(VDX7UserBank::load(file, destination).failed(), "reject control character in occupied USER name");
+            require(destination.voices == validSnapshot.voices
+                    && destination.occupiedMask == validSnapshot.occupiedMask,
+                    "invalid USER name leaves caller snapshot unchanged");
+        }
+        require(file.replaceWithData(goodBytes.getData(), goodBytes.getSize()), "restore valid bank after semantic probes");
         for (int slot : { -1, 32 })
             require(VDX7UserBank::savePatch(file, second, slot, patch, "INVALID", true).failed(), "reject invalid slots");
         for (const auto& name : { juce::String(), juce::String("           "), juce::String("12345678901"),
@@ -69,6 +131,10 @@ int main(int argc, char** argv)
         auto invalid = patch;
         invalid[0] = 128;
         require(VDX7UserBank::savePatch(file, second, 0, invalid, "INVALID", false).failed(), "reject invalid voice byte");
+        invalid = patch;
+        invalid[0] = 100;
+        require(VDX7UserBank::savePatch(file, second, 0, invalid, "INVALID", false).failed(),
+                "reject semantically invalid packed voice before writing");
         require(VDX7UserBank::savePatch(directory.getChildFile("missing/USER.vdxbank"), empty,
                     0, patch, "NO FOLDER", false).failed(), "failed I/O does not create arbitrary folders");
         juce::MemoryBlock afterInvalid;

@@ -35,6 +35,33 @@ int parameterMaximum(Parameter parameter) noexcept
     }
 }
 
+bool hasValidPackedVoice(const uint8_t* packedVoice, std::size_t size) noexcept
+{
+    if (packedVoice == nullptr || size < kPackedVoiceSize)
+        return false;
+
+    for (int operatorIndex = 0; operatorIndex < kOperatorCount; ++operatorIndex)
+    {
+        const auto* op = packedVoice + operatorOffset(operatorIndex);
+        for (int field = 0; field < 8; ++field)
+            if (op[field] > 99) return false;
+        if (op[8] > 99 || op[9] > 99 || op[10] > 99
+            || ((op[12] >> 3) & 0x0f) > 14
+            || op[14] > 99 || op[16] > 99)
+            return false;
+    }
+
+    for (int field = 0; field < 8; ++field)
+        if (packedVoice[102 + field] > 99) return false;
+    if (packedVoice[112] > 99 || packedVoice[113] > 99
+        || packedVoice[114] > 99 || packedVoice[115] > 99
+        || ((packedVoice[116] >> 1) & 0x07) > 5
+        || packedVoice[117] > 48)
+        return false;
+
+    return true;
+}
+
 int getOperatorParameter(const uint8_t* packedVoice, std::size_t size,
                          int operatorIndex, Parameter parameter) noexcept
 {

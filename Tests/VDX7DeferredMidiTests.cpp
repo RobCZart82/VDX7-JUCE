@@ -3,10 +3,12 @@
 #include "VDX7KeyboardQueue.h"
 #include "VDX7MidiValidation.h"
 #include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <iostream>
-#include <vector>
 #include <thread>
+#include <utility>
+#include <vector>
 
 static void checkEditQueue();
 static void checkMidiTimeline();
@@ -212,8 +214,8 @@ static void checkSysExAdmission()
     corruptBank[128] = 0x80;
     require(!VDX7MidiValidation::isLiveBankSysex(corruptBank.data(), corruptBank.size()));
 
-    // Checksum-valid packets with an impossible +8 detune are rejected at the
-    // live boundary, in every voice/operator slot, before engine import.
+    // Checksum-valid packets with semantically invalid packed fields are
+    // rejected at the live boundary before engine import.
     for (int voice = 0; voice < 32; ++voice)
         for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
         {
@@ -232,6 +234,24 @@ static void checkSysExAdmission()
             require(!VDX7MidiValidation::isLiveBankSysex(corruptBank.data(), corruptBank.size()),
                     "live validation rejects invalid detune in every voice/operator slot");
         }
+
+    // The same full packed-field gate used by file import applies to live
+    // admission: checksum-valid rates, LFO waveforms and transposes are not
+    // accepted merely because they fit in Yamaha's seven-bit transport.
+    for (const auto& invalidField : std::array<std::pair<std::size_t, uint8_t>, 3> {{
+             {0, 100},       // Operator rate in voice 0.
+             {116, 0x0c},    // LFO waveform 6 in voice 0.
+             {32 * 128 - 11, 49} // Transpose in voice 31.
+         }})
+    {
+        corruptBank = validBank;
+        corruptBank[6 + invalidField.first] = invalidField.second;
+        int sum = 0;
+        for (std::size_t i = 6; i < 4102; ++i) sum += corruptBank[i];
+        corruptBank[4102] = static_cast<uint8_t>((128 - (sum & 0x7f)) & 0x7f);
+        require(!VDX7MidiValidation::isLiveBankSysex(corruptBank.data(), corruptBank.size()),
+                "live validation rejects checksum-valid semantic field violations");
+    }
 
     const auto survivingNote = [&](const uint8_t* invalid, std::size_t invalidSize, int repetitions)
     {
