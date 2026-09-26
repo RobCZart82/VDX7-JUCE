@@ -2,7 +2,8 @@
 
 ## Audit disposition
 
-**FIXED in `codex/audit-validation-gaps`; public CI and merge are pending.**
+**Implemented on `codex/packed-voice-validation-1.0` from current main
+`af763f140c648418d9c95de40ea5a3c38dea149e`; public CI and merge are pending.**
 
 The audit found that checksum-valid VMEM and VUB1 data could contain packed
 parameter values outside the DX7 voice ranges. VCED import already validated
@@ -19,7 +20,8 @@ its unpacked values, but bank import/export only rejected invalid detune nibbles
 
 Bit fields whose encodings already span their entire legal range are not
 needlessly rejected. Reserved bits are preserved. Full packed-voice validation
-is applied to VMEM decoding and encoding, and to occupied USER-bank voices on
+is applied to VMEM decoding and encoding, live bulk-SysEx admission, the
+processor's internal packed import boundary, and occupied USER-bank voices on
 load and before save. Occupied USER patch names must be printable ASCII and
 contain at least one non-space character. A failed USER-bank load leaves the
 caller’s existing snapshot unchanged.
@@ -34,10 +36,10 @@ needed or used.
 
 ## Verification record
 
-- Base SHA: `b8492854ee7cfb47dfea566268bbd743e7f5458e` with the uncommitted validation patch in this worktree.
+- Base SHA: `af763f140c648418d9c95de40ea5a3c38dea149e`.
 - Platform: macOS 26.7, Apple clang 21.0.0.
-- Configure: `cmake -S . -B /private/tmp/VDX7-audit-validation-build -D CMAKE_BUILD_TYPE=Debug`.
-- Build: `cmake --build /private/tmp/VDX7-audit-validation-build --target vdx7_ci_checks -j 4` — PASS.
-- Tests: `ctest --test-dir /private/tmp/VDX7-audit-validation-build --output-on-failure` — 10/10 PASS.
+- Configure: `cmake -S . -B /private/tmp/VDX7-packed-validation-clean -DCMAKE_BUILD_TYPE=Debug` — PASS.
+- Build: `cmake --build /private/tmp/VDX7-packed-validation-clean --target vdx7_ci_checks -j 4` — PASS.
+- Tests: `ctest --test-dir /private/tmp/VDX7-packed-validation-clean --output-on-failure --no-tests=error` — 10/10 PASS after live-admission coverage was added.
 - ROM-backed tests: NOT RUN; no ROM was used.
-- GitHub Actions: NOT RUN for this branch; the existing GUI PR Actions were left untouched.
+- GitHub Actions: NOT YET VERIFIED for this candidate branch.

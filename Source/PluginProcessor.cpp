@@ -1426,6 +1426,17 @@ bool VDX7AudioProcessor::loadUserBank(const juce::File& file, juce::String& erro
 bool VDX7AudioProcessor::loadPackedVoices(const std::vector<uint8_t>& packed, juce::String* error, int selectProgram)
 {
     if (packed.size() != 128 && packed.size() != 4096) return false;
+    const auto voiceCount = static_cast<int>(packed.size() / VDX7VoiceData::kPackedVoiceSize);
+    for (int voice = 0; voice < voiceCount; ++voice)
+    {
+        const auto* voiceData = packed.data() + voice * VDX7VoiceData::kPackedVoiceSize;
+        if (!VDX7VoiceData::hasValidPackedVoice(
+                voiceData, VDX7VoiceData::kPackedVoiceSize))
+        {
+            if (error != nullptr) *error = "Packed voice contains an out-of-range parameter.";
+            return false;
+        }
+    }
     {
         std::scoped_lock lock(engineMutex_);
         if (!engine_.isLoaded())

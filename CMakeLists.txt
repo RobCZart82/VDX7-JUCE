@@ -79,6 +79,7 @@ set_tests_properties(vdx7_user_bank PROPERTIES TIMEOUT 20)
 
 add_executable(vdx7_deferred_midi_tests Tests/VDX7DeferredMidiTests.cpp)
 target_include_directories(vdx7_deferred_midi_tests PRIVATE Source)
+target_link_libraries(vdx7_deferred_midi_tests PRIVATE vdx7_voice_data)
 add_test(NAME vdx7_deferred_midi COMMAND vdx7_deferred_midi_tests)
 set_tests_properties(vdx7_deferred_midi PROPERTIES TIMEOUT 60)
 
