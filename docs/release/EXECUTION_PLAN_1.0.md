@@ -77,13 +77,17 @@ historical records, not instructions to reopen completed GUI work.
   pending saved project's packed RAM remains authoritative. See
   `docs/validation/VALIDATION_1.0_NO_ROM_FIRST_EDIT.md`.
   Local verification for the current branch: Release Standalone/VST3/AU and
-  `vdx7_ci_checks` compiled; all 10 ROM-free tests passed. F5/F6 runtime
-  regressions remain NOT RUN because this checkout has no user ROM fixture.
+  `vdx7_ci_checks` compiled; all 10 ROM-free tests passed. On 2026-09-26 the
+  owner-supplied v1.8 package was used locally: F5 profile, state interleaving,
+  and pending-identity regressions passed; the full ROM-backed stability suite
+  passed, including F6 first-load edit retention. The fixture remains outside
+  the repository and CI artifacts.
   Public Windows and macOS CI both PASS on `36df778` (2026-09-26), including
   plugin builds, all 10 ROM-free tests, and local-ROM test registration smoke;
   Actions does not run the firmware-dependent regressions without the private
-  fixture. Independent code review/merge and exact-candidate ROM-backed
-  verification remain pending. See both F5/F6 validation notes for scope.
+  fixture. Exact-candidate ROM-backed verification is now complete for F5/F6
+  on the current source tip; independent PR review and merge remain pending.
+  See both F5/F6 validation notes for scope and fixture boundaries.
 - [ ] F8/F9 — SOURCE-DERIVED CANDIDATES: establish supported concurrent/reentrant
   state-call contract, then barrier-test whole restore and engine/APVTS lock
   order. Demonstrate a reachable inversion before claiming deadlock. Never

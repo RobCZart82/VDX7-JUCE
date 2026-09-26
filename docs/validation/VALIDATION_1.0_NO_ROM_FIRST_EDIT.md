@@ -45,3 +45,13 @@ and macOS CI passed on commit `36df778` on 2026-09-26: plugin builds, all 10
 ROM-free tests, and ROM-test registration smoke passed, but CI did not execute
 the firmware-dependent regression. The private ROM and any derived firmware
 data remain outside the repository and build artifacts.
+
+## Owner-supplied fixture retest — 2026-09-26
+
+The owner-supplied Retromulator DX7 v1.8 package was used as a local-only test
+fixture. Rebuilt `vdx7_stability_tests` from the current checkout and ran it
+against the package's 48 KB combined image: PASS. This full stability run
+includes the F6 fresh-instance voice-edit-before-first-ROM-load regression.
+The fixture remained outside the checkout and build artifacts. Tested source
+matches CI-tested commit `36df778`; subsequent `b301986` changes are documentation
+only.
