@@ -60,7 +60,7 @@ feltétel. A helyben fordított Standalone DAW nélkül fut.
 
 **A megszólaláshoz kompatibilis DX7 Mk I ROM szükséges.**
 A formátumokat és az opcionális külső gyári hangadatot a
-[firmware-útmutató](GUIDE_HU.md#3-firmware-és-bankok) ismerteti.
+[firmware-útmutató](docs/guides/GUIDE_HU.md#3-firmware-és-bankok) ismerteti.
 A támogatott MIDI-hangtartomány **12–120**, Native és Correct MONO módban egyaránt.
 
 Előre fordított csomaghoz nem kell fordító vagy CMake.
@@ -79,23 +79,25 @@ az operációs rendszer figyelmeztetései előtt olvasd el az útmutatót.
 5. Válassz programot vagy tölts be kompatibilis SysExet, engedélyezd a MIDI-monitorozást, és játssz.
 
 Kerüld a kettős plugintelepítést. Ne kapcsold ki a rendszer egészének biztonsági védelmét.
-Részletek: [telepítés és első megszólaltatás](GUIDE_HU.md#2-telepítés-és-első-megszólaltatás).
+Részletek: [telepítés és első megszólaltatás](docs/guides/GUIDE_HU.md#2-telepítés-és-első-megszólaltatás).
 
 ## Dokumentáció
 
-- [Részletes magyar útmutató](GUIDE_HU.md)
-- [Detailed English guide](GUIDE_EN.md)
-- [1.0 kiadási ellenőrzőlista](ROADMAP_1.0.md)
-- [Forrásfüggőségek](SOURCE_DEPENDENCIES.md)
+- [Dokumentációs tartalomjegyzék és archívum](docs/README.md)
+
+- [Részletes magyar útmutató](docs/guides/GUIDE_HU.md)
+- [Detailed English guide](docs/guides/GUIDE_EN.md)
+- [1.0 kiadási ellenőrzőlista](docs/release/ROADMAP_1.0.md)
+- [Forrásfüggőségek](docs/guides/SOURCE_DEPENDENCIES.md)
 - [Licenc- és komponensközlések](NOTICE.md)
 
 Élő MIDI Out/SysEx-küldés nincs. A görbék alakot szemléltetnek, nem kalibrált időzítést.
 A GUI-jóváhagyás és a zöld CI nem helyettesíti a firmware-, offline render-,
-automatizálási és platformteszteket. Lásd az [ismert korlátokat](GUIDE_HU.md#9-ismert-korlátok).
+automatizálási és platformteszteket. Lásd az [ismert korlátokat](docs/guides/GUIDE_HU.md#9-ismert-korlátok).
 
 ## Fordítás forrásból
 
-A [fordítási útmutató](GUIDE_HU.md#11-fordítás-forrásból) tartalmazza a C++20,
+A [fordítási útmutató](docs/guides/GUIDE_HU.md#11-fordítás-forrásból) tartalmazza a C++20,
 CMake 3.22+, platformeszközök, rögzített függőségek és tesztparancsok részleteit.
 A public CI ROM-mentes regressziókat futtat; a firmware-tesztekhez jogszerű helyi
 ROM szükséges, amely nem kerülhet commitba vagy csomagba.

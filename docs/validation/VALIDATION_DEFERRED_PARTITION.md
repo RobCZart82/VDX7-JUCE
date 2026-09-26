@@ -93,5 +93,5 @@ Actual skipped samples still cause latency and may trigger the bounded fail-safe
 
 MONO note-zero is NOT fixed here. Its original acceptance diagnostic remains
 unchanged and separate from passing known-firmware characterization. See
-`DESIGN_MONO_NOTE_ZERO_POLICY.md`; all other release gates remain open.
+`docs/design/DESIGN_MONO_NOTE_ZERO_POLICY.md`; all other release gates remain open.
 No GUI, installed plugin, core/ROM, main merge, tag or release changed.

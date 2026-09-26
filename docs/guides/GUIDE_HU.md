@@ -1,6 +1,6 @@
 # VDX7 Mk1. — részletes fejlesztői útmutató
 
-[Vissza az áttekintéshez](README_HU.md) · [English guide](GUIDE_EN.md)
+[Vissza az áttekintéshez](../../README_HU.md) · [English guide](GUIDE_EN.md)
 
 Ez az útmutató az **1.0.0-dev** változatot írja le, nem elfogadott stabil kiadást.
 
@@ -89,7 +89,7 @@ Kézi bank-/ROM-/SYX-csere előtt figyelmeztetés jelenik meg a nem exportált m
 A végleges 1.0 GUI kinézetét a tulajdonos helyi macOS REAPER VST3-, Standalone-
 és Retina-vizuális ellenőrzés után jóváhagyta. A választható méretek: 50%, 75%,
 100%, 125% és 150%. Ez nem teljes platform- és kiadási elfogadás.
-Lásd a [képeket](README_HU.md) és a [kiadási listát](ROADMAP_1.0.md).
+Lásd a [képeket](../../README_HU.md) és a [kiadási listát](../release/ROADMAP_1.0.md).
 
 ## 9. Ismert korlátok
 
@@ -121,7 +121,7 @@ Lásd a [képeket](README_HU.md) és a [kiadási listát](ROADMAP_1.0.md).
 
 A public CI ROM-mentes regressziókat futtat. A sikeres fordítás nem firmware-runtime
 vagy teljes DAW-elfogadás. A helyi ROM-os teszteket és a hátralévő hostellenőrzéseket
-az adott kiadásjelöltön kell futtatni; lásd a [kiadási feltételeket](ROADMAP_1.0.md).
+az adott kiadásjelöltön kell futtatni; lásd a [kiadási feltételeket](../release/ROADMAP_1.0.md).
 
 Hibát a [GitHub Issues](https://github.com/RobCZart82/VDX7-JUCE/issues) oldalon jelezz
 build/commit, operációs rendszer, architektúra, hostverzió, mintavétel/puffer,
@@ -160,7 +160,7 @@ létező abszolút mappát fogad a PNG-előnézetekhez.
 
 ## 12. Licenc és kiadási állapot
 
-Ez a kiadás [GNU AGPLv3](LICENSE.txt) szerint érhető el. A wrapper és az eredeti GUI-erőforrások AGPL-3.0-only licencűek; a DX7-mag megőrzi GPL-3.0-or-later licencét és eredeti közléseit. A JUCE-ot AGPLv3 alatt használjuk. Az egyesített mű és a komponensek közlései: [NOTICE.md](NOTICE.md).
+Ez a kiadás [GNU AGPLv3](../../LICENSE.txt) szerint érhető el. A wrapper és az eredeti GUI-erőforrások AGPL-3.0-only licencűek; a DX7-mag megőrzi GPL-3.0-or-later licencét és eredeti közléseit. A JUCE-ot AGPLv3 alatt használjuk. Az egyesített mű és a komponensek közlései: [NOTICE.md](../../NOTICE.md).
 
 A kiadás a bináris mellett teljes forrást biztosít a rögzített JUCE- és dx7Lib-forrással, build scriptekkel és licencközlésekkel. A szoftver garancia nélkül érhető el. A firmware nem része a szoftverlicencnek. A leírásban szereplő Yamaha-név kompatibilitást jelöl, nem támogatást vagy jóváhagyást; Yamaha-logó nincs mellékelve.
 

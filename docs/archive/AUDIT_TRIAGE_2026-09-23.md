@@ -13,7 +13,7 @@ or release until separately approved. Never upload ROMs.
 The correction is integrated, persisted and selectable in SETTINGS for the
 verified v1.8 image. Native/default Note0 acceptance still fails; do not equate
 the corrected path's success with native firmware repair or release acceptance.
-See VALIDATION_MONO_SETTINGS.md and VALIDATION_MONO_PERSISTENCE.md.
+See docs/validation/VALIDATION_MONO_SETTINGS.md and VALIDATION_MONO_PERSISTENCE.md.
 
 Desktop processor regression now completes successfully in a separate run.
 The historical raw6144-byte restore assertion was replaced by the persistent
@@ -24,12 +24,12 @@ changed. No production change in that follow-up.
 Subsequent audit findings reproduced and targeted fixes implemented:
 - A2 held-note snapshot restoration: VALIDATION_HELD_SNAPSHOT.md.
 - A1 ignored CC admission: VALIDATION_IGNORED_CC_ADMISSION.md.
-- B1 installation boundary: VALIDATION_STATE_INSTALL_BOUNDARY.md; shared
+- B1 installation boundary: docs/validation/VALIDATION_STATE_INSTALL_BOUNDARY.md; shared
   collected-input control in VALIDATION_BYPASS_AND_COLLECTED_INPUT.md. Full
   public concurrent state-call/DAW coverage remains open.
-- B2 bypass releases: VALIDATION_BYPASS_AND_COLLECTED_INPUT.md; suspended host
+- B2 bypass releases: docs/validation/VALIDATION_BYPASS_AND_COLLECTED_INPUT.md; suspended host
   callbacks are not covered by the active-bypass fix.
-- B3 wheel rejection/flush: VALIDATION_WHEEL_DELIVERY.md; input delivery and
+- B3 wheel rejection/flush: docs/validation/VALIDATION_WHEEL_DELIVERY.md; input delivery and
   newer physical MIDI priority verified, broader scheduling/DAW tests remain.
 
 ### Historical stages (not current feature availability)
@@ -59,13 +59,13 @@ Subsequent audit findings reproduced and targeted fixes implemented:
   immediate-save loss 73 -> 0 before fixing. Engine-owned latest accepted intent
   now survives serial recovery/flush and supplies display/detached state capture;
   native CC5 retains rate computation. Later accepted physical CC5 supersedes it,
-  rejected input does not. See VALIDATION_PORTAMENTO_INTENT.md for validation
+  rejected input does not. See docs/validation/VALIDATION_PORTAMENTO_INTENT.md for validation
   and limits. MONO implementation status is described in the current section.
 - Q2 publication follow-up: real processor capture/public setter interleaving
   reproduced display 0 after the newer request 99. Guarded single-attempt frame
   publication now preserves concurrent UI edits, including same-value/ABA, with
   no audio retry/lock. Covers PERFORMANCE and tuning; 88 targeted schedules pass.
-  See VALIDATION_PERFORMANCE_PUBLICATION.md for scope and validation results.
+  See docs/validation/VALIDATION_PERFORMANCE_PUBLICATION.md for scope and validation results.
   Native CC5 pipeline still processes older time values in work RAM, but the
   independent intent follow-up now prevents that from rolling back display/save.
 - Q1 follow-up: reproduced false age expiry in the real processor before fixing
@@ -73,8 +73,8 @@ Subsequent audit findings reproduced and targeted fixes implemented:
   Successful deferred playback now credits its matching block when checking
   lag; contention/reset-drain callbacks do not. Actual two-second skipped-time
   limit remains. New small/large/mixed partition, threshold and reset-expiry
-  regressions pass; see VALIDATION_DEFERRED_PARTITION.md for full validation.
-  MONO policy/design boundary is recorded in DESIGN_MONO_NOTE_ZERO_POLICY.md;
+  regressions pass; see docs/validation/VALIDATION_DEFERRED_PARTITION.md for full validation.
+  MONO policy/design boundary is recorded in docs/design/DESIGN_MONO_NOTE_ZERO_POLICY.md;
   corrective development is now authorized; no compatibility mode or firmware
   workaround has yet been implemented or validated.
 - MONO instruction/continuation follow-up: the private known image's decoded
@@ -97,7 +97,7 @@ Subsequent audit findings reproduced and targeted fixes implemented:
   POLY-to-MONO mode cycle recovers ownership and allows a fresh audible note
   to release. This is characterization, NOT a production fix or an automatic
   workaround. The original failing diagnostic remains intact. See
-  VALIDATION_MONO_BOUNDARY_AND_CI.md; firmware policy, physical-hardware
+  docs/validation/VALIDATION_MONO_BOUNDARY_AND_CI.md; firmware policy, physical-hardware
   confirmation and broader MONO/reset combinations remain open.
   Full rebuilt registered suite 20/20 PASS (239.83 s), fresh ROM-free 5/5 PASS
   (3.05 s); separate original MONO-zero acceptance diagnostic still FAIL.
@@ -109,7 +109,7 @@ Subsequent audit findings reproduced and targeted fixes implemented:
   Six POLY/MONO public-lifecycle/forced-short-drain cases pass locally;
   rebuilt registered suite 18/18 PASS in 223.83 s (separate known-failing
   MONO pitch-zero diagnostic is NOT part of those 18). See
-  VALIDATION_RESET_LIFECYCLE_DRAIN.md for exact scope and full-suite status.
+  docs/validation/VALIDATION_RESET_LIFECYCLE_DRAIN.md for exact scope and full-suite status.
 - R1 gate/overflow: source ordering is confirmed, but audible leakage was NOT
   reproduced in six real-ROM cases (R4=1/99, L4=0/70/99). Same-offset Note On
   is demonstrably flushed, firmware never owns it, measured leaked peak is zero;
@@ -129,7 +129,7 @@ Subsequent audit findings reproduced and targeted fixes implemented:
   failure with one continuously held anchor and released neighboring history.
   Known-image POLY now protects both firmware ownership tables per pitch and
   retires only completed pitches when all input-stage guards pass. See
-  VALIDATION_OVERLAP_RETIREMENT.md for fresh/history pairs and pending-release
+  docs/validation/VALIDATION_OVERLAP_RETIREMENT.md for fresh/history pairs and pending-release
   overflow tests. Full rebuilt local suite: 16/16 PASS in 220.72 s. This
   supersedes the idle-only limitation below, not the
   remaining MONO/unknown-ROM/continuous-input/real-host acceptance work.
@@ -151,7 +151,7 @@ Subsequent audit findings reproduced and targeted fixes implemented:
   1.333 vs 1512 ms and fresh onset 50.667 vs 1561.333 ms at 48 kHz/64.
   Actual serial queue decoded: 0 vs 2048 Note Offs, 0 vs 4097 bytes. This is
   NOT a proof of identical firmware voice ownership. See
-  VALIDATION_RESET_HISTORY_PAIR.md for callback wall timings and limitations.
+  docs/validation/VALIDATION_RESET_HISTORY_PAIR.md for callback wall timings and limitations.
   P1 remains open: prove retirement during normal processing, then add
   queue-stage/sustain/repeat/overload counterexamples and a numeric latency
   acceptance target independent of the two-second fail-safe.

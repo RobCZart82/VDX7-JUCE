@@ -118,4 +118,4 @@ release, legato and subsequent notes, not just silencing output.
 
 Physical-hardware/independent-emulator confirmation, broader MONO/portamento/
 sustain cases and real DAW acceptance remain open. Q1 and the other separate
-stabilization items in AUDIT_TRIAGE_2026-09-23.md are not solved by this work.
+stabilization items in docs/archive/AUDIT_TRIAGE_2026-09-23.md are not solved by this work.

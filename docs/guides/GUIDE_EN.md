@@ -1,6 +1,6 @@
 # VDX7 Mk1. — detailed development guide
 
-[Back to overview](README.md) · [Magyar útmutató](GUIDE_HU.md)
+[Back to overview](../../README.md) · [Magyar útmutató](GUIDE_HU.md)
 
 This guide describes **1.0.0-dev**, not an accepted stable release.
 
@@ -88,7 +88,7 @@ Manual bank/ROM/SYX replacement warns about unexported edits. MIDI-driven bank c
 The owner approved the final 1.0 GUI appearance after local macOS REAPER VST3,
 Standalone and Retina visual checks. GUI size choices are 50%, 75%, 100%, 125%
 and 150%. This visual approval is not full cross-platform release acceptance.
-See the [screenshots](README.md) and [release checklist](ROADMAP_1.0.md).
+See the [screenshots](../../README.md) and [release checklist](../release/ROADMAP_1.0.md).
 
 ## 9. Known limitations
 
@@ -117,7 +117,7 @@ See the [screenshots](README.md) and [release checklist](ROADMAP_1.0.md).
 
 Public CI runs ROM-free regressions. A successful build is not firmware-runtime
 or complete DAW acceptance. Run the local ROM-backed suite and remaining host
-checks on the exact release candidate; see [release gates](ROADMAP_1.0.md).
+checks on the exact release candidate; see [release gates](../release/ROADMAP_1.0.md).
 
 Report issues at [GitHub Issues](https://github.com/RobCZart82/VDX7-JUCE/issues)
 with build/commit, OS, architecture, host version, sample rate/buffer, reproduction
@@ -174,11 +174,11 @@ The follow-up `vdx7_mono_trace_characterization` (`--mono-trace-only`) verifies
 the loaded image's relevant instructions, observes the actual failing branches,
 and tests subsequent notes **without** recovery. It documents retained output
 and rejected native allocation, rather than declaring them fixed. See
-[instruction trace and continuation](VALIDATION_MONO_INSTRUCTION_TRACE.md).
+[instruction trace and continuation](../validation/VALIDATION_MONO_INSTRUCTION_TRACE.md).
 `vdx7_mono_candidate_experiment` evaluates explicitly changed branch decisions
 in a separate raw-core test machine. It checks real Note 0 playback as well as
 lookup, cleanup and legato; **it is not linked into the plugin**. Its PASS cannot
-close production acceptance. See [experiment and remaining work](VALIDATION_MONO_CANDIDATE.md).
+close production acceptance. See [experiment and remaining work](../validation/VALIDATION_MONO_CANDIDATE.md).
 The experiment includes a pitch-oracle sensitivity control: unchanged Note 0
 passes; deliberate test-only Note 1 input while expecting Note 0 fails the same
 audio-frequency check. `--pitch-oracle-only` runs the pair;
@@ -190,26 +190,26 @@ selectable in SETTINGS and persisted with project state as an advanced compatibi
 option; Native firmware is the recommended default and routine users should
 normally leave it unchanged. Both modes accept only Note 12–120, so the option
 does not enable the excluded low octave. Raw-core tests continue to characterize
-native Note 0 separately. See [engine integration scope](VALIDATION_MONO_ENGINE_OPTIN.md)
-and [the product range policy](MIDI_RANGE_v0.7.0.md).
+native Note 0 separately. See [engine integration scope](../validation/VALIDATION_MONO_ENGINE_OPTIN.md)
+and [the product range policy](../design/MIDI_RANGE_v0.7.0.md).
 The separate `vdx7_deferred_partition` (`--deferred-partition-only`) regression
 checks real-processor note playback/release across small and oversized successful
 blocks, plus true-delay expiry under contention and reset. Its queue-only portion
-also executes in public ROM-free CI. See [Q1 validation](VALIDATION_DEFERRED_PARTITION.md).
+also executes in public ROM-free CI. See [Q1 validation](../validation/VALIDATION_DEFERRED_PARTITION.md).
 Native MONO compatibility choices remain a separate
-[design decision](DESIGN_MONO_NOTE_ZERO_POLICY.md), not a fix implied by green CI.
+[design decision](../design/DESIGN_MONO_NOTE_ZERO_POLICY.md), not a fix implied by green CI.
 The local `vdx7_portamento` (`vdx7_stress_tests <private-ROM> --portamento-only`)
 checks accepted time intent, immediate save during recovery, restore, physical
 CC5 precedence and actual native time/rate across six rate/block configurations.
-It requires the validated v1.8 firmware fixture; see `VALIDATION_PORTAMENTO_INTENT.md`.
+It requires the validated v1.8 firmware fixture; see `docs/validation/VALIDATION_PORTAMENTO_INTENT.md`.
 
 The ROM-free `vdx7_latest_display` and local stress runner's `--publication-only`
 cover stale PERFORMANCE/tuning publication versus newer UI edits, including
-same-value/ABA races. See [Q2 validation and limits](VALIDATION_PERFORMANCE_PUBLICATION.md).
+same-value/ABA races. See [Q2 validation and limits](../validation/VALIDATION_PERFORMANCE_PUBLICATION.md).
 
 ## 12. Licensing and release status
 
-This release uses [GNU AGPLv3](LICENSE.txt). The wrapper and original GUI resources are AGPL-3.0-only; the DX7 core retains GPL-3.0-or-later and its original notices. JUCE is used under AGPLv3. See [NOTICE.md](NOTICE.md) for the combined-work and third-party notices.
+This release uses [GNU AGPLv3](../../LICENSE.txt). The wrapper and original GUI resources are AGPL-3.0-only; the DX7 core retains GPL-3.0-or-later and its original notices. JUCE is used under AGPLv3. See [NOTICE.md](../../NOTICE.md) for the combined-work and third-party notices.
 
 The release provides complete corresponding source including pinned JUCE and dx7Lib, build scripts and license notices alongside the binary. This software comes without warranty. Firmware is excluded from the software license. Yamaha branding in descriptive text identifies compatibility, not endorsement; no Yamaha logo is included.
 

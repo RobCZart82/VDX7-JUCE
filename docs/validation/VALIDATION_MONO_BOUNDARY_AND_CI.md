@@ -6,7 +6,7 @@
 No production engine, firmware, parameter, GUI or installed-plugin change.
 Keep #47 Draft: this round does not close P1 or authorize release/merge.
 
-Subsequent evidence: VALIDATION_MONO_INSTRUCTION_TRACE.md records the actual
+Subsequent evidence: docs/validation/VALIDATION_MONO_INSTRUCTION_TRACE.md records the actual
 loaded-image branch execution and subsequent-note failures without recovery.
 The results below describe the earlier boundary/recovery round, not that later
 test's scope. The original failure still has no production fix.
@@ -112,5 +112,5 @@ on the observed thread and finite output, not every allocator.
 
 Next retained stabilization work: Q1 processor-level block-partition regression,
 then the deferred-timeline fix if reproduced; Q2 publication races and the other
-items in AUDIT_TRIAGE_2026-09-23.md remain tracked. GUI/Retina finishing, actual
+items in docs/archive/AUDIT_TRIAGE_2026-09-23.md remain tracked. GUI/Retina finishing, actual
 host acceptance and exact-source release-candidate checks still follow.

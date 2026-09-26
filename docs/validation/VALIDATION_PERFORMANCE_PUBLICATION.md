@@ -88,7 +88,7 @@ runners. It does not contain or execute the private ROM.
 
 ## Separate portamento observation and limits
 
-Follow-up: `VALIDATION_PORTAMENTO_INTENT.md` independently reproduces and fixes
+Follow-up: `docs/validation/VALIDATION_PORTAMENTO_INTENT.md` independently reproduces and fixes
 the time-display and immediate-save cases below. This section records what was
 still open at the Q2 checkpoint; Q2 alone did not fix it.
 

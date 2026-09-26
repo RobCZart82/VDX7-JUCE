@@ -9,7 +9,7 @@ on:
         type: string
 
 # Deliberately cannot publish, tag, or overwrite any existing release asset.
-# Final publication is a separate step after ROADMAP_1.0.md acceptance.
+# Final publication is a separate step after docs/release/ROADMAP_1.0.md acceptance.
 permissions:
   contents: read
 
@@ -55,8 +55,9 @@ jobs:
           name: VDX7-1.0.0-dev-${{ matrix.platform }}-${{ inputs.source_commit }}
           path: |
             build/VDX7_artefacts/Release/VST3/VDX7.vst3
-            ROADMAP_1.0.md
-            DEVELOPMENT_1.0_HU_EN.md
+            README.md
+            README_HU.md
+            docs
             LICENSE.txt
             LICENSES
             NOTICE.md

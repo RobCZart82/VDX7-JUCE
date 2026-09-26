@@ -12,7 +12,7 @@ Earlier full regression belongs to local
 `e43c9b8eb5d9dcddf560c0683efef8a4defec66a`, equivalent remote
 `c8d413c666ba7fcabd4a9e46435c06cb80e45ccd`, not automatically to a new
 production revision. Subsequent changes were documentation and the Python
-recording validator. See VALIDATION_CONSOLIDATED_2026-09-24.md for the
+recording validator. See docs/validation/VALIDATION_CONSOLIDATED_2026-09-24.md for the
 27/29 original run, separate desktop retry and retained native FAIL.
 
 ## Coverage review, not new bug reports
