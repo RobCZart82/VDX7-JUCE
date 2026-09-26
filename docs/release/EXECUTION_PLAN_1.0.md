@@ -183,10 +183,9 @@ evidence that the shipped instrument currently malfunctions.
   local macOS Release Standalone, VST3 and `vdx7_ci_checks` built; all 10
   ROM-free tests passed. This is a compile smoke only, not release or host
   acceptance.
-- [ ] Exercise supported compile targets: macOS Release Standalone, AU and VST3
-  compile locally; Windows CI now includes both VST3 and Standalone, but its
-  run and corresponding macOS Actions remain to be checked. Compilation is not
-  host acceptance.
+- [ ] Exercise supported compile targets: macOS CI now includes Release
+  Standalone, AU and VST3; Windows CI includes VST3 and Standalone. Both Actions
+  runs remain to be checked. Compilation is not host acceptance.
 - [ ] Exercise the corresponding-source/offline dependency path using the
   packaged `third_party/` sources with network disabled.
 - [ ] Add `pluginval`/VST3 validation as an optional RC gate; retain real REAPER
