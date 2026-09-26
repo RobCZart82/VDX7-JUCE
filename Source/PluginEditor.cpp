@@ -243,7 +243,7 @@ void VDX7Keyboard::paintOverChildren(juce::Graphics& g)
     // Continue the key-bed fade into the panel below, without shading the keys.
     const float unit = getHeight() / 138.0f;
     g.setGradientFill(juce::ColourGradient(juce::Colour(0xff0b0c0b), 0.0f, 132.0f * unit,
-                                          juce::Colour(0xff23221e), 0.0f, 144.0f * unit, false));
+                                          juce::Colour(0xff23221e), 0.0f, 138.0f * unit, false));
     g.fillRect(0.0f, 132.0f * unit, float(getWidth()), 6.0f * unit);
     // A stationary felt strip above the keys, including pressed/hovered notes.
     const float line = juce::jmax(1.0f, getHeight() / 138.0f);
@@ -1185,7 +1185,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
                                           juce::Colour(0xff111210), keyWell.getX(), keyWell.getBottom(), false));
     g.fillRect(keyWell);
     g.setGradientFill(juce::ColourGradient(juce::Colour(0xff0b0c0b), 0.0f, 1002.0f * scaleY,
-                                          juce::Colour(0xff23221e), 0.0f, 1014.0f * scaleY, false));
+                                          juce::Colour(0xff23221e), 0.0f, 1008.0f * scaleY, false));
     g.fillRect(referenceRect(210, 1002, 1184, 12));
 
     // Raised metallic lip above the existing keyboard/wheel bay.
