@@ -97,16 +97,23 @@ int main(int argc, char** argv)
         int saveAsButtons = 0;
         bool algorithmDisabled = false;
         bool hasCornerResizer = false;
+        juce::TextButton* editTab = nullptr;
+        juce::TextButton* performanceTab = nullptr;
+        VDX7PerformancePanel* performancePanel = nullptr;
         for (auto* child : editor->getChildren())
         {
             if (auto* button = dynamic_cast<juce::TextButton*>(child))
             {
+                if (button->getButtonText() == "EDIT") editTab = button;
+                if (button->getButtonText() == "PERFORMANCE") performanceTab = button;
                 if (button->getButtonText() == "SAVE AS...")
                 {
                     ++saveAsButtons;
                     require(!button->isEnabled(), "Save As is disabled without firmware");
                 }
             }
+            if (child->getName() == "Performance controllers")
+                performancePanel = dynamic_cast<VDX7PerformancePanel*>(child);
             if (auto* box = dynamic_cast<juce::ComboBox*>(child))
                 if (box->getName() == "Algorithm")
                 {
@@ -118,6 +125,35 @@ int main(int argc, char** argv)
         require(saveAsButtons == 1, "one Save As control is present without firmware");
         require(algorithmDisabled, "algorithm selector is present without firmware");
         require(!hasCornerResizer, "bottom-right drag resizer is absent");
+        require(editTab && performanceTab && performancePanel,
+                "EDIT, PERFORMANCE and its panel are present");
+        require(editTab->getToggleState() && !performanceTab->getToggleState()
+                && !performancePanel->isVisible(), "editor opens in EDIT mode");
+
+        constexpr std::array<const char*, 6> performanceComboNames
+        {{
+            "Play mode", "Portamento mode", "Glissando", "Portamento time",
+            "Pitch bend range", "Pitch bend step"
+        }};
+        std::array<int, performanceComboNames.size()> performanceCombos {};
+        int controllerRanges = 0;
+        int controllerAssignments = 0;
+        for (auto* child : performancePanel->getChildren())
+        {
+            if (auto* combo = dynamic_cast<juce::ComboBox*>(child))
+                for (std::size_t i = 0; i < performanceComboNames.size(); ++i)
+                    if (combo->getName() == performanceComboNames[i]) ++performanceCombos[i];
+            if (auto* slider = dynamic_cast<juce::Slider*>(child))
+                if (slider->getName().startsWith("Controller ")
+                    && slider->getName().endsWith(" range")) ++controllerRanges;
+            if (auto* button = dynamic_cast<juce::ToggleButton*>(child))
+                if (button->getName().startsWith("Controller ")
+                    && button->getName().contains(" assignment ")) ++controllerAssignments;
+        }
+        for (const auto count : performanceCombos)
+            require(count == 1, "each named PERFORMANCE selector exists exactly once");
+        require(controllerRanges == 4, "all four PERFORMANCE controller range controls exist");
+        require(controllerAssignments == 12, "all twelve PERFORMANCE assignment switches exist");
 
         const juce::Colour accent(0xff71685b);
         constexpr std::array<float, 3> decorationY { 22.0f, 34.0f, 46.0f };
@@ -166,8 +202,26 @@ int main(int argc, char** argv)
                 require(stream.openedOk() && juce::PNGImageFormat().writeImageToStream(image, stream),
                         "write optional GUI preview");
             }
+
+            require(performanceTab->isEnabled() && performanceTab->isVisible(),
+                    "PERFORMANCE tab is available in EDIT view");
+            performanceTab->onClick();
+            require(performanceTab->getToggleState(), "PERFORMANCE tab becomes active");
+            require(!editTab->getToggleState(), "EDIT tab deactivates in PERFORMANCE view");
+            require(performancePanel->isVisible(), "PERFORMANCE tab shows its panel");
+            for (auto* child : editor->getChildren())
+                require(editor->getLocalBounds().contains(child->getBounds()),
+                        "PERFORMANCE view remains inside each fixed preset size");
+            for (auto* child : performancePanel->getChildren())
+                require(performancePanel->getLocalBounds().contains(child->getBounds()),
+                        "PERFORMANCE controls remain inside their section");
+            const auto performanceImage = editor->createComponentSnapshot(editor->getLocalBounds());
+            require(performanceImage.isValid(), "PERFORMANCE view renders at every supported size");
+            editTab->onClick();
+            require(editTab->getToggleState() && !performanceTab->getToggleState()
+                    && !performancePanel->isVisible(), "EDIT tab restores the editor view");
         }
-        std::cout << "PASS: fixed 50/75/100/125/150% GUI sizes render within bounds\n";
+        std::cout << "PASS: EDIT and PERFORMANCE views render within bounds at all five fixed GUI sizes\n";
         return 0;
     }
     catch (const std::exception& error)

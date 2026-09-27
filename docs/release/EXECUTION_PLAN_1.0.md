@@ -159,9 +159,11 @@ completed GUI work.
   PERFORMANCE, Settings/About, tooltips, keyboard/footer and host window
   tracking. Include Windows/HiDPI. Preserve the approved appearance.
   The editor now disables arbitrary host/window resizing, and the GUI regression
-  verifies no corner dragger plus in-bounds child layouts and header snapshots at
-  all five fixed dimensions. The Settings-menu interaction itself, broader
-  element/overlap checks, and Windows/HiDPI execution remain open.
+  verifies no corner dragger plus in-bounds EDIT and PERFORMANCE views at all
+  five fixed dimensions. It also checks all six named PERFORMANCE selectors,
+  four controller ranges, twelve assignment switches, and panel-child bounds.
+  The Settings/About interactions, broader EDIT element/overlap checks, and
+  Windows/HiDPI execution remain open.
 - [ ] F11 — unused runtime image loads confirmed; performance magnitude NOT
   MEASURED. Measure 0/1/4/8 editors (RSS and creation time), remove only proven
   unused loads/resources, compare screenshots and behavior before/after.
