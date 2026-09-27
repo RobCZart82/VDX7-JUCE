@@ -139,6 +139,14 @@ int main(int argc, char** argv)
             require(image.isValid(), "header snapshot at supported scale");
             const float scaleX = float(width) / 1440.0f;
             const float scaleY = float(height) / 1110.0f;
+            const int removedSeparatorX = juce::roundToInt(594.0f * scaleX);
+            const int removedSeparatorY = juce::roundToInt(450.0f * scaleY);
+            require(image.getPixelAt(removedSeparatorX, removedSeparatorY).getARGB() != accent.getARGB(),
+                    "unneeded separator beside the global curve display is absent");
+            const int operatorSeparatorX = juce::roundToInt(692.0f * scaleX);
+            const int operatorSeparatorY = juce::roundToInt(600.0f * scaleY);
+            require(image.getPixelAt(operatorSeparatorX, operatorSeparatorY).getARGB() == accent.getARGB(),
+                    "operator controls and envelope sliders have a section separator");
             // The top accent now has an intentional gap for the centre screw.
             const int headerX = juce::roundToInt(100.0f * scaleX);
             const int dividerX = juce::roundToInt(100.0f * scaleX);
