@@ -1,7 +1,7 @@
 # 1.0 consolidated execution plan — current status 2026-09-27
 
-Current main: `bca29c5e3122d7bbc918e39691bf209ff0e1dd09` (PR #81 merged atop
-PR #80). This plan combines the original 1.0 host/audio/release gates with the
+Current main: `94081f925b0dbc4393a51f2733935cc2c1e343a6` (PR #83 merged after
+PR #81). This plan combines the original 1.0 host/audio/release gates with the
 useful findings F1–F19 and the test-system review. Planning is not release
 authorization. Older roadmap narratives and validation notes remain historical
 records unless explicitly updated here; they are not instructions to reopen
@@ -106,6 +106,8 @@ completed GUI work.
   state or a reachable deadlock; any fix must preserve the real-time boundary.
   Sources: [JUCE APVTS](https://docs.juce.com/master/classjuce_1_1AudioProcessorValueTreeState.html)
   and [Steinberg VST3 processing FAQ](https://steinbergmedia.github.io/vst3_dev_portal/pages/FAQ/Processing.html).
+  The clarified disposition is merged in PR #83 (`94081f9`); Windows and macOS
+  Actions both passed on that source.
 - [x] F10 — REPRODUCED and fixed: Settings Apply partially committed tuning
   before a pending-restore MONO failure. `applySettingsFromUi` now
   validates first and performs the fallible MONO operation before committing
@@ -174,8 +176,13 @@ completed GUI work.
   four controller ranges, twelve assignment switches, and panel-child bounds.
   A shared preset table now drives the Settings menu and has ROM-free tests for
   all five sizes and nearest-width selection. The About vector assets, child
-  bounds and snapshot are also covered. Actual Settings dialog interaction,
-  broader EDIT element/overlap checks, and Windows/HiDPI execution remain open.
+  bounds and snapshot are also covered; the regression verifies the VDX7, GYR
+  and signature vectors. Actual Settings dialog interaction, broader EDIT
+  element/overlap checks, and Windows/HiDPI execution remain open. A local
+  attempt to open the modal Settings window from the headless component test
+  was unstable, so it is not counted as coverage or product evidence. The
+  existing non-modal component/snapshot tests remain green.
+  After PR #83, all ten ROM-free tests passed locally on `94081f9`.
 - [ ] F11 — unused runtime image loads confirmed; performance magnitude NOT
   MEASURED. Measure 0/1/4/8 editors (RSS and creation time), remove only proven
   unused loads/resources, compare screenshots and behavior before/after.
@@ -183,8 +190,9 @@ completed GUI work.
 - [ ] F13 — reconcile historical raster manifest with vector-first production
   geometry (1440×1110 reference canvas); distinguish reference assets from
   runtime assets and do not promise a nonexistent full 2× pack.
-- [ ] F14 — include developer signature in required About vector validation
-  and render checks alongside VDX7 and GYR artwork.
+- [x] F14 — the About regression requires all three vectors (VDX7, GYR and
+  developer signature) and captures a rendered panel snapshot. The test passed
+  in the GUI regression and merged cross-platform CI.
 - [x] F18 — compile/link CI covers Standalone on Windows/macOS and AU on macOS.
   PR #79's macOS and Windows workflows passed; do not imply host acceptance
   from compilation.
@@ -303,10 +311,12 @@ CHARACTERIZATION, NOT RUN, FIXED and PASS accurately. PASS requires execution;
 source inspection, prior runs and owner reports retain their specific scope.
 
 Next concrete order (2026-09-27):
-1. Finish PR #83's review and required Actions checks; it only clarifies the
-   source-derived F8/F9 disposition and does not change product code.
+1. PR #83 is merged and its Windows/macOS Actions passed; no further action is
+   needed for that source-only clarification.
 2. Close the remaining F12 Windows/HiDPI and interactive Settings/About GUI
-   coverage gaps without changing the approved appearance.
+   coverage gaps without changing the approved appearance. Do not force a
+   modal UI check into a harness that cannot safely host it; use a suitable
+   desktop test or record explicit owner verification.
 3. Freeze an exact release-candidate SHA, then run the still-open host-dependent
    gates on that artifact: offline render comparison (F7), envelope/release and
    dense MIDI/contention characterization (F15/F16), and the missing REAPER
