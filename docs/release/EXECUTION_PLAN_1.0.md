@@ -1,18 +1,18 @@
-# 1.0 consolidated execution plan — 2026-09-26
+# 1.0 consolidated execution plan — current status 2026-09-27
 
-Baseline: main `29ab5e350019e32f64650b068afcc7709b409607` (#77, including #76).
-The supplied test-system audit
-records 10/10 ROM-free CTest tests on Windows and macOS for its earlier baseline.
-This plan combines the original 1.0 host/audio/release gates with the useful
-findings F1–F19 and the 2026-09-26 test-system review. Planning is not new
-runtime evidence or release authorization. Older roadmap narratives remain
-historical records, not instructions to reopen completed GUI work.
+Current main: `d696e56b8b69521f8b3ba879f8325c044b410b70` (PR #79 merged atop
+PR #78). This plan combines the original 1.0 host/audio/release gates with the
+useful findings F1–F19 and the test-system review. Planning is not release
+authorization. Older roadmap narratives and validation notes remain historical
+records unless explicitly updated here; they are not instructions to reopen
+completed GUI work.
 
 ## Closed implementation and owner-approved scope
 
-- GUI appearance is final: PRs #68/#69, including the recessed keyboard and
-  short lower fade. Owner-reported REAPER VST3, Standalone and Retina visual
-  checks are retained; Windows/Intel/complete host acceptance is separate.
+- GUI appearance is final: PRs #68/#69 and the final logo/separator polish in
+  #79 are merged. The owner approved and tested the #79 GUI, and its macOS and
+  Windows Actions passed. This does not close remaining release host/platform
+  acceptance.
 - Repository presentation and the three owner-supplied screenshots are merged
   in #70. English/Hungarian overviews and detailed guides exist; final package
   instructions and release notes still need candidate-specific review.
@@ -58,9 +58,8 @@ historical records, not instructions to reopen completed GUI work.
 
 ## 2. ROM and project-state integrity
 
-- [ ] F5 — REPRODUCED on baseline `29ab5e3`; fix and focused local-ROM tests
-  are implemented on the current branch, public CI passed (details below), and
-  the changes are not yet merged. New state
+- [x] F5 — REPRODUCED on baseline `29ab5e3`; fix and focused local-ROM tests
+  are merged in PR #78 (`23e1503`). New state
   records SHA-256 of firmware plus the effective factory voice image (or an
   explicit no-factory marker), independent of path. Mismatches keep project RAM
   pending; matching content at a new path resumes restore. Legacy states with
@@ -69,9 +68,8 @@ historical records, not instructions to reopen completed GUI work.
   ROM-backed regression. See
   `docs/validation/VALIDATION_1.0_ROM_CONTENT_IDENTITY.md`. Keep this distinct
   from the already-fixed save-generation/path pairing race.
-- [ ] F6 — REPRODUCED on baseline `29ab5e3`; targeted fix and ROM-backed
-  regression are implemented on the current branch, public CI passed (details
-  below), and the changes are not yet merged. A voice edit
+- [x] F6 — REPRODUCED on baseline `29ab5e3`; targeted fix and ROM-backed
+  regression are merged in PR #78 (`23e1503`). A voice edit
   in a fresh no-ROM instance was discarded on first ROM load. The chosen
   behavior preserves explicit edits over the newly loaded initial voice; a
   pending saved project's packed RAM remains authoritative. See
@@ -87,9 +85,9 @@ historical records, not instructions to reopen completed GUI work.
   Actions does not run the firmware-dependent regressions without the private
   fixture. After the prepare-time epoch fix, Windows run `36269491224` and
   macOS run `36269491357` also PASS on `fed4721` (2026-09-26), with builds,
-  ROM-free regressions, registration smoke, and packaging. Exact-candidate
-  ROM-backed verification is complete for F5/F6 on the current source tip;
-  independent PR review and merge remain pending.
+  ROM-free regressions, registration smoke, and packaging. The full local ROM
+  suite was rerun on merged main `d696e56`; see
+  `docs/validation/VALIDATION_1.0_MAIN_D696E56_ROM_SUITE.md`.
   See both F5/F6 validation notes for scope and fixture boundaries.
 - [ ] F8/F9 — SOURCE-DERIVED CANDIDATES: establish supported concurrent/reentrant
   state-call contract, then barrier-test whole restore and engine/APVTS lock
@@ -98,15 +96,15 @@ historical records, not instructions to reopen completed GUI work.
   confirms host parameter callbacks occur after releasing `engineMutex_`, and
   the existing reentrant-save regression passes; a whole-restore barrier test
   and supported host-call concurrency contract remain outstanding.
-- [ ] F10 — REPRODUCED: the former Settings Apply order partially committed
-  tuning before a pending-restore MONO failure. `applySettingsFromUi` now
+- [x] F10 — REPRODUCED and fixed: Settings Apply partially committed tuning
+  before a pending-restore MONO failure. `applySettingsFromUi` now
   validates first and performs the fallible MONO operation before committing
   tuning/channel; a v1.8 ROM-backed regression reproduces the former behavior
   and verifies the corrected all-or-none failure result. `vdx7_ci_checks` and
   35/35 ROM-backed/ROM-free CTest cases pass locally (the desktop-dependent
-  SAVE AS integration test is excluded). Windows run `36271282618` and macOS
-  run `36271284143` also PASS on `c108b28`; independent review and merge remain
-  pending. Details: `docs/validation/VALIDATION_1.0_SETTINGS_APPLY.md`.
+  SAVE AS integration test is excluded). The fix is merged in PR #78 and was
+  included in the full local suite on main `d696e56`. Details:
+  `docs/validation/VALIDATION_1.0_SETTINGS_APPLY.md`.
 
 ## 3. Original audio and DAW acceptance — still required
 
@@ -121,18 +119,17 @@ historical records, not instructions to reopen completed GUI work.
 - [ ] F16 — CHARACTERIZATION: dense CC/pitch/automation, sustain and Note Off,
   large blocks and contention, then fresh Note On/Off recovery. Keep bounded
   256-event/65536-byte policy; larger capacity alone is not an architectural fix.
-- [ ] Full exact-SHA local ROM suite: lifecycle/reset/reactivation, MIDI range,
+- [x] Full merged-main local ROM suite: lifecycle/reset/reactivation, MIDI range,
   timing/stability/stress, ownership/history/overlap retirement, reset overflow,
   deferred partition, portamento, wheel delivery, direct reload, state-ROM
-  identity and corrected MONO. Record SHA, OS/compiler, command, rates and result.
-  ROM stays local; public ROM-free CI is not firmware-runtime PASS. On
-  2026-09-26, 35/35 ROM-backed/ROM-free tests passed after rebuilding all
-  `vdx7_ci_checks` binaries; the single `vdx7_processor` test is excluded from
-  the pass count because its SAVE AS dialog requires desktop/display access.
-  The full run exposed an initial-UI-note epoch bug in `prepareToPlay`; it is
-  fixed and `vdx7_stress` now passes. Cross-platform CI after that source fix
-  passed on `fed4721` (runs `36269491224` and `36269491357`). The desktop-
-  dependent `vdx7_processor` test remains outstanding for a GUI-capable host.
+  identity and corrected MONO. On main `d696e56`, 35/35 CTest cases passed on
+  macOS 26.7 with Apple clang 21.0.0 and CMake 4.4.3 using the owner-supplied
+  v1.8 fixture locally. The desktop-dependent `vdx7_processor` SAVE AS test
+  was attempted separately but stopped at its primary-display precondition in
+  the command runner; the dialog checks remain NOT RUN. Full command and result:
+  `docs/validation/VALIDATION_1.0_MAIN_D696E56_ROM_SUITE.md`. ROM stays local;
+  public ROM-free CI is not firmware-runtime PASS. Repeat exact candidate
+  testing if source changes after this main SHA.
 - [x] Owner-reported REAPER PASS (2026-09-26): Native and Correct MONO note
   boundaries (11/12 and 120/121), Note Off, sustain and repeated-note behavior,
   automation and project reopen, transport, bypass, device restarts, physical
@@ -174,8 +171,9 @@ historical records, not instructions to reopen completed GUI work.
   runtime assets and do not promise a nonexistent full 2× pack.
 - [ ] F14 — include developer signature in required About vector validation
   and render checks alongside VDX7 and GYR artwork.
-- [ ] F18 — add compile/link CI for Standalone on Windows/macOS and AU on macOS
-  if retained as supported targets; do not imply host acceptance from compilation.
+- [x] F18 — compile/link CI covers Standalone on Windows/macOS and AU on macOS.
+  PR #79's macOS and Windows workflows passed; do not imply host acceptance
+  from compilation.
 - [ ] F19 — optional ROM-free ASan/UBSan job for voice/SysEx/USER, deferred MIDI,
   latest display, bounded files, algorithms and status helper.
 
@@ -225,9 +223,10 @@ evidence that the shipped instrument currently malfunctions.
   local macOS Release Standalone, VST3 and `vdx7_ci_checks` built; all 10
   ROM-free tests passed. This is a compile smoke only, not release or host
   acceptance.
-- [ ] Exercise supported compile targets: macOS CI now includes Release
+- [x] Exercise supported compile targets: macOS CI includes Release
   Standalone, AU and VST3; Windows CI includes VST3 and Standalone. Both Actions
-  runs remain to be checked. Compilation is not host acceptance.
+  passed on PR #79's exact source tree (runs `36303586325` and `36303586277`).
+  Compilation is not host acceptance.
 - [x] Exercise the corresponding-source/offline dependency path: a clean source
   snapshot with `third_party/JUCE` and `third_party/dx7Lib` populated from the
   documented pinned revisions configured with

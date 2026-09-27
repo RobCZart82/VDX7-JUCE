@@ -5,12 +5,15 @@ not final releases. Do not publish or replace existing release assets until
 the acceptance checklist is complete. Keep plugin IDs and existing parameter
 indices compatible with saved projects.
 
-## Current execution authority — 2026-09-26
+## Current execution authority — 2026-09-27
 
 Use [the consolidated 1.0 execution plan](EXECUTION_PLAN_1.0.md) for current
 priority, closed GUI scope, audit F1–F19 disposition, and test-system follow-up
-against main `af763f1` (#75 merged atop #74). It preserves the original release gates
-and local unmerged validation work.
+against main `d696e56` (#79 GUI polish merged atop #78). The approved GUI is
+closed, and the full local ROM-enabled CTest set passes 35/35 on that source
+tree; the desktop-dependent `vdx7_processor` SAVE AS case remains not run. See
+`docs/validation/VALIDATION_1.0_MAIN_D696E56_ROM_SUITE.md` for exact evidence.
+The execution plan preserves the remaining original release gates.
 Older dated sections below are historical evidence; their stale GUI checkboxes
 or "next chapter" wording must not reopen the approved design. The RC checklist
 remains the final release gate, not a publication authorization.
