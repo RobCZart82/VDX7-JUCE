@@ -1331,6 +1331,106 @@ static void testStateRomIdentityInterleaving(const juce::File& rom)
     std::cout << "PASS: state RAM and ROM path remain from one engine generation across concurrent reload\n";
 }
 
+static void testPendingStateWithDifferentLoadedRom(const juce::File& rom)
+{
+    const auto tempFolder = juce::File::getSpecialLocation(juce::File::tempDirectory)
+        .getNonexistentChildFile("vdx7-pending-rom-identity-", "", false);
+    require(tempFolder.createDirectory(), "create isolated pending ROM identity directory");
+    struct RemoveDirectory
+    {
+        juce::File directory;
+        ~RemoveDirectory() { directory.deleteRecursively(); }
+    } cleanup { tempFolder };
+
+    const auto savedRomFile = tempFolder.getChildFile("saved-rom.bin");
+    require(rom.copyFileTo(savedRomFile), "copy source ROM into isolated identity fixture");
+    const auto differentRom = tempFolder.getChildFile("different-factory-bank.bin");
+    juce::MemoryBlock differentImage;
+    require(rom.loadFileAsData(differentImage), "read source ROM for identity fixture");
+    require(differentImage.getSize() == VDX7Engine::kCombinedRomSize,
+            "identity fixture requires a combined firmware and factory-bank ROM");
+    auto* changedBytes = static_cast<uint8_t*>(differentImage.getData());
+    changedBytes[VDX7Engine::kFirmwareSize + 118] ^= 1; // First factory voice name byte.
+    require(differentRom.replaceWithData(differentImage.getData(), differentImage.getSize()),
+            "write different factory-bank identity fixture");
+
+    auto source = std::make_unique<VDX7AudioProcessor>(false);
+    require(source->loadRomFromFile(savedRomFile), "load source ROM");
+    source->selectProgramFromUi(7);
+    juce::MemoryBlock saved;
+    source->getStateInformation(saved);
+    auto savedXml = juce::AudioProcessor::getXmlFromBinary(saved.getData(), int(saved.getSize()));
+    require(savedXml != nullptr, "decode source project state");
+    auto savedTree = juce::ValueTree::fromXml(*savedXml);
+    require(savedTree.isValid(), "parse source project state");
+    const auto missingPath = tempFolder.getChildFile("removed-original-rom.bin");
+
+    // The saved path still exists, but now points at a different factory bank.
+    // A fresh instance must load that image without applying the saved RAM.
+    require(savedRomFile.replaceWithData(differentImage.getData(), differentImage.getSize()),
+            "replace saved path with a different ROM image");
+    juce::MemoryBlock changedPathState;
+    juce::AudioProcessor::copyXmlToBinary(*savedTree.createXml(), changedPathState);
+    auto changedPathStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& changedPath = *changedPathStorage;
+    changedPath.setStateInformation(changedPathState.getData(), int(changedPathState.getSize()));
+    require(VDX7RegressionAccess::engine(changedPath).currentProgram() == 0,
+            "changed contents at the saved path must not receive the saved program");
+    require(changedPath.getStatusText().containsIgnoreCase("differs"),
+            "changed ROM contents should explain why saved state remains pending");
+    require(changedPath.loadRomFromFile(rom), "load identical ROM contents from a new path");
+    require(VDX7RegressionAccess::engine(changedPath).currentProgram() == 7,
+            "identical ROM contents at another path should restore pending project state");
+
+    savedTree.setProperty("romPath", missingPath.getFullPathName(), nullptr);
+    juce::MemoryBlock missingRomState;
+    juce::AudioProcessor::copyXmlToBinary(*savedTree.createXml(), missingRomState);
+
+    auto waitingStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& waiting = *waitingStorage;
+    require(waiting.loadRomFromFile(differentRom), "load a different but valid ROM before project restore");
+    waiting.setStateInformation(missingRomState.getData(), int(missingRomState.getSize()));
+    require(VDX7RegressionAccess::engine(waiting).currentProgram() == 0,
+            "missing saved path must not apply project state to a different loaded ROM");
+    juce::MemoryBlock afterRestore;
+    waiting.getStateInformation(afterRestore);
+    auto afterXml = juce::AudioProcessor::getXmlFromBinary(afterRestore.getData(), int(afterRestore.getSize()));
+    require(afterXml != nullptr, "decode state after alternate ROM restore attempt");
+    auto afterTree = juce::ValueTree::fromXml(*afterXml);
+    require(afterTree.getProperty("ram").toString() == savedTree.getProperty("ram").toString(),
+            "project state should remain pending when its ROM is unavailable");
+    require(afterTree.getProperty("program") == savedTree.getProperty("program"),
+            "saved program should remain pending when a different ROM is loaded");
+    require(afterTree.getProperty("romPath").toString() == missingPath.getFullPathName(),
+            "saved ROM identity should remain pending when a different ROM is loaded");
+    require(waiting.getStatusText().containsIgnoreCase("ROM"),
+            "alternate ROM restore attempt should explain the compatibility wait");
+    require(waiting.loadRomFromFile(rom), "matching ROM later resumes pending project restore");
+    require(VDX7RegressionAccess::engine(waiting).currentProgram() == 7,
+            "matching ROM later must restore the preserved program");
+
+    // Pre-identity projects must keep the older path-based rule: a missing
+    // saved path cannot restore into an unrelated ROM that was already loaded.
+    auto legacyTree = savedTree.createCopy();
+    legacyTree.removeProperty("romIdentity", nullptr);
+    legacyTree.setProperty("romPath", missingPath.getFullPathName(), nullptr);
+    juce::MemoryBlock legacyState;
+    juce::AudioProcessor::copyXmlToBinary(*legacyTree.createXml(), legacyState);
+    auto legacyStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& legacy = *legacyStorage;
+    require(legacy.loadRomFromFile(differentRom), "preload alternate ROM for legacy state");
+    legacy.setStateInformation(legacyState.getData(), int(legacyState.getSize()));
+    require(VDX7RegressionAccess::engine(legacy).currentProgram() == 0,
+            "legacy state with a missing saved path must not restore into another loaded ROM");
+    require(legacy.getStatusText().containsIgnoreCase("differs"),
+            "legacy ROM path mismatch should be reported");
+    require(rom.copyFileTo(missingPath), "restore matching ROM at the legacy saved path");
+    require(legacy.loadRomFromFile(missingPath), "load matching legacy ROM path later");
+    require(VDX7RegressionAccess::engine(legacy).currentProgram() == 7,
+            "legacy state should resume when its original path becomes available");
+    std::cout << "PASS: missing saved ROM does not apply its project state to another loaded ROM\n";
+}
+
 // Independent of VDX7Engine/processor MIDI, reset, retirement and resampling.
 // Only the pinned unmodified dx7Lib core executes the user's original firmware.
 class BareFirmware
@@ -2737,6 +2837,7 @@ int main(int argc, char** argv)
         const bool supportedNoteRangeOnly = argc == 3 && juce::String(argv[2]) == "--supported-note-range-only";
         const bool directRomReloadBoundaryOnly = argc == 3 && juce::String(argv[2]) == "--direct-rom-reload-only";
         const bool stateRomIdentityOnly = argc == 3 && juce::String(argv[2]) == "--state-rom-identity-only";
+        const bool pendingRomIdentityOnly = argc == 3 && juce::String(argv[2]) == "--pending-rom-identity-only";
         const bool monoCorrectedOnly = argc == 3 && juce::String(argv[2]) == "--mono-corrected-processor-only";
         if (argc == 3 && juce::String(argv[2]) == "--mono-soak-only")
         { testCorrectedSoak(juce::File(argv[1])); return 0; }
@@ -2745,7 +2846,7 @@ int main(int argc, char** argv)
         const bool profileCheckOnly = argc == 3 && juce::String(argv[2]) == "--profile-check-only";
         const bool deferredPartitionOnly = argc == 3 && juce::String(argv[2]) == "--deferred-partition-only";
         const bool wheelDeliveryOnly = argc == 3 && juce::String(argv[2]) == "--wheel-delivery-only";
-        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !supportedNoteRangeOnly && !directRomReloadBoundaryOnly && !stateRomIdentityOnly && !monoCorrectedOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly && !deferredPartitionOnly && !wheelDeliveryOnly) || !juce::File(argv[1]).existsAsFile())
+        if ((argc != 2 && !reactivationOnly && !historyPairOnly && !ownershipOnly && !retirementOnly && !overlapOnly && !gateOverflowOnly && !expandedLifecycleOnly && !supportedNoteRangeOnly && !directRomReloadBoundaryOnly && !stateRomIdentityOnly && !pendingRomIdentityOnly && !monoCorrectedOnly && !monoBoundaryOnly && !monoTraceOnly && !profileCheckOnly && !deferredPartitionOnly && !wheelDeliveryOnly) || !juce::File(argv[1]).existsAsFile())
             throw std::runtime_error("Supply an explicit compatible local ROM path");
         juce::MemoryBlock image;
         require(juce::File(argv[1]).loadFileAsData(image), "read explicit local ROM fixture");
@@ -2807,6 +2908,11 @@ int main(int argc, char** argv)
         if (stateRomIdentityOnly)
         {
             testStateRomIdentityInterleaving(juce::File(argv[1]));
+            return 0;
+        }
+        if (pendingRomIdentityOnly)
+        {
+            testPendingStateWithDifferentLoadedRom(juce::File(argv[1]));
             return 0;
         }
         if (expandedLifecycleOnly)

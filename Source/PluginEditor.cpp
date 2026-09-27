@@ -405,10 +405,9 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
 {
     setLookAndFeel(&lookAndFeel_);
     setOpaque(true);
-    setResizable(true, true);
-    setResizeLimits(600, 463, 1800, 1388);
-    if (auto* constrainer = getConstrainer())
-        constrainer->setFixedAspectRatio(kReferenceWidth / kReferenceHeight);
+    // Window size is selected only from the fixed presets in Settings.
+    // Keep both the host resize flag and JUCE's corner dragger disabled.
+    setResizable(false, false);
     setSize(1200, 925);
 
     configureLabel(status_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xffcec9bd));
@@ -1700,15 +1699,19 @@ void VDX7AudioProcessorEditor::showSettings()
                 || safe->processor_.getMidiInputChannel() != initialChannel
                 || safe->processor_.getMonoCorrectionStatus().requested != initialCorrection.requested)
             { safe->showError("Settings changed", "Settings changed while this dialog was open. Reopen SETTINGS."); return; }
-            if (text.getIntValue() != initial && !safe->processor_.setMasterTuneFromUi(text.getIntValue()))
+            const auto applied = safe->processor_.applySettingsFromUi(
+                text.getIntValue(),
+                dialog->getComboBoxComponent("channel")->getSelectedItemIndex(),
+                dialog->getComboBoxComponent("monoCorrection")->getSelectedItemIndex() == 1);
+            if (applied == VDX7AudioProcessor::SettingsApplyResult::tuningUnavailable)
             { safe->showError("Tuning unavailable", "Load compatible firmware before applying settings."); return; }
-            safe->processor_.setMidiInputChannelFromUi(dialog->getComboBoxComponent("channel")->getSelectedItemIndex());
-            if (!safe->processor_.setMonoCorrectionFromUi(
-                    dialog->getComboBoxComponent("monoCorrection")->getSelectedItemIndex() == 1))
+            if (applied == VDX7AudioProcessor::SettingsApplyResult::monoCorrectionUnavailable)
             {
                 safe->showError("Correction unavailable", "A project restore may be in progress. Reopen SETTINGS.");
                 return;
             }
+            if (applied != VDX7AudioProcessor::SettingsApplyResult::applied)
+            { safe->showError("Invalid settings", "One or more settings are outside the supported range."); return; }
             constexpr std::array<int, 5> scaleWidths { 600, 900, 1200, 1500, 1800 };
             constexpr std::array<int, 5> scaleHeights { 463, 694, 925, 1156, 1388 };
             const int scaleIndex = juce::jlimit(0, 4,

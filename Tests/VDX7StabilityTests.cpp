@@ -158,10 +158,16 @@ struct VDX7RegressionAccess
 
             // The built-in keyboard has a separate collection path; exercise
             // its lower out-of-range event while the engine lock is contended.
+            const int queuedBeforeKeyboard = p.engine_.dx7_.midiSerialRx.writeIdx;
             p.keyboardState_.noteOn(1, 0, 1.0f);
             midi.clear();
             VDX7RegressionAccess::contend(p, midi);
-            require(!p.deferredMidi_.active() && !p.engine_.hasHeldMidiNotes(),
+            // Contention advances the delayed timeline even when the event is
+            // filtered. Let that event-free time drain before checking queue
+            // inactivity; active() also reports timeline lag, not just events.
+            p.processBlock(audio, midi);
+            require(!p.deferredMidi_.active() && !p.engine_.hasHeldMidiNotes()
+                    && p.engine_.dx7_.midiSerialRx.writeIdx == queuedBeforeKeyboard,
                     "unsupported GUI key must not enter deferred MIDI or reach firmware");
             p.keyboardState_.noteOff(1, 0, 0.0f);
             midi.clear();
@@ -197,6 +203,11 @@ struct VDX7RegressionAccess
                 midi.addEvent(juce::MidiMessage::noteOff(1, i % 12), 1);
             }
             VDX7RegressionAccess::contend(p, midi);
+            // As above, active() includes paused sample-time accumulated by
+            // contention. Drain that empty timeline before asserting that the
+            // unsupported messages did not occupy event slots or trigger panic.
+            midi.clear();
+            p.processBlock(audio, midi);
             require(!p.deferredMidi_.active() && !p.engine_.isMidiRecovering(),
                     "filtered pitch events do not fill delayed MIDI or trigger panic");
 
@@ -211,6 +222,7 @@ struct VDX7RegressionAccess
             p.processBlock(audio, midi);
             require(!p.engine_.hasHeldMidiNotes(), "supported boundary notes release cleanly");
         }
+        require(p.setMonoCorrectionFromUi(false), "restore native mode after range acceptance");
         require(!p.getMonoCorrectionStatus().requested, "native mode restored after range acceptance");
     }
     static void checkFactoryCc32DeferredCapacity(VDX7AudioProcessor& p, bool hasFactoryVoices)
@@ -475,6 +487,58 @@ static juce::MemoryBlock encode(const juce::ValueTree& s)
     return result;
 }
 
+static juce::MemoryBlock makeMismatchedPendingState(VDX7AudioProcessor& p)
+{
+    auto state = decode(save(p));
+    const auto missingRom = juce::File::getSpecialLocation(juce::File::tempDirectory)
+        .getChildFile("vdx7-settings-restore-" + juce::Uuid().toString() + ".bin");
+    state.setProperty("romPath", missingRom.getFullPathName(), nullptr);
+    state.setProperty("romIdentity", "deliberate-test-mismatch", nullptr);
+    return encode(state);
+}
+
+static void checkSettingsApplyAtomicity(const juce::File& romFile)
+{
+    auto oldOrderStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& oldOrder = *oldOrderStorage;
+    require(oldOrder.loadRomFromFile(romFile), "settings-order fixture ROM");
+    oldOrder.prepareToPlay(48000, 64);
+    const int requestedTune = 37;
+    const int requestedChannel = 9;
+    const auto pendingState = makeMismatchedPendingState(oldOrder);
+
+    // Reproduce the previous Settings callback order with a project restore
+    // arriving after the easy setters but before the fallible MONO operation.
+    require(oldOrder.setMasterTuneFromUi(requestedTune), "old-order tune request");
+    require(oldOrder.setMidiInputChannelFromUi(requestedChannel), "old-order channel request");
+    oldOrder.setStateInformation(pendingState.getData(), static_cast<int>(pendingState.getSize()));
+    require(!oldOrder.setMonoCorrectionFromUi(true), "pending restore rejects MONO change");
+    require(oldOrder.getMasterTune() == requestedTune,
+            "repro: old Settings order leaves tuning applied after Apply failure");
+
+    auto atomicStorage = std::make_unique<VDX7AudioProcessor>(false);
+    auto& atomic = *atomicStorage;
+    require(atomic.loadRomFromFile(romFile), "atomic settings fixture ROM");
+    atomic.prepareToPlay(48000, 64);
+    const auto atomicPendingState = makeMismatchedPendingState(atomic);
+    atomic.setStateInformation(atomicPendingState.getData(),
+                               static_cast<int>(atomicPendingState.getSize()));
+    const auto result = atomic.applySettingsFromUi(requestedTune, requestedChannel, true);
+    require(result == VDX7AudioProcessor::SettingsApplyResult::monoCorrectionUnavailable,
+            "atomic Apply reports pending restore");
+    require(atomic.getMasterTune() == 0 && atomic.getMidiInputChannel() == 0
+                && !atomic.getMonoCorrectionStatus().requested,
+            "failed atomic Apply leaves all settings unchanged");
+
+    VDX7AudioProcessor noRom(false);
+    const auto unavailable = noRom.applySettingsFromUi(requestedTune, requestedChannel, true);
+    require(unavailable == VDX7AudioProcessor::SettingsApplyResult::tuningUnavailable
+                && noRom.getMasterTune() == 0 && noRom.getMidiInputChannel() == 0
+                && !noRom.getMonoCorrectionStatus().requested,
+            "unavailable tuning rejects Apply before changing MONO or channel");
+    std::cout << "PASS: reproduced partial Settings Apply and verified all-or-none failure behavior\n";
+}
+
 static void checkEditOrdering(const juce::File& romFile)
 {
     for (bool bankSwitch : {false, true})
@@ -669,6 +733,7 @@ int main(int argc, char** argv)
         juce::File romFile(juce::String::fromUTF8(argv[1]));
         juce::MemoryBlock rom;
         require(romFile.loadFileAsData(rom), "read local ROM");
+        checkSettingsApplyAtomicity(romFile);
         checkAudioPublication(romFile);
         checkEditOrdering(romFile);
         {
@@ -793,6 +858,20 @@ int main(int argc, char** argv)
             require(editedOperator->getValue() == editedOperator->convertTo0to1(42),
                     "offline operator edit in upper dirty mask survives restore");
             require(edited.getCurrentPatchName() == "RESTORE1", "offline edit preserves remaining voice data");
+        }
+        {
+            auto freshStorage = std::make_unique<VDX7AudioProcessor>(false);
+            auto& fresh = *freshStorage;
+            auto* freshFeedback = fresh.parameters().getParameter(VDX7ParameterIDs::voiceParameter(
+                VDX7VoiceData::VoiceParameter::feedback));
+            auto* freshOperator = fresh.parameters().getParameter(VDX7ParameterIDs::operatorParameter(
+                5, VDX7VoiceData::Parameter::outputLevel));
+            freshFeedback->setValueNotifyingHost(freshFeedback->convertTo0to1(3));
+            freshOperator->setValueNotifyingHost(freshOperator->convertTo0to1(37));
+            require(fresh.loadRomFromFile(romFile), "first ROM load after fresh-instance voice edits");
+            require(freshFeedback->getValue() == freshFeedback->convertTo0to1(3)
+                    && freshOperator->getValue() == freshOperator->convertTo0to1(37),
+                    "first ROM load preserves explicit voice edits made before firmware was available");
         }
         auto malformed = saved.createCopy();
         malformed.setProperty("ram", "invalid-base64", nullptr);

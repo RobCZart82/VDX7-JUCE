@@ -154,6 +154,15 @@ then rebuild `vdx7_all_tests` and rerun CTest. Never upload the ROM. The process
 runner opens no audio device and optionally accepts an existing absolute directory
 for PNG snapshots.
 
+`VDX7_TEST_ROM_FILE` is one fixture shared by the opt-in tests: either a
+16,384-byte firmware file (optionally beside `dx7_factory_voices_32KB.bin`) or
+a 49,152-byte combined firmware-plus-factory-voices image. Factory voices are
+optional for firmware execution; they supply the eight factory banks. The
+complete opt-in suite includes tests that inspect the validated v1.8 firmware
+memory map, so its profile fixture must contain that locally validated v1.8
+firmware. The factory-voice payload is not itself what establishes the v1.8
+profile. This test fixture is separate from the public ROM-free CI suite.
+
 The host-reset/ownership groups inspect the validated v1.8 firmware memory map.
 They are labelled `local-rom;firmware-v1_8` and require the `vdx7_v18_profile`
 CTest fixture. It verifies the firmware identity before running those groups;
@@ -221,4 +230,3 @@ Next priorities are the local ROM-enabled regression suite; targeted REAPER
 boundary/transport tests; real-host, concurrency and platform acceptance; remaining
 cross-platform GUI checks; and release packaging. No 1.0.0 publication is authorized.
 See ROADMAP_1.0.md.
-
