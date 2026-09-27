@@ -1,7 +1,9 @@
 # First ROM load after a fresh-instance voice edit (F6)
 
-Status: baseline failure reproduced; targeted fix implemented and covered by
-the local-ROM stability executable. Public CI and review/merge are pending.
+Current status: baseline failure reproduced; targeted fix and regression are
+merged in PR #78 (`23e1503`). The full local ROM suite passes on merged main
+`d696e56`; see `VALIDATION_1.0_MAIN_D696E56_ROM_SUITE.md`. The dated entries
+below preserve the historical investigation and earlier validation evidence.
 
 ## Reproduced behavior
 
@@ -40,9 +42,10 @@ Using the existing private ROM fixture (not copied into the repository):
 - ROM-free CTest: 10/10 PASS.
 - `git diff --check`: PASS.
 
-The ROM-backed results are local to the current unmerged branch. Public Windows
-and macOS CI passed on commit `36df778` on 2026-09-26: plugin builds, all 10
-ROM-free tests, and ROM-test registration smoke passed, but CI did not execute
+At the time of this earlier validation, the ROM-backed results were local to an
+unmerged branch. Public Windows and macOS CI passed on commit `36df778` on
+2026-09-26: plugin builds, all 10 ROM-free tests, and ROM-test registration
+smoke passed, but CI did not execute
 the firmware-dependent regression. The private ROM and any derived firmware
 data remain outside the repository and build artifacts.
 

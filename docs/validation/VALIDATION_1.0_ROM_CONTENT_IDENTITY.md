@@ -1,7 +1,9 @@
 # Project-state ROM content identity (F5)
 
-Status: baseline failure reproduced; fix and focused local-ROM tests
-implemented; public CI and review/merge are still pending.
+Current status: fixed and merged in PR #78 (`23e1503`). The owner-supplied
+v1.8 regressions and full local ROM suite pass on merged main `d696e56`; see
+`VALIDATION_1.0_MAIN_D696E56_ROM_SUITE.md`. The dated entries below preserve
+the historical investigation and earlier validation evidence.
 
 ## Reproduced failure
 
@@ -52,7 +54,8 @@ Using the existing private v1.8 ROM fixture (not copied into the repository):
   `docs/validation/VALIDATION_1.0_NO_ROM_FIRST_EDIT.md`, the complete local-ROM
   stability executable passes.
 
-Still required: independent code review and merge. Windows and macOS public CI passed on commit `36df778` on
+At the time of this earlier validation, independent code review and merge were
+still pending. Windows and macOS public CI passed on commit `36df778` on
 2026-09-26; both built their plugin targets, passed all 10 ROM-free tests, and
 verified registration of the ROM-dependent regression without executing it.
 The private fixture is intentionally not available to GitHub Actions, so those
@@ -82,4 +85,5 @@ local ROM fixture, the updated focused pending-identity test, the concurrent
 state/RAM-path interleaving test and the complete ROM-backed stability
 executable all passed. ROM-free CTest also passed 10/10 and `git diff --check`
 is clean. The ROM remains outside the repository. Public CI is now PASS on
-`36df778`; independent review and merge are still required.
+`36df778`; PR #78 subsequently merged the implementation. The current exact-
+main ROM suite is recorded in `VALIDATION_1.0_MAIN_D696E56_ROM_SUITE.md`.

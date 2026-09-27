@@ -1,5 +1,10 @@
 # Settings Apply failure ordering
 
+Current status: fixed and merged in PR #78 (`23e1503`). The regression passes
+as part of the 35/35 local ROM-enabled CTest run on merged main `d696e56`; see
+`VALIDATION_1.0_MAIN_D696E56_ROM_SUITE.md`. The dated verification below is the
+original implementation record.
+
 ## Reproduced behavior
 
 The Settings dialog previously committed master tuning and MIDI channel before
