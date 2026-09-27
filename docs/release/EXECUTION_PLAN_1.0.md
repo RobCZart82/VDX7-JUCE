@@ -302,9 +302,22 @@ Use CONFIRMED, REPRODUCED, SOURCE-DERIVED CANDIDATE, HOST-DEPENDENT,
 CHARACTERIZATION, NOT RUN, FIXED and PASS accurately. PASS requires execution;
 source inspection, prior runs and owner reports retain their specific scope.
 
-Next concrete development order: review and CI must cover both the F5 and F6
-changes together, then proceed to the next evidence-led item. F2's general
-wheel-automation host test is accepted; the optional Write/Touch/Latch boundary
-characterization can be done separately and is not a failure or a blocker for
-that result. Local ROM-free PASS is not firmware-runtime or host acceptance.
-No main merge, tag, or release publication is authorized by this plan.
+Next concrete order (2026-09-27):
+1. Finish PR #83's review and required Actions checks; it only clarifies the
+   source-derived F8/F9 disposition and does not change product code.
+2. Close the remaining F12 Windows/HiDPI and interactive Settings/About GUI
+   coverage gaps without changing the approved appearance.
+3. Freeze an exact release-candidate SHA, then run the still-open host-dependent
+   gates on that artifact: offline render comparison (F7), envelope/release and
+   dense MIDI/contention characterization (F15/F16), and the missing REAPER
+   matrix. Existing owner-reported macOS/Windows REAPER passes remain valid for
+   their recorded baseline scopes, not as exact-candidate acceptance.
+4. Complete packaging, licensing, naming, USER-library/host support, and
+   signature/notarisation review before any release approval.
+
+F5/F6 are already fixed and merged together in PR #78; do not list them as the
+next implementation step. F2's general wheel-automation host test is accepted;
+the optional Write/Touch/Latch boundary characterization can be done separately
+and is not a failure or blocker for that result. Local ROM-free PASS is not
+firmware-runtime or host acceptance. No main merge, tag, or release publication
+is authorized by this plan.
