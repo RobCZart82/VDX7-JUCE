@@ -10,7 +10,8 @@ public:
     ~VDX7AboutPanel() override;
     void paint(juce::Graphics&) override;
     void resized() override;
-    bool hasVectorLogos() const { return wordmark_ != nullptr && gyr_ != nullptr; }
+    bool hasVectorLogos() const
+    { return wordmark_ != nullptr && gyr_ != nullptr && signature_ != nullptr; }
 
 private:
     VDX7LookAndFeel lookAndFeel_;

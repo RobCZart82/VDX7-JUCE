@@ -1,5 +1,6 @@
 #include "PluginEditor.h"
 #include "VDX7AboutPanel.h"
+#include "VDX7GuiScale.h"
 #include "VDX7StatusPresentation.h"
 
 #include <BinaryData.h>
@@ -1633,13 +1634,7 @@ void VDX7AudioProcessorEditor::showSettings()
     const int initial = processor_.getMasterTune();
     const int initialChannel = processor_.getMidiInputChannel();
     const auto initialCorrection = processor_.getMonoCorrectionStatus();
-    constexpr std::array<int, 5> guiScalePercentages { 50, 75, 100, 125, 150 };
-    const float currentPercent = static_cast<float>(getWidth()) * 100.0f / 1200.0f;
-    int initialScaleIndex = 0;
-    for (int i = 1; i < static_cast<int>(guiScalePercentages.size()); ++i)
-        if (std::abs(guiScalePercentages[static_cast<std::size_t>(i)] - currentPercent)
-            < std::abs(guiScalePercentages[static_cast<std::size_t>(initialScaleIndex)] - currentPercent))
-            initialScaleIndex = i;
+    const auto initialScaleIndex = VDX7GuiScale::indexForWidth(getWidth());
     const juce::String correctionStatus = initialCorrection.active ? "Active (verified firmware)"
         : initialCorrection.requested ? (initialCorrection.loaded ? "Unavailable for this firmware: native behavior"
                                                                    : "Waiting for compatible firmware")
@@ -1659,8 +1654,8 @@ void VDX7AudioProcessorEditor::showSettings()
     };
     dialog->addCustomComponent(new SettingsInfoComponent(std::move(settingsInfoRows)));
     juce::StringArray guiScaleChoices;
-    for (const auto percentage : guiScalePercentages)
-        guiScaleChoices.add(juce::String(percentage) + "%");
+    for (const auto& preset : VDX7GuiScale::presets)
+        guiScaleChoices.add(juce::String(preset.percentage) + "%");
     dialog->addTextEditor("tuning", juce::String(initial), "Master tuning:");
     dialog->getTextEditor("tuning")->setInputRestrictions(4, "-0123456789");
     dialog->addComboBox("guiScale", guiScaleChoices, "GUI size:");
@@ -1712,12 +1707,9 @@ void VDX7AudioProcessorEditor::showSettings()
             }
             if (applied != VDX7AudioProcessor::SettingsApplyResult::applied)
             { safe->showError("Invalid settings", "One or more settings are outside the supported range."); return; }
-            constexpr std::array<int, 5> scaleWidths { 600, 900, 1200, 1500, 1800 };
-            constexpr std::array<int, 5> scaleHeights { 463, 694, 925, 1156, 1388 };
-            const int scaleIndex = juce::jlimit(0, 4,
+            const auto& preset = VDX7GuiScale::atIndex(
                 dialog->getComboBoxComponent("guiScale")->getSelectedItemIndex());
-            safe->setSize(scaleWidths[static_cast<std::size_t>(scaleIndex)],
-                          scaleHeights[static_cast<std::size_t>(scaleIndex)]);
+            safe->setSize(preset.width, preset.height);
         }), true);
 }
 
