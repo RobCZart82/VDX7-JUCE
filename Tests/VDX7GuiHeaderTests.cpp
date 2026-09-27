@@ -1,4 +1,6 @@
 #include "PluginEditor.h"
+#include "VDX7AboutPanel.h"
+#include "VDX7GuiScale.h"
 
 #include <array>
 #include <cmath>
@@ -44,6 +46,28 @@ int main(int argc, char** argv)
     try
     {
         checkWhiteKeyHover();
+        for (std::size_t i = 0; i < VDX7GuiScale::presets.size(); ++i)
+        {
+            const auto& preset = VDX7GuiScale::presets[i];
+            require(VDX7GuiScale::indexForWidth(preset.width) == static_cast<int>(i),
+                    "each fixed Settings width selects its matching GUI size");
+            const auto& selected = VDX7GuiScale::atIndex(static_cast<int>(i));
+            require(selected.percentage == preset.percentage && selected.width == preset.width
+                    && selected.height == preset.height,
+                    "fixed Settings sizes keep their approved dimensions");
+        }
+        require(VDX7GuiScale::indexForWidth(750) == 0
+                && VDX7GuiScale::indexForWidth(1050) == 1
+                && VDX7GuiScale::indexForWidth(1350) == 2,
+                "Settings size selection keeps nearest-preset tie behavior");
+
+        VDX7AboutPanel about;
+        require(about.hasVectorLogos(), "About loads the VDX7, GYR and signature vectors");
+        for (auto* child : about.getChildren())
+            require(about.getLocalBounds().contains(child->getBounds()),
+                    "About controls remain inside their original panel");
+        require(about.createComponentSnapshot(about.getLocalBounds()).isValid(),
+                "About panel renders its vector artwork");
         {
             VDX7WheelSlider pitch(true);
             VDX7WheelSlider mod(false);
@@ -157,14 +181,10 @@ int main(int argc, char** argv)
 
         const juce::Colour accent(0xff71685b);
         constexpr std::array<float, 3> decorationY { 22.0f, 34.0f, 46.0f };
-        constexpr std::array<std::array<int, 2>, 5> fixedPresetSizes
-        {{
-            { 600, 463 }, { 900, 694 }, { 1200, 925 }, { 1500, 1156 }, { 1800, 1388 }
-        }};
-        for (const auto& size : fixedPresetSizes)
+        for (const auto& preset : VDX7GuiScale::presets)
         {
-            const int width = size[0];
-            const int height = size[1];
+            const int width = preset.width;
+            const int height = preset.height;
             editor->setSize(width, height);
             require(editor->getWidth() == width && editor->getHeight() == height,
                     "editor accepts each fixed Settings preset size");
@@ -221,7 +241,7 @@ int main(int argc, char** argv)
             require(editTab->getToggleState() && !performanceTab->getToggleState()
                     && !performancePanel->isVisible(), "EDIT tab restores the editor view");
         }
-        std::cout << "PASS: EDIT and PERFORMANCE views render within bounds at all five fixed GUI sizes\n";
+        std::cout << "PASS: About artwork and EDIT/PERFORMANCE views render at all five fixed GUI sizes\n";
         return 0;
     }
     catch (const std::exception& error)

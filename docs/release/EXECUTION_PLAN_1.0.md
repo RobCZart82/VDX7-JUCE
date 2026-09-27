@@ -1,7 +1,7 @@
 # 1.0 consolidated execution plan — current status 2026-09-27
 
-Current main: `d696e56b8b69521f8b3ba879f8325c044b410b70` (PR #79 merged atop
-PR #78). This plan combines the original 1.0 host/audio/release gates with the
+Current main: `bca29c5e3122d7bbc918e39691bf209ff0e1dd09` (PR #81 merged atop
+PR #80). This plan combines the original 1.0 host/audio/release gates with the
 useful findings F1–F19 and the test-system review. Planning is not release
 authorization. Older roadmap narratives and validation notes remain historical
 records unless explicitly updated here; they are not instructions to reopen
@@ -162,8 +162,10 @@ completed GUI work.
   verifies no corner dragger plus in-bounds EDIT and PERFORMANCE views at all
   five fixed dimensions. It also checks all six named PERFORMANCE selectors,
   four controller ranges, twelve assignment switches, and panel-child bounds.
-  The Settings/About interactions, broader EDIT element/overlap checks, and
-  Windows/HiDPI execution remain open.
+  A shared preset table now drives the Settings menu and has ROM-free tests for
+  all five sizes and nearest-width selection. The About vector assets, child
+  bounds and snapshot are also covered. Actual Settings dialog interaction,
+  broader EDIT element/overlap checks, and Windows/HiDPI execution remain open.
 - [ ] F11 — unused runtime image loads confirmed; performance magnitude NOT
   MEASURED. Measure 0/1/4/8 editors (RSS and creation time), remove only proven
   unused loads/resources, compare screenshots and behavior before/after.

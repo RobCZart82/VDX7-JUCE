@@ -169,6 +169,7 @@ target_sources(VDX7 PRIVATE
     Source/PluginEditor.cpp
     Source/VDX7AboutPanel.h
     Source/VDX7AboutPanel.cpp
+    Source/VDX7GuiScale.h
     Source/VDX7StatusPresentation.h
     Source/VDX7Algorithms.h
     Source/VDX7AlgorithmView.h
@@ -219,7 +220,7 @@ target_link_libraries(vdx7_resampling_tests PRIVATE vdx7_core vdx7_voice_data)
 add_test(NAME vdx7_resampling COMMAND vdx7_resampling_tests)
 set_tests_properties(vdx7_resampling PROPERTIES TIMEOUT 60 LABELS "rom-free")
 
-# GUI-only pixel regression for the approved three-line header decoration.
+# ROM-free GUI regression for Settings presets, About artwork and EDIT/PERFORMANCE layout.
 add_executable(vdx7_gui_header_tests Tests/VDX7GuiHeaderTests.cpp)
 target_link_libraries(vdx7_gui_header_tests PRIVATE VDX7)
 target_include_directories(vdx7_gui_header_tests PRIVATE
