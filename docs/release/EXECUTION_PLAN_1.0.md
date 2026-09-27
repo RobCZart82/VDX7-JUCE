@@ -89,13 +89,23 @@ completed GUI work.
   suite was rerun on merged main `d696e56`; see
   `docs/validation/VALIDATION_1.0_MAIN_D696E56_ROM_SUITE.md`.
   See both F5/F6 validation notes for scope and fixture boundaries.
-- [ ] F8/F9 — SOURCE-DERIVED CANDIDATES: establish supported concurrent/reentrant
-  state-call contract, then barrier-test whole restore and engine/APVTS lock
-  order. Demonstrate a reachable inversion before claiming deadlock. Never
-  solve it with an unanalysed audio-thread blocking lock. Source inspection
-  confirms host parameter callbacks occur after releasing `engineMutex_`, and
-  the existing reentrant-save regression passes; a whole-restore barrier test
-  and supported host-call concurrency contract remain outstanding.
+- [~] F8/F9 — SOURCE-DERIVED CANDIDATES: scoped by API/source review on
+  2026-09-27; no actionable deadlock or host-reproduced whole-restore defect
+  found. JUCE documents APVTS `copyState()` and `replaceState()` as individually
+  thread-safe but not real-time-safe; VST3 permits state calls while processing
+  (UI thread in real-time use, processing thread in offline use), but neither
+  source specifies that overlapping whole-state get/set calls form one atomic
+  plugin-wide transaction. In this plugin, engine snapshots are detached under
+  `engineMutex_` before APVTS copies or host notifications; `parameterChanged`
+  only publishes bounded/atomic edits; and `setStateInformation` releases the
+  engine lock before replacing APVTS state and before host-facing parameter
+  synchronization. Existing reentrant-save and state/process interleaving
+  regressions pass. Do not add a broad mutex based on an unsupported
+  simultaneous-restore assumption. Reopen this candidate only if a supported
+  host demonstrates overlapping get/set calls producing a user-visible mixed
+  state or a reachable deadlock; any fix must preserve the real-time boundary.
+  Sources: [JUCE APVTS](https://docs.juce.com/master/classjuce_1_1AudioProcessorValueTreeState.html)
+  and [Steinberg VST3 processing FAQ](https://steinbergmedia.github.io/vst3_dev_portal/pages/FAQ/Processing.html).
 - [x] F10 — REPRODUCED and fixed: Settings Apply partially committed tuning
   before a pending-restore MONO failure. `applySettingsFromUi` now
   validates first and performs the fallible MONO operation before committing
