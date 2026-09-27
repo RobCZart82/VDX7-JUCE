@@ -157,12 +157,14 @@ historical records, not instructions to reopen completed GUI work.
 ## 4. Invisible GUI hardening and build coverage
 
 - [ ] F12 — coverage gap: actual menu sizes 600×463, 900×694, 1200×925,
-  1500×1156, 1800×1388. The present GUI header pixel test uses 1080/1440/1800
-  reference-canvas widths and labels them 75/100/125%; this is not the full
-  Settings preset matrix. Add/adjust tests to exercise the actual five selectable
+  1500×1156, 1800×1388. Add/adjust tests to exercise the actual five selectable
   sizes, including visible control bounds/overlap, editable fields, LCD,
   PERFORMANCE, Settings/About, tooltips, keyboard/footer and host window
   tracking. Include Windows/HiDPI. Preserve the approved appearance.
+  The editor now disables arbitrary host/window resizing, and the GUI regression
+  verifies no corner dragger plus in-bounds child layouts and header snapshots at
+  all five fixed dimensions. The Settings-menu interaction itself, broader
+  element/overlap checks, and Windows/HiDPI execution remain open.
 - [ ] F11 — unused runtime image loads confirmed; performance magnitude NOT
   MEASURED. Measure 0/1/4/8 editors (RSS and creation time), remove only proven
   unused loads/resources, compare screenshots and behavior before/after.

@@ -405,10 +405,9 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
 {
     setLookAndFeel(&lookAndFeel_);
     setOpaque(true);
-    setResizable(true, true);
-    setResizeLimits(600, 463, 1800, 1388);
-    if (auto* constrainer = getConstrainer())
-        constrainer->setFixedAspectRatio(kReferenceWidth / kReferenceHeight);
+    // Window size is selected only from the fixed presets in Settings.
+    // Keep both the host resize flag and JUCE's corner dragger disabled.
+    setResizable(false, false);
     setSize(1200, 925);
 
     configureLabel(status_, 12.0f, juce::Justification::centredLeft, juce::Colour(0xffcec9bd));

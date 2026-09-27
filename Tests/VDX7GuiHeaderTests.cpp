@@ -93,32 +93,48 @@ int main(int argc, char** argv)
         VDX7AudioProcessor processor(false);
         std::unique_ptr<juce::AudioProcessorEditor> editor(processor.createEditor());
         require(editor != nullptr, "editor creation without firmware");
+        require(!editor->isResizable(), "host must not resize the editor window");
         int saveAsButtons = 0;
         bool algorithmDisabled = false;
+        bool hasCornerResizer = false;
         for (auto* child : editor->getChildren())
         {
             if (auto* button = dynamic_cast<juce::TextButton*>(child))
+            {
                 if (button->getButtonText() == "SAVE AS...")
                 {
                     ++saveAsButtons;
                     require(!button->isEnabled(), "Save As is disabled without firmware");
                 }
+            }
             if (auto* box = dynamic_cast<juce::ComboBox*>(child))
                 if (box->getName() == "Algorithm")
                 {
                     algorithmDisabled = true;
                     require(!box->isEnabled(), "algorithm selector is disabled without firmware");
                 }
+            hasCornerResizer |= dynamic_cast<juce::ResizableCornerComponent*>(child) != nullptr;
         }
         require(saveAsButtons == 1, "one Save As control is present without firmware");
         require(algorithmDisabled, "algorithm selector is present without firmware");
+        require(!hasCornerResizer, "bottom-right drag resizer is absent");
 
         const juce::Colour accent(0xff71685b);
         constexpr std::array<float, 3> decorationY { 22.0f, 34.0f, 46.0f };
-        for (const int width : { 1080, 1440, 1800 })
+        constexpr std::array<std::array<int, 2>, 5> fixedPresetSizes
+        {{
+            { 600, 463 }, { 900, 694 }, { 1200, 925 }, { 1500, 1156 }, { 1800, 1388 }
+        }};
+        for (const auto& size : fixedPresetSizes)
         {
-            const int height = juce::roundToInt(width * 1110.0 / 1440.0);
+            const int width = size[0];
+            const int height = size[1];
             editor->setSize(width, height);
+            require(editor->getWidth() == width && editor->getHeight() == height,
+                    "editor accepts each fixed Settings preset size");
+            for (auto* child : editor->getChildren())
+                require(editor->getLocalBounds().contains(child->getBounds()),
+                        "GUI child bounds remain inside each fixed preset size");
             const auto image = editor->createComponentSnapshot(editor->getLocalBounds());
             require(image.isValid(), "header snapshot at supported scale");
             const float scaleX = float(width) / 1440.0f;
@@ -136,14 +152,14 @@ int main(int argc, char** argv)
                 require(image.getPixelAt(headerX, pixelY).getARGB() == accent.getARGB(),
                         "all three header accents are visible in divider color");
             }
-            if (argc == 2 && width == 1440)
+            if (argc == 2 && width == 1200)
             {
                 juce::FileOutputStream stream { juce::File(argv[1]) };
                 require(stream.openedOk() && juce::PNGImageFormat().writeImageToStream(image, stream),
                         "write optional GUI preview");
             }
         }
-        std::cout << "PASS: three header accents match divider color at 75/100/125% sizes\n";
+        std::cout << "PASS: fixed 50/75/100/125/150% GUI sizes render within bounds\n";
         return 0;
     }
     catch (const std::exception& error)
