@@ -1116,7 +1116,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     for (const float y : { 34.0f, 46.0f })
         g.fillRect(referenceRect(34, y, 1372, 1));
     if (wordmark_)
-        wordmark_->drawWithin(g, { 44.0f * scaleX, headerBottom - logoHeight,
+        wordmark_->drawWithin(g, { 41.0f * scaleX, headerBottom - logoHeight - 4.0f * scaleY,
                                   logoWidth, logoHeight }, juce::RectanglePlacement::stretchToFit, 1.0f);
     g.setColour(juce::Colour(0xffbdb8ac));
     juce::GlyphArrangement modelMark;
@@ -1250,7 +1250,7 @@ void VDX7AudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colour(0xffc9c4b8));
 
     g.setColour(juce::Colour(0xff71685b));
-    g.fillRect(referenceRect(594, 390, 1, 116));
+    g.fillRect(referenceRect(692, 588, 1, 232));
     drawPitchEnvelope(g);
     drawOperatorEnvelope(g);
 }
