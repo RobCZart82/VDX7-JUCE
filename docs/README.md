@@ -27,7 +27,7 @@ New validation reports belong in `docs/validation/`, not at the repository root.
 The [v0.6.6 validation summary](validation/VALIDATION.txt) and
 [packed voice range validation](validation/VALIDATION_1.0_PACKED_VOICE_RANGES.md)
 were moved here on 2026-09-28; their original results and status wording are
-preserved as historical evidence, not fresh acceptance claims.
+retained as historical evidence, not fresh acceptance claims.
 
 ## History and evidence
 
