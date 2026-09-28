@@ -68,7 +68,7 @@ jobs:
       - name: Verify macOS candidate signature
         if: runner.os == 'macOS'
         run: |
-          lipo -verify_arch arm64 x86_64 build/VDX7_artefacts/Release/VST3/VDX7.vst3/Contents/MacOS/VDX7
+          lipo build/VDX7_artefacts/Release/VST3/VDX7.vst3/Contents/MacOS/VDX7 -verify_arch arm64 x86_64
           codesign --force --deep --sign - build/VDX7_artefacts/Release/VST3/VDX7.vst3
           codesign --verify --deep --strict build/VDX7_artefacts/Release/VST3/VDX7.vst3
       - uses: actions/upload-artifact@v4
