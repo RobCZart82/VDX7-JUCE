@@ -139,7 +139,9 @@ Lásd a [képeket](../../README_HU.md) és a [kiadási listát](../release/ROADM
   nem multitimbrális vagy MPE működés.
 - Élő MIDI Out/SysEx-küldés nincs; SysEx-fájlimport/-export van.
 - A mintavétel-átalakítás Blackman-ablakos sinc szűrést használ, a hostnak jelzett
-  késleltetéssel. A végleges host- és hangminőségi elfogadás még hátravan.
+  késleltetéssel. A tulajdonos szerint az RC1 hangja macOS-en és Windowson is
+  kiváló, DX7-hű; a teljes mintavételi/buffer- és transport/render-mátrix nem
+  futott le, a tulajdonos döntése alapján halasztva van.
 - A hangparaméterek módosítása újratölti az aktív programot. Sűrű automatizálás és tartott hang alatti szerkesztés további hosttesztet igényel.
 - A hardveres és más szoftverekkel való SysEx-együttműködés nincs átfogóan ellenőrizve.
 - Nem ígér teljes DX7-funkcióazonosságot, kalibrált envelope-időzítést vagy általános hostkompatibilitást.
@@ -147,9 +149,11 @@ Lásd a [képeket](../../README_HU.md) és a [kiadási listát](../release/ROADM
 
 ## 10. Ellenőrzés és hibajelentés
 
-A public CI ROM-mentes regressziókat futtat. A sikeres fordítás nem firmware-runtime
-vagy teljes DAW-elfogadás. A helyi ROM-os teszteket és a hátralévő hostellenőrzéseket
-az adott kiadásjelöltön kell futtatni; lásd a [kiadási feltételeket](../release/ROADMAP_1.0.md).
+A public CI ROM-mentes regressziókat futtat. A pontos RC1 forrás helyi ROM-os
+tesztje 36/36 CTesttel sikeres volt (egy asztali párbeszédablakot nyitó teszt
+kimaradt), a tulajdonos pedig célzott macOS/Windows REAPER-elfogadásról számolt
+be. A szélesebb host/audio/GUI mátrix nem futott le, tulajdonosi döntés alapján
+halasztva van; lásd a [kiadási jegyzéket](../release/RELEASE_CHECKLIST_1.0_RC.md).
 
 Hibát a [GitHub Issues](https://github.com/RobCZart82/VDX7-JUCE/issues) oldalon jelezz
 build/commit, operációs rendszer, architektúra, hostverzió, mintavétel/puffer,

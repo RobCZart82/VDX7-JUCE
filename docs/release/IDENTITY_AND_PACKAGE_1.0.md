@@ -1,11 +1,11 @@
 # 1.0 build identity and package boundaries
 
-Source review: 2026-09-28, main after PR #91 at
-`37c83f378a81e4623993941fb7e10c4ab58c208c`. PR #91 Windows/macOS and ASan/UBSan
-checks passed; post-merge main Windows `36441316285` and macOS `36441316112`
-also passed. The exact-candidate workflow remains unrun; this is a preparation
-record, not approval to publish, rename installed plugins or change their
-identity.
+Preparation checkpoint: 2026-09-28, current main
+`0fae59d79a849a8fe2e1993533adf2df3d90bc59`; the frozen RC1 product source is
+`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. RC1 exact-SHA builds and candidate
+workflow passed; latest observed main Windows/macOS checks also passed. RC1 is
+a test candidate, not the final stable package. This is a preparation record,
+not approval to publish, rename installed plugins or change their identity.
 
 ## Identity (F17)
 
@@ -18,10 +18,13 @@ identity.
   RC labels are checked by a ROM-free regression test; combining a candidate
   label with stable mode, or supplying a malformed label, is rejected.
 - A stable package uses `VDX7_RELEASE_BUILD=ON` with an empty candidate label
-  and displays `1.0.0`. The exact-candidate workflow remains non-publishing and
-  names its artifacts with the RC label, platform and full source SHA. Record
-  SHA, build options, platform/architecture, dependency revisions and binary
-  checksum with each test; never describe a dev binary as an RC or stable build.
+  and displays `1.0.0`. The exact-candidate workflow is non-publishing and
+  names artifacts with the RC label, platform and full source SHA. A separate
+  non-publishing stable preparation workflow has been added in the current
+  worktree; it must be merged and run on the final main SHA before artifact
+  inspection. It does not publish a release. Record SHA, build
+  options, platform/architecture, dependency revisions and binary checksum
+  with each test; never describe a dev binary as an RC or stable build.
 - Keep `org.vdx7.prototype`, manufacturer `VdxP`, plugin code `VdX7`, product
   `VDX7`, and all 148 parameter IDs/order compatible. The historical bundle ID
   is an identity, not permission to rename it during release polish.
@@ -36,16 +39,21 @@ The HU/EN guides describe one 32-slot persistent USER bank (not a named-library
 manager), supported single-voice/bank SysEx, external ROM requirements and
 primary VST3 distribution. Windows/macOS builds also cover Standalone and
 macOS AU compilation, but that does not establish their host/runtime support.
-Keep the dated owner-reported REAPER evidence and its missing exact-SHA details
-separate from future candidate acceptance.
+Keep owner-reported exact-RC1 REAPER/listening and five-instance project
+save/reopen evidence distinct from executed checks. The full host/audio/GUI
+matrix was not run and is deferred by owner decision; see the current
+[acceptance checklist](RELEASE_CHECKLIST_1.0_RC.md) and
+[RC1 validation](../validation/VALIDATION_20260928_EXACT_RC1.md).
 
 ## Package review and remaining blockers
 
 The candidate workflow has read-only repository permissions and no
-release/tag publication step. The follow-up adds a matching complete source ZIP,
-embedded manifest and source ZIP checksum beside the VST3/documents/licenses.
-See [source packaging](SOURCE_PACKAGING_1.0.md). Final binary checksums and
-distribution packaging are still separate gates; artifacts remain development builds.
+release/tag publication step. It produced exact-RC test artifacts; these are
+not stable release assets. Both candidate and new stable-preparation workflows
+include a matching complete source ZIP, embedded manifest and checksums. The
+stable workflow is currently an unmerged local change and has not been run.
+See [source packaging](SOURCE_PACKAGING_1.0.md). A final stable build, final
+asset inspection and explicit publication authorization are still required.
 
 - Owner decision (handoff dated 2026-09-28): distribute Windows without publisher
   signing and macOS with the existing ad-hoc signature, without Developer ID or
@@ -67,11 +75,13 @@ distribution packaging are still separate gates; artifacts remain development bu
   with the actual artifacts and recorded tests. The no-publisher-signature /
   macOS ad-hoc policy above remains in effect unless the owner explicitly changes it.
 
-The owner reports REAPER acceptance. Existing records identify macOS 26.7 and
-Windows 10 x64 build #219 / `29ab5e3`, but not every tested SHA/binary hash,
-REAPER application version or the full rate/block/instance matrix; preserve
-that as OWNER-REPORTED. No final RC is frozen or accepted by this document. Final archive inspection,
-exact-candidate host matrix and separate publication approval remain OPEN.
+The owner reports successful exact-RC1 REAPER use and excellent sound on
+macOS/Windows, and a five-instance project save/reopen success. The macOS
+installed binary hash matches its candidate artifact; Windows hash and some
+host/test details remain unrecorded. Preserve these as OWNER-REPORTED. The
+owner deferred the wider host/audio/GUI matrix; do not infer unrun cells passed.
+The final stable package, its final archive review, and separate publication
+approval remain outstanding.
 
 On 2026-09-28, the owner additionally reported installing the Windows VST3 from
 **Build Windows VST3 and Standalone #247**, source commit

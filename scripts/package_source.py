@@ -1,4 +1,4 @@
-"""Build a deterministic development source ZIP from exact Git objects (no upload)."""
+"""Build deterministic corresponding-source ZIPs from exact Git objects (no upload)."""
 import argparse
 import hashlib
 import io
@@ -99,8 +99,10 @@ def write_zip(destination, files, manifest):
             archive.writestr(item, data)
 
 
-def package(repo, juce, core, sha, output):
+def package(repo, juce, core, sha, output, package_label="1.0.0-dev"):
     files = snapshot(repo, sha)
+    if not re.fullmatch(r"1\.0\.0(?:-dev|-rc[1-9][0-9]*)?", package_label):
+        raise ValueError("Package label must be 1.0.0-dev, 1.0.0-rcN, or 1.0.0")
     cmake = files["CMakeLists.txt"][0].decode()
     if JUCE_SHA not in cmake or CORE_SHA not in cmake:
         raise ValueError("Source dependency pins changed; review/update the packager")
@@ -120,15 +122,19 @@ def package(repo, juce, core, sha, output):
                      "third_party/retromulator-notices/LICENSE.txt", "third_party/dx7Lib/dx7.cpp"):
         if required not in files:
             raise ValueError(f"Required source/notice missing: {required}")
+    kind = ("development-corresponding-source" if package_label == "1.0.0-dev"
+            else "release-candidate-corresponding-source" if "-rc" in package_label
+            else "stable-release-preparation-corresponding-source")
     manifest = {
-        "schema": 1, "kind": "development-corresponding-source", "source_commit": sha,
-        "release_accepted": False, "dependencies": {"JUCE": JUCE_SHA, "Retromulator": CORE_SHA},
+        "schema": 1, "kind": kind, "package_label": package_label,
+        "source_commit": sha, "release_accepted": False,
+        "dependencies": {"JUCE": JUCE_SHA, "Retromulator": CORE_SHA},
         "files": [{"path": name, "sha256": hashlib.sha256(data).hexdigest(), "size": len(data), "mode": mode}
                   for name, (data, mode) in sorted(files.items())],
     }
     # Refuse any existing destination, even an empty directory; never overwrite.
     output.mkdir(parents=True, exist_ok=False)
-    filename = f"VDX7-1.0.0-dev-{sha}-corresponding-source.zip"
+    filename = f"VDX7-{package_label}-{sha}-corresponding-source.zip"
     archive = output / filename
     write_zip(archive, files, manifest)
     checksum = hashlib.sha256(archive.read_bytes()).hexdigest()
@@ -145,10 +151,17 @@ def verify(archive_path):
         for name in names:
             safe_path(name)
         manifest = json.loads(archive.read(MANIFEST))
+        label = manifest.get("package_label", "")
+        kind = ("development-corresponding-source" if label == "1.0.0-dev"
+                else "release-candidate-corresponding-source" if re.fullmatch(r"1\.0\.0-rc[1-9][0-9]*", label)
+                else "stable-release-preparation-corresponding-source" if label == "1.0.0"
+                else None)
         if (manifest.get("schema") != 1 or manifest.get("release_accepted") is not False
+                or kind is None
+                or manifest.get("kind") != kind
                 or manifest.get("dependencies") != {"JUCE": JUCE_SHA, "Retromulator": CORE_SHA}
                 or not re.fullmatch(r"[0-9a-f]{40}", manifest.get("source_commit", ""))):
-            raise ValueError("Invalid development-source manifest identity")
+            raise ValueError("Invalid corresponding-source package identity")
         entries = manifest["files"]
         expected = [entry["path"] for entry in entries]
         if len(expected) != len(set(expected)) or set(names) != set(expected) | {MANIFEST}:
@@ -171,10 +184,13 @@ if __name__ == "__main__":
     for option in ("repo", "juce", "core", "output"):
         create.add_argument("--" + option, type=Path, required=True)
     create.add_argument("--commit", required=True)
+    create.add_argument("--package-label", default="1.0.0-dev",
+                        help="1.0.0-dev, 1.0.0-rcN or 1.0.0 (prepublication stable package)")
     check = commands.add_parser("verify")
     check.add_argument("archive", type=Path)
     args = parser.parse_args()
     if args.command == "create":
-        verify(package(args.repo, args.juce, args.core, args.commit, args.output))
+        verify(package(args.repo, args.juce, args.core, args.commit, args.output,
+                      args.package_label))
     else:
         verify(args.archive)

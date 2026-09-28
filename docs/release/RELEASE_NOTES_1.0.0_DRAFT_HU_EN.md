@@ -1,21 +1,26 @@
 # VDX7 Mk1. 1.0.0 — draft release notes and test matrix
 
 **DRAFT — not an accepted release and not publication authorization.**
-Test-only RC1 has been built from an exact SHA and passed automated CI, but
-private-ROM runtime, final host acceptance and owner publication approval are
-still outstanding. Do not turn owner reports into CI results.
+Test-only RC1 has been built from an exact SHA and passed automated CI. The
+owner has completed focused cross-platform REAPER, listening-quality, and
+five-instance/project-reopen checks. Broader host/audio/GUI matrix cells remain
+not run or deferred by the owner's decision to close exploratory testing; they
+are not implied passes. Do not turn owner reports into CI results.
 
-Preparation checkpoint: PR #93 is merged on main at
+Preparation checkpoint (2026-09-28): frozen RC1 product source is
 `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. Exact-RC workflow `36451459751`
 passed for Windows x64 and macOS universal; artifacts are test downloads, not a
-published GitHub release or stable release approval.
+published GitHub release or stable release approval. The current `main` CI is
+green, but a final stable `1.0.0` package has not yet been built. GitHub has no
+stable `1.0.0` release; the existing public releases are historical pre-beta
+versions.
 
 ## English
 
 VDX7 Mk1. is an open-source six-operator FM instrument built around the VDX7
-DX7 Mk I emulation core and JUCE. Version 1.0.0 packages the owner-approved GUI
-and current implementation as a release candidate for final compatibility and
-host acceptance.
+DX7 Mk I emulation core and JUCE. The 1.0.0 release is being prepared from the
+owner-approved GUI and implementation. Stable release identity, final assets
+and publication are not yet approved or published.
 
 ### Highlights
 
@@ -49,24 +54,32 @@ host acceptance.
 | RC version and full source SHA | `1.0.0-rc1`, `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684` |
 | Windows/macOS exact-SHA CI and candidate workflow | PASS — run `36451459751` |
 | Matching source archive, manifest, package inspection and checksums | PASS for CI artifacts; see exact-RC validation report for SHA-256 and limits |
-| Windows REAPER exact-RC1 smoke | Owner reports exact RC1 works; host reported as Windows 10 Pro 22H2 (build 19045.7663), Core i7-6600U, 8 GB RAM; REAPER version, binary hash and detailed procedure not recorded; full matrix remains open |
-| macOS REAPER exact-RC1 smoke | Owner reports exact RC1 works; screenshot shows REAPER 7.80 and RC1 label; machine reported as Mac mini M1 (2020), 16 GB, macOS Tahoe 26.7; binary hash/full matrix remain unconfirmed/open |
+| Local-ROM suite on exact product source | PASS — 36/36 CTests; desktop-dependent `vdx7_processor` save-dialog test excluded; no ROM in CI/artifacts |
+| Windows REAPER exact-RC1 smoke/listening | Owner reports successful operation and excellent, DX7-faithful audio on Windows 10 Pro 22H2 (build 19045.7663), Core i7-6600U, 8 GB RAM; REAPER version and installed binary hash not recorded |
+| macOS REAPER exact-RC1 smoke/listening | Owner reports successful operation and excellent, DX7-faithful audio; screenshot shows REAPER 7.80 and RC1 label; machine reported as Mac mini M1 (2020), 16 GB, macOS Tahoe 26.7. Installed VST3 hash matches the downloaded macOS candidate artifact |
+| macOS local REAPER smoke | Assistant confirmed `v1.0.0-rc1`, local ROM/factory-bank loading and visible host output-meter activity from a MIDI note; not a subjective listening or full matrix test |
+| Five instances and project persistence | Owner reports five VDX7 instances in one REAPER project, successful save and reopen; OS, duration and CPU details not supplied |
 | Windows 10 x64 REAPER | Owner previously reported testing build #219 (`29ab5e3`) without known functional issues; not the final RC matrix |
 | macOS REAPER | Owner reported testing on macOS 26.7; exact tested build/hash and complete matrix not recorded |
 | Windows VST3 build #247 installation | Owner reports installed artifact from source `fbea5ea`; reported VST3 SHA-256 `1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`; installation only, no new functional result stated |
-| Final host/audio/GUI acceptance | OPEN; run and record each required cell against this exact RC |
+| Remaining broad host/audio/GUI matrix | NOT RUN / DEFERRED by owner's decision to wind down open-ended testing; see checklist for specific cells and limits |
+| Stable `1.0.0` package, checksums and final archive review | NOT PREPARED yet; requires a final source SHA and stable-build packaging run |
+| Publication | NOT AUTHORIZED / NOT PUBLISHED |
 
 ## Magyar
 
 A VDX7 Mk1. nyílt forrású, hatoperátoros FM hangszer a VDX7 DX7 Mk I
-emulációs magjára és a JUCE-ra építve. Az 1.0.0 a tulajdonos által jóváhagyott
-GUI-t és az aktuális implementációt készíti elő a végső kompatibilitási és
-host-elfogadási ellenőrzésre.
+emulációs magjára és a JUCE-ra építve. Az 1.0.0 kiadást a tulajdonos által
+jóváhagyott GUI-val és implementációval készítjük elő. A stabil kiadási
+azonosság, végleges csomagok és publikálás még nincs jóváhagyva vagy közzétéve.
 
-Előkészítési állapot: a #93 PR beolvadt a `main` ágba a
-`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684` commitban. A pontos RC-workflow
+Előkészítési állapot (2026-09-28): a befagyasztott RC1 termékforrás
+`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. A pontos RC-workflow
 (`36451459751`) sikeres Windows x64 és macOS Universal platformon. Ezek teszt-
 letöltések, nem publikált GitHub Release és nem végleges kiadási jóváhagyás.
+A jelenlegi `main` CI zöld, de végleges stabil `1.0.0` csomag még nem készült.
+GitHubon nincs stabil `1.0.0` kiadás; a meglévő nyilvános kiadások korábbi
+pre-beta verziók.
 
 ### Főbb jellemzők
 
@@ -100,13 +113,17 @@ letöltések, nem publikált GitHub Release és nem végleges kiadási jóváhag
 | RC-verzió és teljes forrás-SHA | `1.0.0-rc1`, `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684` |
 | Windows/macOS pontos SHA-jú CI és jelöltworkflow | PASS — `36451459751` |
 | Egyező forrásarchívum, manifest, csomagvizsgálat és ellenőrzőösszegek | PASS a CI artifactokra; részletek a pontos-RC validációban |
-| Windows REAPER exact-RC1 próba | A tulajdonos szerint a pontos RC1 működik; a gép Windows 10 Pro 22H2 (19045.7663), Core i7-6600U, 8 GB RAM; a REAPER-verzió, a bináris hash és a részletes eljárás nincs rögzítve; a teljes mátrix nyitott |
-| macOS REAPER exact-RC1 próba | A tulajdonos szerint a pontos RC1 működik; a képen REAPER 7.80 és az RC1 felirat látszik; a gép: Mac mini M1 (2020), 16 GB, macOS Tahoe 26.7; a bináris hash nincs megerősítve, a teljes mátrix nyitott |
+| Helyi ROM-os tesztcsomag a pontos termékforráson | PASS — 36/36 CTest; az asztali `vdx7_processor` mentési párbeszédablakot nyitó teszt kimaradt; ROM nem került CI-ba/csomagba |
+| Windows REAPER exact-RC1 próba/hallgatás | A tulajdonos szerint működik, hangminősége kiváló és DX7-hű; Windows 10 Pro 22H2 (19045.7663), Core i7-6600U, 8 GB RAM; REAPER-verzió és telepített bináris hash nincs rögzítve |
+| macOS REAPER exact-RC1 próba/hallgatás | A tulajdonos szerint működik, hangminősége kiváló és DX7-hű; képernyőkép: REAPER 7.80, RC1 felirat; Mac mini M1 (2020), 16 GB, macOS Tahoe 26.7. A telepített VST3 hash egyezik a letöltött macOS jelöltcsomagéval |
+| Helyi macOS REAPER-próba | Az asszisztens ellenőrizte az `v1.0.0-rc1` verziót, a helyi ROM/gyári bank betöltését és MIDI hangra a host kivezérlésmérőjének mozgását; nem teljes mátrix és nem szubjektív hangteszt |
+| Öt példány és projektállapot | A tulajdonos szerint öt VDX7 egy REAPER-projektben sikeresen menthető és újranyitható; az OS, időtartam és CPU-adatok nincsenek megadva |
 | Windows 10 x64 REAPER | A tulajdonos korábban a #219-es (`29ab5e3`) buildet ismert probléma nélkül tesztelte; ez nem a végleges RC tesztmátrixa |
 | macOS REAPER | A tulajdonos macOS 26.7-en végzett tesztről számolt be; a pontos build/hash és a teljes mátrix nincs rögzítve |
 | #247 Windows VST3 telepítése | A tulajdonos a `fbea5ea` forrásból készült csomag telepítését jelezte; megadott VST3 SHA-256: `1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`; ez telepítési adat, új funkcionális teszteredményt nem közölt |
-| Végső host/audio/GUI elfogadás | NYITOTT; minden tényleges tesztet a pontos RC-hez kell rögzíteni |
+| A teljes host/audio/GUI mátrix | NEM FUTOTT / TULAJDONOSI DÖNTÉS ALAPJÁN HALASZTVA; a konkrét tételek és korlátok a jegyzékben |
+| Stabil `1.0.0` csomag, ellenőrzőösszeg és végső archívumvizsgálat | MÉG NEM KÉSZÜLT; végleges forrás-SHA és stabil csomagolási futás szükséges |
+| Publikálás | NINCS JÓVÁHAGYVA / NINCS KÖZZÉTÉVE |
 
-E dokumentum tervezet marad a privát-ROM-os regressziók, a host/audio/GUI
-elfogadás, a végleges útmutató- és csomagellenőrzés, valamint a külön
-publikálási jóváhagyás előtt.
+Ez a dokumentum kiadási jegyzet-tervezet marad a stabil csomag véglegesítése,
+a hátralévő kockázatok áttekintése és a külön publikálási jóváhagyás előtt.

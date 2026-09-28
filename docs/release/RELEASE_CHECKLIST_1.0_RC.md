@@ -1,30 +1,32 @@
-# 1.0 RC acceptance checklist — not a publication authorization
+# 1.0 release-preparation checklist — not a publication authorization
 
-Keep builds marked development until these gates close. The v0.6.6 checklist
-is historical and must not be used to approve 1.0. No release or tag is created
-by this checklist. No proprietary firmware belongs in source, CI or artifacts.
+This checklist distinguishes completed evidence from items the owner has
+deferred. An unchecked item is not a pass. The owner has chosen to close
+open-ended exploratory testing and handle any later confirmed issue after
+1.0.0; that decision does not authorize publication. The v0.6.6 checklist is
+historical and must not be used to approve 1.0. No release or tag is created by
+this checklist. No proprietary firmware belongs in source, CI or artifacts.
 
 Current work order and audit disposition: [consolidated plan](EXECUTION_PLAN_1.0.md).
 GUI appearance approval does not close the technical/platform gates below.
 
-Current main after documentation-only PR #94:
-`58adac07f54ccd9f1838d29ea450b44492853972`; frozen RC1 product source remains
-`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. PR #93, PR #94 and the relevant
-post-merge main Windows/macOS and ASan/UBSan checks passed. Exact-RC workflow
-`36451459751` passed for the frozen RC source and uploaded Windows x64 and macOS
-universal VST3 candidate artifacts. The owner reports that exact RC1 works in
-REAPER on Windows and macOS; the supplied screenshot shows REAPER 7.80 on macOS.
-The owner identified the macOS test computer as a Mac mini (M1, 2020), 16 GB,
-macOS Tahoe 26.7; this environment detail does not close the exact-binary hash
-or full host/audio matrix.
-The Windows test computer is reported as Windows 10 Pro 22H2 (build 19045.7663),
-Intel Core i7-6600U, 8 GB RAM. REAPER version and exact VST3 hash remain unknown.
-This is a cross-platform owner-reported smoke pass, not closure of the full
-host/audio matrix. Package hashes, source manifest verification and remaining
-test limits are in
+Current main checkpoint (2026-09-28): `0fae59d79a849a8fe2e1993533adf2df3d90bc59`;
+the frozen RC1 product source remains
+`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. Latest observed main Windows run
+#265 and macOS run #270 passed; PR #97 and its required checks are merged/green.
+Exact-RC workflow `36451459751` passed and uploaded Windows x64 and macOS
+Universal VST3 test artifacts. Local ROM suite passed 36/36 CTests (the
+desktop-dependent save-dialog case was excluded). Owner reports successful
+RC1 REAPER use and excellent DX7-faithful sound on Windows and macOS, plus five
+instances in one project with successful save/reopen. The macOS installed
+binary hash matches the candidate artifact; Windows hash and REAPER version
+remain unrecorded. Broader matrix details and limits are in
 [the RC1 validation report](../validation/VALIDATION_20260928_EXACT_RC1.md).
-Private-ROM runtime, full host/audio acceptance and release publication remain
-open.
+The stable `1.0.0` package has not been built; GitHub has no stable 1.0.0
+release. A non-publishing stable-package workflow is added in the current
+worktree but is not merged or run yet. It must pass on the final main SHA before
+its artifacts can be inspected. No tag or publication is authorized by this
+preparation.
 
 Merged non-host checkpoint: #90 / `817987b`. PR #90 Windows/macOS and
 ASan/UBSan checks passed; post-merge main Windows/macOS builds passed (runs
@@ -91,18 +93,32 @@ artifacts from final binary packaging, signing and acceptance gates.
 
 ## Acceptance and evidence
 
+**Owner decision (2026-09-28):** wind down open-ended exploratory testing.
+No reproducible defect has been found; confirmed defects found after 1.0.0 are
+expected to be handled in a later release. This does not turn unrun checks into
+passes. Keep the remaining host/audio/GUI matrix items below unchecked and
+identify them as not run/deferred; review and explicitly accept/defer any
+remaining release gates before publication.
+
 Recent targeted evidence (not closure of the broader gates): held-state restore,
 ignored-CC admission, staged install boundaries, active bypass releases and wheel
 delivery recovery are documented in their `VALIDATION_*.md` reports. Full host
 suspension, public concurrent state calls and mixed controller timing still need
 acceptance. Desktop-unavailable GUI tests must not be counted as passing.
 
-- [ ] Local opt-in ROM integration tests pass on the candidate source.
+- [x] Exact-source local opt-in ROM integration suite passes: 36/36 CTests;
+  desktop-dependent `vdx7_processor` save-dialog test intentionally excluded.
 - [x] macOS and Windows CI pass on exact source SHA
   `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`.
 - [x] Exact-commit release-candidate workflow `36451459751` passes on that SHA;
   this is a non-publishing test workflow.
 - [ ] M1 REAPER and Windows REAPER: 1/4/8 instances, UI, save/restore, CPU.
+- [x] Owner-reported RC1 check: five VDX7 instances in one REAPER project;
+  save and reopen succeeded. Platform, duration and CPU details not supplied;
+  this does not complete the full instance/CPU/platform matrix.
+- [x] Owner-reported RC1 listening-quality check on macOS and Windows; owner
+  reports excellent, DX7-faithful sound. This subjective pass does not close
+  the measured rate/buffer, transport, render, or multi-instance matrix.
 - [ ] Transport play/stop/seek/loop/offline; device/sample-rate/buffer restart.
 - [ ] 44.1/48/96 kHz × 64/128/256/512/1024 samples where host/device configurable;
   record unsupported combinations explicitly rather than silently omitting them.
@@ -129,9 +145,13 @@ acceptance. Desktop-unavailable GUI tests must not be counted as passing.
 
 ## Repository policy
 
-During the owner-authorized non-REAPER round (2026-09-28), host gates stay
-NOT RUN for the new candidate. Record implementation and automated-test progress
-in the consolidated plan; do not mark these final gates from historical results.
+The exact RC1 host reports are recorded above and in the validation report.
+Unrun rate/buffer, transport/render, boundary, dense-MIDI, GUI-preset, and
+broader instance/CPU checks remain NOT RUN / DEFERRED—not passed. Do not reopen
+open-ended exploration absent a reproducible issue; do not misstate the deferred
+cells. Recheck current main and required Actions before freezing a stable source
+SHA. Never disable or bypass branch protection, force-push, or rewrite main.
+Source backup and release publication are separate actions.
 
 Main protection now requires a Pull Request and successful `build-macos` and
 `build-windows` checks. Never disable or bypass protection, force-push, or

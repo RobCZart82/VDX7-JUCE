@@ -11,11 +11,15 @@
   macOS `lipo` invocation so the input binary precedes `-verify_arch`.
 
 The CI/package results below do not imply runtime acceptance by themselves.
-The owner has separately reported an RC1 REAPER smoke test on Windows and
-macOS; details and its limited scope are recorded below. No private-ROM suite,
-full host/audio matrix, final release acceptance, or publication authorization
-is claimed. The exact candidate workflow builds and uploads VST3 artifacts
-only; AU/Standalone runtime or release distribution is not claimed.
+The owner has separately reported RC1 REAPER and listening tests on Windows
+and macOS; their limited scope is recorded below. The local opt-in ROM suite
+was also run on the exact product source (the checkout differed from the
+frozen RC only in documentation): 36/36 CTests passed. The desktop-dependent
+`vdx7_processor` test was deliberately excluded because it opens a save dialog.
+The full host/audio matrix, final release acceptance, and publication
+authorization are still open. The exact candidate workflow builds and uploads
+VST3 artifacts only; AU/Standalone runtime or release distribution is not
+claimed.
 
 ## Owner-reported exact-RC1 REAPER smoke test — 2026-09-28
 
@@ -34,11 +38,29 @@ are intentionally not retained.
 This is recorded as an **OWNER-REPORTED CROSS-PLATFORM REAPER SMOKE PASS** for
 the reported RC1 binaries, not as a test performed by the assistant.
 
-The Windows REAPER version, exact binary hash used on either machine, ROM/voice,
-feature-by-feature procedure, number of instances, audio rates/buffer sizes,
-project save/restore, transport/offline render and stress results were not
-supplied. Do not infer that the full host matrix, local-ROM suite, audio
-acceptance or all GUI presets have passed from this concise report.
+The owner additionally reports listening to the exact RC1 on both macOS and
+Windows and considers the sound quality excellent and faithful to the original
+Yamaha DX7. Record this as an **OWNER-REPORTED CROSS-PLATFORM LISTENING PASS**;
+the listening procedure, patch/ROM, monitoring chain, sample rate, buffer size,
+and Windows binary hash were not supplied. The assistant independently
+verified that the installed macOS VST3 hash matches the downloaded macOS RC1
+candidate artifact. In REAPER 7.80 on macOS, the plugin displayed
+`v1.0.0-rc1`, loaded the local ROM/factory banks, and a MIDI-keyboard note
+produced visible host output-meter activity. This was a bounded smoke check,
+not the full audio matrix or an independent subjective listening judgment.
+
+The owner also reports running five VDX7 instances in one REAPER project, then
+saving and reopening that project successfully. Record this as an
+**OWNER-REPORTED FIVE-INSTANCE AND PROJECT SAVE/REOPEN PASS**. The tested OS,
+REAPER version, project contents, duration/CPU behavior, and installed Windows
+binary hash were not specified. This is positive bounded evidence, but does
+not close the planned 1/4/8-instance, CPU, multi-platform, or broader state
+matrix.
+
+The Windows REAPER version and installed VST3 hash, ROM/voice, feature-by-feature
+procedure, number of instances, audio rates/buffer sizes, project save/restore,
+transport/offline render and stress results were not supplied. Do not infer
+that the full host matrix or all GUI presets have passed from these reports.
 
 ## Candidate CI results
 
@@ -78,20 +100,30 @@ project documentation/notices and corresponding-source archive; the verified
 source package rejected firmware, local absolute paths, build caches and
 credential-like content. Do not describe these as public release assets.
 
-## Still required before acceptance/publication
+## Owner test-phase decision — 2026-09-28
 
-- Owner downloads and installs this exact artifact in REAPER on macOS and
-  Windows; record application/OS versions and the exact binary hash used.
-- Run the required REAPER functional, multi-instance, MIDI boundary, automation,
-  save/restore, transport/offline-render and audio-rate/buffer matrix; mark
-  unsupported combinations explicitly. Older owner reports remain scoped to
-  the builds they tested.
-- Run the exact-SHA local opt-in ROM suite using the owner's local ROM. No ROM
-  was accessed or placed in CI/artifacts.
-- Close the remaining F7 offline-render, F15 envelope/release, F16 dense
-  MIDI/contention recovery and GUI Settings/About/size-preset checks as listed
-  in the release plan.
-- Finalize bilingual installation/release notes and confirm accepted signing
-  warnings and package contents. Then present version, SHA, asset list and
-  checksums for separate explicit publication authorization. No stable tag or
-  GitHub release has been created.
+The owner elects to wind down open-ended exploratory testing because no
+reproducible defect has been found. Any subsequently confirmed issue is
+expected to be handled in a release after 1.0.0. This is a testing-scope
+decision, not evidence that unrun checks passed or authorization to publish.
+Keep the broader host/audio/GUI matrix below and in the release checklist
+marked not run/deferred; review and explicitly accept or defer the remaining
+gates before publication. A serious release-blocking defect would still stop
+publication pending a fix.
+
+## Remaining release-preparation items and deferred test scope
+
+- The Windows installed-binary hash and REAPER version remain unrecorded; keep
+  that evidence OWNER-REPORTED and incomplete rather than inferring an exact
+  binary match.
+- The broader REAPER functional, MIDI-boundary, automation, transport/offline,
+  audio-rate/buffer, full instance/CPU and complete GUI-preset matrix was not
+  run. The owner chose to close exploratory testing and defer those cells; they
+  remain NOT RUN, not passes. See the release checklist for the enumerated scope.
+- The exact-source local opt-in ROM suite passed 36/36 CTests; the desktop UI
+  save-dialog test remains not run. No ROM was placed in CI/artifacts.
+- Bilingual release notes and guides are being reconciled with these results.
+  A non-publishing stable-package workflow is added in the current worktree;
+  it must be merged and run on the final main SHA, then its binaries, source
+  archive and checksums must be inspected. No stable tag or GitHub release has
+  been created or authorized.
