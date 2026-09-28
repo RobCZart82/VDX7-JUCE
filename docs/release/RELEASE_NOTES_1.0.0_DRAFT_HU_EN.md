@@ -50,7 +50,7 @@ host acceptance.
 | Windows/macOS exact-SHA CI and candidate workflow | PASS — run `36451459751` |
 | Matching source archive, manifest, package inspection and checksums | PASS for CI artifacts; see exact-RC validation report for SHA-256 and limits |
 | Windows REAPER exact-RC1 smoke | Owner reports exact RC1 works; REAPER/Windows versions, binary hash confirmation and detailed procedure not recorded; full matrix remains open |
-| macOS REAPER exact-RC1 smoke | Owner reports exact RC1 works; supplied screenshot shows REAPER 7.80 and RC1 label; full matrix remains open |
+| macOS REAPER exact-RC1 smoke | Owner reports exact RC1 works; screenshot shows REAPER 7.80 and RC1 label; machine reported as Mac mini M1 (2020), 16 GB, macOS Tahoe 26.7; binary hash/full matrix remain unconfirmed/open |
 | Windows 10 x64 REAPER | Owner previously reported testing build #219 (`29ab5e3`) without known functional issues; not the final RC matrix |
 | macOS REAPER | Owner reported testing on macOS 26.7; exact tested build/hash and complete matrix not recorded |
 | Windows VST3 build #247 installation | Owner reports installed artifact from source `fbea5ea`; reported VST3 SHA-256 `1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`; installation only, no new functional result stated |
@@ -101,7 +101,7 @@ letöltések, nem publikált GitHub Release és nem végleges kiadási jóváhag
 | Windows/macOS pontos SHA-jú CI és jelöltworkflow | PASS — `36451459751` |
 | Egyező forrásarchívum, manifest, csomagvizsgálat és ellenőrzőösszegek | PASS a CI artifactokra; részletek a pontos-RC validációban |
 | Windows REAPER exact-RC1 próba | A tulajdonos szerint a pontos RC1 működik; a REAPER/Windows-verzió, a használt bináris hash-egyezése és a részletes eljárás nincs rögzítve; a teljes mátrix nyitott |
-| macOS REAPER exact-RC1 próba | A tulajdonos szerint a pontos RC1 működik; a csatolt képen REAPER 7.80 és az RC1 felirat látszik; a teljes mátrix nyitott |
+| macOS REAPER exact-RC1 próba | A tulajdonos szerint a pontos RC1 működik; a képen REAPER 7.80 és az RC1 felirat látszik; a gép: Mac mini M1 (2020), 16 GB, macOS Tahoe 26.7; a bináris hash nincs megerősítve, a teljes mátrix nyitott |
 | Windows 10 x64 REAPER | A tulajdonos korábban a #219-es (`29ab5e3`) buildet ismert probléma nélkül tesztelte; ez nem a végleges RC tesztmátrixa |
 | macOS REAPER | A tulajdonos macOS 26.7-en végzett tesztről számolt be; a pontos build/hash és a teljes mátrix nincs rögzítve |
 | #247 Windows VST3 telepítése | A tulajdonos a `fbea5ea` forrásból készült csomag telepítését jelezte; megadott VST3 SHA-256: `1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`; ez telepítési adat, új funkcionális teszteredményt nem közölt |

@@ -14,6 +14,9 @@ post-merge main Windows/macOS and ASan/UBSan checks passed. Exact-RC workflow
 `36451459751` passed for the frozen RC source and uploaded Windows x64 and macOS
 universal VST3 candidate artifacts. The owner reports that exact RC1 works in
 REAPER on Windows and macOS; the supplied screenshot shows REAPER 7.80 on macOS.
+The owner identified the macOS test computer as a Mac mini (M1, 2020), 16 GB,
+macOS Tahoe 26.7; this environment detail does not close the exact-binary hash
+or full host/audio matrix.
 This is a cross-platform owner-reported smoke pass, not closure of the full
 host/audio matrix. Package hashes, source manifest verification and remaining
 test limits are in
