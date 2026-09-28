@@ -1,13 +1,14 @@
 # VDX7 Mk1. 1.0.0 — draft release notes and test matrix
 
 **DRAFT — not an accepted release and not publication authorization.**
-The exact release-candidate commit, artifacts and final acceptance results have
-not yet been selected. Replace the candidate-specific placeholders only after
-the exact RC is frozen and tested; do not turn owner reports into CI results.
+Test-only RC1 has been built from an exact SHA and passed automated CI, but
+private-ROM runtime, final host acceptance and owner publication approval are
+still outstanding. Do not turn owner reports into CI results.
 
-Preparation checkpoint: PR #91 is merged on main at
-`37c83f378a81e4623993941fb7e10c4ab58c208c`; its PR checks and post-merge
-Windows/macOS Actions passed. This is not an exact-RC build or release approval.
+Preparation checkpoint: PR #93 is merged on main at
+`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. Exact-RC workflow `36451459751`
+passed for Windows x64 and macOS universal; artifacts are test downloads, not a
+published GitHub release or stable release approval.
 
 ## English
 
@@ -45,13 +46,13 @@ host acceptance.
 
 | Item | Evidence / status |
 | --- | --- |
-| RC version and full source SHA | NOT SELECTED |
-| Windows/macOS exact-SHA CI and candidate workflow | NOT RUN |
-| Matching source archive, manifest, package inspection and checksums | NOT RUN for an RC |
+| RC version and full source SHA | `1.0.0-rc1`, `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684` |
+| Windows/macOS exact-SHA CI and candidate workflow | PASS — run `36451459751` |
+| Matching source archive, manifest, package inspection and checksums | PASS for CI artifacts; see exact-RC validation report for SHA-256 and limits |
 | Windows 10 x64 REAPER | Owner previously reported testing build #219 (`29ab5e3`) without known functional issues; not the final RC matrix |
 | macOS REAPER | Owner reported testing on macOS 26.7; exact tested build/hash and complete matrix not recorded |
 | Windows VST3 build #247 installation | Owner reports installed artifact from source `fbea5ea`; reported VST3 SHA-256 `1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`; installation only, no new functional result stated |
-| Final host/audio/GUI acceptance | OPEN; record each executed cell against the exact RC |
+| Final host/audio/GUI acceptance | OPEN; run and record each required cell against this exact RC |
 
 ## Magyar
 
@@ -60,10 +61,10 @@ emulációs magjára és a JUCE-ra építve. Az 1.0.0 a tulajdonos által jóvá
 GUI-t és az aktuális implementációt készíti elő a végső kompatibilitási és
 host-elfogadási ellenőrzésre.
 
-Előkészítési állapot: a #91 PR beolvadt a `main` ágba a
-`37c83f378a81e4623993941fb7e10c4ab58c208c` commitban; PR-ellenőrzései és az
-utána futó Windows/macOS Actions sikeresek. Ez még nem a pontos RC build és nem
-kiadási jóváhagyás.
+Előkészítési állapot: a #93 PR beolvadt a `main` ágba a
+`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684` commitban. A pontos RC-workflow
+(`36451459751`) sikeres Windows x64 és macOS Universal platformon. Ezek teszt-
+letöltések, nem publikált GitHub Release és nem végleges kiadási jóváhagyás.
 
 ### Főbb jellemzők
 
@@ -94,13 +95,14 @@ kiadási jóváhagyás.
 
 | Tétel | Bizonyíték / állapot |
 | --- | --- |
-| RC-verzió és teljes forrás-SHA | MÉG NINCS KIJELÖLVE |
-| Windows/macOS pontos SHA-jú CI és jelöltworkflow | NEM FUTOTT LE |
-| Egyező forrásarchívum, manifest, csomagvizsgálat és ellenőrzőösszegek | RC-re MÉG NEM FUTOTT LE |
+| RC-verzió és teljes forrás-SHA | `1.0.0-rc1`, `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684` |
+| Windows/macOS pontos SHA-jú CI és jelöltworkflow | PASS — `36451459751` |
+| Egyező forrásarchívum, manifest, csomagvizsgálat és ellenőrzőösszegek | PASS a CI artifactokra; részletek a pontos-RC validációban |
 | Windows 10 x64 REAPER | A tulajdonos korábban a #219-es (`29ab5e3`) buildet ismert probléma nélkül tesztelte; ez nem a végleges RC tesztmátrixa |
 | macOS REAPER | A tulajdonos macOS 26.7-en végzett tesztről számolt be; a pontos build/hash és a teljes mátrix nincs rögzítve |
 | #247 Windows VST3 telepítése | A tulajdonos a `fbea5ea` forrásból készült csomag telepítését jelezte; megadott VST3 SHA-256: `1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`; ez telepítési adat, új funkcionális teszteredményt nem közölt |
 | Végső host/audio/GUI elfogadás | NYITOTT; minden tényleges tesztet a pontos RC-hez kell rögzíteni |
 
-E dokumentum tervezet marad a pontos RC tesztelése, a kiadási fájlok ellenőrzése
-és a külön publikálási jóváhagyás előtt.
+E dokumentum tervezet marad a privát-ROM-os regressziók, a host/audio/GUI
+elfogadás, a végleges útmutató- és csomagellenőrzés, valamint a külön
+publikálási jóváhagyás előtt.

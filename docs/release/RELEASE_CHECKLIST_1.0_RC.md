@@ -7,12 +7,14 @@ by this checklist. No proprietary firmware belongs in source, CI or artifacts.
 Current work order and audit disposition: [consolidated plan](EXECUTION_PLAN_1.0.md).
 GUI appearance approval does not close the technical/platform gates below.
 
-Current main after PR #91: `37c83f378a81e4623993941fb7e10c4ab58c208c`.
-PR #91 Windows, macOS and ASan/UBSan checks passed. Post-merge main Actions
-also passed: Windows `36441316285`, macOS `36441316112`. They include build,
-ROM-free tests, packaging checks and ROM-test registration smoke; they are not
-an exact-RC workflow run, private-ROM runtime acceptance or REAPER acceptance.
-No candidate SHA is frozen yet.
+Current main after PR #93: `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`.
+PR #93 and post-merge main Windows/macOS and ASan/UBSan checks passed. Exact-RC
+workflow `36451459751` passed for this SHA and uploaded Windows x64 and macOS
+universal VST3 candidate artifacts. Package hashes, source manifest verification
+and remaining test limits are in
+[the RC1 validation report](../validation/VALIDATION_20260928_EXACT_RC1.md).
+This does not count as private-ROM runtime, REAPER, audio acceptance or release
+publication.
 
 Merged non-host checkpoint: #90 / `817987b`. PR #90 Windows/macOS and
 ASan/UBSan checks passed; post-merge main Windows/macOS builds passed (runs
@@ -85,9 +87,11 @@ delivery recovery are documented in their `VALIDATION_*.md` reports. Full host
 suspension, public concurrent state calls and mixed controller timing still need
 acceptance. Desktop-unavailable GUI tests must not be counted as passing.
 
-- [ ] Local opt-in ROM integration and ROM-free tests pass on the candidate source.
-- [ ] macOS and Windows CI pass on that exact source SHA.
-- [ ] Exact-commit release-candidate workflow passes on that SHA.
+- [ ] Local opt-in ROM integration tests pass on the candidate source.
+- [x] macOS and Windows CI pass on exact source SHA
+  `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`.
+- [x] Exact-commit release-candidate workflow `36451459751` passes on that SHA;
+  this is a non-publishing test workflow.
 - [ ] M1 REAPER and Windows REAPER: 1/4/8 instances, UI, save/restore, CPU.
 - [ ] Transport play/stop/seek/loop/offline; device/sample-rate/buffer restart.
 - [ ] 44.1/48/96 kHz × 64/128/256/512/1024 samples where host/device configurable;
@@ -100,11 +104,17 @@ acceptance. Desktop-unavailable GUI tests must not be counted as passing.
 ## Packaging (only after correctness gates)
 
 - [ ] Explicit 1.0.0-rcN identity matched to exact source SHA and dependency revisions.
-- [ ] Verify the candidate UI label, artifact name, source SHA and binary checksum agree.
-- [ ] Matching corresponding-source archive, licenses and checksum manifest.
+- [x] Candidate VST3 labels, artifact names and exact source SHA agree; binary
+  hashes were computed and recorded in the RC1 validation report.
+- [x] Matching corresponding-source archives, embedded manifests, pinned
+  dependencies, licenses/notices and source checksum manifest verified. The
+  archives use the packager's `1.0.0-dev` filename convention but identify the
+  exact candidate SHA; the candidate artifacts themselves are labeled `rc1`.
 - [x] Draft HU/EN release notes and owner-reported/current CI evidence matrix created;
   finalize the matrix against the frozen RC before acceptance.
-- [ ] Package inspected for absence of firmware, local paths, secrets and build caches.
+- [x] Source archive checker and manifest inspection found no firmware, local
+  paths, secrets or build caches; only the VST3 bundle and source/docs are in
+  the tested artifacts. Human review is recorded in the RC1 validation report.
 - [ ] Separate user authorization for any public release/tag/assets.
 
 ## Repository policy
