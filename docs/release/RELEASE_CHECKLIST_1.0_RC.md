@@ -9,9 +9,13 @@ GUI appearance approval does not close the technical/platform gates below.
 
 ## Correctness and realtime gates
 
-- [ ] Close the consolidated plan's packed-input validation, wheel-input,
-  ROM-identity and pre-ROM-edit findings with scoped regression evidence;
-  explicitly resolve or disposition state/lock/Settings candidates.
+- [x] Earlier F3/F4 packed-input, F1 wheel-input, F5 ROM-identity, F6 pre-ROM-edit
+  and F10 Settings fixes are implemented and merged; F8/F9 have a source-review
+  disposition. This records implementation only, not acceptance of a final RC.
+- [ ] Repeat relevant regressions on the frozen RC and attach exact-SHA evidence.
+- [ ] Resolve/disposition the NEW `AUDIT-20260928-N1` through `N7` ledger entries
+  in the consolidated plan. Do not confuse their IDs with older roadmap audits.
+  Missing coverage or a policy question is not automatically a product defect.
 - [ ] Validate all five actual GUI size presets and required About assets;
   preserve owner-approved graphics during any resource cleanup.
 
@@ -50,7 +54,8 @@ acceptance. Desktop-unavailable GUI tests must not be counted as passing.
 - [ ] Exact-commit release-candidate workflow passes on that SHA.
 - [ ] M1 REAPER and Windows REAPER: 1/4/8 instances, UI, save/restore, CPU.
 - [ ] Transport play/stop/seek/loop/offline; device/sample-rate/buffer restart.
-- [ ] 44.1/48/96 kHz × 64/128/256/512 samples.
+- [ ] 44.1/48/96 kHz × 64/128/256/512/1024 samples where host/device configurable;
+  record unsupported combinations explicitly rather than silently omitting them.
 - [ ] Linear SRC frequency response and aliasing measured; quality decision documented.
 
 ## Packaging (only after correctness gates)
@@ -62,6 +67,10 @@ acceptance. Desktop-unavailable GUI tests must not be counted as passing.
 - [ ] Separate user authorization for any public release/tag/assets.
 
 ## Repository policy
+
+During the owner-authorized non-REAPER round (2026-09-28), host gates stay
+NOT RUN for the new candidate. Record implementation and automated-test progress
+in the consolidated plan; do not mark these final gates from historical results.
 
 Main protection now requires a Pull Request and successful `build-macos` and
 `build-windows` checks. Never disable or bypass protection, force-push, or
