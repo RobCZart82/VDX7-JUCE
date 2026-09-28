@@ -26,13 +26,18 @@ The owner subsequently supplied the macOS “About This Mac” details: **Mac mi
 (M1, 2020), 16 GB RAM, macOS Tahoe 26.7**. This identifies the reported macOS
 test machine, but does not independently identify the installed VST3 binary by
 hash. The visible device serial number is intentionally not retained.
+The owner also supplied Windows system details: **Windows 10 Pro 22H2, build
+19045.7663; Intel Core i7-6600U; 8 GB RAM**. This identifies the reported
+Windows test environment, but the REAPER version and installed VST3 binary hash
+remain unconfirmed. Device and product identifiers visible in the screenshot
+are intentionally not retained.
 This is recorded as an **OWNER-REPORTED CROSS-PLATFORM REAPER SMOKE PASS** for
 the reported RC1 binaries, not as a test performed by the assistant.
 
-The Windows REAPER version/OS build, exact binary hash used on each machine,
-ROM/voice, feature-by-feature procedure, number of instances, audio rates/buffer
-sizes, project save/restore, transport/offline render and stress results were
-not supplied. Do not infer that the full host matrix, local-ROM suite, audio
+The Windows REAPER version, exact binary hash used on either machine, ROM/voice,
+feature-by-feature procedure, number of instances, audio rates/buffer sizes,
+project save/restore, transport/offline render and stress results were not
+supplied. Do not infer that the full host matrix, local-ROM suite, audio
 acceptance or all GUI presets have passed from this concise report.
 
 ## Candidate CI results
