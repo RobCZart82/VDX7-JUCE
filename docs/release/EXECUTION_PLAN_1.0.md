@@ -31,7 +31,7 @@ reproduction, and an implemented fix is not exact-RC acceptance.
 | N2 | Storage accepts semantically invalid unoccupied USER slots that processor import rejects | CRC-valid invalid fields in occupied and empty slots; reject all malformed packed voices transactionally | ROM-free storage test | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS |
 | N3 | Project RAM restore lacked packed voice semantic validation | Reject malformed VMEM before mutation; loaded/deferred ROM and modern/legacy state matrix | Processor harness and local ROM | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS; no crash claim |
 | N4 | Shared 16 KB/48 KB fixture claim did not match full direct-engine suite | Full-suite requirement narrowed to combined 48 KB v1.8; all local tests use profile fixture; product 16 KB support unchanged | Local ROM tests | IMPLEMENTED; combined profile PASS, 16 KB negative control fails clearly as expected |
-| N5 | CI registration smoke checked only one selected ROM test | Full names, labels, fixture edges, timeouts and failure policy; seven checker negative controls | Configuration-only CI | IMPLEMENTED; actual local ROM-on 36 / ROM-off 10 inventories and checker PASS; PR #89 Windows/macOS/sanitizer checks PASS |
+| N5 | CI registration smoke checked only one selected ROM test | Full names, labels, fixture edges, timeouts and failure policy; seven checker negative controls | Configuration-only CI | Existing baseline inventory was 36 ROM-on / 10 ROM-off; this branch adds one ROM-free version-identity test and updates the checker to expect 37/11 |
 | N6 | Keyboard pitch-wheel return policy differs from mouse release | Owner explicitly chose existing keyboard value retention on 2026-09-28; HU/EN guides clarify distinction | Component/UI policy review | ACCEPTED POLICY, not a defect; no input behavior change |
 | N7 | Invalid companion warning hid pending-ROM identity mismatch | Reproduce both conditions; preserve both warnings and pending project recovery | Local ROM processor harness | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS |
 | N8 | Moving main described using stale SHA | Dated reviewed baseline and aligned current documents; historical evidence keeps original SHAs | Documentation review | Initial fix MERGED #87; this checkpoint tracks post-#89 main `fbea5ea` |
@@ -372,10 +372,12 @@ evidence that the shipped instrument currently malfunctions.
   36 registered tests expose a timeout.
 - [x] Add a no-execution CMake registration smoke to Windows/macOS CI:
   configure `VDX7_ENABLE_ROM_TESTS=ON` with a placeholder path, then inspect
-  CTest's JSON listing. The new checker covers all 36 ROM-on and 10 ROM-off
-  names, fixture edges, labels, timeouts and absence of disabled/skip policy,
-  replacing the earlier single-test assertion. This is registration evidence,
-  not ROM acceptance, and executes no firmware tests.
+  CTest's JSON listing. The checker covers all 36 ROM-on and 10 ROM-off names
+  at baseline, fixture edges, labels, timeouts and absence of disabled/skip
+  policy, replacing the earlier single-test assertion. This branch's new
+  version-identity target changes the expected inventories to 37/11; the checker
+  is updated accordingly. This is registration evidence, not ROM acceptance,
+  and executes no firmware tests.
 - [x] Compile smoke with `VDX7_RELEASE_BUILD=ON`, with no artifact publication:
   local macOS Release Standalone, VST3 and `vdx7_ci_checks` built; all 10
   ROM-free tests passed. This is a compile smoke only, not release or host

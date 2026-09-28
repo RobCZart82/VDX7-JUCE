@@ -32,6 +32,18 @@ of a frozen RC, not host acceptance, and not authorization to publish.
   **11/11 PASS**.
 - Release-candidate workflow YAML parsed successfully; `git diff --check` passed.
 
+## CI registration inventory follow-up
+
+The first PR #91 Windows and macOS runs confirmed their product builds, ROM-free
+tests and packaging tests passed, but the registration checker rejected the new
+test as unexpected: its hard-coded inventory still expected the prior 10-test
+baseline. This is a test inventory contract failure, not a product/build failure.
+The checker now includes `vdx7_version_identity`, and the documented expected
+inventories are updated to 37 ROM-on / 11 ROM-off. Local full inventory
+verification passed for both ROM-off and placeholder-ROM registration modes;
+the placeholder is used only for configuration and no firmware test executes.
+Both platform CI jobs must re-run on the fix before considering merge.
+
 The first CTest invocation occurred before test executables were built and
 therefore reported them as Not Run. This was corrected by building
 `vdx7_ci_checks`; the complete final 11-test suite then passed. The initial
