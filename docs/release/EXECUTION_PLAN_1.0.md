@@ -1,7 +1,8 @@
 # 1.0 consolidated execution plan — current status 2026-09-28
 
-Reviewed baseline: `811f3a3ccaedbda3310134407000b0bf36c08504` (including
-merged #87; its Windows run 36397313250 and macOS run 36397313480 both PASS).
+Reviewed baseline: `d4ef9516b23e7198e6963d1a08b74195a9802159` (merged #88).
+PR #88 source `47ff097` passed Windows run 36405070149, macOS run 36405070251
+and ASan/UBSan run 36405070221. These results do not imply final RC acceptance.
 Main is re-fetched before each publication; incoming changes are preserved.
 This is a review
 checkpoint, not a claim that the moving main branch always has this SHA.
@@ -31,10 +32,17 @@ reproduction, and an implemented fix is not exact-RC acceptance.
 N2–N7 follow-up evidence, full-suite status and publication state:
 [non-host hardening validation](../validation/VALIDATION_20260928_NONHOST_HARDENING.md).
 Local FIXED does not imply merged, remote CI PASS or accepted final RC.
-Publication checkpoint: the 24-file follow-up is committed locally. After the
-initial safety-review rejection, the owner explicitly approved this upload and
-Draft PR on 2026-09-28. Remote Windows/macOS/sanitizer outcomes must be verified
-in that PR's Checks; local PASS and upload permission do not establish CI PASS.
+Publication checkpoint: the 24-file follow-up was published as #88 with explicit
+owner approval and is now merged. All three PR checks PASS. Its N2/N3/N7 fixes
+and N4/N5 test-contract changes are therefore merged implementation, not merely
+local fixes; the earlier evidence rows retain the actual local reproduction scope.
+New non-host round: [reproducible source packaging](SOURCE_PACKAGING_1.0.md)
+and HU/EN candidate instructions implemented. Two actual source ZIPs matched;
+extracted-source Windows offline build, 10/10 CTest and six packaging tests PASS.
+Independent Steinberg validation: 47 PASS, 0 FAIL. About opening/rendering PASS
+at the observed size; further UI testing stopped when Windows locked.
+See [exact provenance and limitations](../validation/VALIDATION_20260928_SOURCE_PACKAGING.md).
+New remote CI and exact-candidate workflow remain separate checks; no stable publication.
 
 Owner scope (2026-09-28): continue work that does NOT launch the installed
 REAPER. Do not replace an installed plugin, modify host projects or claim host
@@ -269,10 +277,10 @@ report. These checks do not start REAPER.
 - [x] F18 — compile/link CI covers Standalone on Windows/macOS and AU on macOS.
   PR #79's macOS and Windows workflows passed; do not imply host acceptance
   from compilation.
-- [ ] F19 — optional ROM-free ASan/UBSan job for voice/SysEx/USER, deferred MIDI,
+- [x] F19 — optional ROM-free ASan/UBSan job for voice/SysEx/USER, deferred MIDI,
   latest display, bounded files, algorithms and status helper. Workflow added
   in this follow-up for seven non-GUI component tests on macOS; no ROM, no
-  failure suppression. Runtime result is pending remote CI. LeakSanitizer is
+  failure suppression. Run 36405070221 PASS on PR #88. LeakSanitizer is
   explicitly excluded on this platform; do not claim leak-test coverage.
 
 ## 5. Test-system audit follow-up
@@ -335,7 +343,9 @@ evidence that the shipped instrument currently malfunctions.
 - [x] Optional `pluginval` gate exercised locally: Windows 1.0.4, strictness 5,
   GUI enabled, default rate/block matrix, final detailed log SUCCESS. See the
   follow-up validation for command/tool hash and limitations. Repeat on exact
-  RC; separate Steinberg validator and real host acceptance remain NOT RUN.
+  RC. Separate Steinberg validator now PASS (47/47) on the extracted-source
+  Windows build; see the source-packaging report for exact identity. Real host
+  acceptance and final-RC repetition remain open.
 - [x] Clarify the local-ROM contract in CMake and the HU/EN guide: one shared
   product accepts 16 KB firmware (optional sibling factory voices) or a 48 KB
   combined image, but the complete opt-in suite requires a combined 48 KB v1.8

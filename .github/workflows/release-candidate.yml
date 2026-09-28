@@ -40,6 +40,16 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
       - name: Configure development candidate
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DVDX7_RELEASE_BUILD=OFF ${{ matrix.configure }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test source packager
+        run: python -m unittest discover -s Tests -p test_package_source.py -v
+      - name: Prepare matching complete source (no publication)
+        run: >-
+          python scripts/package_source.py create --repo .
+          --juce build/_deps/juce-src --core build/_deps/retromulator-src
+          --commit ${{ inputs.source_commit }} --output candidate-source
       - name: Build plugin and ROM-free tests
         run: cmake --build build --config Release --parallel 4 --target VDX7_VST3 vdx7_ci_checks
       - name: Run ROM-free tests
@@ -62,4 +72,6 @@ jobs:
             LICENSES
             NOTICE.md
             THIRD_PARTY.md
+            candidate-source/*.zip
+            candidate-source/SHA256SUMS.txt
           if-no-files-found: error

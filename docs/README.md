@@ -8,6 +8,8 @@
 - [Release-candidate checklist](release/RELEASE_CHECKLIST_1.0_RC.md)
 - [Roadmap and milestone history](release/ROADMAP_1.0.md)
 - [1.0 build identity and package boundaries](release/IDENTITY_AND_PACKAGE_1.0.md)
+- [Reproducible source packaging](release/SOURCE_PACKAGING_1.0.md)
+- [Candidate instructions / jelölt útmutató](release/CANDIDATE_README_HU_EN.md)
 - [Current runtime GUI resources](design/GUI_RUNTIME_ASSETS.md)
 
 ## Document groups

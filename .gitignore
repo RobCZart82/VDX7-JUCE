@@ -5,6 +5,8 @@ _cmake-*/
 *.xcuserstate
 .vscode/
 .idea/
+__pycache__/
+*.pyc
 
 # Never accidentally commit proprietary Yamaha firmware/ROM data.
 ROM/*

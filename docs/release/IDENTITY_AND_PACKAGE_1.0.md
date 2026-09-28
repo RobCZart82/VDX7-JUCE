@@ -33,10 +33,11 @@ separate from future candidate acceptance.
 
 ## Package review and remaining blockers
 
-The existing candidate workflow has read-only repository permissions and no
-release/tag publication step. It uploads the VST3 and selected documents and
-licenses. It is **not yet a complete corresponding-source/checksum release
-package**. Build workflows' VST3 ZIPs likewise are development artifacts.
+The candidate workflow has read-only repository permissions and no
+release/tag publication step. The follow-up adds a matching complete source ZIP,
+embedded manifest and source ZIP checksum beside the VST3/documents/licenses.
+See [source packaging](SOURCE_PACKAGING_1.0.md). Final binary checksums and
+distribution packaging are still separate gates; artifacts remain development builds.
 
 - Windows code signing is not configured in these workflows.
 - macOS performs ad-hoc signing; this is not Developer ID/notarisation.
@@ -44,10 +45,9 @@ package**. Build workflows' VST3 ZIPs likewise are development artifacts.
   `e18f7f506c0b96f2c738a0bcd7fe6467a5005ad8` and Retromulator
   `d5473776a0449d60a997b91bdc888598a33265ac`. Offline layout and prior build
   evidence are in [SOURCE_DEPENDENCIES](../guides/SOURCE_DEPENDENCIES.md).
-- `NOTICE.md` still describes the historical v0.6.6 published package;
-  `release/README_HU_EN.txt` is explicitly historical. Neither proves that a
-  matching 1.0 source archive has been generated. Before publication, prepare
-  candidate-specific notices/readmes while preserving upstream licenses.
+- `NOTICE.md` now describes the 1.0 development source-package contract without
+  changing upstream terms. New HU/EN candidate instructions are available;
+  `release/README_HU_EN.txt` remains explicitly historical, not the 1.0 guide.
 - Generate matching complete source with dependency notices, checksums and
   an exact-SHA manifest; inspect final archives for ROMs, credentials, local
   paths, caches and unrelated files. Repeat offline extraction/build checks

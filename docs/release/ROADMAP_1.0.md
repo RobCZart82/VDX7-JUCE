@@ -9,8 +9,8 @@ indices compatible with saved projects.
 
 Use [the consolidated 1.0 execution plan](EXECUTION_PLAN_1.0.md) for current
 priority, closed GUI scope, audit F1–F19 disposition, and the new dated
-`AUDIT-20260928-N1`–`N8` ledger. Reviewed baseline is `811f3a3` (merged #87,
-Windows/macOS checks PASS); old N-numbered
+`AUDIT-20260928-N1`–`N8` ledger. Reviewed baseline is `d4ef951` (merged #88;
+PR Windows/macOS and ASan/UBSan checks PASS); old N-numbered
 findings below refer to earlier audits, not this new ledger. The approved GUI is
 closed, and the recorded local ROM-enabled CTest run passed 35/35 on the
 `d696e56` source tree; that run did not execute the desktop-dependent
@@ -26,6 +26,12 @@ N6 keyboard policy, measured GUI resource cleanup and pluginval evidence.
 It also records complete-suite and remote-CI status separately. Do not interpret
 historical 35/35 as a clean result for this new source. The execution plan
 preserves the remaining release gates.
+The [source-packaging round](../validation/VALIDATION_20260928_SOURCE_PACKAGING.md)
+adds reproducible exact-commit source archives, an actual extracted-source
+Windows offline build (10/10 CTest plus six packaging tests PASS), and separate
+Steinberg VST3 validation (47/47 PASS). Interactive About opening/rendering was
+checked, but Settings/preset/HiDPI completion is blocked by the locked desktop.
+These development-source results do not accept or publish a stable release.
 Older dated sections below are historical evidence; their stale GUI checkboxes
 or "next chapter" wording must not reopen the approved design. The RC checklist
 remains the final release gate, not a publication authorization.

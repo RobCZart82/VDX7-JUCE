@@ -1,5 +1,8 @@
 # Corresponding source dependencies
 
+Current automated creation, hash verification and extracted-source check:
+[reproducible source packaging](../release/SOURCE_PACKAGING_1.0.md).
+
 The 1.0.0 development branch retains the dependency revisions below. Its wrapper
 source is the exact development commit recorded with the package, not v0.6.6.
 The remaining v0.6.6 packaging description is retained as historical context.
