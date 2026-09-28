@@ -1,0 +1,43 @@
+name: Optional ROM-free sanitizers
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  address-undefined:
+    runs-on: macos-14
+    timeout-minutes: 25
+    env:
+      # LeakSanitizer is not supported here; this gate covers ASan and UBSan.
+      ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure instrumented ROM-free components
+        run: |
+          cmake -S . -B build-sanitized -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DVDX7_ENABLE_ROM_TESTS=OFF \
+            -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+      - name: Build non-GUI component tests
+        run: |
+          cmake --build build-sanitized --parallel 3 --target \
+            vdx7_voice_data_tests vdx7_user_bank_tests vdx7_deferred_midi_tests \
+            vdx7_latest_display_tests vdx7_bounded_file_tests \
+            vdx7_algorithm_tests vdx7_status_priority_tests
+      - name: Run ASan and UBSan checks
+        run: |
+          ctest --test-dir build-sanitized --output-on-failure --no-tests=error \
+            -R '^vdx7_(voice_data|user_bank|deferred_midi|latest_display|bounded_file|algorithms|status_priority)$'
+      - name: Preserve test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rom-free-sanitizer-diagnostics
+          path: build-sanitized/Testing/Temporary/LastTest.log
+          if-no-files-found: warn

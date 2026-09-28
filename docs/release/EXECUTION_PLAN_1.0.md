@@ -1,7 +1,9 @@
 # 1.0 consolidated execution plan — current status 2026-09-28
 
-Reviewed baseline: `b58679c80d54c1cedaebf26a49817329e8b82997` (including
-documentation cleanup #85 and refreshed screenshots #86). This is a review
+Reviewed baseline: `811f3a3ccaedbda3310134407000b0bf36c08504` (including
+merged #87; its Windows run 36397313250 and macOS run 36397313480 both PASS).
+Main is re-fetched before each publication; incoming changes are preserved.
+This is a review
 checkpoint, not a claim that the moving main branch always has this SHA.
 This plan combines the original 1.0 host/audio/release gates with the
 useful findings F1–F19 and the test-system review. Planning is not release
@@ -17,14 +19,22 @@ reproduction, and an implemented fix is not exact-RC acceptance.
 
 | ID suffix | Finding / evidence class | Next action and completion evidence | Environment | Status |
 | --- | --- | --- | --- | --- |
-| N1 | Reproduced edit loss while a saved project waits for a matching ROM and another ROM is loaded | Stopped processing, running callbacks and re-save/reopen regressions; preserve feedback/operator edits, leave incompatible engine unchanged, resume normal routing | Local v1.8 ROM, Windows processor harness; no REAPER | FIX IMPLEMENTED; failing baseline and 10/10 related checks PASS; see [validation](../validation/VALIDATION_20260928_PENDING_PROJECT_EDITS.md); not merged or exact-RC accepted |
-| N2 | Storage accepts semantically invalid unoccupied USER slots that processor import rejects | Synthetic CRC-valid fixture; define empty-slot policy; prove consistent transactional load behavior | ROM-free storage test, processor integration as needed | OPEN, source inconsistency |
-| N3 | Project RAM restore checks size/encoding but not packed voice semantic ranges | Mutated state fixtures; define rejection/legacy policy; prove valid and legacy state preservation | Processor harness and local ROM | OPEN, validation gap; crash not demonstrated |
-| N4 | Shared 16 KB/48 KB fixture claim may not match direct-engine audio tests | Run both layouts; share fixture loading or narrow full-suite requirement; update guide/CMake together | Local ROM tests | OPEN, fixture-contract candidate |
-| N5 | CI registration smoke checks only one selected ROM test | Verify full expected test set, fixture properties, labels and timeouts without executing ROM | Configuration-only CI | OPEN, test coverage gap |
-| N6 | Keyboard pitch-wheel return policy differs from mouse release | Decide intended accessible keyboard behavior before changing tests or code | Component/UI policy review | DECISION, not a confirmed defect |
-| N7 | Invalid companion warning can hide pending-ROM identity mismatch | Regression with mismatch plus invalid sibling file; retain both warnings or prioritize pending-project status | Local ROM processor harness | OPEN, source-confirmed status priority |
-| N8 | Moving main described using stale SHA | Use dated reviewed baseline; align roadmap and checklist; retain old validation claims with original SHAs | Documentation review | IMPLEMENTED on `fix/pending-rom-edits-20260928`; not merged |
+| N1 | Reproduced edit loss while a saved project waits for a matching ROM and another ROM is loaded | Stopped processing, running callbacks and re-save/reopen regressions; preserve feedback/operator edits, leave incompatible engine unchanged, resume normal routing | Local v1.8 ROM, Windows processor harness; no REAPER | MERGED #87; failing baseline and 10/10 related checks PASS; see [validation](../validation/VALIDATION_20260928_PENDING_PROJECT_EDITS.md); exact-RC acceptance remains open |
+| N2 | Storage accepts semantically invalid unoccupied USER slots that processor import rejects | CRC-valid invalid fields in occupied and empty slots; reject all malformed packed voices transactionally | ROM-free storage test | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS |
+| N3 | Project RAM restore lacked packed voice semantic validation | Reject malformed VMEM before mutation; loaded/deferred ROM and modern/legacy state matrix | Processor harness and local ROM | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS; no crash claim |
+| N4 | Shared 16 KB/48 KB fixture claim did not match full direct-engine suite | Full-suite requirement narrowed to combined 48 KB v1.8; all local tests use profile fixture; product 16 KB support unchanged | Local ROM tests | IMPLEMENTED; combined profile PASS, 16 KB negative control fails clearly as expected |
+| N5 | CI registration smoke checked only one selected ROM test | Full names, labels, fixture edges, timeouts and failure policy; seven checker negative controls | Configuration-only CI | IMPLEMENTED; actual local ROM-on 36 / ROM-off 10 inventories and checker PASS; remote CI must verify new workflow |
+| N6 | Keyboard pitch-wheel return policy differs from mouse release | Owner explicitly chose existing keyboard value retention on 2026-09-28; HU/EN guides clarify distinction | Component/UI policy review | ACCEPTED POLICY, not a defect; no input behavior change |
+| N7 | Invalid companion warning hid pending-ROM identity mismatch | Reproduce both conditions; preserve both warnings and pending project recovery | Local ROM processor harness | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS |
+| N8 | Moving main described using stale SHA | Dated reviewed baseline and aligned current documents; historical evidence keeps original SHAs | Documentation review | Initial fix MERGED #87; follow-up checkpoint tracks `811f3a3` |
+
+N2–N7 follow-up evidence, full-suite status and publication state:
+[non-host hardening validation](../validation/VALIDATION_20260928_NONHOST_HARDENING.md).
+Local FIXED does not imply merged, remote CI PASS or accepted final RC.
+Publication checkpoint: the 24-file follow-up is committed locally. After the
+initial safety-review rejection, the owner explicitly approved this upload and
+Draft PR on 2026-09-28. Remote Windows/macOS/sanitizer outcomes must be verified
+in that PR's Checks; local PASS and upload permission do not establish CI PASS.
 
 Owner scope (2026-09-28): continue work that does NOT launch the installed
 REAPER. Do not replace an installed plugin, modify host projects or claim host
@@ -32,8 +42,8 @@ acceptance from these runs. The final REAPER/platform gates remain open. No
 stable tag, release or asset publication is authorized by this development work.
 
 Work order: N1 reproduction/minimal fix, N7, N2/N3 with compatibility coverage,
-N4/N5 test-contract hardening, then non-host GUI/build/package checks. N6 requires
-a behavior decision, not a speculative fix. Record exact source, test command,
+N4/N5 test-contract hardening, then non-host GUI/build/package checks. N6 is now
+an accepted owner decision, not a speculative fix. Record exact source, test command,
 platform, fixture scope and PASS/FAIL/NOT RUN in linked validation reports.
 N8 documentation work does not close N1–N7 or any exact-RC gate.
 
@@ -47,8 +57,16 @@ Additional findings from this round's runtime checks (not audit N numbers):
   independent pitch-fader assertion correction below.
 - `TEST-20260928-TIMEOUTS`: `vdx7_midi_range` exceeded its existing 60-second
   CTest limit and `vdx7_mono_corrected_processor` exceeded 120 seconds on
-  Windows. Record the failures and investigate separately; do not
-  silently extend limits or call this a passed product acceptance test.
+  Windows. Sequential baseline reruns reproduced both timeouts; unchanged
+  executables completed in 292.44 s (MIDI, prior round) and 130.88 s (MONO,
+  isolated rerun). Windows-only budgets are now 600/300 s without reducing
+  scenarios/assertions. See the follow-up validation for the complete rerun;
+  these are exhaustive emulation tests, not realtime wall-clock guarantees.
+  Follow-up full run: 35/36 PASS; aggregate host reset additionally hit its
+  180 s limit. Its Windows-only budget is 360 s; retain the initial FAIL and
+  the separate unchanged-scenario rerun PASS (176.16 s) in the follow-up report.
+  All 36 unique cases now have a latest PASS across the full run and rerun,
+  not one newly executed all-green full invocation.
 - `TEST-20260928-PITCH-LAYOUT`: after fixing the bank oracle, the processor test
   fails at `pitch faders leave room for values`. The test assumes bottom <=490
   reference units; approved layout uses y=408, height=88 (bottom=496). FIXED
@@ -234,14 +252,17 @@ report. These checks do not start REAPER.
   attempt to open the modal Settings window from the headless component test
   was unstable, so it is not counted as coverage or product evidence. The
   existing non-modal component/snapshot tests remain green.
+  The 2026-09-28 Windows interactive Standalone follow-up was NOT RUN because
+  the computer-use application launch approval timed out; no bypass attempted.
   After PR #83, all ten ROM-free tests passed locally on `94081f9`.
-- [ ] F11 — unused runtime image loads confirmed; performance magnitude NOT
-  MEASURED. Measure 0/1/4/8 editors (RSS and creation time), remove only proven
-  unused loads/resources, compare screenshots and behavior before/after.
-  Keep design/reference files where useful; no blanket raster deletion.
-- [ ] F13 — reconcile historical raster manifest with vector-first production
-  geometry (1440×1110 reference canvas); distinguish reference assets from
-  runtime assets and do not promise a nonexistent full 2× pack.
+- [x] F11 — locally measured and implemented: remove five unused editor image
+  loads, retaining all source artwork and used images. 0/1/4/8 fresh-process
+  measurements (three repeats) and byte-identical before/after GUI snapshots
+  are recorded in the follow-up validation. Eight-editor median sampled
+  working set fell from 100.64 to 44.23 MiB; this is not DAW/audio CPU evidence.
+- [x] F13 — historical manifest/spec now point to the current
+  [runtime asset contract](../design/GUI_RUNTIME_ASSETS.md), with 1440×1110
+  geometry, runtime/reference distinction and no promise of a full 2× pack.
 - [x] F14 — the About regression requires all three vectors (VDX7, GYR and
   developer signature) and captures a rendered panel snapshot. The test passed
   in the GUI regression and merged cross-platform CI.
@@ -249,7 +270,10 @@ report. These checks do not start REAPER.
   PR #79's macOS and Windows workflows passed; do not imply host acceptance
   from compilation.
 - [ ] F19 — optional ROM-free ASan/UBSan job for voice/SysEx/USER, deferred MIDI,
-  latest display, bounded files, algorithms and status helper.
+  latest display, bounded files, algorithms and status helper. Workflow added
+  in this follow-up for seven non-GUI component tests on macOS; no ROM, no
+  failure suppression. Runtime result is pending remote CI. LeakSanitizer is
+  explicitly excluded on this platform; do not claim leak-test coverage.
 
 ## 5. Test-system audit follow-up
 
@@ -290,9 +314,10 @@ evidence that the shipped instrument currently malfunctions.
   36 registered tests expose a timeout.
 - [x] Add a no-execution CMake registration smoke to Windows/macOS CI:
   configure `VDX7_ENABLE_ROM_TESTS=ON` with a placeholder path, then inspect
-  CTest's JSON listing to assert the pending ROM-identity test and v1.8 fixture
-  are registered. Verified locally; this checks names/fixtures only, not ROM
-  acceptance, and executes no firmware tests.
+  CTest's JSON listing. The new checker covers all 36 ROM-on and 10 ROM-off
+  names, fixture edges, labels, timeouts and absence of disabled/skip policy,
+  replacing the earlier single-test assertion. This is registration evidence,
+  not ROM acceptance, and executes no firmware tests.
 - [x] Compile smoke with `VDX7_RELEASE_BUILD=ON`, with no artifact publication:
   local macOS Release Standalone, VST3 and `vdx7_ci_checks` built; all 10
   ROM-free tests passed. This is a compile smoke only, not release or host
@@ -307,14 +332,16 @@ evidence that the shipped instrument currently malfunctions.
   `FETCHCONTENT_FULLY_DISCONNECTED=ON`; VST3, AU, Standalone and CI-test targets
   built, and all 10 ROM-free tests passed. This validates the extracted source
   tree layout and offline build path, not archive publication or host acceptance.
-- [ ] Add `pluginval`/VST3 validation as an optional RC gate; retain real REAPER
-  and other-host acceptance as separate required evidence.
+- [x] Optional `pluginval` gate exercised locally: Windows 1.0.4, strictness 5,
+  GUI enabled, default rate/block matrix, final detailed log SUCCESS. See the
+  follow-up validation for command/tool hash and limitations. Repeat on exact
+  RC; separate Steinberg validator and real host acceptance remain NOT RUN.
 - [x] Clarify the local-ROM contract in CMake and the HU/EN guide: one shared
-  fixture may be 16 KB firmware (with optional sibling factory voices) or a
-  48 KB combined image; the full opt-in suite includes v1.8-profile tests, so
-  its fixture must contain the locally validated v1.8 firmware. A no-execution
-  CTest registration smoke confirmed the profile fixture and 26 local-ROM
-  registrations. The placeholder was not used to execute firmware tests.
+  product accepts 16 KB firmware (optional sibling factory voices) or a 48 KB
+  combined image, but the complete opt-in suite requires a combined 48 KB v1.8
+  image. This corrects the previous broader fixture claim. All 26 local-ROM
+  registrations are now covered by a complete inventory checker; placeholder
+  CI never executes firmware tests.
 
 ### P3 — naming and source-quality polish
 
@@ -338,11 +365,16 @@ evidence that the shipped instrument currently malfunctions.
 
 ## 6. Exact candidate and release — original gates retained
 
-- [ ] F17 — document numeric host 1.0.0 versus displayed 1.0.0-dev/RC identity;
-  review prototype description/bundle naming without casually changing IDs.
+- [x] F17 — [identity/package review](IDENTITY_AND_PACKAGE_1.0.md) documents
+  numeric host 1.0.0 versus displayed 1.0.0-dev and exact-SHA artifact naming.
+  Historical bundle/plugin IDs are preserved. Cosmetic prototype DESCRIPTION
+  cleanup and any future rcN display option are separate candidate changes.
 - [ ] Freeze one RC SHA; run public Windows/macOS checks, full local ROM suite,
   host matrix and exact-SHA candidate workflow. Retest relevant gates after fixes.
-- [ ] Decide/document single USER-library limitation and supported formats/hosts.
+- [x] Document single USER-library limitation and supported formats/hosts:
+  HU/EN guides and the identity/package review distinguish primary VST3,
+  compile-only AU/Standalone coverage and dated host evidence. Exact RC host
+  acceptance is still required; no new runtime support claim was made.
 - [ ] Verify package signatures/notarisation status, matching complete source,
   pinned dependencies, licences/notices, checksums, HU/EN installation guidance
   and release notes. Inspect for ROMs, secrets, local paths and build caches.

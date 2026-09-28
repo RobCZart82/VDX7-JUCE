@@ -470,6 +470,35 @@ int main(int argc, char** argv)
         original.selectProgramFromUi(3);
         auto state = save(original);
         auto bank = ram(state);
+        // N3: a well-sized project RAM block can still contain invalid VMEM.
+        // Probe an unselected voice so host parameter publication cannot repair it.
+        for (const bool deferRom : {false, true})
+        for (const bool legacy : {false, true})
+        {
+            auto probe = std::make_unique<VDX7AudioProcessor>(false);
+            auto xml = juce::AudioProcessor::getXmlFromBinary(state.getData(), int(state.getSize()));
+            auto tree = juce::ValueTree::fromXml(*xml);
+            if (legacy) tree.removeAllChildren(nullptr);
+            if (deferRom) tree.setProperty("romPath", "", nullptr);
+            else require(probe->loadRomFromFile(testRomFile), "N3 loaded fixture");
+            juce::MemoryBlock validState;
+            juce::AudioProcessor::copyXmlToBinary(*tree.createXml(), validState);
+            probe->setStateInformation(validState.getData(), int(validState.getSize()));
+            const auto before = save(*probe);
+            for (const auto mutation : std::array<std::pair<int, uint8_t>, 3>{{{0,100},{12,0x78},{117,49}}})
+            {
+                auto badRam = bank;
+                static_cast<uint8_t*>(badRam.getData())[31 * 128 + mutation.first] = mutation.second;
+                auto badTree = tree.createCopy();
+                badTree.setProperty("ram", badRam.toBase64Encoding(), nullptr);
+                badTree.setProperty("midiInputChannel", 9, nullptr);
+                juce::MemoryBlock badState;
+                juce::AudioProcessor::copyXmlToBinary(*badTree.createXml(), badState);
+                probe->setStateInformation(badState.getData(), int(badState.getSize()));
+                require(save(*probe) == before,
+                        "invalid packed project RAM must preserve loaded or pending state transactionally");
+            }
+        }
         require(original.getCurrentProgram() == 3, "pending program saved");
         const auto* voice = static_cast<const uint8_t*>(bank.getData()) + 3 * 128;
         for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)

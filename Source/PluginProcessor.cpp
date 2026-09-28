@@ -1182,6 +1182,10 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
         juce::MemoryBlock ram;
         if (!ram.fromBase64Encoding(ramText) || ram.getSize() != VDX7Engine::kRamStateSize)
             return; // Malformed state must not replace a usable/pending project.
+        const auto* packed = static_cast<const uint8_t*>(ram.getData());
+        for (int slot = 0; slot < 32; ++slot)
+            if (!VDX7VoiceData::hasValidPackedVoice(packed + slot * 128, 128))
+                return; // Validate only packed voices, not firmware working RAM.
     }
 
     auto pendingCopy = state.createCopy();
@@ -1438,7 +1442,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
                 ? "DX7 firmware loaded + 8 factory banks"
                 : "DX7 firmware loaded (factory voice image not found)");
         if (ignoredCompanion)
-            statusText_ = "DX7 firmware loaded; invalid or unreadable optional factory voice image ignored";
+            statusText_ += "; invalid or unreadable optional factory voice image ignored";
     }
     synchroniseOperatorParametersFromEngine();
     return true;

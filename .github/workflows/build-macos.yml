@@ -42,7 +42,9 @@ jobs:
             -DVDX7_ENABLE_ROM_TESTS=ON \
             -DVDX7_TEST_ROM_FILE="$(pwd)/build-rom-registration/fixture.placeholder"
           ctest --test-dir build-rom-registration -C Release -N --show-only=json-v1 > rom-test-registration.json
-          python3 -c 'import json; d=json.load(open("rom-test-registration.json")); t=next(x for x in d["tests"] if x["name"]=="vdx7_pending_rom_content_identity"); p={x["name"]:x["value"] for x in t["properties"]}; assert "vdx7_v18_rom" in p["FIXTURES_REQUIRED"], "pending ROM identity test is missing its v1.8 fixture requirement"'
+          python3 scripts/check_test_registration.py rom-test-registration.json --self-test
+          ctest --test-dir build -C Release -N --show-only=json-v1 > rom-free-registration.json
+          python3 scripts/check_test_registration.py rom-free-registration.json --rom-free-only
 
       - name: Locate VST3
         run: |

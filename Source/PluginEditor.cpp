@@ -396,13 +396,8 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
       processor_(processor),
       keyboard_(processor.keyboardState()),
       performancePanel_(processor),
-      chassis_(loadImage(VDX7Assets::mainwindow_png, VDX7Assets::mainwindow_pngSize)),
       wordmark_(juce::Drawable::createFromImageData(VDX7Assets::vdx7silver2_svg, VDX7Assets::vdx7silver2_svgSize)),
-      lcdFrame_(loadImage(VDX7Assets::lcdframe_png, VDX7Assets::lcdframe_pngSize)),
-      panel_(loadImage(VDX7Assets::panel9slice_png, VDX7Assets::panel9slice_pngSize)),
-      valueField_(loadImage(VDX7Assets::valuefield_png, VDX7Assets::valuefield_pngSize)),
-      envelopeGrid_(loadImage(VDX7Assets::envelopegrid_png, VDX7Assets::envelopegrid_pngSize)),
-      divider_(loadImage(VDX7Assets::sectiondivider_png, VDX7Assets::sectiondivider_pngSize))
+      valueField_(loadImage(VDX7Assets::valuefield_png, VDX7Assets::valuefield_pngSize))
 {
     setLookAndFeel(&lookAndFeel_);
     setOpaque(true);

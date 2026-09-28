@@ -9,7 +9,8 @@ indices compatible with saved projects.
 
 Use [the consolidated 1.0 execution plan](EXECUTION_PLAN_1.0.md) for current
 priority, closed GUI scope, audit F1–F19 disposition, and the new dated
-`AUDIT-20260928-N1`–`N8` ledger. Reviewed baseline is `b58679c`; old N-numbered
+`AUDIT-20260928-N1`–`N8` ledger. Reviewed baseline is `811f3a3` (merged #87,
+Windows/macOS checks PASS); old N-numbered
 findings below refer to earlier audits, not this new ledger. The approved GUI is
 closed, and the recorded local ROM-enabled CTest run passed 35/35 on the
 `d696e56` source tree; that run did not execute the desktop-dependent
@@ -18,8 +19,13 @@ closed, and the recorded local ROM-enabled CTest run passed 35/35 on the
 The 2026-09-28 Windows processor harness now completes after correcting two test
 oracles, but the broader run exposed a MIDI-test timeout. See
 [the current validation record](../validation/VALIDATION_20260928_PENDING_PROJECT_EDITS.md)
-for original failures and reruns. Do not interpret historical 35/35 as a clean
-result for this new source. The execution plan preserves the remaining release gates.
+for original failures and reruns. The next
+[non-host hardening round](../validation/VALIDATION_20260928_NONHOST_HARDENING.md)
+records N2/N3/N7 regressions and fixes, N4/N5 fixture/CI hardening, the accepted
+N6 keyboard policy, measured GUI resource cleanup and pluginval evidence.
+It also records complete-suite and remote-CI status separately. Do not interpret
+historical 35/35 as a clean result for this new source. The execution plan
+preserves the remaining release gates.
 Older dated sections below are historical evidence; their stale GUI checkboxes
 or "next chapter" wording must not reopen the approved design. The RC checklist
 remains the final release gate, not a publication authorization.

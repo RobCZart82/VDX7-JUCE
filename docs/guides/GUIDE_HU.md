@@ -54,7 +54,7 @@ Gyári hangadat esetén ROM1A–ROM4B érhető el: nyolc bank, bankonként 32 pr
 
 Mind a 32 algoritmus kapcsolása látható. Operátorcsomópontra kattintva kiválasztod annak szerkesztőjét; a tabok és az ábra kijelölése együtt mozog. A kijelölés nem némít operátort és nem módosít hangot. Az OUT a kimeneti operátorokat jelöli; az F0–F7 a feedback értéke, nem élő jelszint.
 
-A képernyő-billentyűzet, a középre visszatérő pitch kerék, a helyzetét megtartó modulation kerék és a hangerőfader működik. A kerék bordázata az értékkel együtt mozog. A két kivezérlésmérő a kimeneti szintet mutatja; a mag mono jele mindkét csatornára kerül.
+A képernyő-billentyűzet, a pitch kerék, a helyzetét megtartó modulation kerék és a hangerőfader működik. A pitch kerék egérhúzás után középre tér vissza; billentyűzetes állításkor szándékosan megtartja a beállított értéket (tulajdonos által jóváhagyott működés). A kerék bordázata az értékkel együtt mozog. A két kivezérlésmérő a kimeneti szintet mutatja; a mag mono jele mindkét csatornára kerül.
 
 A footer CPU-százaléka simított audio-callback terhelésbecslés, nem a teljes számítógép CPU-használata, és nem feltétlenül egyezik a REAPER mérőjével.
 
@@ -158,15 +158,13 @@ opciókkal, majd fordítsd újra a `vdx7_all_tests` célt, és indítsd a CTeste
 A ROM-ot ne töltsd fel. A processor teszt nem nyit audioeszközt, és opcionálisan
 létező abszolút mappát fogad a PNG-előnézetekhez.
 
-A `VDX7_TEST_ROM_FILE` egyetlen, az opt-in tesztekkel közösen használt fájl:
-16 384 bájtos firmware (mellette opcionálisan `dx7_factory_voices_32KB.bin`)
-vagy 49 152 bájtos, firmware-t és gyári hangadatot tartalmazó kombinált kép.
-A gyári hangadat nem szükséges a firmware futtatásához; a nyolc gyári bankhoz
-ad hangszíneket. A teljes opt-in tesztkör része a validált v1.8 firmware
-memóriatérképét ellenőrző tesztcsoport is, ezért a profilteszt fixture-jének
-azt a helyben validált v1.8 firmware-t kell tartalmaznia. A v1.8 profilt nem a
-gyári hangadat payload határozza meg. Ez a privát teszt-fixture elkülönül a
-nyilvános, ROM-mentes CI-től.
+A teljes opt-in tesztkör `VDX7_TEST_ROM_FILE` fájlja 49 152 bájtos, v1.8
+firmware-t és gyári hangadatot tartalmazó kombinált kép legyen. A közvetlen
+motortesztek nem olvasnak kísérőfájlt, az azonosságtesztek gyári hangadatot is
+igényelnek. A közös profilteszt ezt minden függő ROM-teszt előtt ellenőrzi.
+A plugin továbbra is támogatja a 16 384 bájtos firmware-t opcionális
+`dx7_factory_voices_32KB.bin` mellett; ez nem jelenti ugyanennek a formának
+a támogatását a teljes tesztkörben. A privát fixture nem kerül nyilvános CI-be.
 
 ## 12. Licenc és kiadási állapot
 

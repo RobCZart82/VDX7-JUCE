@@ -1,6 +1,9 @@
 {
   "name": "VDX7 Mk I GUI Asset Pack",
   "version": "1.2.0",
+  "status": "Historical raster design inventory, not the current runtime geometry or a complete shipped 2x pack",
+  "runtimeDocumentation": "../../docs/design/GUI_RUNTIME_ASSETS.md",
+  "currentRuntimeCanvas": { "width": 1440, "height": 1110 },
   "format": "PNG RGBA",
   "referenceCanvas": { "width": 1447, "height": 1087 },
   "implementationCanvas": { "width": 1440, "height": 1080 },

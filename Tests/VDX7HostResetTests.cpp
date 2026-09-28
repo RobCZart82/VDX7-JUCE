@@ -1386,6 +1386,22 @@ static void testPendingStateWithDifferentLoadedRom(const juce::File& rom)
     juce::MemoryBlock missingRomState;
     juce::AudioProcessor::copyXmlToBinary(*savedTree.createXml(), missingRomState);
 
+    // N7: an optional factory-file warning must not hide a pending project.
+    const auto firmwareOnly = tempFolder.getChildFile("firmware-only.bin");
+    require(firmwareOnly.replaceWithData(differentImage.getData(), VDX7Engine::kFirmwareSize),
+            "write isolated firmware-only fixture");
+    const auto badCompanion = tempFolder.getChildFile("dx7_factory_voices_32KB.bin");
+    require(badCompanion.replaceWithText("invalid"), "write invalid companion fixture");
+    auto warned = std::make_unique<VDX7AudioProcessor>(false);
+    warned->setStateInformation(missingRomState.getData(), int(missingRomState.getSize()));
+    require(warned->loadRomFromFile(firmwareOnly), "valid firmware tolerates invalid optional companion");
+    require(warned->getStatusText().containsIgnoreCase("differs")
+            && warned->getStatusText().containsIgnoreCase("ignored"),
+            "pending ROM mismatch and optional companion warning must both remain visible");
+    require(warned->loadRomFromFile(rom), "matching image resumes warned project");
+    require(VDX7RegressionAccess::engine(*warned).currentProgram() == 7,
+            "warning priority does not discard the pending project");
+
     auto waitingStorage = std::make_unique<VDX7AudioProcessor>(false);
     auto& waiting = *waitingStorage;
     require(waiting.loadRomFromFile(differentRom), "load a different but valid ROM before project restore");
@@ -2920,6 +2936,8 @@ int main(int argc, char** argv)
         }
         if (profileCheckOnly)
         {
+            require(image.getSize() == VDX7Engine::kCombinedRomSize,
+                    "Complete local test suite requires a 48 KB combined v1.8 image; 16 KB remains supported by the plugin");
             juce::MemoryBlock firmware(image.getData(), VDX7Engine::kFirmwareSize);
             require(VDX7RegressionAccess::knownFirmwareImage(firmware), "firmware-only profile");
             auto changed = firmware;
