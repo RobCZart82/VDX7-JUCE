@@ -22,6 +22,10 @@ only; AU/Standalone runtime or release distribution is not claimed.
 The owner reports installing and trying the exact `1.0.0-rc1` VST3 on both
 Windows and macOS and says it works well on both. The supplied screenshot shows
 the plugin in REAPER **7.80** on macOS, including the `1.0.0-rc1` GUI footer.
+The owner subsequently supplied the macOS “About This Mac” details: **Mac mini
+(M1, 2020), 16 GB RAM, macOS Tahoe 26.7**. This identifies the reported macOS
+test machine, but does not independently identify the installed VST3 binary by
+hash. The visible device serial number is intentionally not retained.
 This is recorded as an **OWNER-REPORTED CROSS-PLATFORM REAPER SMOKE PASS** for
 the reported RC1 binaries, not as a test performed by the assistant.
 
