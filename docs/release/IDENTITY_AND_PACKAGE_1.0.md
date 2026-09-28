@@ -1,8 +1,11 @@
 # 1.0 build identity and package boundaries
 
-Source review: 2026-09-28, post-#90 main baseline `817987b`. PR and post-merge
-Windows/macOS CI passed; PR ASan/UBSan passed. This is a preparation record,
-not approval to publish, rename installed plugins or change their identity.
+Source review: 2026-09-28, main after PR #91 at
+`37c83f378a81e4623993941fb7e10c4ab58c208c`. PR #91 Windows/macOS and ASan/UBSan
+checks passed; post-merge main Windows `36441316285` and macOS `36441316112`
+also passed. The exact-candidate workflow remains unrun; this is a preparation
+record, not approval to publish, rename installed plugins or change their
+identity.
 
 ## Identity (F17)
 

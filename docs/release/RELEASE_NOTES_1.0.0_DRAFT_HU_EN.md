@@ -5,6 +5,10 @@ The exact release-candidate commit, artifacts and final acceptance results have
 not yet been selected. Replace the candidate-specific placeholders only after
 the exact RC is frozen and tested; do not turn owner reports into CI results.
 
+Preparation checkpoint: PR #91 is merged on main at
+`37c83f378a81e4623993941fb7e10c4ab58c208c`; its PR checks and post-merge
+Windows/macOS Actions passed. This is not an exact-RC build or release approval.
+
 ## English
 
 VDX7 Mk1. is an open-source six-operator FM instrument built around the VDX7
@@ -55,6 +59,11 @@ A VDX7 Mk1. nyílt forrású, hatoperátoros FM hangszer a VDX7 DX7 Mk I
 emulációs magjára és a JUCE-ra építve. Az 1.0.0 a tulajdonos által jóváhagyott
 GUI-t és az aktuális implementációt készíti elő a végső kompatibilitási és
 host-elfogadási ellenőrzésre.
+
+Előkészítési állapot: a #91 PR beolvadt a `main` ágba a
+`37c83f378a81e4623993941fb7e10c4ab58c208c` commitban; PR-ellenőrzései és az
+utána futó Windows/macOS Actions sikeresek. Ez még nem a pontos RC build és nem
+kiadási jóváhagyás.
 
 ### Főbb jellemzők
 

@@ -1,5 +1,18 @@
 # 1.0 consolidated execution plan — current status 2026-09-28
 
+## Current main checkpoint — after PR #91
+
+Current reviewed main: `37c83f378a81e4623993941fb7e10c4ab58c208c` (merge of
+PR #91). PR #91 adds opt-in `rcN` display/artifact identity and focused
+ROM-free validation; its Windows, macOS and ASan/UBSan checks passed. The
+post-merge main runs also passed: Windows `36441316285` and macOS
+`36441316112`, including builds, ROM-free tests, source-packaging checks,
+local-ROM test-registration smoke and artifact upload. These are successful
+development/main checks, **not** an exact-RC run or REAPER acceptance. The
+exact-candidate workflow has not yet been dispatched, no RC SHA has been
+accepted, and no stable tag/release has been published. At this checkpoint
+there is no open PR. Keep owner reports separate from executed evidence.
+
 Reviewed baseline: `817987b9337aca9d0e21d14427ac14fc74833505` (main after #90).
 PR #90 merged the bilingual release-preparation documentation and recorded the
 owner-reported Windows #247 VST3 installation hash. Its PR Windows/macOS and
@@ -31,7 +44,7 @@ reproduction, and an implemented fix is not exact-RC acceptance.
 | N2 | Storage accepts semantically invalid unoccupied USER slots that processor import rejects | CRC-valid invalid fields in occupied and empty slots; reject all malformed packed voices transactionally | ROM-free storage test | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS |
 | N3 | Project RAM restore lacked packed voice semantic validation | Reject malformed VMEM before mutation; loaded/deferred ROM and modern/legacy state matrix | Processor harness and local ROM | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS; no crash claim |
 | N4 | Shared 16 KB/48 KB fixture claim did not match full direct-engine suite | Full-suite requirement narrowed to combined 48 KB v1.8; all local tests use profile fixture; product 16 KB support unchanged | Local ROM tests | IMPLEMENTED; combined profile PASS, 16 KB negative control fails clearly as expected |
-| N5 | CI registration smoke checked only one selected ROM test | Full names, labels, fixture edges, timeouts and failure policy; seven checker negative controls | Configuration-only CI | Existing baseline inventory was 36 ROM-on / 10 ROM-off; this branch adds one ROM-free version-identity test and updates the checker to expect 37/11 |
+| N5 | CI registration smoke checked only one selected ROM test | Full names, labels, fixture edges, timeouts and failure policy; seven checker negative controls | Configuration-only CI | Full inventory checker and `vdx7_version_identity` merged in #91; expected inventory is 37 ROM-on / 11 ROM-off; PR and post-merge platform checks PASS |
 | N6 | Keyboard pitch-wheel return policy differs from mouse release | Owner explicitly chose existing keyboard value retention on 2026-09-28; HU/EN guides clarify distinction | Component/UI policy review | ACCEPTED POLICY, not a defect; no input behavior change |
 | N7 | Invalid companion warning hid pending-ROM identity mismatch | Reproduce both conditions; preserve both warnings and pending project recovery | Local ROM processor harness | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS |
 | N8 | Moving main described using stale SHA | Dated reviewed baseline and aligned current documents; historical evidence keeps original SHAs | Documentation review | Initial fix MERGED #87; this checkpoint tracks post-#89 main `fbea5ea` |
@@ -54,7 +67,9 @@ unit tests 6/6 PASS, 36-test local-ROM-on registration inventory and seven
 negative controls PASS. A 5,073-file corresponding-source ZIP was generated
 and manifest-verified (SHA-256 `19c5ab95e1af36c15b19194a37603557b1975bcd5247d72f94b284ff8db113cd`).
 This exact merge-commit ZIP was not extracted/rebuilt in this check. The
-exact-candidate workflow remains NOT RUN; no stable publication.
+At that historical checkpoint the exact-candidate workflow remained NOT RUN;
+PR #91 has since added the workflow and tested build identity. It remains NOT
+RUN on an exact candidate; no stable publication.
 
 Owner-reported acceptance from the supplied handoff dated 2026-09-28: the owner
 reports REAPER testing with no known issue and considers the product releasable.
@@ -88,11 +103,11 @@ reproduction):
    test results.
 3. Implement and review the exact stable-build/source-package identity without
    changing plugin IDs, parameter IDs/order or project compatibility; add focused
-   packaging tests for release mode before freezing any RC. Current branch work
-   adds `rcN` display/artifact identity plus ROM-free positive/negative tests;
-   local macOS RC/stable VST3 builds and 11/11 ROM-free tests passed. Branch CI
-   review is still required. See [version identity validation](../validation/VALIDATION_20260928_VERSION_IDENTITY.md).
-   Stable display remains opt-in.
+   packaging tests for release mode before freezing any RC. `rcN`
+   display/artifact identity and ROM-free positive/negative tests are merged in
+   #91. Local macOS RC/stable VST3 builds and 11/11 ROM-free tests passed; PR and
+   post-merge Windows/macOS checks passed. Stable display remains opt-in. See
+   [version identity validation](../validation/VALIDATION_20260928_VERSION_IDENTITY.md).
 4. Freeze one exact candidate SHA, build and test it on required CI/platforms,
    inspect the matching packages and source archive, then record every PASS,
    FAIL, NOT RUN and accepted limitation against that SHA.
@@ -457,24 +472,30 @@ Use CONFIRMED, REPRODUCED, SOURCE-DERIVED CANDIDATE, HOST-DEPENDENT,
 CHARACTERIZATION, NOT RUN, FIXED and PASS accurately. PASS requires execution;
 source inspection, prior runs and owner reports retain their specific scope.
 
-Next concrete order (2026-09-28; subject to the active audit ledger above):
-1. PR #83 is merged and its Windows/macOS Actions passed; no further action is
-   needed for that source-only clarification.
-2. Close the remaining F12 Windows/HiDPI and interactive Settings/About GUI
-   coverage gaps without changing the approved appearance. Do not force a
-   modal UI check into a harness that cannot safely host it; use a suitable
-   desktop test or record explicit owner verification.
-3. Freeze an exact release-candidate SHA, then run the still-open host-dependent
-   gates on that artifact: offline render comparison (F7), envelope/release and
-   dense MIDI/contention characterization (F15/F16), and the missing REAPER
-   matrix. Existing owner-reported macOS/Windows REAPER passes remain valid for
-   their recorded baseline scopes, not as exact-candidate acceptance.
-4. Complete packaging, licensing, naming, USER-library/host support, and
-   signature/notarisation review before any release approval.
+Next concrete order (after PR #91; subject to the active audit ledger above):
+1. Keep the approved GUI appearance frozen. Close the remaining F12 evidence:
+   real Settings/About interaction and Windows/HiDPI verification using a safe
+   desktop test or explicit owner verification; do not count headless modal
+   attempts as PASS.
+2. Select a test-only `1.0.0-rc1` from one exact SHA and dispatch the
+   exact-candidate workflow. This creates CI artifacts only; it does not
+   publish a GitHub release or tag.
+3. On that exact RC, run relevant ROM-free and local-ROM regressions and close
+   the host/audio checks still marked open: F7 offline-render comparison, F15
+   envelope/release characterization, F16 dense MIDI/contention recovery, and
+   the listed REAPER feature/platform matrix. Record unsupported cells rather
+   than silently treating them as PASS. Older owner-reported REAPER runs remain
+   evidence for their recorded builds, not this RC.
+4. Inspect the matching VST3/source artifacts, pinned dependencies, notices,
+   checksums and archive contents; finalize HU/EN guides and release notes with
+   exact-SHA evidence and accepted limitations.
+5. Present the version, SHA, asset list, checksums and unresolved/accepted items
+   for owner review. Only a separate explicit publication authorization permits
+   creating the stable tag/release; verify its links and checksums afterward.
 
 F5/F6 are already fixed and merged together in PR #78; do not list them as the
 next implementation step. F2's general wheel-automation host test is accepted;
 the optional Write/Touch/Latch boundary characterization can be done separately
 and is not a failure or blocker for that result. Local ROM-free PASS is not
-firmware-runtime or host acceptance. No main merge, tag, or release publication
-is authorized by this plan.
+firmware-runtime or host acceptance. PR #91 is merged and the listed platform
+Actions passed, but this plan does not authorize a tag or release publication.
