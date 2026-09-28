@@ -1,6 +1,23 @@
 # 1.0 consolidated execution plan — current status 2026-09-28
 
-## Current main checkpoint — after PR #91
+## Current main checkpoint — after PR #93
+
+Current main: `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. PR #93 corrected
+the macOS universal-binary architecture check in the exact-RC workflow. PR
+Windows, macOS and ASan/UBSan checks passed; post-merge main Windows run
+`36450182898` and macOS run `36450184841` also passed. The exact-candidate run
+`36451459751` then passed on this exact SHA for Windows x64 and macOS universal,
+including ROM-free tests, source packaging, candidate identity, and macOS
+architecture/ad-hoc-signature verification. It uploaded two test artifacts;
+see [exact RC1 validation](../validation/VALIDATION_20260928_EXACT_RC1.md).
+
+The RC is CI-built and its packages/source archive have been inspected and
+hashed, but it has not received private-ROM runtime or exact-RC host acceptance.
+Owner-run REAPER/GUI/audio checks remain open. No stable tag/release or public
+release asset has been created or authorized. There is no open PR at this
+checkpoint.
+
+## Historical checkpoint — after PR #91
 
 Current reviewed main: `37c83f378a81e4623993941fb7e10c4ab58c208c` (merge of
 PR #91). PR #91 adds opt-in `rcN` display/artifact identity and focused
@@ -447,15 +464,18 @@ evidence that the shipped instrument currently malfunctions.
   naming and tested `rcN` mode resolution. Historical bundle/plugin IDs are
   preserved. Cosmetic prototype DESCRIPTION cleanup remains a separate
   candidate decision.
-- [ ] Freeze one RC SHA; run public Windows/macOS checks, full local ROM suite,
-  host matrix and exact-SHA candidate workflow. Retest relevant gates after fixes.
+- [x] Freeze test-only RC1 SHA `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`;
+  exact-SHA Windows/macOS candidate workflow `36451459751` passed and uploaded
+  both platform artifacts. This does not close the separate full local-ROM
+  suite or host matrix.
 - [x] Document single USER-library limitation and supported formats/hosts:
   HU/EN guides and the identity/package review distinguish primary VST3,
   compile-only AU/Standalone coverage and dated host evidence. Exact RC host
   acceptance is still required; no new runtime support claim was made.
-- [ ] Verify package signatures/notarisation status, matching complete source,
-  pinned dependencies, licences/notices, checksums, HU/EN installation guidance
-  and release notes. Inspect for ROMs, secrets, local paths and build caches.
+- [~] Exact-RC packages and corresponding-source archives were downloaded and
+  inspected; source manifests verified and binary/source hashes recorded.
+  Windows is unsigned and macOS is ad-hoc signed (not notarized). Final HU/EN
+  guide/release-note review and owner-side acceptance remain open.
 - [ ] Separate approval before merge/publication as applicable; never bypass
   required checks, auto-tag or auto-publish a stable release from this plan.
 
@@ -472,23 +492,24 @@ Use CONFIRMED, REPRODUCED, SOURCE-DERIVED CANDIDATE, HOST-DEPENDENT,
 CHARACTERIZATION, NOT RUN, FIXED and PASS accurately. PASS requires execution;
 source inspection, prior runs and owner reports retain their specific scope.
 
-Next concrete order (after PR #91; subject to the active audit ledger above):
+Next concrete order (after PR #93; subject to the active audit ledger above):
 1. Keep the approved GUI appearance frozen. Close the remaining F12 evidence:
    real Settings/About interaction and Windows/HiDPI verification using a safe
    desktop test or explicit owner verification; do not count headless modal
    attempts as PASS.
-2. Select a test-only `1.0.0-rc1` from one exact SHA and dispatch the
-   exact-candidate workflow. This creates CI artifacts only; it does not
-   publish a GitHub release or tag.
-3. On that exact RC, run relevant ROM-free and local-ROM regressions and close
+2. [x] Select test-only `1.0.0-rc1` at exact SHA
+   `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684` and pass the exact-candidate
+   workflow. It created CI artifacts only; it did not publish a release or tag.
+3. On that exact RC, run the local-ROM regression suite and close
    the host/audio checks still marked open: F7 offline-render comparison, F15
    envelope/release characterization, F16 dense MIDI/contention recovery, and
    the listed REAPER feature/platform matrix. Record unsupported cells rather
    than silently treating them as PASS. Older owner-reported REAPER runs remain
    evidence for their recorded builds, not this RC.
-4. Inspect the matching VST3/source artifacts, pinned dependencies, notices,
+4. [~] Inspect the matching VST3/source artifacts, pinned dependencies, notices,
    checksums and archive contents; finalize HU/EN guides and release notes with
-   exact-SHA evidence and accepted limitations.
+   exact-SHA evidence and accepted limitations. Artifact inspection and hashes
+   are recorded; owner review and final document cleanup remain.
 5. Present the version, SHA, asset list, checksums and unresolved/accepted items
    for owner review. Only a separate explicit publication authorization permits
    creating the stable tag/release; verify its links and checksums afterward.

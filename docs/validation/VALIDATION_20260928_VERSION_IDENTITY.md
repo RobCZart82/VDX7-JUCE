@@ -51,8 +51,11 @@ Windows, macOS and ASan/UBSan checks passed. Post-merge main Windows run
 `36441316285` and macOS run `36441316112` also passed, including the corrected
 registration smoke. The earlier failing runs above remain part of the record;
 they were resolved by updating the expected test inventory, not by suppressing
-the check. The exact-candidate workflow still needs a separate dispatch on a
-frozen RC SHA.
+the check. At this report's initial checkpoint, exact-candidate workflow
+dispatch was still pending. It has since passed on exact RC1 SHA
+`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`; see the
+[exact RC1 validation](VALIDATION_20260928_EXACT_RC1.md) for package identity,
+binary/source hashes, checks, and remaining owner-side acceptance gates.
 
 The first CTest invocation occurred before test executables were built and
 therefore reported them as Not Run. This was corrected by building
