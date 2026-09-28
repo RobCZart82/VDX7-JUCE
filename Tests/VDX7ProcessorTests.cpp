@@ -549,6 +549,9 @@ int main(int argc, char** argv)
         require(restored.hasUnexportedEdits(), "single import preserves other dirty flags");
         require(restored.exportSyx(bankFile.getFile(),true,error), "bank export");
         require(bankFile.getFile().getSize()==4104 && !restored.hasUnexportedEdits(), "bank export acknowledges all voices");
+        // The round-trip oracle must describe bankFile, before the deliberate
+        // edits below exercise immutable asynchronous export snapshots.
+        const auto exportedBank = ram(save(restored));
         // Model the asynchronous file-chooser interval: capture first, then
         // apply a host automation edit through an audio callback before writing.
         VDX7AudioProcessor::SyxExportSnapshot patchSnapshot;
@@ -599,7 +602,9 @@ int main(int argc, char** argv)
                 && std::memcmp(writtenBank.getData(), bankSnapshot.message().data(), writtenBank.getSize()) == 0,
                 "bank export writes the pre-dialog snapshot, not live RAM");
         require(restored.hasUnexportedEdits(), "post-snapshot bank edit remains marked unexported");
-        auto exportedBank=ram(save(restored));
+        const auto afterSnapshotEdits = ram(save(restored));
+        require(std::memcmp(exportedBank.getData(), afterSnapshotEdits.getData(), 4096) != 0,
+                "snapshot edits must differ from the original exported bank");
         require(restored.renameVoice("TEMP"), "edit before bank restore");
         require(restored.loadSyxFromFile(bankFile.getFile(),&error), "bank import");
         auto importedBank=ram(save(restored));
