@@ -1,4 +1,4 @@
-# Document path migration — 2026-09-26
+# Document path migration — 2026-09-26, updated 2026-09-28
 
 All listed documents were moved, not discarded. Git history retains the old paths.
 Use the current links below to resolve an older root-level reference.
@@ -18,6 +18,7 @@ Use the current links below to resolve an older root-level reference.
 | `RELEASE_NOTES_v0.6.6.md` | [RELEASE_NOTES_v0.6.6.md](archive/RELEASE_NOTES_v0.6.6.md) |
 | `ROADMAP_1.0.md` | [ROADMAP_1.0.md](release/ROADMAP_1.0.md) |
 | `SOURCE_DEPENDENCIES.md` | [SOURCE_DEPENDENCIES.md](guides/SOURCE_DEPENDENCIES.md) |
+| `VALIDATION.txt` | [VALIDATION.txt](validation/VALIDATION.txt) |
 | `VALIDATION_1.0_ABOUT.md` | [VALIDATION_1.0_ABOUT.md](validation/VALIDATION_1.0_ABOUT.md) |
 | `VALIDATION_1.0_BANDLIMITED_SRC.md` | [VALIDATION_1.0_BANDLIMITED_SRC.md](validation/VALIDATION_1.0_BANDLIMITED_SRC.md) |
 | `VALIDATION_1.0_BANK_SELECT.md` | [VALIDATION_1.0_BANK_SELECT.md](validation/VALIDATION_1.0_BANK_SELECT.md) |
@@ -39,6 +40,7 @@ Use the current links below to resolve an older root-level reference.
 | `VALIDATION_1.0_MIDI_LIFECYCLE.md` | [VALIDATION_1.0_MIDI_LIFECYCLE.md](validation/VALIDATION_1.0_MIDI_LIFECYCLE.md) |
 | `VALIDATION_1.0_MIDI_OVERLOAD.md` | [VALIDATION_1.0_MIDI_OVERLOAD.md](validation/VALIDATION_1.0_MIDI_OVERLOAD.md) |
 | `VALIDATION_1.0_OPERATOR_POLISH.md` | [VALIDATION_1.0_OPERATOR_POLISH.md](validation/VALIDATION_1.0_OPERATOR_POLISH.md) |
+| `VALIDATION_1.0_PACKED_VOICE_RANGES.md` | [VALIDATION_1.0_PACKED_VOICE_RANGES.md](validation/VALIDATION_1.0_PACKED_VOICE_RANGES.md) |
 | `VALIDATION_1.0_PERFORMANCE_CONTROLLERS.md` | [VALIDATION_1.0_PERFORMANCE_CONTROLLERS.md](validation/VALIDATION_1.0_PERFORMANCE_CONTROLLERS.md) |
 | `VALIDATION_1.0_PERFORMANCE_SNAPSHOT.md` | [VALIDATION_1.0_PERFORMANCE_SNAPSHOT.md](validation/VALIDATION_1.0_PERFORMANCE_SNAPSHOT.md) |
 | `VALIDATION_1.0_PITCH_BEND.md` | [VALIDATION_1.0_PITCH_BEND.md](validation/VALIDATION_1.0_PITCH_BEND.md) |
