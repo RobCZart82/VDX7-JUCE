@@ -140,6 +140,8 @@ private:
     void discardStaleCollectedInput(juce::MidiBuffer&, std::size_t& keyboardCount);
     void capturePendingRestoreEditsLocked();
     juce::ValueTree pendingRestore_;
+    // Lock-free routing mirror only; pendingRestore_ remains engine-lock owned.
+    std::atomic<bool> pendingProjectEdits_ {false};
     bool detectRom_ = true;
     // The host may request a reset from a processing thread. Only publish a
     // request here; processBlock owns the MIDI queues and the engine cleanup.

@@ -1409,6 +1409,62 @@ static void testPendingStateWithDifferentLoadedRom(const juce::File& rom)
     require(VDX7RegressionAccess::engine(waiting).currentProgram() == 7,
             "matching ROM later must restore the preserved program");
 
+    // AUDIT-20260928-N1: edits belong to the preserved project, not the
+    // incompatible loaded engine. Exercise stopped, running and re-saved state.
+    const int expectedFeedback = (VDX7RegressionAccess::engine(*source)
+        .getVoiceParameter(VDX7VoiceData::VoiceParameter::feedback) + 1) % 8;
+    for (int scenario = 0; scenario < 3; ++scenario)
+    {
+        auto edited = std::make_unique<VDX7AudioProcessor>(false);
+        initialise(*edited, differentRom, 48000, 64);
+        edited->setStateInformation(missingRomState.getData(), int(missingRomState.getSize()));
+        auto& wrongEngine = VDX7RegressionAccess::engine(*edited);
+        const int wrongFeedback = wrongEngine.getVoiceParameter(VDX7VoiceData::VoiceParameter::feedback);
+        const int wrongOutput = wrongEngine.getOperatorParameter(5, VDX7VoiceData::Parameter::outputLevel);
+        auto* feedback = edited->parameters().getParameter(
+            VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback));
+        auto* output = edited->parameters().getParameter(
+            VDX7ParameterIDs::operatorParameter(5, VDX7VoiceData::Parameter::outputLevel));
+        require(feedback != nullptr && output != nullptr, "pending-edit parameters exist");
+        feedback->setValueNotifyingHost(feedback->convertTo0to1(float(expectedFeedback)));
+        output->setValueNotifyingHost(output->convertTo0to1(42));
+        if (scenario != 0)
+        {
+            juce::AudioBuffer<float> audio(2, 64);
+            juce::MidiBuffer midi;
+            for (int block = 0; block < 4; ++block) processChecked(*edited, audio, midi);
+        }
+        edited->synchroniseOperatorParametersFromEngine();
+        require(wrongEngine.getVoiceParameter(VDX7VoiceData::VoiceParameter::feedback) == wrongFeedback
+                && wrongEngine.getOperatorParameter(5, VDX7VoiceData::Parameter::outputLevel) == wrongOutput,
+                "pending project edits must not change the incompatible engine");
+        require(feedback->getValue() == feedback->convertTo0to1(float(expectedFeedback))
+                && output->getValue() == output->convertTo0to1(42),
+                "incompatible engine publication must not overwrite pending host parameters");
+        if (scenario == 2)
+        {
+            juce::MemoryBlock resaved;
+            edited->getStateInformation(resaved);
+            edited = std::make_unique<VDX7AudioProcessor>(false);
+            edited->setStateInformation(resaved.getData(), int(resaved.getSize()));
+        }
+        require(edited->loadRomFromFile(rom), "matching ROM resumes edited pending project");
+        auto& restored = VDX7RegressionAccess::engine(*edited);
+        require(restored.currentProgram() == 7, "pending edit preserves saved program");
+        require(restored.getVoiceParameter(VDX7VoiceData::VoiceParameter::feedback) == expectedFeedback,
+                "pending mismatch must preserve feedback edit after matching ROM load");
+        require(restored.getOperatorParameter(5, VDX7VoiceData::Parameter::outputLevel) == 42,
+                "pending mismatch must preserve operator edit after matching ROM load");
+        auto* resumedFeedback = edited->parameters().getParameter(
+            VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback));
+        const int resumedValue = (expectedFeedback + 1) % 8;
+        resumedFeedback->setValueNotifyingHost(resumedFeedback->convertTo0to1(float(resumedValue)));
+        juce::MemoryBlock resumedSave;
+        edited->getStateInformation(resumedSave);
+        require(restored.getVoiceParameter(VDX7VoiceData::VoiceParameter::feedback) == resumedValue,
+                "ordinary edits must resume after the pending project is installed");
+    }
+
     // Pre-identity projects must keep the older path-based rule: a missing
     // saved path cannot restore into an unrelated ROM that was already loaded.
     auto legacyTree = savedTree.createCopy();

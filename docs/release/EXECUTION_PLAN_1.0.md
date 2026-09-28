@@ -1,11 +1,63 @@
-# 1.0 consolidated execution plan — current status 2026-09-27
+# 1.0 consolidated execution plan — current status 2026-09-28
 
-Current main: `94081f925b0dbc4393a51f2733935cc2c1e343a6` (PR #83 merged after
-PR #81). This plan combines the original 1.0 host/audio/release gates with the
+Reviewed baseline: `b58679c80d54c1cedaebf26a49817329e8b82997` (including
+documentation cleanup #85 and refreshed screenshots #86). This is a review
+checkpoint, not a claim that the moving main branch always has this SHA.
+This plan combines the original 1.0 host/audio/release gates with the
 useful findings F1–F19 and the test-system review. Planning is not release
 authorization. Older roadmap narratives and validation notes remain historical
 records unless explicitly updated here; they are not instructions to reopen
 completed GUI work.
+
+## Active work ledger — audit 2026-09-28
+
+Use full IDs `AUDIT-20260928-N1` through `AUDIT-20260928-N8`: older roadmap
+audits reused N1/N2/etc. for DIFFERENT findings. Source review is not runtime
+reproduction, and an implemented fix is not exact-RC acceptance.
+
+| ID suffix | Finding / evidence class | Next action and completion evidence | Environment | Status |
+| --- | --- | --- | --- | --- |
+| N1 | Reproduced edit loss while a saved project waits for a matching ROM and another ROM is loaded | Stopped processing, running callbacks and re-save/reopen regressions; preserve feedback/operator edits, leave incompatible engine unchanged, resume normal routing | Local v1.8 ROM, Windows processor harness; no REAPER | FIX IMPLEMENTED; failing baseline and 10/10 related checks PASS; see [validation](../validation/VALIDATION_20260928_PENDING_PROJECT_EDITS.md); not merged or exact-RC accepted |
+| N2 | Storage accepts semantically invalid unoccupied USER slots that processor import rejects | Synthetic CRC-valid fixture; define empty-slot policy; prove consistent transactional load behavior | ROM-free storage test, processor integration as needed | OPEN, source inconsistency |
+| N3 | Project RAM restore checks size/encoding but not packed voice semantic ranges | Mutated state fixtures; define rejection/legacy policy; prove valid and legacy state preservation | Processor harness and local ROM | OPEN, validation gap; crash not demonstrated |
+| N4 | Shared 16 KB/48 KB fixture claim may not match direct-engine audio tests | Run both layouts; share fixture loading or narrow full-suite requirement; update guide/CMake together | Local ROM tests | OPEN, fixture-contract candidate |
+| N5 | CI registration smoke checks only one selected ROM test | Verify full expected test set, fixture properties, labels and timeouts without executing ROM | Configuration-only CI | OPEN, test coverage gap |
+| N6 | Keyboard pitch-wheel return policy differs from mouse release | Decide intended accessible keyboard behavior before changing tests or code | Component/UI policy review | DECISION, not a confirmed defect |
+| N7 | Invalid companion warning can hide pending-ROM identity mismatch | Regression with mismatch plus invalid sibling file; retain both warnings or prioritize pending-project status | Local ROM processor harness | OPEN, source-confirmed status priority |
+| N8 | Moving main described using stale SHA | Use dated reviewed baseline; align roadmap and checklist; retain old validation claims with original SHAs | Documentation review | IMPLEMENTED on `fix/pending-rom-edits-20260928`; not merged |
+
+Owner scope (2026-09-28): continue work that does NOT launch the installed
+REAPER. Do not replace an installed plugin, modify host projects or claim host
+acceptance from these runs. The final REAPER/platform gates remain open. No
+stable tag, release or asset publication is authorized by this development work.
+
+Work order: N1 reproduction/minimal fix, N7, N2/N3 with compatibility coverage,
+N4/N5 test-contract hardening, then non-host GUI/build/package checks. N6 requires
+a behavior decision, not a speculative fix. Record exact source, test command,
+platform, fixture scope and PASS/FAIL/NOT RUN in linked validation reports.
+N8 documentation work does not close N1–N7 or any exact-RC gate.
+
+Additional findings from this round's runtime checks (not audit N numbers):
+
+- `TEST-20260928-BANK-ORACLE`: processor integration compared an old exported
+  bank with live RAM after intentional snapshot-test edits. Move the expected
+  snapshot to export time; keep the original byte-exact round-trip assertion
+  and add a negative control proving that the later edits changed the bank.
+  IMPLEMENTED; final complete processor executable rerun PASS after the
+  independent pitch-fader assertion correction below.
+- `TEST-20260928-TIMEOUTS`: `vdx7_midi_range` exceeded its existing 60-second
+  CTest limit and `vdx7_mono_corrected_processor` exceeded 120 seconds on
+  Windows. Record the failures and investigate separately; do not
+  silently extend limits or call this a passed product acceptance test.
+- `TEST-20260928-PITCH-LAYOUT`: after fixing the bank oracle, the processor test
+  fails at `pitch faders leave room for values`. The test assumes bottom <=490
+  reference units; approved layout uses y=408, height=88 (bottom=496). FIXED
+  test oracle: use JUCE's thumb-inset drawing area and check it ends before the
+  value label at y=488. The renderer clamps the cap within that drawing area.
+  Complete processor executable rerun PASS; production GUI remains unchanged.
+
+These results and subsequent reruns are recorded in the linked N1 validation
+report. These checks do not start REAPER.
 
 ## Closed implementation and owner-approved scope
 
@@ -310,7 +362,7 @@ Use CONFIRMED, REPRODUCED, SOURCE-DERIVED CANDIDATE, HOST-DEPENDENT,
 CHARACTERIZATION, NOT RUN, FIXED and PASS accurately. PASS requires execution;
 source inspection, prior runs and owner reports retain their specific scope.
 
-Next concrete order (2026-09-27):
+Next concrete order (2026-09-28; subject to the active audit ledger above):
 1. PR #83 is merged and its Windows/macOS Actions passed; no further action is
    needed for that source-only clarification.
 2. Close the remaining F12 Windows/HiDPI and interactive Settings/About GUI
