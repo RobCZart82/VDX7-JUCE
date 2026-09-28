@@ -46,6 +46,32 @@ No REAPER, installed-plugin replacement, ROM upload, tag or release publication.
   `PACK_offline_build.log`, `PACK_offline_ctest.log` in the task output directory.
 - New remote CI/exact-candidate workflow: NOT RUN at this local checkpoint.
 
+## Post-merge main verification — 2026-09-28
+
+Exact source: `fbea5ea167598f9b625eab9145f53b8700d9eb15` (merge commit #89).
+This supplements, and does not rewrite, the earlier `dc68b6f` branch-source
+evidence above.
+
+- Fresh `origin/main` fetch confirmed the source SHA. PR #89 Windows, macOS and
+  ASan/UBSan runs passed (36410161563, 36410161589, 36410161474); post-merge
+  main Windows/macOS runs passed (36411273600, 36411273595).
+- Local Release build target `vdx7_ci_checks`: PASS. ROM-free CTest: 10/10 PASS.
+- Source-packaging Python unit tests: 6/6 PASS. CTest registration checker:
+  full 36-test local-ROM-on inventory and seven negative controls PASS.
+- Generated the corresponding-source archive directly from this exact commit
+  using Python 3.12.14. 5,073 payload files; embedded manifest verification
+  PASS; ZIP SHA-256 `19c5ab95e1af36c15b19194a37603557b1975bcd5247d72f94b284ff8db113cd`.
+  Archive path-portability scan found no case-fold collisions or Windows
+  reserved/trailing-dot/space names.
+- Checked 192 relative Markdown links across the repository: none unresolved.
+- Owner-reported REAPER acceptance and accepted signing policy are documented
+  in the release plan/checklist. The plan's prior entries specify macOS 26.7
+  and Windows 10 x64 build #219 / `29ab5e3`; not all binary hashes, REAPER app
+  versions or matrix cells are available. This is not runtime validation.
+- NOT RUN on this exact merge commit: extracted-source offline rebuild,
+  full local-ROM integration execution, exact-candidate workflow, interactive
+  Settings/HiDPI and exact-RC host/audio acceptance. This was non-host work.
+
 ## Independent VST3 validator
 
 PASS: official Steinberg SDK `v3.8.1_build_84`, commit

@@ -1,24 +1,45 @@
-# VDX7 Mk1. — detailed development guide
+# VDX7 Mk1. — User Guide
 
 [Back to overview](../../README.md) · [Magyar útmutató](GUIDE_HU.md)
 
-This guide describes **1.0.0-dev**, not an accepted stable release.
+This guide describes the current **1.0.0-dev** development package. The final
+release version and download are valid only after an actual GitHub Release is
+published; until then, Actions artifacts linked from the README are development
+builds.
 
 ## 1. Platform and package
 
-CI and exact-commit candidates build **macOS Universal (arm64 + x86_64) VST3** and **Windows x64 VST3**. Local arm64 builds remain available. These are development artifacts, not accepted final release packages. Intel Mac and Windows host acceptance remain separate release gates. AU and Standalone are not the primary distribution formats.
+CI builds **macOS Universal (arm64 + x86_64) VST3** and **Windows x64 VST3**
+targets. VST3 is the planned distribution format; AU and Standalone are build
+targets, not promised downloads. The owner reports macOS REAPER and Windows 10
+x64 REAPER use, but this does not verify every platform/sample-rate/buffer
+combination on the final RC. Physical Intel Mac acceptance is not documented.
 
-The binary is ad-hoc signed, not Developer ID signed or notarised. macOS may require approval. Do not disable system-wide security protections. macOS 11 is the build-script deployment target, not a claim that every supported OS/host combination has been tested.
+**Signing:** the Windows VST3 has no publisher signature. The macOS Universal
+VST3 receives a technical ad-hoc signature, but is not Developer ID signed or
+notarised. The OS may show a warning or prevent loading. Do not disable
+system-wide security protections. macOS 11 is the build-script deployment target,
+not a claim that every supported OS/host combination has been tested.
 
 ## 2. Installation and first sound
 
-1. Close the host and back up any existing VDX7 plug-in and projects.
-2. Extract the VST3 ZIP and copy the complete VDX7.vst3 bundle to:
-   `~/Library/Audio/Plug-Ins/VST3/`
-3. In REAPER, rescan under Preferences → Plug-ins → VST, then insert VDX7 as a virtual instrument.
-4. Supply your own compatible firmware using LOAD ROM, or an automatic search location below.
-5. Select a bank/program on the LCD, or import a compatible .syx file with LOAD SYX.
-6. Play MIDI notes or use the on-screen keyboard.
+1. Close the DAW and back up the existing VDX7 plug-in, projects and edited USER
+   bank.
+2. Download and extract the VST3 ZIP. If it contains another ZIP, extract that
+   too. Copy the complete `VDX7.vst3` bundle to:
+   - macOS: `~/Library/Audio/Plug-Ins/VST3/`
+   - Windows: `C:\Program Files\Common Files\VST3\` (or `%COMMONPROGRAMFILES%\VST3\`)
+3. Avoid leaving another VDX7 copy in a second plug-in folder; the host may load
+   the older copy.
+4. Restart the host. In REAPER, if needed, rescan under Preferences → Plug-ins →
+   VST, then insert VDX7 as a virtual instrument.
+5. Supply your own compatible firmware using LOAD ROM or an automatic search location below.
+6. Select a bank/program on the LCD or import a compatible `.syx` file with LOAD
+   SYX. Enable MIDI monitoring and play notes.
+
+If the OS warns about the missing publisher signature, verify that the package
+came from the project's official GitHub page. Do not disable system-wide
+protections; follow the OS's documented per-app approval process instead.
 
 If there is no sound, check firmware status, MIDI routing, track monitoring and the OUTPUT volume. Avoid duplicate VDX7 installations in user/system plug-in folders.
 
@@ -86,8 +107,11 @@ Manual bank/ROM/SYX replacement warns about unexported edits. MIDI-driven bank c
 ## 8. Interface and scaling
 
 The owner approved the final 1.0 GUI appearance after local macOS REAPER VST3,
-Standalone and Retina visual checks. GUI size choices are 50%, 75%, 100%, 125%
-and 150%. This visual approval is not full cross-platform release acceptance.
+Standalone and Retina visual checks. In Settings, choose one of the fixed sizes:
+50%, 75%, 100%, 125% or 150%; dragging a window corner does not freely resize
+the editor. Settings also contains master tuning, MIDI-channel filtering and the
+advanced MONO compatibility mode. Visual approval is not full cross-platform
+release acceptance.
 See the [screenshots](../../README.md) and [release checklist](../release/ROADMAP_1.0.md).
 
 ## 9. Known limitations
@@ -111,7 +135,7 @@ See the [screenshots](../../README.md) and [release checklist](../release/ROADMA
 - Voice edits reload the active program. Dense automation and held-note editing need further host testing.
 - Hardware/third-party SysEx interoperability is not comprehensively verified.
 - No claim of complete DX7 feature parity, calibrated envelope timing or universal host compatibility.
-- Back up valuable work; this pre-beta has no production-stability guarantee.
+- Back up valuable work. Development builds do not imply a production-stability guarantee.
 
 ## 10. Validation and reporting
 
@@ -217,9 +241,14 @@ same-value/ABA races. See [Q2 validation and limits](../validation/VALIDATION_PE
 
 ## 12. Licensing and release status
 
-This release uses [GNU AGPLv3](../../LICENSE.txt). The wrapper and original GUI resources are AGPL-3.0-only; the DX7 core retains GPL-3.0-or-later and its original notices. JUCE is used under AGPLv3. See [NOTICE.md](../../NOTICE.md) for the combined-work and third-party notices.
+This project uses [GNU AGPLv3](../../LICENSE.txt). The wrapper and original GUI resources are AGPL-3.0-only; the DX7 core retains GPL-3.0-or-later and its original notices. JUCE is used under AGPLv3. See [NOTICE.md](../../NOTICE.md) for the combined-work and third-party notices.
 
-The release provides complete corresponding source including pinned JUCE and dx7Lib, build scripts and license notices alongside the binary. This software comes without warranty. Firmware is excluded from the software license. Yamaha branding in descriptive text identifies compatibility, not endorsement; no Yamaha logo is included.
+The 1.0.0 release plan calls for a complete corresponding-source package beside
+the binary, including pinned JUCE and dx7Lib source, build scripts and license
+notices; that package is not a published download yet. This software comes
+without warranty. Firmware is excluded from the software license. Yamaha
+branding in descriptive text identifies compatibility, not endorsement; no
+Yamaha logo is included.
 
 ## 13. Credits and next steps
 

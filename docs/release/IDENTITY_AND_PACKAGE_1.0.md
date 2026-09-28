@@ -1,6 +1,6 @@
 # 1.0 build identity and package boundaries
 
-Source review: 2026-09-28, baseline `811f3a3`. This is a preparation record,
+Source review: 2026-09-28, post-#89 main baseline `fbea5ea`. This is a preparation record,
 not approval to publish, rename installed plugins or change their identity.
 
 ## Identity (F17)
@@ -39,8 +39,11 @@ embedded manifest and source ZIP checksum beside the VST3/documents/licenses.
 See [source packaging](SOURCE_PACKAGING_1.0.md). Final binary checksums and
 distribution packaging are still separate gates; artifacts remain development builds.
 
-- Windows code signing is not configured in these workflows.
-- macOS performs ad-hoc signing; this is not Developer ID/notarisation.
+- Owner decision (handoff dated 2026-09-28): distribute Windows without publisher
+  signing and macOS with the existing ad-hoc signature, without Developer ID or
+  notarisation. This is accepted risk, not a security guarantee. Make possible
+  OS warnings/load friction prominent in both installation guides. The SHA-256
+  manifest/checksum detects changes; it does not authenticate the publisher.
 - Pinned source dependencies remain JUCE
   `e18f7f506c0b96f2c738a0bcd7fe6467a5005ad8` and Retromulator
   `d5473776a0449d60a997b91bdc888598a33265ac`. Offline layout and prior build
@@ -53,8 +56,18 @@ distribution packaging are still separate gates; artifacts remain development bu
   paths, caches and unrelated files. Repeat offline extraction/build checks
   on that actual source archive, not merely an equivalent working tree.
 - Keep installation instructions and supported platform/host claims aligned
-  with the actual artifacts and recorded tests. Final signing/notarisation
-  policy requires an explicit owner decision if distribution policy changes.
+  with the actual artifacts and recorded tests. The no-publisher-signature /
+  macOS ad-hoc policy above remains in effect unless the owner explicitly changes it.
 
-No final RC is frozen or accepted by this document. Final archive inspection,
-exact-candidate host matrix and publication approval remain OPEN.
+The owner reports REAPER acceptance. Existing records identify macOS 26.7 and
+Windows 10 x64 build #219 / `29ab5e3`, but not every tested SHA/binary hash,
+REAPER application version or the full rate/block/instance matrix; preserve
+that as OWNER-REPORTED. No final RC is frozen or accepted by this document. Final archive inspection,
+exact-candidate host matrix and separate publication approval remain OPEN.
+
+On 2026-09-28, the owner additionally reported installing the Windows VST3 from
+**Build Windows VST3 and Standalone #247**, source commit
+`fbea5ea167598f9b625eab9145f53b8700d9eb15`. Reported VDX7.vst3 SHA-256:
+`1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`.
+This is owner-reported installation evidence, not a new functional-test result
+or final-RC acceptance.

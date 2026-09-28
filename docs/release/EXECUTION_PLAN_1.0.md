@@ -1,11 +1,12 @@
 # 1.0 consolidated execution plan — current status 2026-09-28
 
-Reviewed baseline: `d4ef9516b23e7198e6963d1a08b74195a9802159` (merged #88).
-PR #88 source `47ff097` passed Windows run 36405070149, macOS run 36405070251
-and ASan/UBSan run 36405070221. These results do not imply final RC acceptance.
-Main is re-fetched before each publication; incoming changes are preserved.
-This is a review
-checkpoint, not a claim that the moving main branch always has this SHA.
+Reviewed baseline: `fbea5ea167598f9b625eab9145f53b8700d9eb15` (main after #89).
+PR #88 checks passed; PR #89 source `d834f4f` passed Windows run 36410161563,
+macOS run 36410161589 and ASan/UBSan run 36410161474. Post-merge main Windows
+run 36411273600 and macOS run 36411273595 also passed. These are development
+checks, not exact-RC acceptance. Main is re-fetched before each publication;
+incoming changes are preserved. This is a dated review checkpoint, not a claim
+that moving main will always remain at this SHA.
 This plan combines the original 1.0 host/audio/release gates with the
 useful findings F1–F19 and the test-system review. Planning is not release
 authorization. Older roadmap narratives and validation notes remain historical
@@ -24,10 +25,10 @@ reproduction, and an implemented fix is not exact-RC acceptance.
 | N2 | Storage accepts semantically invalid unoccupied USER slots that processor import rejects | CRC-valid invalid fields in occupied and empty slots; reject all malformed packed voices transactionally | ROM-free storage test | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS |
 | N3 | Project RAM restore lacked packed voice semantic validation | Reject malformed VMEM before mutation; loaded/deferred ROM and modern/legacy state matrix | Processor harness and local ROM | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS; no crash claim |
 | N4 | Shared 16 KB/48 KB fixture claim did not match full direct-engine suite | Full-suite requirement narrowed to combined 48 KB v1.8; all local tests use profile fixture; product 16 KB support unchanged | Local ROM tests | IMPLEMENTED; combined profile PASS, 16 KB negative control fails clearly as expected |
-| N5 | CI registration smoke checked only one selected ROM test | Full names, labels, fixture edges, timeouts and failure policy; seven checker negative controls | Configuration-only CI | IMPLEMENTED; actual local ROM-on 36 / ROM-off 10 inventories and checker PASS; remote CI must verify new workflow |
+| N5 | CI registration smoke checked only one selected ROM test | Full names, labels, fixture edges, timeouts and failure policy; seven checker negative controls | Configuration-only CI | IMPLEMENTED; actual local ROM-on 36 / ROM-off 10 inventories and checker PASS; PR #89 Windows/macOS/sanitizer checks PASS |
 | N6 | Keyboard pitch-wheel return policy differs from mouse release | Owner explicitly chose existing keyboard value retention on 2026-09-28; HU/EN guides clarify distinction | Component/UI policy review | ACCEPTED POLICY, not a defect; no input behavior change |
 | N7 | Invalid companion warning hid pending-ROM identity mismatch | Reproduce both conditions; preserve both warnings and pending project recovery | Local ROM processor harness | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS |
-| N8 | Moving main described using stale SHA | Dated reviewed baseline and aligned current documents; historical evidence keeps original SHAs | Documentation review | Initial fix MERGED #87; follow-up checkpoint tracks `811f3a3` |
+| N8 | Moving main described using stale SHA | Dated reviewed baseline and aligned current documents; historical evidence keeps original SHAs | Documentation review | Initial fix MERGED #87; this checkpoint tracks post-#89 main `fbea5ea` |
 
 N2–N7 follow-up evidence, full-suite status and publication state:
 [non-host hardening validation](../validation/VALIDATION_20260928_NONHOST_HARDENING.md).
@@ -42,18 +43,55 @@ extracted-source Windows offline build, 10/10 CTest and six packaging tests PASS
 Independent Steinberg validation: 47 PASS, 0 FAIL. About opening/rendering PASS
 at the observed size; further UI testing stopped when Windows locked.
 See [exact provenance and limitations](../validation/VALIDATION_20260928_SOURCE_PACKAGING.md).
-New remote CI and exact-candidate workflow remain separate checks; no stable publication.
+Post-merge main verification on `fbea5ea`: ROM-free CTest 10/10 PASS, packaging
+unit tests 6/6 PASS, 36-test local-ROM-on registration inventory and seven
+negative controls PASS. A 5,073-file corresponding-source ZIP was generated
+and manifest-verified (SHA-256 `19c5ab95e1af36c15b19194a37603557b1975bcd5247d72f94b284ff8db113cd`).
+This exact merge-commit ZIP was not extracted/rebuilt in this check. The
+exact-candidate workflow remains NOT RUN; no stable publication.
 
-Owner scope (2026-09-28): continue work that does NOT launch the installed
-REAPER. Do not replace an installed plugin, modify host projects or claim host
-acceptance from these runs. The final REAPER/platform gates remain open. No
-stable tag, release or asset publication is authorized by this development work.
+Owner-reported acceptance from the supplied handoff dated 2026-09-28: the owner
+reports REAPER testing with no known issue and considers the product releasable.
+The earlier dated records in section 3 retain the known scope: macOS REAPER
+testing (macOS 26.7) and Windows 10 x64 using Actions build #219 from
+`29ab5e350019e32f64650b068afcc7709b409607`. The macOS tested SHA, binary hashes,
+REAPER application versions and complete rate/block/instance matrix were not
+recorded. Keep this OWNER-REPORTED, not an assistant-run PASS or proof of every
+platform/matrix cell. The owner accepts Windows distribution without
+publisher signing and macOS distribution with ad-hoc signing only (no Developer
+ID/notarization). Show the resulting OS security-warning risk clearly; checksums
+prove integrity, not publisher identity. This does not itself authorize release
+publication.
 
-Work order: N1 reproduction/minimal fix, N7, N2/N3 with compatibility coverage,
-N4/N5 test-contract hardening, then non-host GUI/build/package checks. N6 is now
-an accepted owner decision, not a speculative fix. Record exact source, test command,
-platform, fixture scope and PASS/FAIL/NOT RUN in linked validation reports.
-N8 documentation work does not close N1–N7 or any exact-RC gate.
+Owner scope (2026-09-28): do NOT launch the installed REAPER, replace an installed
+plugin or modify host projects during this non-host preparation. Preserve the
+owner-reported acceptance separately from exact-SHA/platform evidence. No stable
+tag, release or asset publication is authorized by this development work; before
+publication show the final version, source SHA and asset list and confirm the
+separate publication authorization.
+
+Release-preparation work order (do not reopen completed N1–N8 without a new
+reproduction):
+
+1. Align HU/EN README and guides with the actual VST3 distribution, install paths,
+   ROM requirement, known limits and accepted signing-warning policy. Keep dev
+   labels until a stable package actually exists; do not relabel old screenshots.
+2. Prepare bilingual 1.0.0 release notes and an honest tested-platform matrix.
+   Keep owner-reported REAPER acceptance distinct from assistant-run evidence.
+3. Implement and review the exact stable-build/source-package identity without
+   changing plugin IDs, parameter IDs/order or project compatibility; add focused
+   packaging tests for release mode before freezing any RC.
+4. Freeze one exact candidate SHA, build and test it on required CI/platforms,
+   inspect the matching packages and source archive, then record every PASS,
+   FAIL, NOT RUN and accepted limitation against that SHA.
+5. Present the exact version, SHA and asset list for owner review. Only after
+   explicit publication authorization create a new tag/release; verify links and
+   checksums afterward. Do not modify an existing tag or release.
+
+N6 remains an accepted owner decision, not a speculative fix. The supplied
+handoff is useful acceptance/policy context, not a new test result or publishing
+authorization. Record exact source, command, platform, fixture scope and status
+in linked validation reports.
 
 Additional findings from this round's runtime checks (not audit N numbers):
 
