@@ -255,17 +255,18 @@ target_include_directories(vdx7_stress_tests PRIVATE $<TARGET_PROPERTY:VDX7,INCL
 target_compile_definitions(vdx7_stress_tests PRIVATE $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
 
 set(VDX7_TEST_ROM_FILE "" CACHE FILEPATH
-    "Local 16 KB firmware or 48 KB combined image for opt-in tests; never packaged")
+    "Local 48 KB combined v1.8 image for the complete opt-in suite; never packaged")
 
 if(VDX7_ENABLE_ROM_TESTS)
     if(NOT EXISTS "${VDX7_TEST_ROM_FILE}")
         message(FATAL_ERROR "VDX7_TEST_ROM_FILE must point to your local compatible ROM")
     endif()
 
-    # One user-supplied fixture feeds the opt-in suite. Tests tagged
-    # firmware-v1_8 additionally require the verified v1.8 firmware profile;
-    # the runtime accepts 16 KB firmware (and its optional sibling voice file)
-    # or a 48 KB combined firmware/voice image.
+    # The complete suite requires a combined v1.8 image: direct-engine runners
+    # do not load sibling files, and identity tests mutate factory-bank bytes.
+    # Product ROM support is broader (16 KB with optional companion or 48 KB).
+    # The profile fixture checks content at runtime; configuration-only CI uses
+    # a placeholder and never executes firmware tests.
     # Core integration runners.
     add_test(NAME vdx7_stability COMMAND vdx7_stability_tests "${VDX7_TEST_ROM_FILE}")
     add_test(NAME vdx7_midi_range COMMAND vdx7_midi_range_tests "${VDX7_TEST_ROM_FILE}")
@@ -446,4 +447,18 @@ if(VDX7_ENABLE_ROM_TESTS)
         FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;integration-stage")
     set_tests_properties(vdx7_mono_corrected_processor PROPERTIES
         TIMEOUT 120 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;integration-stage")
+
+    set_tests_properties(vdx7_stability vdx7_midi_range vdx7_timing vdx7_processor vdx7_stress
+        PROPERTIES FIXTURES_REQUIRED vdx7_v18_rom)
+    if(WIN32)
+        # Measured MSVC x64 Release completion: MIDI 292.44 s, corrected MONO
+        # 130.88 s. These exhaustive emulation matrices are not realtime timers.
+        # Preserve all assertions and allow ~2x headroom on Windows machines.
+        set_tests_properties(vdx7_midi_range PROPERTIES TIMEOUT 600)
+        set_tests_properties(vdx7_mono_corrected_processor PROPERTIES TIMEOUT 300)
+        # The combined reset/history matrix also reached the 180 s Windows
+        # budget while progressing through its final rate/block combinations.
+        # Keep its sample-based reset assertions; allow time to finish the matrix.
+        set_tests_properties(vdx7_host_reset PROPERTIES TIMEOUT 360)
+    endif()
 endif()

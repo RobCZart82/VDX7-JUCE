@@ -7,6 +7,13 @@ by this checklist. No proprietary firmware belongs in source, CI or artifacts.
 Current work order and audit disposition: [consolidated plan](EXECUTION_PLAN_1.0.md).
 GUI appearance approval does not close the technical/platform gates below.
 
+Latest non-host checkpoint: [2026-09-28 hardening report](../validation/VALIDATION_20260928_NONHOST_HARDENING.md),
+based on merged #87 / `811f3a3`. N2/N3/N7 have local failing-baseline/fixed
+regressions; N6 retains keyboard PITCH values by owner decision. Follow the
+report for full-suite and remote-CI results, not historical green runs.
+[Identity/package review](IDENTITY_AND_PACKAGE_1.0.md) distinguishes development
+artifacts from the still-unprepared final corresponding-source/checksum package.
+
 ## Correctness and realtime gates
 
 - [x] Earlier F3/F4 packed-input, F1 wheel-input, F5 ROM-identity, F6 pre-ROM-edit
@@ -56,7 +63,10 @@ acceptance. Desktop-unavailable GUI tests must not be counted as passing.
 - [ ] Transport play/stop/seek/loop/offline; device/sample-rate/buffer restart.
 - [ ] 44.1/48/96 kHz × 64/128/256/512/1024 samples where host/device configurable;
   record unsupported combinations explicitly rather than silently omitting them.
-- [ ] Linear SRC frequency response and aliasing measured; quality decision documented.
+- [ ] Production SRC frequency response, aliasing and latency accepted on the
+  exact candidate; retain the synthetic resampling regression and separate
+  listening/host acceptance. Historical linear-SRC wording is not a claim that
+  the current implementation is still the original linear resampler.
 
 ## Packaging (only after correctness gates)
 

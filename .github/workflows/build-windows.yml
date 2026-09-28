@@ -44,15 +44,15 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release `
             -DVDX7_ENABLE_ROM_TESTS=ON `
             -DVDX7_TEST_ROM_FILE="$PWD/build-rom-registration/fixture.placeholder"
-          $listing = ctest --test-dir build-rom-registration -C Release -N --show-only=json-v1 | Out-String | ConvertFrom-Json
-          $test = $listing.tests | Where-Object { $_.name -eq "vdx7_pending_rom_content_identity" }
-          if (-not $test) {
-            throw "Pending ROM identity regression was not registered"
-          }
-          $fixture = $test.properties | Where-Object { $_.name -eq "FIXTURES_REQUIRED" }
-          if (-not $fixture -or $fixture.value -notcontains "vdx7_v18_rom") {
-            throw "Pending ROM identity regression is missing the v1.8 fixture requirement"
-          }
+          if ($LASTEXITCODE -ne 0) { throw "ROM-enabled configuration failed" }
+          ctest --test-dir build-rom-registration -C Release -N --show-only=json-v1 | Set-Content -Encoding utf8 rom-test-registration.json
+          if ($LASTEXITCODE -ne 0) { throw "CTest inventory failed" }
+          python scripts/check_test_registration.py rom-test-registration.json --self-test
+          if ($LASTEXITCODE -ne 0) { throw "ROM-enabled registration contract failed" }
+          ctest --test-dir build -C Release -N --show-only=json-v1 | Set-Content -Encoding utf8 rom-free-registration.json
+          if ($LASTEXITCODE -ne 0) { throw "ROM-free CTest inventory failed" }
+          python scripts/check_test_registration.py rom-free-registration.json --rom-free-only
+          if ($LASTEXITCODE -ne 0) { throw "ROM-free registration contract failed" }
 
       - name: Locate VST3
         shell: powershell

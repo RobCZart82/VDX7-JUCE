@@ -54,7 +54,7 @@ Factory data enables ROM1A–ROM4B: eight banks of 32 programs. Without it, supp
 
 All 32 algorithm routings are drawn. Click an operator node to select its editor; tabs and diagram selection follow each other. Selection does not mute an operator or edit its sound. OUT identifies carriers; F0–F7 indicates feedback, not a live signal level.
 
-The on-screen keyboard, spring-centred pitch wheel, position-holding modulation wheel and master fader are functional. Wheel ribs move with their values. Stereo meters show output levels; the core's mono signal is sent to both channels.
+The on-screen keyboard, pitch wheel, position-holding modulation wheel and master fader are functional. The pitch wheel springs to centre after a mouse drag; keyboard adjustment intentionally retains the selected value (owner-approved policy). Wheel ribs move with their values. Stereo meters show output levels; the core's mono signal is sent to both channels.
 
 The footer CPU percentage is a smoothed audio-callback load estimate, not total computer CPU usage and not necessarily identical to REAPER's meter.
 
@@ -154,14 +154,13 @@ then rebuild `vdx7_all_tests` and rerun CTest. Never upload the ROM. The process
 runner opens no audio device and optionally accepts an existing absolute directory
 for PNG snapshots.
 
-`VDX7_TEST_ROM_FILE` is one fixture shared by the opt-in tests: either a
-16,384-byte firmware file (optionally beside `dx7_factory_voices_32KB.bin`) or
-a 49,152-byte combined firmware-plus-factory-voices image. Factory voices are
-optional for firmware execution; they supply the eight factory banks. The
-complete opt-in suite includes tests that inspect the validated v1.8 firmware
-memory map, so its profile fixture must contain that locally validated v1.8
-firmware. The factory-voice payload is not itself what establishes the v1.8
-profile. This test fixture is separate from the public ROM-free CI suite.
+`VDX7_TEST_ROM_FILE` for the complete opt-in suite must be a 49,152-byte combined
+v1.8 firmware-plus-factory-voices image. Direct-engine tests do not load sibling
+files, and identity tests need factory-bank bytes. The shared profile fixture
+checks the image before all dependent local-ROM tests. The plugin itself still
+supports 16,384-byte firmware with optional `dx7_factory_voices_32KB.bin`;
+that product capability is not a promise that the complete suite accepts the
+same fixture layout. The private fixture is separate from public ROM-free CI.
 
 The host-reset/ownership groups inspect the validated v1.8 firmware memory map.
 They are labelled `local-rom;firmware-v1_8` and require the `vdx7_v18_profile`

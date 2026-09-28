@@ -1,5 +1,10 @@
 # VDX7 Mk I GUI Design Spec v1.2
 
+> Történeti raszteres terv, nem a jelenlegi felület specifikációja. Az aktuális
+> 1440×1110 koordinátarendszert és a ténylegesen használt erőforrásokat a
+> [runtime leírás](../../docs/design/GUI_RUNTIME_ASSETS.md) rögzíti. Ez a fájl
+> nem ígér teljes 2× képcsomagot, és nem nyitja újra a jóváhagyott megjelenést.
+
 ## 1. Vizuális karakter
 
 A felület egy sötét, professzionális, késő-1980-as éveket idéző digitális hangszer és egy modern plug-in közös nyelvét használja. Nem retro másolat: a történeti utalást a blokkos hardver-logika, az LCD, a keskeny feliratok és a fizikai vezérlők adják; a kortárs minőséget az egységes térköz, a tiszta állapotjelzés és a visszafogott anyagkezelés biztosítja.

@@ -7,6 +7,8 @@
 - [Current 1.0 execution plan](release/EXECUTION_PLAN_1.0.md)
 - [Release-candidate checklist](release/RELEASE_CHECKLIST_1.0_RC.md)
 - [Roadmap and milestone history](release/ROADMAP_1.0.md)
+- [1.0 build identity and package boundaries](release/IDENTITY_AND_PACKAGE_1.0.md)
+- [Current runtime GUI resources](design/GUI_RUNTIME_ASSETS.md)
 
 ## Document groups
 

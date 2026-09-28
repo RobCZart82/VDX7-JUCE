@@ -7,6 +7,7 @@
 #include <iostream>
 #include <memory>
 #include <stdexcept>
+#include <vector>
 
 namespace
 {
@@ -45,6 +46,25 @@ int main(int argc, char** argv)
     juce::ScopedJuceInitialiser_GUI gui;
     try
     {
+        // Optional local measurement only, never part of the timed CI test.
+        // Keep instances alive briefly so the caller can sample process RSS.
+        if (argc == 3 && juce::String(argv[1]) == "--benchmark-editors")
+        {
+            const int count = juce::String(argv[2]).getIntValue();
+            require(count == 0 || count == 1 || count == 4 || count == 8, "benchmark count is 0/1/4/8");
+            std::vector<std::unique_ptr<VDX7AudioProcessor>> processors;
+            std::vector<std::unique_ptr<juce::AudioProcessorEditor>> editors;
+            const auto started = juce::Time::getMillisecondCounterHiRes();
+            for (int i = 0; i < count; ++i)
+            {
+                processors.push_back(std::make_unique<VDX7AudioProcessor>(false));
+                editors.emplace_back(processors.back()->createEditor());
+            }
+            std::cout << "Editors=" << count << " create_ms="
+                      << juce::Time::getMillisecondCounterHiRes() - started << std::endl;
+            juce::Thread::sleep(1000);
+            return 0;
+        }
         checkWhiteKeyHover();
         for (std::size_t i = 0; i < VDX7GuiScale::presets.size(); ++i)
         {

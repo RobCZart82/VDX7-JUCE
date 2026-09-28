@@ -83,7 +83,8 @@ int main(int argc, char** argv)
         require(VDX7UserBank::load(file, validSnapshot).wasOk(), "capture valid bank snapshot");
 
         // CRC-valid files still have to obey packed voice semantics. Change
-        // occupied slot 04, recompute CRC, and ensure failure is transactional.
+        // occupied slot 04 AND unoccupied slot 01; both are sent on bank import.
+        for (const int probeSlot : {3, 0})
         for (const auto& invalidField : std::array<std::pair<int, uint8_t>, 6> {{
                  {0, 100},       // operator rate
                  {14, 100},      // operator output level
@@ -95,7 +96,7 @@ int main(int argc, char** argv)
         {
             auto malformed = goodBytes;
             auto* bytes = static_cast<uint8_t*>(malformed.getData());
-            bytes[8 + 3 * 128 + invalidField.first] = invalidField.second;
+            bytes[8 + probeSlot * 128 + invalidField.first] = invalidField.second;
             setLittleEndian32(bytes + malformed.getSize() - 4,
                               testChecksum(bytes, malformed.getSize() - 4));
             require(file.replaceWithData(bytes, malformed.getSize()), "write semantic-invalid fixture");

@@ -81,12 +81,14 @@ juce::Result VDX7UserBank::load(const juce::File& file, Snapshot& destination)
 
     for (int slot = 0; slot < 32; ++slot)
     {
-        if (!result.occupied(slot))
-            continue;
-
         const auto& voice = result.voices[slot];
         if (!VDX7VoiceData::hasValidPackedVoice(voice.data(), voice.size()))
             return fail("USER bank contains semantically invalid voice data.");
+
+        // Bank import transfers every slot, including unoccupied placeholders.
+        // Occupancy controls naming policy, not validity of the stored voice.
+        if (!result.occupied(slot))
+            continue;
 
         const auto nameBegin = voice.begin() + 118;
         const auto nameEnd = voice.end();

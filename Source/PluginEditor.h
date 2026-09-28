@@ -96,13 +96,8 @@ private:
     VDX7PerformancePanel performancePanel_;
     bool performanceVisible_ = false;
 
-    juce::Image chassis_;
     std::unique_ptr<juce::Drawable> wordmark_;
-    juce::Image lcdFrame_;
-    juce::Image panel_;
     juce::Image valueField_;
-    juce::Image envelopeGrid_;
-    juce::Image divider_;
 
     juce::Label status_;
     juce::Label patch_;
