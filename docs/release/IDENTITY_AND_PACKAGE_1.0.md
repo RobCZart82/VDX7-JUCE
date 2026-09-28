@@ -64,3 +64,10 @@ Windows 10 x64 build #219 / `29ab5e3`, but not every tested SHA/binary hash,
 REAPER application version or the full rate/block/instance matrix; preserve
 that as OWNER-REPORTED. No final RC is frozen or accepted by this document. Final archive inspection,
 exact-candidate host matrix and separate publication approval remain OPEN.
+
+On 2026-09-28, the owner additionally reported installing the Windows VST3 from
+**Build Windows VST3 and Standalone #247**, source commit
+`fbea5ea167598f9b625eab9145f53b8700d9eb15`. Reported VDX7.vst3 SHA-256:
+`1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`.
+This is owner-reported installation evidence, not a new functional-test result
+or final-RC acceptance.

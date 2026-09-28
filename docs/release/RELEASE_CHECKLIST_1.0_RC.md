@@ -23,6 +23,13 @@ convert unverified matrix entries to PASS. The owner accepts Windows distributio
 without publisher signing and macOS with ad-hoc signing only, without Developer
 ID/notarization. Clearly warn about
 possible OS security prompts. This is not publication authorization.
+
+Additional owner-reported installation evidence (2026-09-28): the owner installed
+the Windows VST3 from **Build Windows VST3 and Standalone #247**, built from
+`fbea5ea167598f9b625eab9145f53b8700d9eb15`. Reported VDX7.vst3 SHA-256:
+`1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`.
+This records installation and artifact identity only; no new functional test
+result was stated, so it does not close the exact-RC REAPER acceptance matrix.
 [Identity/package review](IDENTITY_AND_PACKAGE_1.0.md) distinguishes development
 artifacts from final binary packaging, signing and acceptance gates.
 
