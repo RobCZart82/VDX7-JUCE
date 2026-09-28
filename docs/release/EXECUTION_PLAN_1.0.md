@@ -1,6 +1,12 @@
 # 1.0 consolidated execution plan — current status 2026-09-28
 
-Reviewed baseline: `fbea5ea167598f9b625eab9145f53b8700d9eb15` (main after #89).
+Reviewed baseline: `817987b9337aca9d0e21d14427ac14fc74833505` (main after #90).
+PR #90 merged the bilingual release-preparation documentation and recorded the
+owner-reported Windows #247 VST3 installation hash. Its PR Windows/macOS and
+ASan/UBSan checks passed. Post-merge main Windows run 36433962468 and macOS run
+36433962462 both passed on `817987b`; the sanitizer check passed on the PR head.
+No open PR was present at the next-work checkpoint. Owner report is installation
+evidence, not new functional acceptance.
 PR #88 checks passed; PR #89 source `d834f4f` passed Windows run 36410161563,
 macOS run 36410161589 and ASan/UBSan run 36410161474. Post-merge main Windows
 run 36411273600 and macOS run 36411273595 also passed. These are development
@@ -76,11 +82,17 @@ reproduction):
 1. Align HU/EN README and guides with the actual VST3 distribution, install paths,
    ROM requirement, known limits and accepted signing-warning policy. Keep dev
    labels until a stable package actually exists; do not relabel old screenshots.
-2. Prepare bilingual 1.0.0 release notes and an honest tested-platform matrix.
-   Keep owner-reported REAPER acceptance distinct from assistant-run evidence.
+2. Draft bilingual 1.0.0 release notes and the platform matrix in
+   [the release-note draft](RELEASE_NOTES_1.0.0_DRAFT_HU_EN.md). Before finalizing,
+   fill its exact-RC evidence cells and keep owner reports distinct from executed
+   test results.
 3. Implement and review the exact stable-build/source-package identity without
    changing plugin IDs, parameter IDs/order or project compatibility; add focused
-   packaging tests for release mode before freezing any RC.
+   packaging tests for release mode before freezing any RC. Current branch work
+   adds `rcN` display/artifact identity plus ROM-free positive/negative tests;
+   local macOS RC/stable VST3 builds and 11/11 ROM-free tests passed. Branch CI
+   review is still required. See [version identity validation](../validation/VALIDATION_20260928_VERSION_IDENTITY.md).
+   Stable display remains opt-in.
 4. Freeze one exact candidate SHA, build and test it on required CI/platforms,
    inspect the matching packages and source archive, then record every PASS,
    FAIL, NOT RUN and accepted limitation against that SHA.
@@ -414,9 +426,10 @@ evidence that the shipped instrument currently malfunctions.
 ## 6. Exact candidate and release — original gates retained
 
 - [x] F17 — [identity/package review](IDENTITY_AND_PACKAGE_1.0.md) documents
-  numeric host 1.0.0 versus displayed 1.0.0-dev and exact-SHA artifact naming.
-  Historical bundle/plugin IDs are preserved. Cosmetic prototype DESCRIPTION
-  cleanup and any future rcN display option are separate candidate changes.
+  numeric host 1.0.0 versus displayed dev/RC/stable labels, exact-SHA artifact
+  naming and tested `rcN` mode resolution. Historical bundle/plugin IDs are
+  preserved. Cosmetic prototype DESCRIPTION cleanup remains a separate
+  candidate decision.
 - [ ] Freeze one RC SHA; run public Windows/macOS checks, full local ROM suite,
   host matrix and exact-SHA candidate workflow. Retest relevant gates after fixes.
 - [x] Document single USER-library limitation and supported formats/hosts:

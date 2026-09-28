@@ -1,19 +1,24 @@
 # 1.0 build identity and package boundaries
 
-Source review: 2026-09-28, post-#89 main baseline `fbea5ea`. This is a preparation record,
+Source review: 2026-09-28, post-#90 main baseline `817987b`. PR and post-merge
+Windows/macOS CI passed; PR ASan/UBSan passed. This is a preparation record,
 not approval to publish, rename installed plugins or change their identity.
 
 ## Identity (F17)
 
 - CMake project/host numeric version is `1.0.0`. A host displaying that number
   alone does not prove that the binary is an accepted stable release.
-- Default `VDX7_RELEASE_BUILD=OFF` displays `1.0.0-dev`. Keep this setting for
-  development and current exact-commit candidates until all acceptance gates
-  pass. The existing candidate workflow explicitly sets it OFF.
-- Candidate workflow artifact names include the full source SHA. Record that
+- Default `VDX7_RELEASE_BUILD=OFF` with no candidate label displays
+  `1.0.0-dev`. Keep this setting for development.
+- Exact candidates use `VDX7_RELEASE_BUILD=OFF` and
+  `VDX7_RELEASE_CANDIDATE=rcN` (for example `rc1`) and display `1.0.0-rc1`.
+  RC labels are checked by a ROM-free regression test; combining a candidate
+  label with stable mode, or supplying a malformed label, is rejected.
+- A stable package uses `VDX7_RELEASE_BUILD=ON` with an empty candidate label
+  and displays `1.0.0`. The exact-candidate workflow remains non-publishing and
+  names its artifacts with the RC label, platform and full source SHA. Record
   SHA, build options, platform/architecture, dependency revisions and binary
-  checksum with each test. A future `rcN` display label is not implemented by
-  the current boolean option; do not describe a dev binary as displaying rcN.
+  checksum with each test; never describe a dev binary as an RC or stable build.
 - Keep `org.vdx7.prototype`, manufacturer `VdxP`, plugin code `VdX7`, product
   `VDX7`, and all 148 parameter IDs/order compatible. The historical bundle ID
   is an identity, not permission to rename it during release polish.

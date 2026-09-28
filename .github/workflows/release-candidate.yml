@@ -7,6 +7,10 @@ on:
         description: Full 40-character source commit SHA (no branch or tag names)
         required: true
         type: string
+      candidate_label:
+        description: Release-candidate label (rc1, rc2, ...); this does not publish a release
+        required: true
+        type: string
 
 # Deliberately cannot publish, tag, or overwrite any existing release asset.
 # Final publication is a separate step after docs/release/ROADMAP_1.0.md acceptance.
@@ -38,8 +42,15 @@ jobs:
         run: |
           [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
-      - name: Configure development candidate
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DVDX7_RELEASE_BUILD=OFF ${{ matrix.configure }}
+      - name: Configure exact release candidate
+        shell: bash
+        env:
+          CANDIDATE_LABEL: ${{ inputs.candidate_label }}
+        run: >-
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          -DVDX7_RELEASE_BUILD=OFF
+          "-DVDX7_RELEASE_CANDIDATE=$CANDIDATE_LABEL"
+          ${{ matrix.configure }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -62,7 +73,7 @@ jobs:
           codesign --verify --deep --strict build/VDX7_artefacts/Release/VST3/VDX7.vst3
       - uses: actions/upload-artifact@v4
         with:
-          name: VDX7-1.0.0-dev-${{ matrix.platform }}-${{ inputs.source_commit }}
+          name: VDX7-1.0.0-${{ inputs.candidate_label }}-${{ matrix.platform }}-${{ inputs.source_commit }}
           path: |
             build/VDX7_artefacts/Release/VST3/VDX7.vst3
             README.md
