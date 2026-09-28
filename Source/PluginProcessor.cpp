@@ -656,6 +656,8 @@ void VDX7AudioProcessor::applyPendingCommands()
 
 bool VDX7AudioProcessor::applyOperatorParameters()
 {
+    // These edits target the preserved project, not an incompatible ROM.
+    if (pendingRestore_.isValid()) return false;
     const uint64_t dirtyLow = operatorParameterDirty_[0].exchange(0, std::memory_order_acq_rel);
     const uint64_t dirtyHigh = operatorParameterDirty_[1].exchange(0, std::memory_order_acq_rel);
     if (dirtyLow == 0 && dirtyHigh == 0)
@@ -687,6 +689,7 @@ bool VDX7AudioProcessor::applyOperatorParameters()
 
 bool VDX7AudioProcessor::applyVoiceParameters()
 {
+    if (pendingRestore_.isValid()) return false;
     const uint32_t dirty = voiceParameterDirty_.exchange(0, std::memory_order_acq_rel);
     if (dirty == 0)
         return false;
@@ -798,7 +801,7 @@ bool VDX7AudioProcessor::synchroniseOperatorParametersFromEngine()
     std::array<int, VDX7VoiceData::kVoiceParameterCount> voiceValues {};
     {
         std::scoped_lock lock(engineMutex_);
-        if (!engine_.isLoaded()) return false;
+        if (!engine_.isLoaded() || pendingRestore_.isValid()) return false;
         flushVoiceEditsLocked();
         voicePublicationNeeded_.store(false, std::memory_order_release);
         for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
@@ -938,7 +941,8 @@ void VDX7AudioProcessor::parameterChanged(const juce::String& parameterID, float
                 continue;
 
             const int index = op * VDX7VoiceData::kParameterCount + p;
-            if (engineLoaded_.load(std::memory_order_acquire))
+            if (!pendingProjectEdits_.load(std::memory_order_acquire)
+                && engineLoaded_.load(std::memory_order_acquire))
             {
                 editQueue_.push({VDX7EditQueue::Kind::op, index, juce::roundToInt(newValue)});
                 voicePublicationNeeded_.store(true, std::memory_order_release);
@@ -957,7 +961,8 @@ void VDX7AudioProcessor::parameterChanged(const juce::String& parameterID, float
         if (voiceParameterIDs_[static_cast<std::size_t>(p)] != parameterID)
             continue;
 
-        if (engineLoaded_.load(std::memory_order_acquire))
+        if (!pendingProjectEdits_.load(std::memory_order_acquire)
+            && engineLoaded_.load(std::memory_order_acquire))
         {
             editQueue_.push({VDX7EditQueue::Kind::voice, p, juce::roundToInt(newValue)});
             voicePublicationNeeded_.store(true, std::memory_order_release);
@@ -1190,6 +1195,7 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
         if (!engine_.configureMonoCorrectionForStateRestore(static_cast<bool>(correction)))
             return;
         pendingRestore_ = pendingCopy;
+        pendingProjectEdits_.store(true, std::memory_order_release);
         // The audio callback owns deferredMidi_. Publishing an epoch lets it
         // discard pre-restore events without racing this state-thread update.
         midiTimelineEpoch_.fetch_add(1, std::memory_order_release);
@@ -1224,6 +1230,7 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
         {
             restoreSavedStateLocked(pendingRestore_);
             pendingRestore_ = {};
+            pendingProjectEdits_.store(false, std::memory_order_release);
         }
         else if (engine_.isLoaded() && pendingRestore_.isValid())
         {
@@ -1404,6 +1411,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
             {
                 restoreSavedStateLocked(pendingRestore_);
                 pendingRestore_ = {};
+                pendingProjectEdits_.store(false, std::memory_order_release);
             }
             else
             {
