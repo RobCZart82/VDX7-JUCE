@@ -10,3 +10,7 @@ commit the work locally and push it to GitHub main as a second backup.
 - Never commit Yamaha firmware/factory ROM, local credentials, build caches,
   or installed binaries. User-supplied ROM stays local for integration tests.
 - Keep development builds visibly marked until 1.0.0 acceptance is complete.
+- Keep new validation reports in `docs/validation/` and other detailed documents
+  in the appropriate `docs/` subdirectory. Keep root README files, licence notices
+  and agent instructions in place; update links and `docs/DOCUMENT_PATHS.md`
+  whenever an existing document moves.
