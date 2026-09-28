@@ -1,9 +1,10 @@
 # Licensing and attribution / Licenc és köszönet
 
-VDX7-JUCE v0.6.6 Pre-Beta 2 is distributed as a free-software combined work
+VDX7-JUCE 1.0.0 development sources use the free-software combined-work route
 under GNU AGPL version 3, without warranty. The project owner authorised the
 AGPLv3 publication route. Wrapper contributions and original GUI resources
-in this release are offered under AGPL-3.0-only; see LICENSE.txt.
+are offered under AGPL-3.0-only; see LICENSE.txt. Development artifacts are not
+accepted stable releases; this update does not change upstream license terms.
 
 Existing upstream components retain their own notices and licenses:
 
@@ -18,9 +19,12 @@ Existing upstream components retain their own notices and licenses:
 - VST3 SDK and other JUCE dependencies retain the licenses stated in their
   included source files. No commercial JUCE license is claimed.
 
-Complete corresponding source for the shipped executable is provided as
-VDX7-JUCE-v0.6.6-PreBeta2-corresponding-source.zip alongside the binary.
-It includes the wrapper, GUI resources, build scripts, exact JUCE sources
+For each development candidate, prepare matching complete source as
+VDX7-1.0.0-dev-<full-source-SHA>-corresponding-source.zip. Its embedded
+SOURCE_MANIFEST.json identifies the exact source and dependency revisions and
+hashes the payload files; SHA256SUMS.txt hashes the ZIP. Publication must not
+proceed without the matching source package alongside the binary.
+The source package includes the wrapper, GUI resources, build scripts, exact JUCE sources
 and the portable dx7Lib source subset used by the build. See
 docs/guides/SOURCE_DEPENDENCIES.md for pinned revisions and offline build instructions.
 

@@ -7,12 +7,13 @@ by this checklist. No proprietary firmware belongs in source, CI or artifacts.
 Current work order and audit disposition: [consolidated plan](EXECUTION_PLAN_1.0.md).
 GUI appearance approval does not close the technical/platform gates below.
 
-Latest non-host checkpoint: [2026-09-28 hardening report](../validation/VALIDATION_20260928_NONHOST_HARDENING.md),
-based on merged #87 / `811f3a3`. N2/N3/N7 have local failing-baseline/fixed
-regressions; N6 retains keyboard PITCH values by owner decision. Follow the
-report for full-suite and remote-CI results, not historical green runs.
+Merged non-host checkpoint: #88 / `d4ef951`; its PR Windows/macOS and sanitizer
+checks all PASS. The [hardening report](../validation/VALIDATION_20260928_NONHOST_HARDENING.md)
+retains failing-baseline/fixed evidence. N6 retains keyboard PITCH values by
+owner decision. New [source-package verification](../validation/VALIDATION_20260928_SOURCE_PACKAGING.md)
+is separate from exact-RC acceptance.
 [Identity/package review](IDENTITY_AND_PACKAGE_1.0.md) distinguishes development
-artifacts from the still-unprepared final corresponding-source/checksum package.
+artifacts from final binary packaging, signing and acceptance gates.
 
 ## Correctness and realtime gates
 
@@ -20,9 +21,11 @@ artifacts from the still-unprepared final corresponding-source/checksum package.
   and F10 Settings fixes are implemented and merged; F8/F9 have a source-review
   disposition. This records implementation only, not acceptance of a final RC.
 - [ ] Repeat relevant regressions on the frozen RC and attach exact-SHA evidence.
-- [ ] Resolve/disposition the NEW `AUDIT-20260928-N1` through `N7` ledger entries
+- [x] Resolve/disposition the NEW `AUDIT-20260928-N1` through `N7` ledger entries
   in the consolidated plan. Do not confuse their IDs with older roadmap audits.
   Missing coverage or a policy question is not automatically a product defect.
+  Merged #87/#88 implement the fixes/contracts; N6 is accepted policy. Re-run
+  relevant evidence on the frozen RC before closing the separate release gates.
 - [ ] Validate all five actual GUI size presets and required About assets;
   preserve owner-approved graphics during any resource cleanup.
 

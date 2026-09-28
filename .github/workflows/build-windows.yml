@@ -33,6 +33,9 @@ jobs:
       - name: ROM-free regression tests
         run: ctest --test-dir build -C Release --output-on-failure --no-tests=error
 
+      - name: Source packaging regression tests (no ROM)
+        run: python -m unittest discover -s Tests -p test_package_source.py -v
+
       - name: Local-ROM test registration smoke (does not execute tests)
         shell: pwsh
         run: |
