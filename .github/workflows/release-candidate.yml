@@ -55,12 +55,19 @@ jobs:
         with:
           python-version: '3.12'
       - name: Test source packager
-        run: python -m unittest discover -s Tests -p test_package_source.py -v
+        run: python -m unittest discover -s Tests -p "test_*.py" -v
       - name: Prepare matching complete source (no publication)
-        run: >-
-          python scripts/package_source.py create --repo .
-          --juce build/_deps/juce-src --core build/_deps/retromulator-src
-          --commit ${{ inputs.source_commit }} --output candidate-source
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          CANDIDATE_LABEL: ${{ inputs.candidate_label }}
+        run: |
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$CANDIDATE_LABEL" =~ ^rc[1-9][0-9]*$ ]]
+          python scripts/package_source.py create --repo . \
+            --juce build/_deps/juce-src --core build/_deps/retromulator-src \
+            --commit "$SOURCE_COMMIT" --package-label "1.0.0-$CANDIDATE_LABEL" \
+            --output candidate-source
       - name: Build plugin and ROM-free tests
         run: cmake --build build --config Release --parallel 4 --target VDX7_VST3 vdx7_ci_checks
       - name: Run ROM-free tests

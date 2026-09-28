@@ -7,7 +7,8 @@ packager; the dirty working tree and untracked files are intentionally ignored.
 ```text
 python -m unittest discover -s Tests -p test_package_source.py -v
 python scripts/package_source.py create --repo . --juce <JUCE-checkout>
-  --core <Retromulator-checkout> --commit <40-character-SHA> --output <new-folder>
+  --core <Retromulator-checkout> --commit <40-character-SHA>
+  --package-label 1.0.0-dev --output <new-folder>
 python scripts/package_source.py verify <new-folder>/<source-package>.zip
 ```
 
@@ -46,8 +47,11 @@ ctest --test-dir <new-build> -C Release --output-on-failure --no-tests=error
 
 Add the platform generator/architecture options from the HU/EN build guide.
 No installed plugin should be replaced by this check. The exact-candidate workflow
-now prepares matching source, but final binary checksums, signing policy, archive
-inspection and exact-candidate host acceptance remain release gates.
+prepares matching test-candidate source and packages. The final stable build still
+needs its exact-SHA binary/source pairing, checksum and archive review. Owner-
+reported focused RC1 host/listening checks are recorded separately; the broader
+host/audio/GUI matrix is explicitly deferred, not passed. See the
+[release checklist](RELEASE_CHECKLIST_1.0_RC.md).
 
 Magyarul: a csomag kizárólag a megadott commitok fájljait tartalmazza, helyi
 ROM-ot, munkapéldány-módosítást vagy buildmappát nem másol át. Az ellenőrzés és

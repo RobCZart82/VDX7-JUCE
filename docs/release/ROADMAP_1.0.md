@@ -7,39 +7,29 @@ indices compatible with saved projects.
 
 ## Current execution authority — 2026-09-28
 
-Use [the consolidated 1.0 execution plan](EXECUTION_PLAN_1.0.md) for current
-priority, closed GUI scope, audit F1–F19 disposition, and the new dated
-`AUDIT-20260928-N1`–`N8` ledger. Reviewed baseline is `fbea5ea` (main after
-merged #89). PR #89 Windows/macOS and ASan/UBSan checks passed, as did the
-post-merge main Windows/macOS builds; old N-numbered findings below refer to
-earlier audits, not this new ledger. The approved GUI is
-closed, and the recorded local ROM-enabled CTest run passed 35/35 on the
-`d696e56` source tree; that run did not execute the desktop-dependent
-`vdx7_processor` case. See
-`docs/validation/VALIDATION_1.0_MAIN_D696E56_ROM_SUITE.md` for exact evidence.
-The 2026-09-28 Windows processor harness now completes after correcting two test
-oracles, but the broader run exposed a MIDI-test timeout. See
-[the current validation record](../validation/VALIDATION_20260928_PENDING_PROJECT_EDITS.md)
-for original failures and reruns. The next
-[non-host hardening round](../validation/VALIDATION_20260928_NONHOST_HARDENING.md)
-records N2/N3/N7 regressions and fixes, N4/N5 fixture/CI hardening, the accepted
-N6 keyboard policy, measured GUI resource cleanup and pluginval evidence.
-It also records complete-suite and remote-CI status separately. Do not interpret
-historical 35/35 as a clean result for this new source. The execution plan
-preserves the remaining release gates.
-The [source-packaging round](../validation/VALIDATION_20260928_SOURCE_PACKAGING.md)
-adds reproducible exact-commit source archives, an actual extracted-source
-Windows offline build (10/10 CTest plus six packaging tests PASS), and separate
-Steinberg VST3 validation (47/47 PASS). Post-merge `fbea5ea` local checks also
-passed 10/10 ROM-free CTest and 6/6 packaging tests; its 5,073-file source ZIP
-was generated and manifest-verified. Interactive About opening/rendering was
-checked, but Settings/preset/HiDPI completion is blocked by the locked desktop.
-The owner reports REAPER use without known issues and accepts the Windows
-unsigned/macOS ad-hoc-only signing policy; these remain OWNER-REPORTED decisions,
-not exact-RC test results. This does not accept or publish a stable release.
-Older dated sections below are historical evidence; their stale GUI checkboxes
-or "next chapter" wording must not reopen the approved design. The RC checklist
-remains the final release gate, not a publication authorization.
+Use the [consolidated 1.0 execution plan](EXECUTION_PLAN_1.0.md),
+[release-preparation checklist](RELEASE_CHECKLIST_1.0_RC.md), and linked
+validation reports for the current status. Current `main` is
+`0fae59d79a849a8fe2e1993533adf2df3d90bc59`; latest observed Windows #265 and
+macOS #270 main builds passed. The frozen RC1 product source is
+`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`; exact-candidate run `36451459751`
+passed and produced test-only Windows x64 and macOS Universal VST3 artifacts.
+The local exact-source ROM suite passed 36/36 CTests, excluding the desktop
+save-dialog-dependent case. The owner reports successful RC1 REAPER use and
+excellent DX7-faithful sound on macOS and Windows, plus a successful five-
+instance project save/reopen check. The installed macOS VST3 hash matches the
+candidate artifact; the Windows hash and REAPER version are not recorded.
+
+The owner has elected to close open-ended exploratory testing. That is a scope
+decision, not a claim that every matrix cell passed: unrun MIDI boundary,
+transport/render, rate/buffer, broader instance/CPU and GUI-preset checks are
+deferred and remain explicitly marked NOT RUN in the checklist. Any later
+confirmed issue is expected to be handled after 1.0.0, except a release-blocking
+problem that would require stopping the release. The final stable package has
+not been built, and GitHub has no stable 1.0.0 release. Keep old milestone and
+audit narratives below as historical evidence; their stale checkboxes or
+"next chapter" wording do not override the current plan. This page is not
+publication authorization.
 
 ## Stabilization
 
@@ -97,20 +87,16 @@ Implemented in the current source; release acceptance is separate:
   row divider and three section-tone header accents exist in the current source.
   The last two details were confirmed/added in PR #63.
 
-Still open and release-relevant:
-- Run the complete ROM-free and opt-in v1.8 ROM CTest suites on one exact
-  release-candidate SHA, preserving logs and separate known-firmware
-  characterization from product acceptance.
-- Perform REAPER Note 11/12 and 120/121 boundary tests in both Settings modes,
-  including every Note Off encoding, sustain, repeated notes, transport/loop,
-  and a subsequent supported note. Then run the full host/platform matrix below.
-- Complete real GUI/audio lock-overlap, suspension/bypass, allocation and
-  deferred-MIDI timing acceptance; test SRC frequency/aliasing/latency and
-  measure offline-render release tails before deciding whether zero host-tail
-  metadata needs a change. No release-tail truncation is currently confirmed.
-- Finish whole-interface visual/HiDPI acceptance and package/legal/version
-  gates. The current four manually compiled component tests and green PR builds
-  are not substitutes for these items.
+Deferred acceptance / release-preparation work:
+- Broader REAPER MIDI-boundary, transport/loop, offline-render, rate/buffer,
+  multi-instance/CPU and GUI-size matrix cells were not run against the frozen
+  RC1. Preserve these as deferred limitations, not test passes.
+- The exact RC1 local-ROM suite is recorded separately (36/36 CTests); the
+  desktop-dependent save-dialog test was excluded. Do not repeat exploratory
+  testing absent a reproducible issue unless the owner chooses to reopen it.
+- Stable `1.0.0` packaging, final platform/source archive checksum and human
+  archive review, final notes/asset list, and separate publication authorization
+  remain release-preparation steps. There is no confirmed release-tail defect.
 
 ### Audit follow-up — 2026-09-24 (reviewed against current main)
 

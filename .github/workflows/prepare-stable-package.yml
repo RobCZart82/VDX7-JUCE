@@ -1,0 +1,128 @@
+name: Prepare stable 1.0.0 packages (no publication)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Full 40-character commit SHA already present on main
+        required: true
+        type: string
+
+# Creates downloadable validation artifacts only. It cannot create tags/releases.
+permissions:
+  contents: read
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            platform: macOS-universal
+          - os: windows-2022
+            platform: Windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify source identity and main ancestry
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git merge-base --is-ancestor "$SOURCE_COMMIT" origin/main
+
+      - name: Configure stable macOS Universal build
+        if: runner.os == 'macOS'
+        run: >-
+          cmake -S . -B build -G Xcode -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          -DVDX7_RELEASE_BUILD=ON -DVDX7_RELEASE_CANDIDATE=
+
+      - name: Configure stable Windows x64 build
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: >
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+          -DCMAKE_BUILD_TYPE=Release
+          -DVDX7_RELEASE_BUILD=ON -DVDX7_RELEASE_CANDIDATE=
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test release packagers
+        run: python -m unittest discover -s Tests -p "test_*.py" -v
+
+      - name: Prepare matching stable source archive
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          python scripts/package_source.py create --repo . \
+            --juce build/_deps/juce-src --core build/_deps/retromulator-src \
+            --commit "$SOURCE_COMMIT" --package-label 1.0.0 \
+            --output stable-source
+
+      - name: Build stable VST3 and ROM-free tests
+        run: cmake --build build --config Release --parallel 4 --target VDX7_VST3 vdx7_ci_checks
+
+      - name: Run ROM-free tests
+        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error
+
+      - name: Verify and package macOS VST3
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          VST3="build/VDX7_artefacts/Release/VST3/VDX7.vst3"
+          test -d "$VST3"
+          lipo "$VST3/Contents/MacOS/VDX7" -verify_arch arm64 x86_64
+          codesign --force --deep --sign - "$VST3"
+          codesign --verify --deep --strict "$VST3"
+          mkdir release-assets
+          ditto -c -k --sequesterRsrc --keepParent "$VST3" \
+            release-assets/VDX7-1.0.0-macOS-universal-VST3.zip
+
+      - name: Verify and package Windows VST3
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $vst3 = Get-ChildItem -Path build -Recurse -Directory -Filter "VDX7.vst3" | Select-Object -First 1
+          if (-not $vst3) { throw "VDX7.vst3 was not found" }
+          New-Item -ItemType Directory -Path release-assets | Out-Null
+          Compress-Archive -Path $vst3.FullName -DestinationPath "release-assets/VDX7-1.0.0-Windows-x64-VST3.zip"
+
+      - name: Assemble stable source and build identity assets
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          cp stable-source/VDX7-1.0.0-${SOURCE_COMMIT}-corresponding-source.zip release-assets/
+          cat > release-assets/BUILD-INFO.txt <<EOF
+          Product: VDX7 Mk1.
+          Stable version: 1.0.0
+          Source commit: ${SOURCE_COMMIT}
+          Platform: ${PLATFORM}
+          VST3 distribution package; source archive and hashes included.
+          This is a non-publishing preparation artifact, not an approved GitHub Release.
+          Windows packages are unsigned; macOS uses an ad-hoc signature, not Developer ID/notarization.
+          EOF
+          python scripts/write_sha256_manifest.py --output release-assets/SHA256SUMS.txt \
+            release-assets/*.zip release-assets/BUILD-INFO.txt
+
+      - name: Upload stable preparation artifact (no publication)
+        uses: actions/upload-artifact@v4
+        with:
+          name: VDX7-1.0.0-${{ matrix.platform }}-${{ inputs.source_commit }}
+          path: release-assets/*
+          if-no-files-found: error

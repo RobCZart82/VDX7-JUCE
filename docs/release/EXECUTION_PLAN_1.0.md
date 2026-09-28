@@ -1,25 +1,41 @@
-# 1.0 consolidated execution plan — current status 2026-09-28
+# 1.0 consolidated execution plan — release preparation 2026-09-28
 
-## Current main checkpoint — after PR #94 and owner RC1 smoke test
+## Current main checkpoint — after PR #97 and owner RC1 validation
 
-Current main is documentation-only PR #94 merge
-`58adac07f54ccd9f1838d29ea450b44492853972`; the frozen RC1 product source is
-`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. PR #93 corrected the macOS
-universal-binary architecture check in the exact-RC workflow. PR #93 and #94
-checks passed; post-merge main Windows/macOS runs `36450182898` / `36450184841`
-and `36454966982` / `36454966859` passed, respectively. Exact-candidate run
-`36451459751` passed for the frozen SHA on Windows x64 and macOS universal,
+Current main is `0fae59d79a849a8fe2e1993533adf2df3d90bc59`, after PR #97. The
+frozen RC1 product source is `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`; PR #93
+corrected the macOS universal-binary architecture check in the exact-RC workflow.
+Latest observed main Windows run #265 and macOS run #270 passed. Exact-candidate
+run `36451459751` passed for the frozen SHA on Windows x64 and macOS universal,
 including ROM-free tests, source packaging, candidate identity, and macOS
 architecture/ad-hoc-signature verification. It uploaded two test artifacts.
 
-Owner reports that the exact RC1 works in REAPER on Windows and macOS; the
-supplied screenshot shows REAPER 7.80 on macOS and the RC1 version label. This
-is an owner-reported cross-platform REAPER smoke pass, not closure of the full
-host/audio/GUI matrix. The RC is CI-built and its packages/source archive have
-been inspected and hashed, but private-ROM runtime, detailed audio/host tests
-and some GUI checks remain. No stable tag/release or public release asset has
-been created or authorized. There is no open PR at this checkpoint. See the
+Owner reports that the exact RC1 works in REAPER on Windows and macOS and that
+its sound quality is excellent and faithful to the original Yamaha DX7. The
+macOS installation hash independently matches the CI RC1 VST3; the Windows
+hash remains unverified. A bounded macOS REAPER check confirmed RC1 identity,
+ROM/factory-bank loading and host output-meter activity from a MIDI note. The
+exact-source local ROM suite passed 36/36 CTests (desktop save-dialog test
+excluded). Owner additionally reports a successful five-instance REAPER
+project and save/reopen test; OS, duration and CPU details were not supplied.
+This is useful RC1 runtime/listening evidence, not closure of the full
+host/audio/GUI matrix. CI packages/source were inspected and hashed, but
+detailed audio/host matrix checks and some GUI checks remain. No stable
+tag/release or public release asset has been created or authorized. There is
+no open PR at this checkpoint. See the
 [exact RC1 validation](../validation/VALIDATION_20260928_EXACT_RC1.md).
+
+## Test-phase decision — 2026-09-28
+
+The owner elects to wind down open-ended exploratory testing: no reproducible
+defect has been found, and any subsequently confirmed issue is expected to be
+fixed in a post-1.0.0 release. This closes the exploratory bug-search phase,
+not every possible test. Remaining unrun host/audio/GUI matrix items must stay
+identified as **not run/deferred**, never be relabeled as passes. Before
+publication, review the remaining unchecked release gates and explicitly
+accept or defer them; this decision alone does not publish or authorize a
+release. A serious data-loss, security, or release-blocking defect would still
+justify stopping publication and issuing a corrective release as appropriate.
 
 ## Historical checkpoint — after PR #91
 
@@ -112,29 +128,32 @@ tag, release or asset publication is authorized by this development work; before
 publication show the final version, source SHA and asset list and confirm the
 separate publication authorization.
 
-Release-preparation work order (do not reopen completed N1–N8 without a new
-reproduction):
+## Release-preparation work order
 
-1. Align HU/EN README and guides with the actual VST3 distribution, install paths,
-   ROM requirement, known limits and accepted signing-warning policy. Keep dev
-   labels until a stable package actually exists; do not relabel old screenshots.
-2. Draft bilingual 1.0.0 release notes and the platform matrix in
-   [the release-note draft](RELEASE_NOTES_1.0.0_DRAFT_HU_EN.md). Before finalizing,
-   fill its exact-RC evidence cells and keep owner reports distinct from executed
-   test results.
-3. Implement and review the exact stable-build/source-package identity without
-   changing plugin IDs, parameter IDs/order or project compatibility; add focused
-   packaging tests for release mode before freezing any RC. `rcN`
-   display/artifact identity and ROM-free positive/negative tests are merged in
-   #91. Local macOS RC/stable VST3 builds and 11/11 ROM-free tests passed; PR and
-   post-merge Windows/macOS checks passed. Stable display remains opt-in. See
-   [version identity validation](../validation/VALIDATION_20260928_VERSION_IDENTITY.md).
-4. Freeze one exact candidate SHA, build and test it on required CI/platforms,
-   inspect the matching packages and source archive, then record every PASS,
-   FAIL, NOT RUN and accepted limitation against that SHA.
-5. Present the exact version, SHA and asset list for owner review. Only after
-   explicit publication authorization create a new tag/release; verify links and
-   checksums afterward. Do not modify an existing tag or release.
+Do not reopen completed N1–N8 absent a reproducible new failure. The RC1
+exploratory testing phase is closed by owner decision; deferred checks remain
+visible in the checklist. The remaining work is packaging and release governance:
+
+1. Finalize bilingual release notes and ensure the HU/EN installation guides,
+   source package, license notices and signing warnings match the exact assets.
+   Keep the current `1.0.0-dev` main downloads accurately labeled until stable
+   assets exist.
+2. Review the deferred acceptance items and their risk disclosures. Do not turn
+   not-run checks into passes. Confirm the planned distribution scope (Windows
+   x64 VST3 and macOS Universal VST3; AU/Standalone remain build targets only).
+3. Once the release contents are ready, recheck protected `main`, freeze the
+   final source SHA, and run the required Windows/macOS CI on that exact commit.
+   A separate non-publishing stable-package workflow is now added in this
+   worktree; it builds `1.0.0` VST3s and matching source/checksums from an exact
+   SHA already on `main`. It must be merged and run on the final SHA before its
+   artifacts can be inspected. The existing candidate workflow remains `rcN`.
+4. Produce stable `VDX7_RELEASE_BUILD=ON` artifacts and a matching corresponding-
+   source archive; inspect both platform bundles and the archive, verify exact
+   versions/dependency revisions/manifest/checksums, and record all hashes.
+5. Present the final version, SHA, asset list, checksums and deferred-test
+   disclosures for review. Only after separate explicit publication
+   authorization create the stable tag/GitHub Release and then verify its links.
+   Never rewrite an existing tag/release or bypass branch protection.
 
 N6 remains an accepted owner decision, not a speculative fix. The supplied
 handoff is useful acceptance/policy context, not a new test result or publishing

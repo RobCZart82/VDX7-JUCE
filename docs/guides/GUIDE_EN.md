@@ -131,7 +131,8 @@ See the [screenshots](../../README.md) and [release checklist](../release/ROADMA
   compatibility Settings modes and are not transposed.
 - No live MIDI Out/SysEx transmission; SysEx file import/export is available.
 - Sample-rate conversion uses a Blackman-windowed sinc filter with reported host latency.
-  Final host/audio-quality acceptance remains outstanding.
+  The owner reports excellent, DX7-faithful RC1 sound on macOS and Windows; the
+  broader rate/buffer and transport/render matrix was not run and is deferred.
 - Voice edits reload the active program. Dense automation and held-note editing need further host testing.
 - Hardware/third-party SysEx interoperability is not comprehensively verified.
 - No claim of complete DX7 feature parity, calibrated envelope timing or universal host compatibility.
@@ -139,9 +140,11 @@ See the [screenshots](../../README.md) and [release checklist](../release/ROADMA
 
 ## 10. Validation and reporting
 
-Public CI runs ROM-free regressions. A successful build is not firmware-runtime
-or complete DAW acceptance. Run the local ROM-backed suite and remaining host
-checks on the exact release candidate; see [release gates](../release/ROADMAP_1.0.md).
+Public CI runs ROM-free regressions. The exact RC1 source passed the local
+ROM-backed suite (36/36 CTests; one desktop-dialog test was excluded), and the
+owner reports focused REAPER acceptance on macOS/Windows. Broader host/audio/GUI
+matrix items were not run and are deferred; see the
+[release checklist](../release/RELEASE_CHECKLIST_1.0_RC.md).
 
 Report issues at [GitHub Issues](https://github.com/RobCZart82/VDX7-JUCE/issues)
 with build/commit, OS, architecture, host version, sample rate/buffer, reproduction

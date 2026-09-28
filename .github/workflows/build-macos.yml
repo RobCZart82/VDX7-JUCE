@@ -32,7 +32,7 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure --no-tests=error
 
       - name: Source packaging regression tests (no ROM)
-        run: python3 -m unittest discover -s Tests -p test_package_source.py -v
+        run: python3 -m unittest discover -s Tests -p "test_*.py" -v
 
       - name: Local-ROM test registration smoke (does not execute tests)
         run: |

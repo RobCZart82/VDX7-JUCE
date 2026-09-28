@@ -17,7 +17,9 @@ class SourcePackageTests(unittest.TestCase):
     def fixture(self):
         data = b"example source\n"
         return {"Source/example.cpp": (data, 0o644)}, {
-            "schema": 1, "source_commit": "a" * 40, "release_accepted": False,
+            "schema": 1, "kind": "development-corresponding-source",
+            "package_label": "1.0.0-dev", "source_commit": "a" * 40,
+            "release_accepted": False,
             "dependencies": {"JUCE": p.JUCE_SHA, "Retromulator": p.CORE_SHA},
             "files": [{"path": "Source/example.cpp", "size": len(data), "mode": 0o644,
                        "sha256": hashlib.sha256(data).hexdigest()}],
@@ -64,15 +66,35 @@ class SourcePackageTests(unittest.TestCase):
     def test_modes_and_manifest_identity(self):
         files, manifest = self.fixture()
         with tempfile.TemporaryDirectory() as folder:
-            for label in ("mode", "identity"):
+            for label in ("mode", "identity", "label"):
                 changed = json.loads(json.dumps(manifest))
                 if label == "mode":
                     changed["files"][0]["mode"] = 0o755
-                else:
+                elif label == "identity":
                     changed["release_accepted"] = True
+                else:
+                    changed["package_label"] = "1.0.0"
+                    changed["kind"] = None
                 path = Path(folder)/(label + ".zip")
                 p.write_zip(path, files, changed)
                 with self.assertRaises(ValueError):
+                    p.verify(path)
+
+    def test_prepublication_source_package_labels(self):
+        files, manifest = self.fixture()
+        labels = {
+            "1.0.0-dev": "development-corresponding-source",
+            "1.0.0-rc2": "release-candidate-corresponding-source",
+            "1.0.0": "stable-release-preparation-corresponding-source",
+        }
+        with tempfile.TemporaryDirectory() as folder:
+            for index, (label, kind) in enumerate(labels.items()):
+                with self.subTest(label=label):
+                    candidate = json.loads(json.dumps(manifest))
+                    candidate["package_label"] = label
+                    candidate["kind"] = kind
+                    path = Path(folder) / f"package-{index}.zip"
+                    p.write_zip(path, files, candidate)
                     p.verify(path)
 
     def test_snapshot_ignores_dirty_and_untracked_files(self):
