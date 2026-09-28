@@ -689,7 +689,14 @@ int main(int argc, char** argv)
                         if (slider->getName().startsWith("Pitch envelope ")) {
                             ++pitchControls;
                             require(slider->getHeight() >= 73 * scale, "pitch faders taller");
-                            require(slider->getBottom() <= 490 * scale + 1, "pitch faders leave room for values");
+                            // JUCE insets the drawing area by the thumb radius;
+                            // the component/hit area extends below the artwork.
+                            // Our fader renderer clamps the cap inside that area.
+                            const auto drawingBounds = slider->getLookAndFeel()
+                                .getSliderLayout(*slider).sliderBounds.translated(
+                                    slider->getX(), slider->getY());
+                            require(drawingBounds.getBottom() <= 488 * scale + 1,
+                                    "pitch fader artwork leaves room for value labels");
                         }
                 require(pitchControls == 8, "eight expanded pitch faders");
                 const juce::Rectangle<float> lcdArea(422 * scale, 190 * scale,
