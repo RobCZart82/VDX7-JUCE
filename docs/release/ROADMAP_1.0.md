@@ -9,9 +9,10 @@ indices compatible with saved projects.
 
 Use [the consolidated 1.0 execution plan](EXECUTION_PLAN_1.0.md) for current
 priority, closed GUI scope, audit F1–F19 disposition, and the new dated
-`AUDIT-20260928-N1`–`N8` ledger. Reviewed baseline is `d4ef951` (merged #88;
-PR Windows/macOS and ASan/UBSan checks PASS); old N-numbered
-findings below refer to earlier audits, not this new ledger. The approved GUI is
+`AUDIT-20260928-N1`–`N8` ledger. Reviewed baseline is `fbea5ea` (main after
+merged #89). PR #89 Windows/macOS and ASan/UBSan checks passed, as did the
+post-merge main Windows/macOS builds; old N-numbered findings below refer to
+earlier audits, not this new ledger. The approved GUI is
 closed, and the recorded local ROM-enabled CTest run passed 35/35 on the
 `d696e56` source tree; that run did not execute the desktop-dependent
 `vdx7_processor` case. See
@@ -29,9 +30,13 @@ preserves the remaining release gates.
 The [source-packaging round](../validation/VALIDATION_20260928_SOURCE_PACKAGING.md)
 adds reproducible exact-commit source archives, an actual extracted-source
 Windows offline build (10/10 CTest plus six packaging tests PASS), and separate
-Steinberg VST3 validation (47/47 PASS). Interactive About opening/rendering was
+Steinberg VST3 validation (47/47 PASS). Post-merge `fbea5ea` local checks also
+passed 10/10 ROM-free CTest and 6/6 packaging tests; its 5,073-file source ZIP
+was generated and manifest-verified. Interactive About opening/rendering was
 checked, but Settings/preset/HiDPI completion is blocked by the locked desktop.
-These development-source results do not accept or publish a stable release.
+The owner reports REAPER use without known issues and accepts the Windows
+unsigned/macOS ad-hoc-only signing policy; these remain OWNER-REPORTED decisions,
+not exact-RC test results. This does not accept or publish a stable release.
 Older dated sections below are historical evidence; their stale GUI checkboxes
 or "next chapter" wording must not reopen the approved design. The RC checklist
 remains the final release gate, not a publication authorization.

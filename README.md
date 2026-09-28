@@ -54,16 +54,21 @@ the public workflows currently distribute VST3.
 
 A matching VST3 host is required for the plug-in. Build targets are **Windows x64**
 and **macOS Universal**; macOS 11 is the deployment target, not a guarantee that
-every OS/host combination has been tested. Physical Intel Mac and Windows host
-acceptance remain release gates. Standalone runs without a DAW when built locally.
+every OS/host combination has been tested. The owner reports macOS REAPER and
+Windows 10 x64 REAPER use; this is not the complete final-RC test matrix. Physical
+Intel Mac acceptance and exact-candidate checks remain separate. Standalone runs
+without a DAW when built locally.
 
 **A compatible DX7 Mk I ROM is required for sound.** Supported layouts and
 optional external factory-bank data are described in the
 [firmware guide](docs/guides/GUIDE_EN.md#3-firmware-and-banks).
 Supported MIDI notes are **12–120** in both Native and Correct MONO modes.
 
-Users of prebuilt artifacts do not need a compiler or CMake. Development packages
-are not notarised/Developer ID signed; see the guide before responding to OS prompts.
+Users of prebuilt artifacts do not need a compiler or CMake. **Signing notice:**
+the Windows package has no publisher signature. The macOS Universal VST3 has a
+technical ad-hoc signature, not Developer ID signing or notarisation. The OS may
+show a security warning or make loading more difficult. Do not disable system-wide
+protections; read the installation guide before proceeding.
 
 ## Installation
 

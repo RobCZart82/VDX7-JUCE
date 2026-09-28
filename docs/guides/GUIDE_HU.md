@@ -1,24 +1,49 @@
-# VDX7 Mk1. — részletes fejlesztői útmutató
+# VDX7 Mk1. — Használati útmutató
 
 [Vissza az áttekintéshez](../../README_HU.md) · [English guide](GUIDE_EN.md)
 
-Ez az útmutató az **1.0.0-dev** változatot írja le, nem elfogadott stabil kiadást.
+Ez az útmutató az aktuális **1.0.0-dev** fejlesztői csomaghoz készült. A végleges
+kiadás letöltése és verziója csak a tényleges GitHub Release megjelenése után lesz
+érvényes; addig a README-ben jelzett Actions artifactok fejlesztői csomagok.
 
 ## 1. Platform és csomag
 
-A CI és az adott commitból készülő kiadásjelölt **macOS Universal (arm64 + x86_64) VST3** és **Windows x64 VST3** változatot fordít. Helyi arm64 build is készíthető. Ezek fejlesztési artifactok, nem elfogadott végleges kiadások. Az Intel Mac és Windows hostteszt külön kiadási feltétel. Az AU és Standalone nem elsődleges terjesztési formátum.
+A CI **macOS Universal (arm64 + x86_64) VST3** és **Windows x64 VST3** célokat
+fordít. A kiadásra tervezett formátum a VST3; az AU és Standalone fordítási cél,
+nem ígért letöltési csomag. A tulajdonos macOS REAPER- és Windows 10 x64 REAPER-
+használatról számolt be, de ezek nem igazolják a végleges RC minden platform-,
+mintavételi- és bufferkombinációját. A fizikai Intel Mac elfogadása továbbra
+sincs dokumentálva.
 
-A bináris ad-hoc aláírt, nem Developer ID aláírt és nem notarizált. A macOS jóváhagyást kérhet. Ne kapcsold ki a rendszer egészére vonatkozó biztonsági védelmeket. A macOS 11 a build script célverziója, nem minden rendszer/host kombináció tesztelésének ígérete.
+**Aláírás:** a Windows VST3 nincs kiadói tanúsítvánnyal aláírva. A macOS
+Universal VST3 technikai ad-hoc aláírást kap, de nincs Developer ID-aláírás és
+notarizáció. Emiatt figyelmeztetés vagy betöltési akadály jelentkezhet. Ne
+kapcsold ki a rendszer egészére vonatkozó biztonsági védelmet. A macOS 11
+buildcél, nem minden rendszer/host kombináció tesztelésének ígérete.
 
 ## 2. Telepítés és első megszólaltatás
 
-1. Zárd be a hostot, és mentsd a meglévő VDX7 plugint és projekteket.
-2. Csomagold ki a VST3 ZIP-et, és a teljes VDX7.vst3 csomagot másold ide:
-   `~/Library/Audio/Plug-Ins/VST3/`
-3. REAPERben indíts újrakeresést a Preferences → Plug-ins → VST alatt, majd illeszd be a VDX7-et virtuális hangszerként.
-4. Add meg saját kompatibilis firmware-edet a LOAD ROM gombbal vagy az alábbi automatikus keresési helyek egyikén.
-5. Válassz bankot/programot az LCD-n, vagy importálj megfelelő .syx fájlt a LOAD SYX gombbal.
-6. Játssz MIDI hangokat, vagy használd a képernyő-billentyűzetet.
+1. Zárd be a DAW-t, és készíts mentést a korábbi VDX7 plug-inről, projektekről
+   és módosított USER-bankról.
+2. Töltsd le a kívánt VST3 ZIP-et, majd csomagold ki. Ha a ZIP további ZIP-et
+   tartalmaz, azt is bontsd ki. A teljes `VDX7.vst3` bundle-t másold a megfelelő
+   mappába:
+   - macOS: `~/Library/Audio/Plug-Ins/VST3/`
+   - Windows: `C:\Program Files\Common Files\VST3\` (vagy `%COMMONPROGRAMFILES%\VST3\`)
+3. Ne hagyj másik VDX7-példányt egy másik plug-inmappában, mert a host a régi
+   példányt is betöltheti.
+4. Indítsd újra a hostot. REAPERben szükség esetén indíts újrakeresést a
+   Preferences → Plug-ins → VST alatt, majd illeszd be a VDX7-et virtuális
+   hangszerként.
+5. Add meg saját, kompatibilis firmware-edet a LOAD ROM gombbal vagy az alábbi automatikus keresési helyek egyikén.
+6. Válassz bankot/programot az LCD-n, vagy importálj megfelelő `.syx` fájlt a
+   LOAD SYX gombbal. Engedélyezd a MIDI-monitorozást, majd játssz hangokat.
+
+Ha az operációs rendszer aláírási, kiadói azonosítási vagy notarizációs
+figyelmeztetést mutat, ellenőrizd, hogy a csomagot a projekt hivatalos GitHub-
+oldaláról szerezted-e be. A figyelmeztetés megszüntetésére ne kapcsold ki a
+rendszer védelmét; kövesd az operációs rendszer dokumentált alkalmazás-
+jóváhagyási folyamatát.
 
 Ha nincs hang, ellenőrizd a firmware állapotát, a MIDI útvonalát, a sáv monitorozását és az OUTPUT hangerőt. Kerüld a párhuzamos VDX7-példányokat a felhasználói és rendszerszintű pluginmappákban.
 
@@ -87,8 +112,11 @@ Kézi bank-/ROM-/SYX-csere előtt figyelmeztetés jelenik meg a nem exportált m
 ## 8. Felület és méretezés
 
 A végleges 1.0 GUI kinézetét a tulajdonos helyi macOS REAPER VST3-, Standalone-
-és Retina-vizuális ellenőrzés után jóváhagyta. A választható méretek: 50%, 75%,
-100%, 125% és 150%. Ez nem teljes platform- és kiadási elfogadás.
+és Retina-vizuális ellenőrzés után jóváhagyta. A Settings ablakban rögzített
+méretek közül választhatsz: 50%, 75%, 100%, 125% és 150%; az ablak sarkát húzva
+nem méretezhető szabadon. A Settings a főhangolást, a MIDI-csatornaszűrést és az
+advanced MONO-kompatibilitási módot is tartalmazza. Ez a vizuális jóváhagyás nem
+teljes platform- és kiadási elfogadás.
 Lásd a [képeket](../../README_HU.md) és a [kiadási listát](../release/ROADMAP_1.0.md).
 
 ## 9. Ismert korlátok
@@ -115,7 +143,7 @@ Lásd a [képeket](../../README_HU.md) és a [kiadási listát](../release/ROADM
 - A hangparaméterek módosítása újratölti az aktív programot. Sűrű automatizálás és tartott hang alatti szerkesztés további hosttesztet igényel.
 - A hardveres és más szoftverekkel való SysEx-együttműködés nincs átfogóan ellenőrizve.
 - Nem ígér teljes DX7-funkcióazonosságot, kalibrált envelope-időzítést vagy általános hostkompatibilitást.
-- A fontos munkáról készíts biztonsági mentést; a pre-beta nem jelent produkciós stabilitási garanciát.
+- A fontos munkáról készíts biztonsági mentést. A fejlesztői csomag nem jelent produkciós stabilitási garanciát.
 
 ## 10. Ellenőrzés és hibajelentés
 
@@ -168,9 +196,14 @@ a támogatását a teljes tesztkörben. A privát fixture nem kerül nyilvános 
 
 ## 12. Licenc és kiadási állapot
 
-Ez a kiadás [GNU AGPLv3](../../LICENSE.txt) szerint érhető el. A wrapper és az eredeti GUI-erőforrások AGPL-3.0-only licencűek; a DX7-mag megőrzi GPL-3.0-or-later licencét és eredeti közléseit. A JUCE-ot AGPLv3 alatt használjuk. Az egyesített mű és a komponensek közlései: [NOTICE.md](../../NOTICE.md).
+Ez a projekt [GNU AGPLv3](../../LICENSE.txt) szerint érhető el. A wrapper és az eredeti GUI-erőforrások AGPL-3.0-only licencűek; a DX7-mag megőrzi GPL-3.0-or-later licencét és eredeti közléseit. A JUCE-ot AGPLv3 alatt használjuk. Az egyesített mű és a komponensek közlései: [NOTICE.md](../../NOTICE.md).
 
-A kiadás a bináris mellett teljes forrást biztosít a rögzített JUCE- és dx7Lib-forrással, build scriptekkel és licencközlésekkel. A szoftver garancia nélkül érhető el. A firmware nem része a szoftverlicencnek. A leírásban szereplő Yamaha-név kompatibilitást jelöl, nem támogatást vagy jóváhagyást; Yamaha-logó nincs mellékelve.
+Az 1.0.0 kiadási terv a bináris mellett teljes corresponding-source csomagot,
+rögzített JUCE- és dx7Lib-forrást, build scripteket és licencközléseket irányoz
+elő; ez a csomag még nem tekinthető publikált letöltésnek. A szoftver garancia
+nélkül érhető el. A firmware nem része a szoftverlicencnek. A leírásban szereplő
+Yamaha-név kompatibilitást jelöl, nem támogatást vagy jóváhagyást; Yamaha-logó
+nincs mellékelve.
 
 ## 13. Köszönet és következő lépések
 

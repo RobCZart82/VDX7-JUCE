@@ -54,9 +54,10 @@ a public workflow-k jelenleg VST3-at terjesztenek.
 ## Rendszerigény
 
 A pluginhoz megfelelő VST3-host szükséges. Fordítási célok: **Windows x64**
-és **macOS Universal**. A macOS 11 build-célverzió, nem minden rendszer/host
-ellenőrzésének ígérete. A fizikai Intel Mac és Windows hostelfogadás még kiadási
-feltétel. A helyben fordított Standalone DAW nélkül fut.
+és **macOS Universal**. A tulajdonos macOS REAPER- és Windows 10 x64 REAPER-
+használatról számolt be; ezek nem azonosak a végleges RC teljes tesztmátrixával.
+A fizikai Intel Mac elfogadása és a pontos RC-n végzett tesztek külön ellenőrzendők.
+A helyben fordított Standalone DAW nélkül fut.
 
 **A megszólaláshoz kompatibilis DX7 Mk I ROM szükséges.**
 A formátumokat és az opcionális külső gyári hangadatot a
@@ -64,8 +65,11 @@ A formátumokat és az opcionális külső gyári hangadatot a
 A támogatott MIDI-hangtartomány **12–120**, Native és Correct MONO módban egyaránt.
 
 Előre fordított csomaghoz nem kell fordító vagy CMake.
-A fejlesztői csomagok nem notarizáltak/Developer ID aláírtak;
-az operációs rendszer figyelmeztetései előtt olvasd el az útmutatót.
+**Aláírási figyelmeztetés:** a Windows csomagon nincs kiadói aláírás. A macOS
+Universal VST3 technikai ad-hoc aláírást kap, de nincs Developer ID-aláírás és
+notarizáció. Emiatt az operációs rendszer biztonsági figyelmeztetést jeleníthet
+meg vagy megnehezítheti a betöltést. Ne kapcsold ki a rendszer egészére vonatkozó
+védelmet; olvasd el a telepítési útmutatót.
 
 ## Telepítés
 

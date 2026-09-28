@@ -7,11 +7,22 @@ by this checklist. No proprietary firmware belongs in source, CI or artifacts.
 Current work order and audit disposition: [consolidated plan](EXECUTION_PLAN_1.0.md).
 GUI appearance approval does not close the technical/platform gates below.
 
-Merged non-host checkpoint: #88 / `d4ef951`; its PR Windows/macOS and sanitizer
-checks all PASS. The [hardening report](../validation/VALIDATION_20260928_NONHOST_HARDENING.md)
+Merged non-host checkpoint: #89 / `fbea5ea`. PR #89 Windows/macOS and
+ASan/UBSan checks passed; post-merge main Windows/macOS builds passed. The
+[hardening report](../validation/VALIDATION_20260928_NONHOST_HARDENING.md)
 retains failing-baseline/fixed evidence. N6 retains keyboard PITCH values by
 owner decision. New [source-package verification](../validation/VALIDATION_20260928_SOURCE_PACKAGING.md)
-is separate from exact-RC acceptance.
+and post-merge local checks are separate from exact-RC acceptance.
+
+Owner-reported decision (2026-09-28 handoff): the owner reports REAPER testing
+with no known issue and considers the program releasable. The plan records
+macOS REAPER checks and Windows 10 x64 using build #219 / `29ab5e3`; the macOS
+tested SHA, binary hashes, REAPER application versions and full rate/block/
+instance matrix are not recorded. Keep this marked OWNER-REPORTED; do not
+convert unverified matrix entries to PASS. The owner accepts Windows distribution
+without publisher signing and macOS with ad-hoc signing only, without Developer
+ID/notarization. Clearly warn about
+possible OS security prompts. This is not publication authorization.
 [Identity/package review](IDENTITY_AND_PACKAGE_1.0.md) distinguishes development
 artifacts from final binary packaging, signing and acceptance gates.
 
