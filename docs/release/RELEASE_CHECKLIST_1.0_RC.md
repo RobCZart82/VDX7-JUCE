@@ -7,6 +7,13 @@ by this checklist. No proprietary firmware belongs in source, CI or artifacts.
 Current work order and audit disposition: [consolidated plan](EXECUTION_PLAN_1.0.md).
 GUI appearance approval does not close the technical/platform gates below.
 
+Current main after PR #91: `37c83f378a81e4623993941fb7e10c4ab58c208c`.
+PR #91 Windows, macOS and ASan/UBSan checks passed. Post-merge main Actions
+also passed: Windows `36441316285`, macOS `36441316112`. They include build,
+ROM-free tests, packaging checks and ROM-test registration smoke; they are not
+an exact-RC workflow run, private-ROM runtime acceptance or REAPER acceptance.
+No candidate SHA is frozen yet.
+
 Merged non-host checkpoint: #90 / `817987b`. PR #90 Windows/macOS and
 ASan/UBSan checks passed; post-merge main Windows/macOS builds passed (runs
 36433962468 and 36433962462). The

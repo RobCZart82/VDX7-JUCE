@@ -2,10 +2,11 @@
 
 ## Scope
 
-Local validation of the release-preparation work based on main `817987b`
-(`PR #90`). The working-tree change introduces explicit `rcN` display identity
-and updates the non-publishing exact-candidate workflow. This is not validation
-of a frozen RC, not host acceptance, and not authorization to publish.
+Local validation of the release-preparation work developed from main `817987b`
+(`PR #90`). The explicit `rcN` display identity and non-publishing
+exact-candidate workflow were subsequently merged in PR #91. This is not
+validation of a frozen RC, not host acceptance, and not authorization to
+publish.
 
 ## Implementation
 
@@ -42,7 +43,16 @@ The checker now includes `vdx7_version_identity`, and the documented expected
 inventories are updated to 37 ROM-on / 11 ROM-off. Local full inventory
 verification passed for both ROM-off and placeholder-ROM registration modes;
 the placeholder is used only for configuration and no firmware test executes.
-Both platform CI jobs must re-run on the fix before considering merge.
+At the time this local report was first written, both platform jobs still
+needed to re-run on the checker fix; the follow-up below records their results.
+
+Follow-up: PR #91 merged as `37c83f378a81e4623993941fb7e10c4ab58c208c` after
+Windows, macOS and ASan/UBSan checks passed. Post-merge main Windows run
+`36441316285` and macOS run `36441316112` also passed, including the corrected
+registration smoke. The earlier failing runs above remain part of the record;
+they were resolved by updating the expected test inventory, not by suppressing
+the check. The exact-candidate workflow still needs a separate dispatch on a
+frozen RC SHA.
 
 The first CTest invocation occurred before test executables were built and
 therefore reported them as Not Run. This was corrected by building
@@ -51,7 +61,8 @@ Not Run result is not counted as a test failure or as evidence of execution.
 
 ## Not run / boundaries
 
-- No Windows build of this branch yet; remote branch CI is required.
+- No exact-candidate Windows/macOS workflow build; the passing PR and main
+  builds were development/main validation, not a frozen RC package.
 - No exact-candidate workflow dispatch or archive/binary package review yet.
 - No private-ROM runtime suite, DAW/Standalone interaction, offline render or
   frozen-candidate host matrix was run in this round.
