@@ -1,6 +1,12 @@
 # 1.0 consolidated execution plan — current status 2026-09-28
 
-Reviewed baseline: `fbea5ea167598f9b625eab9145f53b8700d9eb15` (main after #89).
+Reviewed baseline: `817987b9337aca9d0e21d14427ac14fc74833505` (main after #90).
+PR #90 merged the bilingual release-preparation documentation and recorded the
+owner-reported Windows #247 VST3 installation hash. Its PR Windows/macOS and
+ASan/UBSan checks passed. Post-merge main Windows run 36433962468 and macOS run
+36433962462 both passed on `817987b`; the sanitizer check passed on the PR head.
+No open PR was present at the next-work checkpoint. Owner report is installation
+evidence, not new functional acceptance.
 PR #88 checks passed; PR #89 source `d834f4f` passed Windows run 36410161563,
 macOS run 36410161589 and ASan/UBSan run 36410161474. Post-merge main Windows
 run 36411273600 and macOS run 36411273595 also passed. These are development
@@ -25,7 +31,7 @@ reproduction, and an implemented fix is not exact-RC acceptance.
 | N2 | Storage accepts semantically invalid unoccupied USER slots that processor import rejects | CRC-valid invalid fields in occupied and empty slots; reject all malformed packed voices transactionally | ROM-free storage test | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS |
 | N3 | Project RAM restore lacked packed voice semantic validation | Reject malformed VMEM before mutation; loaded/deferred ROM and modern/legacy state matrix | Processor harness and local ROM | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS; no crash claim |
 | N4 | Shared 16 KB/48 KB fixture claim did not match full direct-engine suite | Full-suite requirement narrowed to combined 48 KB v1.8; all local tests use profile fixture; product 16 KB support unchanged | Local ROM tests | IMPLEMENTED; combined profile PASS, 16 KB negative control fails clearly as expected |
-| N5 | CI registration smoke checked only one selected ROM test | Full names, labels, fixture edges, timeouts and failure policy; seven checker negative controls | Configuration-only CI | IMPLEMENTED; actual local ROM-on 36 / ROM-off 10 inventories and checker PASS; PR #89 Windows/macOS/sanitizer checks PASS |
+| N5 | CI registration smoke checked only one selected ROM test | Full names, labels, fixture edges, timeouts and failure policy; seven checker negative controls | Configuration-only CI | Existing baseline inventory was 36 ROM-on / 10 ROM-off; this branch adds one ROM-free version-identity test and updates the checker to expect 37/11 |
 | N6 | Keyboard pitch-wheel return policy differs from mouse release | Owner explicitly chose existing keyboard value retention on 2026-09-28; HU/EN guides clarify distinction | Component/UI policy review | ACCEPTED POLICY, not a defect; no input behavior change |
 | N7 | Invalid companion warning hid pending-ROM identity mismatch | Reproduce both conditions; preserve both warnings and pending project recovery | Local ROM processor harness | REPRODUCED then FIXED locally; included in follow-up 7/7 PASS |
 | N8 | Moving main described using stale SHA | Dated reviewed baseline and aligned current documents; historical evidence keeps original SHAs | Documentation review | Initial fix MERGED #87; this checkpoint tracks post-#89 main `fbea5ea` |
@@ -76,11 +82,17 @@ reproduction):
 1. Align HU/EN README and guides with the actual VST3 distribution, install paths,
    ROM requirement, known limits and accepted signing-warning policy. Keep dev
    labels until a stable package actually exists; do not relabel old screenshots.
-2. Prepare bilingual 1.0.0 release notes and an honest tested-platform matrix.
-   Keep owner-reported REAPER acceptance distinct from assistant-run evidence.
+2. Draft bilingual 1.0.0 release notes and the platform matrix in
+   [the release-note draft](RELEASE_NOTES_1.0.0_DRAFT_HU_EN.md). Before finalizing,
+   fill its exact-RC evidence cells and keep owner reports distinct from executed
+   test results.
 3. Implement and review the exact stable-build/source-package identity without
    changing plugin IDs, parameter IDs/order or project compatibility; add focused
-   packaging tests for release mode before freezing any RC.
+   packaging tests for release mode before freezing any RC. Current branch work
+   adds `rcN` display/artifact identity plus ROM-free positive/negative tests;
+   local macOS RC/stable VST3 builds and 11/11 ROM-free tests passed. Branch CI
+   review is still required. See [version identity validation](../validation/VALIDATION_20260928_VERSION_IDENTITY.md).
+   Stable display remains opt-in.
 4. Freeze one exact candidate SHA, build and test it on required CI/platforms,
    inspect the matching packages and source archive, then record every PASS,
    FAIL, NOT RUN and accepted limitation against that SHA.
@@ -360,10 +372,12 @@ evidence that the shipped instrument currently malfunctions.
   36 registered tests expose a timeout.
 - [x] Add a no-execution CMake registration smoke to Windows/macOS CI:
   configure `VDX7_ENABLE_ROM_TESTS=ON` with a placeholder path, then inspect
-  CTest's JSON listing. The new checker covers all 36 ROM-on and 10 ROM-off
-  names, fixture edges, labels, timeouts and absence of disabled/skip policy,
-  replacing the earlier single-test assertion. This is registration evidence,
-  not ROM acceptance, and executes no firmware tests.
+  CTest's JSON listing. The checker covers all 36 ROM-on and 10 ROM-off names
+  at baseline, fixture edges, labels, timeouts and absence of disabled/skip
+  policy, replacing the earlier single-test assertion. This branch's new
+  version-identity target changes the expected inventories to 37/11; the checker
+  is updated accordingly. This is registration evidence, not ROM acceptance,
+  and executes no firmware tests.
 - [x] Compile smoke with `VDX7_RELEASE_BUILD=ON`, with no artifact publication:
   local macOS Release Standalone, VST3 and `vdx7_ci_checks` built; all 10
   ROM-free tests passed. This is a compile smoke only, not release or host
@@ -414,9 +428,10 @@ evidence that the shipped instrument currently malfunctions.
 ## 6. Exact candidate and release — original gates retained
 
 - [x] F17 — [identity/package review](IDENTITY_AND_PACKAGE_1.0.md) documents
-  numeric host 1.0.0 versus displayed 1.0.0-dev and exact-SHA artifact naming.
-  Historical bundle/plugin IDs are preserved. Cosmetic prototype DESCRIPTION
-  cleanup and any future rcN display option are separate candidate changes.
+  numeric host 1.0.0 versus displayed dev/RC/stable labels, exact-SHA artifact
+  naming and tested `rcN` mode resolution. Historical bundle/plugin IDs are
+  preserved. Cosmetic prototype DESCRIPTION cleanup remains a separate
+  candidate decision.
 - [ ] Freeze one RC SHA; run public Windows/macOS checks, full local ROM suite,
   host matrix and exact-SHA candidate workflow. Retest relevant gates after fixes.
 - [x] Document single USER-library limitation and supported formats/hosts:

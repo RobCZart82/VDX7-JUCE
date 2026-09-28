@@ -5,7 +5,7 @@ import json
 import math
 
 ROM_FREE = set("""user_bank deferred_midi latest_display status_priority bounded_file
-voice_data algorithms resampling gui_header mono_correction""".split())
+voice_data algorithms resampling gui_header mono_correction version_identity""".split())
 LOCAL_ROM = set("""stability midi_range timing processor stress v18_profile host_reset
 reactivation reset_history_pair firmware_ownership history_retirement overlap_retirement
 reset_gate_overflow expanded_lifecycle mono_boundary_characterization

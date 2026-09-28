@@ -8,6 +8,10 @@ source SHA, not that version label alone. Verify source ZIP checksums and keep
 its SOURCE_MANIFEST.json with the test record. Binary checksums/signature status
 must be recorded separately for the exact artifact actually tested.
 
+For an exact 1.0.0-rcN build, use the non-publishing release-candidate workflow
+and its explicit `candidate_label` input; it builds with the matching RC display
+version. Ordinary development builds remain `1.0.0-dev`.
+
 Primary distribution target: Windows x64 and macOS Universal VST3. AU and
 Standalone compile coverage is not a claim of completed runtime acceptance.
 Windows builds have no publisher signature. macOS builds carry only a technical
@@ -31,6 +35,10 @@ pluginval or sanitizer PASS as complete host/audio acceptance.
 Ez fejlesztői jelölt, nem jóváhagyott stabil kiadás. A host 1.0.0 száma mellett
 a felület 1.0.0-dev jelölése szándékos. A tesztelt fájlt mindig a teljes
 forrás-SHA-val, ellenőrzőösszeggel és platformmal azonosítsd.
+
+A pontos 1.0.0-rcN buildhez a kiadást nem publikáló jelölt-workflow-t és a
+`candidate_label` mezőt használd; a felületen is a megfelelő RC-verzió jelenik
+meg. A szokásos fejlesztői buildek továbbra is `1.0.0-dev` jelzésűek.
 
 A fő célformátum Windows x64 és macOS Universal VST3. Az AU/Standalone sikeres
 fordítása önmagában nem futásidejű elfogadás. A Windows-csomagon nincs kiadói

@@ -9,11 +9,12 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(VDX7_RELEASE_BUILD "Build an accepted final release (not a development build)" OFF)
-set(VDX7_DISPLAY_VERSION "${PROJECT_VERSION}-dev")
-if(VDX7_RELEASE_BUILD)
-    set(VDX7_DISPLAY_VERSION "${PROJECT_VERSION}")
-endif()
+option(VDX7_RELEASE_BUILD "Build a stable release (not a development build)" OFF)
+set(VDX7_RELEASE_CANDIDATE "" CACHE STRING
+    "Optional release-candidate label, for example rc1; mutually exclusive with VDX7_RELEASE_BUILD")
+include(cmake/VDX7Version.cmake)
+vdx7_resolve_display_version(VDX7_DISPLAY_VERSION
+    "${PROJECT_VERSION}" "${VDX7_RELEASE_BUILD}" "${VDX7_RELEASE_CANDIDATE}")
 
 include(FetchContent)
 
@@ -68,6 +69,13 @@ set_target_properties(vdx7_voice_data PROPERTIES POSITION_INDEPENDENT_CODE ON)
 # Tests: ROM-free component targets and registrations
 # -----------------------------------------------------------------------------
 enable_testing()
+
+# Keep development, RC and stable display identities explicit and regression-tested.
+add_test(NAME vdx7_version_identity
+    COMMAND ${CMAKE_COMMAND}
+        "-DVDX7_VERSION_MODULE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/VDX7Version.cmake"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/Tests/VDX7VersionIdentityTests.cmake")
+set_tests_properties(vdx7_version_identity PROPERTIES TIMEOUT 10 LABELS "rom-free")
 
 # USER-bank persistence can be exercised on CI without firmware or GUI startup.
 add_executable(vdx7_user_bank_tests Tests/VDX7UserBankTests.cpp Source/VDX7UserBank.cpp)

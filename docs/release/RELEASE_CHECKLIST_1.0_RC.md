@@ -7,8 +7,9 @@ by this checklist. No proprietary firmware belongs in source, CI or artifacts.
 Current work order and audit disposition: [consolidated plan](EXECUTION_PLAN_1.0.md).
 GUI appearance approval does not close the technical/platform gates below.
 
-Merged non-host checkpoint: #89 / `fbea5ea`. PR #89 Windows/macOS and
-ASan/UBSan checks passed; post-merge main Windows/macOS builds passed. The
+Merged non-host checkpoint: #90 / `817987b`. PR #90 Windows/macOS and
+ASan/UBSan checks passed; post-merge main Windows/macOS builds passed (runs
+36433962468 and 36433962462). The
 [hardening report](../validation/VALIDATION_20260928_NONHOST_HARDENING.md)
 retains failing-baseline/fixed evidence. N6 retains keyboard PITCH values by
 owner decision. New [source-package verification](../validation/VALIDATION_20260928_SOURCE_PACKAGING.md)
@@ -92,8 +93,10 @@ acceptance. Desktop-unavailable GUI tests must not be counted as passing.
 ## Packaging (only after correctness gates)
 
 - [ ] Explicit 1.0.0-rcN identity matched to exact source SHA and dependency revisions.
+- [ ] Verify the candidate UI label, artifact name, source SHA and binary checksum agree.
 - [ ] Matching corresponding-source archive, licenses and checksum manifest.
-- [ ] HU/EN installation/readme, release notes and honest platform/host support matrix.
+- [x] Draft HU/EN release notes and owner-reported/current CI evidence matrix created;
+  finalize the matrix against the frozen RC before acceptance.
 - [ ] Package inspected for absence of firmware, local paths, secrets and build caches.
 - [ ] Separate user authorization for any public release/tag/assets.
 
