@@ -7,14 +7,19 @@ by this checklist. No proprietary firmware belongs in source, CI or artifacts.
 Current work order and audit disposition: [consolidated plan](EXECUTION_PLAN_1.0.md).
 GUI appearance approval does not close the technical/platform gates below.
 
-Current main after PR #93: `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`.
-PR #93 and post-merge main Windows/macOS and ASan/UBSan checks passed. Exact-RC
-workflow `36451459751` passed for this SHA and uploaded Windows x64 and macOS
-universal VST3 candidate artifacts. Package hashes, source manifest verification
-and remaining test limits are in
+Current main after documentation-only PR #94:
+`58adac07f54ccd9f1838d29ea450b44492853972`; frozen RC1 product source remains
+`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. PR #93, PR #94 and the relevant
+post-merge main Windows/macOS and ASan/UBSan checks passed. Exact-RC workflow
+`36451459751` passed for the frozen RC source and uploaded Windows x64 and macOS
+universal VST3 candidate artifacts. The owner reports that exact RC1 works in
+REAPER on Windows and macOS; the supplied screenshot shows REAPER 7.80 on macOS.
+This is a cross-platform owner-reported smoke pass, not closure of the full
+host/audio matrix. Package hashes, source manifest verification and remaining
+test limits are in
 [the RC1 validation report](../validation/VALIDATION_20260928_EXACT_RC1.md).
-This does not count as private-ROM runtime, REAPER, audio acceptance or release
-publication.
+Private-ROM runtime, full host/audio acceptance and release publication remain
+open.
 
 Merged non-host checkpoint: #90 / `817987b`. PR #90 Windows/macOS and
 ASan/UBSan checks passed; post-merge main Windows/macOS builds passed (runs

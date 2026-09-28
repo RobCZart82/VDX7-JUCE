@@ -1,21 +1,25 @@
 # 1.0 consolidated execution plan — current status 2026-09-28
 
-## Current main checkpoint — after PR #93
+## Current main checkpoint — after PR #94 and owner RC1 smoke test
 
-Current main: `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. PR #93 corrected
-the macOS universal-binary architecture check in the exact-RC workflow. PR
-Windows, macOS and ASan/UBSan checks passed; post-merge main Windows run
-`36450182898` and macOS run `36450184841` also passed. The exact-candidate run
-`36451459751` then passed on this exact SHA for Windows x64 and macOS universal,
+Current main is documentation-only PR #94 merge
+`58adac07f54ccd9f1838d29ea450b44492853972`; the frozen RC1 product source is
+`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. PR #93 corrected the macOS
+universal-binary architecture check in the exact-RC workflow. PR #93 and #94
+checks passed; post-merge main Windows/macOS runs `36450182898` / `36450184841`
+and `36454966982` / `36454966859` passed, respectively. Exact-candidate run
+`36451459751` passed for the frozen SHA on Windows x64 and macOS universal,
 including ROM-free tests, source packaging, candidate identity, and macOS
-architecture/ad-hoc-signature verification. It uploaded two test artifacts;
-see [exact RC1 validation](../validation/VALIDATION_20260928_EXACT_RC1.md).
+architecture/ad-hoc-signature verification. It uploaded two test artifacts.
 
-The RC is CI-built and its packages/source archive have been inspected and
-hashed, but it has not received private-ROM runtime or exact-RC host acceptance.
-Owner-run REAPER/GUI/audio checks remain open. No stable tag/release or public
-release asset has been created or authorized. There is no open PR at this
-checkpoint.
+Owner reports that the exact RC1 works in REAPER on Windows and macOS; the
+supplied screenshot shows REAPER 7.80 on macOS and the RC1 version label. This
+is an owner-reported cross-platform REAPER smoke pass, not closure of the full
+host/audio/GUI matrix. The RC is CI-built and its packages/source archive have
+been inspected and hashed, but private-ROM runtime, detailed audio/host tests
+and some GUI checks remain. No stable tag/release or public release asset has
+been created or authorized. There is no open PR at this checkpoint. See the
+[exact RC1 validation](../validation/VALIDATION_20260928_EXACT_RC1.md).
 
 ## Historical checkpoint — after PR #91
 

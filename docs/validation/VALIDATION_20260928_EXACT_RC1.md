@@ -10,11 +10,26 @@
 - PR #93 Windows, macOS and ASan/UBSan checks — **PASS**. PR #93 fixed the
   macOS `lipo` invocation so the input binary precedes `-verify_arch`.
 
-This report records CI/package verification only. It is not a REAPER or
-Standalone runtime test, private-ROM acceptance, final release acceptance, or
-publication authorization. The exact candidate workflow builds and uploads
-VST3 artifacts only; AU/Standalone runtime or release distribution is not
-claimed.
+The CI/package results below do not imply runtime acceptance by themselves.
+The owner has separately reported an RC1 REAPER smoke test on Windows and
+macOS; details and its limited scope are recorded below. No private-ROM suite,
+full host/audio matrix, final release acceptance, or publication authorization
+is claimed. The exact candidate workflow builds and uploads VST3 artifacts
+only; AU/Standalone runtime or release distribution is not claimed.
+
+## Owner-reported exact-RC1 REAPER smoke test — 2026-09-28
+
+The owner reports installing and trying the exact `1.0.0-rc1` VST3 on both
+Windows and macOS and says it works well on both. The supplied screenshot shows
+the plugin in REAPER **7.80** on macOS, including the `1.0.0-rc1` GUI footer.
+This is recorded as an **OWNER-REPORTED CROSS-PLATFORM REAPER SMOKE PASS** for
+the reported RC1 binaries, not as a test performed by the assistant.
+
+The Windows REAPER version/OS build, exact binary hash used on each machine,
+ROM/voice, feature-by-feature procedure, number of instances, audio rates/buffer
+sizes, project save/restore, transport/offline render and stress results were
+not supplied. Do not infer that the full host matrix, local-ROM suite, audio
+acceptance or all GUI presets have passed from this concise report.
 
 ## Candidate CI results
 
