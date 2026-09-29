@@ -7,13 +7,15 @@ five-instance/project-reopen checks. Broader host/audio/GUI matrix cells remain
 not run or deferred by the owner's decision to close exploratory testing; they
 are not implied passes. Do not turn owner reports into CI results.
 
-Preparation checkpoint (2026-09-28): frozen RC1 product source is
-`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. Exact-RC workflow `36451459751`
-passed for Windows x64 and macOS universal; artifacts are test downloads, not a
-published GitHub release or stable release approval. The current `main` CI is
-green, but a final stable `1.0.0` package has not yet been built. GitHub has no
-stable `1.0.0` release; the existing public releases are historical pre-beta
-versions.
+Preparation checkpoint (2026-09-29): stable package workflow
+[`36484917908`](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36484917908)
+passed for main SHA `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` on Windows x64
+and macOS Universal. Matching source archives, `BUILD-INFO.txt` and embedded
+SHA-256 manifests were generated. The temporary Actions artifacts still need
+independent content/hash inspection and owner installation/smoke testing. The
+RC1 test record is not exact-stable-package acceptance. No stable GitHub
+Release, tag, or publication approval exists; prior public releases are
+historical pre-beta versions.
 
 ## English
 
@@ -63,7 +65,8 @@ and publication are not yet approved or published.
 | macOS REAPER | Owner reported testing on macOS 26.7; exact tested build/hash and complete matrix not recorded |
 | Windows VST3 build #247 installation | Owner reports installed artifact from source `fbea5ea`; reported VST3 SHA-256 `1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`; installation only, no new functional result stated |
 | Remaining broad host/audio/GUI matrix | NOT RUN / DEFERRED by owner's decision to wind down open-ended testing; see checklist for specific cells and limits |
-| Stable `1.0.0` package, checksums and final archive review | NOT PREPARED yet; requires a final source SHA and stable-build packaging run |
+| Stable `1.0.0` package build and embedded checksum-manifest generation | PASS in workflow `36484917908` on main SHA `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec`; temporary Windows/macOS artifacts created |
+| Independent inner-archive/hash review and exact-stable owner installation | NOT YET DONE; Actions artifact metadata digests are recorded in execution plan but are not inner ZIP hashes |
 | Publication | NOT AUTHORIZED / NOT PUBLISHED |
 
 ## Magyar
@@ -73,12 +76,14 @@ emulációs magjára és a JUCE-ra építve. Az 1.0.0 kiadást a tulajdonos ált
 jóváhagyott GUI-val és implementációval készítjük elő. A stabil kiadási
 azonosság, végleges csomagok és publikálás még nincs jóváhagyva vagy közzétéve.
 
-Előkészítési állapot (2026-09-28): a befagyasztott RC1 termékforrás
-`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. A pontos RC-workflow
-(`36451459751`) sikeres Windows x64 és macOS Universal platformon. Ezek teszt-
-letöltések, nem publikált GitHub Release és nem végleges kiadási jóváhagyás.
-A jelenlegi `main` CI zöld, de végleges stabil `1.0.0` csomag még nem készült.
-GitHubon nincs stabil `1.0.0` kiadás; a meglévő nyilvános kiadások korábbi
+Előkészítési állapot (2026-09-29): a stabil csomagoló workflow
+(`36484917908`) sikeresen lefutott a `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec`
+main SHA-n Windows x64 és macOS Universal platformra. Elkészült a hozzájuk
+tartozó forrásarchívum, `BUILD-INFO.txt` és beágyazott SHA-256 manifest is.
+Az ideiglenes Actions artefakteket még külön le kell tölteni, tartalmukat és
+belső hash-eiket ellenőrizni, valamint a tulajdonosnak telepíteni/próbálni.
+Az RC1 teszt nem pontos stabil csomag-elfogadás. Stabil GitHub Release, tag és
+publikálási jóváhagyás továbbra sincs; a korábbi nyilvános kiadások történeti
 pre-beta verziók.
 
 ### Főbb jellemzők
@@ -122,7 +127,8 @@ pre-beta verziók.
 | macOS REAPER | A tulajdonos macOS 26.7-en végzett tesztről számolt be; a pontos build/hash és a teljes mátrix nincs rögzítve |
 | #247 Windows VST3 telepítése | A tulajdonos a `fbea5ea` forrásból készült csomag telepítését jelezte; megadott VST3 SHA-256: `1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`; ez telepítési adat, új funkcionális teszteredményt nem közölt |
 | A teljes host/audio/GUI mátrix | NEM FUTOTT / TULAJDONOSI DÖNTÉS ALAPJÁN HALASZTVA; a konkrét tételek és korlátok a jegyzékben |
-| Stabil `1.0.0` csomag, ellenőrzőösszeg és végső archívumvizsgálat | MÉG NEM KÉSZÜLT; végleges forrás-SHA és stabil csomagolási futás szükséges |
+| Stabil `1.0.0` csomag buildje és beágyazott manifestjei | PASS a `36484917908` workflow-ban, `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` main SHA-n; ideiglenes Windows/macOS artefaktumok létrejöttek |
+| Belső archívumok/hash-ek független vizsgálata és a pontos stabil csomag tulajdonosi telepítése | MÉG HÁTRA VAN; az Actions külső artefaktumhash nem a belső ZIP hash-e |
 | Publikálás | NINCS JÓVÁHAGYVA / NINCS KÖZZÉTÉVE |
 
 Ez a dokumentum kiadási jegyzet-tervezet marad a stabil csomag véglegesítése,

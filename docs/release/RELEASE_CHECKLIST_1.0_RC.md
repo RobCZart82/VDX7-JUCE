@@ -10,23 +10,21 @@ this checklist. No proprietary firmware belongs in source, CI or artifacts.
 Current work order and audit disposition: [consolidated plan](EXECUTION_PLAN_1.0.md).
 GUI appearance approval does not close the technical/platform gates below.
 
-Current main checkpoint (2026-09-28): `0fae59d79a849a8fe2e1993533adf2df3d90bc59`;
-the frozen RC1 product source remains
-`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. Latest observed main Windows run
-#265 and macOS run #270 passed; PR #97 and its required checks are merged/green.
-Exact-RC workflow `36451459751` passed and uploaded Windows x64 and macOS
-Universal VST3 test artifacts. Local ROM suite passed 36/36 CTests (the
-desktop-dependent save-dialog case was excluded). Owner reports successful
-RC1 REAPER use and excellent DX7-faithful sound on Windows and macOS, plus five
-instances in one project with successful save/reopen. The macOS installed
-binary hash matches the candidate artifact; Windows hash and REAPER version
-remain unrecorded. Broader matrix details and limits are in
+Current main checkpoint (2026-09-29): merge commit
+`f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` after PR #98. Its Windows #266,
+macOS #271 and optional ASan/UBSan #13 PR checks passed. Stable package workflow
+[`36484917908`](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36484917908)
+passed on this exact main SHA and produced Windows x64 and macOS Universal
+artifacts with matching-source archives, build identity and SHA-256 manifests.
+GitHub artifact archive digests and IDs are recorded in the execution plan;
+these are outer artifact hashes, not inner package hashes. Inner manifests and
+archive contents have not yet been independently reviewed, and the owner has
+not yet installed the exact stable artifacts. The frozen RC1 source remains
+`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`; owner-reported RC1 REAPER/listening
+and five-instance save/reopen evidence remain separate from exact-stable testing.
+The broader matrix remains NOT RUN / DEFERRED; see
 [the RC1 validation report](../validation/VALIDATION_20260928_EXACT_RC1.md).
-The stable `1.0.0` package has not been built; GitHub has no stable 1.0.0
-release. A non-publishing stable-package workflow is added in the current
-worktree but is not merged or run yet. It must pass on the final main SHA before
-its artifacts can be inspected. No tag or publication is authorized by this
-preparation.
+GitHub has no stable 1.0.0 release. No tag or publication is authorized.
 
 Merged non-host checkpoint: #90 / `817987b`. PR #90 Windows/macOS and
 ASan/UBSan checks passed; post-merge main Windows/macOS builds passed (runs
@@ -141,6 +139,16 @@ acceptance. Desktop-unavailable GUI tests must not be counted as passing.
 - [x] Source archive checker and manifest inspection found no firmware, local
   paths, secrets or build caches; only the VST3 bundle and source/docs are in
   the tested artifacts. Human review is recorded in the RC1 validation report.
+- [x] Stable `1.0.0` Windows x64 and macOS Universal VST3 preparation
+  workflow passes on main SHA `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec`;
+  matching source archives and embedded checksum manifests were generated.
+  See workflow run `36484917908` and execution plan for artifact IDs/outer
+  archive digests. This is CI preparation evidence only.
+- [ ] Independently download and inspect both stable artifacts, verify each
+  embedded `SHA256SUMS.txt` against its files, inspect VST3/source archive
+  contents and build identity, and record inner asset hashes.
+- [ ] Owner installs and performs a bounded smoke test of the exact stable
+  artifact for the intended platform(s); do not substitute the earlier RC1 test.
 - [ ] Separate user authorization for any public release/tag/assets.
 
 ## Repository policy
