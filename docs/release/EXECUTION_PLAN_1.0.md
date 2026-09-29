@@ -1,11 +1,14 @@
 # 1.0 consolidated execution plan — release preparation 2026-09-29
 
-## Current main checkpoint — after PR #98 and stable package preparation
+## Current main checkpoint — after PR #99 and stable package validation
 
-Current main is merge commit `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec`, the merge
-of PR #98. PR checks passed: Windows build #266, macOS build #271 and optional
-ROM-free ASan/UBSan run #13. The PR adds the non-publishing stable-package
-workflow and reconciles the release evidence; it creates no tag or Release.
+Current main is `60ee843aaefb3033e36dbbd12c45a2944a6a1723`, after documentation-only
+PR #99; its Windows #269, macOS #274 and optional ROM-free ASan/UBSan #15 checks
+passed. The stable packages were built from exact product main commit
+`f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` by PR #98's non-publishing workflow.
+That workflow's Windows #266, macOS #271 and optional ASan/UBSan #13 checks also
+passed. These documentation updates do not change the packaged product source
+and create no tag or Release.
 
 Stable package workflow run
 [`36484917908`](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36484917908)
@@ -23,24 +26,28 @@ The artifact archive SHA-256 values above come from GitHub's artifact metadata;
 they are not the inner VST3/source ZIP checksums. The workflow generates an
 inner `SHA256SUMS.txt` and `BUILD-INFO.txt` in each artifact, but their contents
 and the packaged archives have not yet been independently downloaded, extracted
-and reviewed in this handoff. No exact-stable package has yet been installed or
-runtime-tested by the owner. Artifacts expire 2026-12-27.
+and reviewed in this handoff. The owner now reports that the exact stable Actions packages work on both
+Windows and macOS. This is owner-reported functional/runtime acceptance of the
+two platform artifacts; the specific installed package checksums, host/version
+details and test matrix were not supplied. The independent archive/manifest
+review remains pending. Artifacts expire 2026-12-27.
 
 The frozen RC1 product source remains
 `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. The owner reports successful
 RC1 REAPER use and excellent DX7-faithful sound on Windows and macOS, plus a
 five-instance project with successful save/reopen. The macOS RC1 installed
 binary hash matched its candidate artifact; the Windows RC1 hash and REAPER
-version remain unrecorded. These RC1 reports are not exact-stable-package
-acceptance. The broader host/audio/GUI matrix remains explicitly NOT RUN /
+version remain unrecorded. The owner has since separately reported successful use of the exact stable
+Actions packages on Windows and macOS. Keep that report distinct from RC1
+evidence and from independently verified binary identity. The broader host/audio/GUI matrix remains explicitly NOT RUN /
 DEFERRED as detailed below and in the
 [exact RC1 validation](../validation/VALIDATION_20260928_EXACT_RC1.md).
 
-Next gates: download both exact-stable artifacts, verify their embedded
-`SHA256SUMS.txt` and `BUILD-INFO.txt` against contents/source commit, inspect
-the VST3 and corresponding-source ZIP contents (including no firmware/local
-data), and have the owner install and smoke-test the intended platform build.
-Then review and explicitly accept/defer the remaining matrix and risks. No
+Next gates: independently verify the embedded `SHA256SUMS.txt` and
+`BUILD-INFO.txt` against the artifact contents/source commit; inspect the VST3
+and corresponding-source ZIP contents (including no firmware/local data).
+Record the owner's successful Windows/macOS runtime report with its known
+limits, then review and explicitly accept/defer the remaining matrix and risks. No
 stable tag, GitHub Release or public release assets have been created or
 authorized. The workflow artifacts are temporary test downloads, not the
 public release.
