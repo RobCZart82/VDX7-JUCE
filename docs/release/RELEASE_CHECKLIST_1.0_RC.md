@@ -10,52 +10,13 @@ this checklist. No proprietary firmware belongs in source, CI or artifacts.
 Current work order and audit disposition: [consolidated plan](EXECUTION_PLAN_1.0.md).
 GUI appearance approval does not close the technical/platform gates below.
 
-Current main checkpoint (2026-09-29): `60ee843aaefb3033e36dbbd12c45a2944a6a1723`,
-after documentation-only PR #99. Its Windows #269, macOS #274 and optional
-ASan/UBSan #15 checks passed. The stable packages were built from product SHA
-`f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` after PR #98; its Windows #266,
-macOS #271 and optional ASan/UBSan #13 checks passed. Stable package workflow
-[`36484917908`](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36484917908)
-passed on this exact main SHA and produced Windows x64 and macOS Universal
-artifacts with matching-source archives, build identity and SHA-256 manifests.
-GitHub artifact archive digests and IDs are recorded in the execution plan;
-these are outer artifact hashes, not inner package hashes. Inner manifests and
-archive contents have not yet been independently reviewed. The owner now
-reports that the exact stable Actions packages work on Windows and macOS; this
-is owner-reported runtime acceptance, while the installed package hashes,
-host/version details and test matrix were not supplied. The frozen RC1 source remains
-`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`; RC1 REAPER/listening and five-instance save/reopen evidence remain distinct
-from this stable-artifact test report.
-Independent inner-manifest/archive inspection remains pending. The broader matrix remains NOT RUN / DEFERRED; see
+Current main checkpoint (2026-09-29 after PR #101): `d79ed5214d82caf70e3941e5a620bab137d3f9ca`. The non-publishing installer workflow [36621909919](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36621909919) passed on this exact SHA for Windows x64 and macOS Universal. Both builds and ROM-free CTests passed; Windows install/uninstall smoke test, macOS package payload checks, and combined `SHA256SUMS.txt` validation passed. Combined artifact ID `11059321610`, outer ZIP SHA-256 `65d3ac7195a00f7d3040816cbbd257ea247f0cb65d487c6823cc8c02675712a3`.
+
+The owner reports that both Windows and macOS installers and REAPER plugins work; the macOS install required the per-app Gatekeeper “Open Anyway” flow. Exact installed package hashes and detailed host/rate/buffer matrix were not supplied. This is OWNER-REPORTED evidence; see [stable installer acceptance](../validation/VALIDATION_20260929_STABLE_INSTALLER_ACCEPTANCE.md). Windows installer is unsigned; macOS `.pkg` is unsigned and the VST3 has only an ad-hoc signature.
+
+The artifact remains preparation-only: BUILD-INFO explicitly says it is not approved for publication. Do not attach it unchanged to a public Release. Independent archive inspection, final release BUILD-INFO and checksum regeneration, bilingual release notes, and deferred-test review remain outstanding. The broader matrix remains NOT RUN / DEFERRED; see
 [the RC1 validation report](../validation/VALIDATION_20260928_EXACT_RC1.md).
-GitHub has no stable 1.0.0 release. No tag or publication is authorized.
-
-Merged non-host checkpoint: #90 / `817987b`. PR #90 Windows/macOS and
-ASan/UBSan checks passed; post-merge main Windows/macOS builds passed (runs
-36433962468 and 36433962462). The
-[hardening report](../validation/VALIDATION_20260928_NONHOST_HARDENING.md)
-retains failing-baseline/fixed evidence. N6 retains keyboard PITCH values by
-owner decision. New [source-package verification](../validation/VALIDATION_20260928_SOURCE_PACKAGING.md)
-and post-merge local checks are separate from exact-RC acceptance.
-
-Owner-reported decision (2026-09-28 handoff): the owner reports REAPER testing
-with no known issue and considers the program releasable. The plan records
-macOS REAPER checks and Windows 10 x64 using build #219 / `29ab5e3`; the macOS
-tested SHA, binary hashes, REAPER application versions and full rate/block/
-instance matrix are not recorded. Keep this marked OWNER-REPORTED; do not
-convert unverified matrix entries to PASS. The owner accepts Windows distribution
-without publisher signing and macOS with ad-hoc signing only, without Developer
-ID/notarization. Clearly warn about
-possible OS security prompts. This is not publication authorization.
-
-Additional owner-reported installation evidence (2026-09-28): the owner installed
-the Windows VST3 from **Build Windows VST3 and Standalone #247**, built from
-`fbea5ea167598f9b625eab9145f53b8700d9eb15`. Reported VDX7.vst3 SHA-256:
-`1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`.
-This records installation and artifact identity only; no new functional test
-result was stated, so it does not close the exact-RC REAPER acceptance matrix.
-[Identity/package review](IDENTITY_AND_PACKAGE_1.0.md) distinguishes development
-artifacts from final binary packaging, signing and acceptance gates.
+GitHub has no stable 1.0.0 release. No tag or publication was created by this workflow.
 
 ## Correctness and realtime gates
 
