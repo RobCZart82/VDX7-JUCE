@@ -1,17 +1,8 @@
 # 1.0 build identity and package boundaries
 
-Preparation checkpoint (2026-09-29): current main is
-`60ee843aaefb3033e36dbbd12c45a2944a6a1723` after documentation-only PR #99;
-the stable packages were built from product SHA
-`f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec`. The frozen RC1 product source is
-`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. Non-publishing stable package
-workflow `36484917908` passed on the exact product SHA above for Windows x64 and macOS
-Universal VST3 and generated matching source archives, build identity and
-SHA-256 manifests. Artifact IDs and outer Actions ZIP digests are recorded in
-the [execution plan](EXECUTION_PLAN_1.0.md); they are not the inner package
-checksums. The artifacts remain test downloads, not a published Release or
-approval to publish. This is a preparation record, not approval to rename
-installed plugins or change their identity.
+Preparation checkpoint (2026-09-29): main is `d79ed5214d82caf70e3941e5a620bab137d3f9ca`, after PR #101. Non-publishing workflow [36621909919](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36621909919) passed on this exact source SHA for Windows x64 and macOS Universal VST3. Both builds and ROM-free tests, platform package checks, and combined SHA-256 verification passed. The owner reports that the Windows/macOS installers and REAPER plugins work; the macOS package installed after the per-app Gatekeeper “Open Anyway” flow. This is owner-reported evidence; exact installed hashes, host versions and the full test matrix were not supplied. Full record: [stable installer acceptance](../validation/VALIDATION_20260929_STABLE_INSTALLER_ACCEPTANCE.md).
+
+The combined Actions artifact (ID `11059321610`, outer ZIP digest `65d3ac7195a00f7d3040816cbbd257ea247f0cb65d487c6823cc8c02675712a3`) is validation-only. Its BUILD-INFO files explicitly say not accepted/approved for publication. Do not publish unchanged. Independent archive inspection, accurate final BUILD-INFO and regenerated manifest, final HU/EN notes and review of deferred-test disclosures remain outstanding. Windows is unsigned; macOS package is unsigned and plugin bundle ad-hoc signed only. No stable tag or Release was created by this workflow.
 
 ## Identity (F17)
 
