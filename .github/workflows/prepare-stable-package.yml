@@ -7,8 +7,14 @@ on:
         description: Full 40-character commit SHA already present on main
         required: true
         type: string
+      accepted_for_publication:
+        description: Mark the validation assets accepted for publication after final review (does not publish)
+        required: true
+        default: false
+        type: boolean
 
-# Creates downloadable validation artifacts only. It cannot create tags/releases.
+# Creates downloadable artifacts only. The acceptance input controls truthful
+# release metadata; this workflow still cannot create tags/releases.
 permissions:
   contents: read
 
@@ -31,7 +37,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify source identity and main ancestry
+      - name: Verify exact product source identity and main ancestry
         shell: bash
         env:
           SOURCE_COMMIT: ${{ inputs.source_commit }}
@@ -39,6 +45,19 @@ jobs:
           [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
           git merge-base --is-ancestor "$SOURCE_COMMIT" origin/main
+
+      - name: Checkout release packager and regression tests
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: release-tools
+          persist-credentials: false
+
+      - name: Verify release tooling identity
+        shell: bash
+        env:
+          PACKAGER_COMMIT: ${{ github.sha }}
+        run: test "$(git -C release-tools rev-parse HEAD)" = "$PACKAGER_COMMIT"
 
       - name: Configure stable macOS Universal build
         if: runner.os == 'macOS'
@@ -61,17 +80,25 @@ jobs:
           python-version: '3.12'
 
       - name: Test release packagers
-        run: python -m unittest discover -s Tests -p "test_*.py" -v
+        run: python -m unittest discover -s release-tools/Tests -p "test_*.py" -v
 
       - name: Prepare matching stable source archive
         if: runner.os == 'Windows'
         shell: bash
         env:
           SOURCE_COMMIT: ${{ inputs.source_commit }}
+          ACCEPTED_FOR_PUBLICATION: ${{ inputs.accepted_for_publication }}
+          PACKAGER_COMMIT: ${{ github.sha }}
         run: |
-          python scripts/package_source.py create --repo . \
+          package_args=()
+          if [[ "$ACCEPTED_FOR_PUBLICATION" == "true" ]]; then
+            package_args+=(--release-accepted)
+          fi
+          python release-tools/scripts/package_source.py create --repo . \
             --juce build/_deps/juce-src --core build/_deps/retromulator-src \
             --commit "$SOURCE_COMMIT" --package-label 1.0.0 \
+            --packager-commit "$PACKAGER_COMMIT" \
+            "${package_args[@]}" \
             --output stable-source
 
       - name: Build stable VST3 and ROM-free tests
@@ -83,6 +110,9 @@ jobs:
       - name: Verify and package macOS VST3 installer and manual ZIP
         if: runner.os == 'macOS'
         shell: bash
+        env:
+          ACCEPTED_FOR_PUBLICATION: ${{ inputs.accepted_for_publication }}
+          PACKAGER_COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
           VST3="build/VDX7_artefacts/Release/VST3/VDX7.vst3"
@@ -111,8 +141,9 @@ jobs:
           cat > release-assets/BUILD-INFO-macOS-universal.txt <<EOF
           Product: VDX7 Mk1.
           Stable version: 1.0.0
-          Status: PREPARATION ARTIFACT; not accepted or approved for publication.
+          Status: $([[ "$ACCEPTED_FOR_PUBLICATION" == "true" ]] && echo "ACCEPTED FOR PUBLICATION; not yet published." || echo "PREPARATION ARTIFACT; not accepted or approved for publication.")
           Source commit: ${{ inputs.source_commit }}
+          Release packager commit: $PACKAGER_COMMIT
           Platform: macOS Universal (arm64 + x86_64), deployment target macOS 11.0
           Included format: VST3 only. No AU component is built or packaged.
           Installer: unsigned .pkg; plugin bundle has an ad-hoc signature only.
@@ -122,6 +153,9 @@ jobs:
       - name: Verify and package Windows x64 VST3 installer and manual ZIP
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          ACCEPTED_FOR_PUBLICATION: ${{ inputs.accepted_for_publication }}
+          PACKAGER_COMMIT: ${{ github.sha }}
         run: |
           $ErrorActionPreference = "Stop"
           $vst3 = Get-ChildItem -Path build -Recurse -Directory -Filter "VDX7.vst3" | Select-Object -First 1
@@ -159,11 +193,17 @@ jobs:
           if ($uninstall.ExitCode -ne 0) { throw "Uninstaller smoke test failed: $($uninstall.ExitCode)" }
           if (Test-Path $installDir) { throw "Uninstaller left the VST3 bundle behind" }
 
+          $status = if ($env:ACCEPTED_FOR_PUBLICATION -eq "true") {
+            "ACCEPTED FOR PUBLICATION; not yet published."
+          } else {
+            "PREPARATION ARTIFACT; not accepted or approved for publication."
+          }
           @"
           Product: VDX7 Mk1.
           Stable version: 1.0.0
-          Status: PREPARATION ARTIFACT; not accepted or approved for publication.
+          Status: $status
           Source commit: ${{ inputs.source_commit }}
+          Release packager commit: $env:PACKAGER_COMMIT
           Platform: Windows x64
           Included format: VST3 only. No AU component is built or packaged.
           Installer: unsigned Setup.exe; Windows may show an unknown-publisher warning.
@@ -173,7 +213,7 @@ jobs:
       - name: Upload platform validation artifact (not a release)
         uses: actions/upload-artifact@v4
         with:
-          name: VDX7-1.0.0-${{ matrix.platform }}-${{ inputs.source_commit }}
+          name: VDX7-1.0.0-${{ matrix.platform }}-${{ inputs.source_commit }}-${{ inputs.accepted_for_publication && 'accepted' || 'prep' }}
           path: |
             release-assets/VDX7-1.0.0-*
             release-assets/BUILD-INFO-*.txt
@@ -192,7 +232,7 @@ jobs:
       - name: Download both platform artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: VDX7-1.0.0-*-${{ inputs.source_commit }}
+          pattern: VDX7-1.0.0-*-${{ inputs.source_commit }}-${{ inputs.accepted_for_publication && 'accepted' || 'prep' }}
           path: release-assets
           merge-multiple: true
 
@@ -224,6 +264,6 @@ jobs:
       - name: Upload complete validation artifact (not a release)
         uses: actions/upload-artifact@v4
         with:
-          name: VDX7-1.0.0-Release-Assets-${{ inputs.source_commit }}
+          name: VDX7-1.0.0-Release-Assets-${{ inputs.source_commit }}-${{ inputs.accepted_for_publication && 'accepted' || 'prep' }}
           path: release-assets/*
           if-no-files-found: error

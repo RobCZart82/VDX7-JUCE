@@ -97,6 +97,25 @@ class SourcePackageTests(unittest.TestCase):
                     p.write_zip(path, files, candidate)
                     p.verify(path)
 
+    def test_explicit_stable_publication_acceptance(self):
+        files, manifest = self.fixture()
+        manifest["package_label"] = "1.0.0"
+        manifest["kind"] = "stable-release-corresponding-source"
+        manifest["release_accepted"] = True
+        manifest["packager_commit"] = "b" * 40
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "accepted-stable.zip"
+            p.write_zip(path, files, manifest)
+            p.verify(path)
+
+        manifest["package_label"] = "1.0.0-rc1"
+        manifest["kind"] = "release-candidate-corresponding-source"
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "accepted-rc.zip"
+            p.write_zip(path, files, manifest)
+            with self.assertRaises(ValueError):
+                p.verify(path)
+
     def test_snapshot_ignores_dirty_and_untracked_files(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

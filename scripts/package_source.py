@@ -99,10 +99,17 @@ def write_zip(destination, files, manifest):
             archive.writestr(item, data)
 
 
-def package(repo, juce, core, sha, output, package_label="1.0.0-dev"):
+def package(repo, juce, core, sha, output, package_label="1.0.0-dev",
+            accepted_for_publication=False, packager_commit=None):
     files = snapshot(repo, sha)
     if not re.fullmatch(r"1\.0\.0(?:-dev|-rc[1-9][0-9]*)?", package_label):
         raise ValueError("Package label must be 1.0.0-dev, 1.0.0-rcN, or 1.0.0")
+    if accepted_for_publication and package_label != "1.0.0":
+        raise ValueError("Only a stable 1.0.0 source package may be accepted for publication")
+    if packager_commit is not None and not re.fullmatch(r"[0-9a-f]{40}", packager_commit):
+        raise ValueError("Packager commit must be a full lowercase 40-character SHA")
+    if accepted_for_publication and packager_commit is None:
+        raise ValueError("Accepted stable source packages must identify the release packager commit")
     cmake = files["CMakeLists.txt"][0].decode()
     if JUCE_SHA not in cmake or CORE_SHA not in cmake:
         raise ValueError("Source dependency pins changed; review/update the packager")
@@ -124,14 +131,17 @@ def package(repo, juce, core, sha, output, package_label="1.0.0-dev"):
             raise ValueError(f"Required source/notice missing: {required}")
     kind = ("development-corresponding-source" if package_label == "1.0.0-dev"
             else "release-candidate-corresponding-source" if "-rc" in package_label
+            else "stable-release-corresponding-source" if accepted_for_publication
             else "stable-release-preparation-corresponding-source")
     manifest = {
         "schema": 1, "kind": kind, "package_label": package_label,
-        "source_commit": sha, "release_accepted": False,
+        "source_commit": sha, "release_accepted": accepted_for_publication,
         "dependencies": {"JUCE": JUCE_SHA, "Retromulator": CORE_SHA},
         "files": [{"path": name, "sha256": hashlib.sha256(data).hexdigest(), "size": len(data), "mode": mode}
                   for name, (data, mode) in sorted(files.items())],
     }
+    if packager_commit is not None:
+        manifest["packager_commit"] = packager_commit
     # Refuse any existing destination, even an empty directory; never overwrite.
     output.mkdir(parents=True, exist_ok=False)
     filename = f"VDX7-{package_label}-{sha}-corresponding-source.zip"
@@ -152,11 +162,19 @@ def verify(archive_path):
             safe_path(name)
         manifest = json.loads(archive.read(MANIFEST))
         label = manifest.get("package_label", "")
+        accepted = manifest.get("release_accepted")
+        packager_commit = manifest.get("packager_commit")
+        stable_kind = ("stable-release-corresponding-source" if accepted is True
+                       else "stable-release-preparation-corresponding-source" if accepted is False
+                       else None)
         kind = ("development-corresponding-source" if label == "1.0.0-dev"
                 else "release-candidate-corresponding-source" if re.fullmatch(r"1\.0\.0-rc[1-9][0-9]*", label)
-                else "stable-release-preparation-corresponding-source" if label == "1.0.0"
+                else stable_kind if label == "1.0.0"
                 else None)
-        if (manifest.get("schema") != 1 or manifest.get("release_accepted") is not False
+        if (manifest.get("schema") != 1
+                or (label != "1.0.0" and accepted is not False)
+                or (accepted is True and not re.fullmatch(r"[0-9a-f]{40}", packager_commit or ""))
+                or (packager_commit is not None and not re.fullmatch(r"[0-9a-f]{40}", packager_commit))
                 or kind is None
                 or manifest.get("kind") != kind
                 or manifest.get("dependencies") != {"JUCE": JUCE_SHA, "Retromulator": CORE_SHA}
@@ -186,11 +204,15 @@ if __name__ == "__main__":
     create.add_argument("--commit", required=True)
     create.add_argument("--package-label", default="1.0.0-dev",
                         help="1.0.0-dev, 1.0.0-rcN or 1.0.0 (prepublication stable package)")
+    create.add_argument("--release-accepted", action="store_true",
+                        help="mark a stable 1.0.0 source package accepted for publication")
+    create.add_argument("--packager-commit",
+                        help="full commit SHA of the source packager used to generate the manifest")
     check = commands.add_parser("verify")
     check.add_argument("archive", type=Path)
     args = parser.parse_args()
     if args.command == "create":
         verify(package(args.repo, args.juce, args.core, args.commit, args.output,
-                      args.package_label))
+                      args.package_label, args.release_accepted, args.packager_commit))
     else:
         verify(args.archive)
