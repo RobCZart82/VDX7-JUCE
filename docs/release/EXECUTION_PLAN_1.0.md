@@ -1,56 +1,12 @@
 # 1.0 consolidated execution plan — release preparation 2026-09-29
 
-## Current main checkpoint — after PR #99 and stable package validation
+## Current main checkpoint — stable installer acceptance (2026-09-29)
 
-Current main is `60ee843aaefb3033e36dbbd12c45a2944a6a1723`, after documentation-only
-PR #99; its Windows #269, macOS #274 and optional ROM-free ASan/UBSan #15 checks
-passed. The stable packages were built from exact product main commit
-`f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` by PR #98's non-publishing workflow.
-That workflow's Windows #266, macOS #271 and optional ASan/UBSan #13 checks also
-passed. These documentation updates do not change the packaged product source
-and create no tag or Release.
+Current main is `d79ed5214d82caf70e3941e5a620bab137d3f9ca`, merge of PR #101. PR checks and post-merge Windows/macOS CI passed. The non-publishing stable VST3 installer workflow [36621909919](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36621909919) passed on this exact SHA. Both platform builds and ROM-free CTests passed; Windows installer install/uninstall smoke test, macOS package payload checks, and combined SHA-256 manifest verification also passed. It uploaded `VDX7-1.0.0-Release-Assets-d79ed5214d82caf70e3941e5a620bab137d3f9ca` (ID `11059321610`, outer artifact SHA-256 `65d3ac7195a00f7d3040816cbbd257ea247f0cb65d487c6823cc8c02675712a3`, expires 2026-12-28).
 
-Stable package workflow run
-[`36484917908`](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36484917908)
-completed successfully against that exact main commit. Both Windows x64 and
-macOS Universal jobs passed the stable configuration/build, release packager
-unit tests, matching-source archive generation, ROM-free CTest, VST3 packaging,
-and SHA-256 manifest generation. Artifacts:
+The owner reports successful Windows installer and REAPER-plugin use. On macOS, the owner reports the Universal `.pkg` installed on a Mac mini M1 / macOS Tahoe 26.7 after the per-app Gatekeeper “Open Anyway” flow, and that the installed VST3 opened and worked/sounded good in REAPER. These are owner-reported real-machine acceptance; exact installed package hashes, REAPER versions for these trials, and full test-matrix details were not supplied. Full record: [stable installer acceptance](../validation/VALIDATION_20260929_STABLE_INSTALLER_ACCEPTANCE.md).
 
-| Platform | Artifact | GitHub artifact SHA-256 (outer Actions ZIP) |
-| --- | --- | --- |
-| macOS Universal | `VDX7-1.0.0-macOS-universal-f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` (ID `10999675610`) | `46b084a89fb58a72161c3d77fb1a62fde64ff4d92c1be41930f014113c63d12a` |
-| Windows x64 | `VDX7-1.0.0-Windows-x64-f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` (ID `10999036856`) | `32b9c358e4e820c66c97559e26725e14caaa05a57b0a7ff0ba6b814cdfbf962d` |
-
-The artifact archive SHA-256 values above come from GitHub's artifact metadata;
-they are not the inner VST3/source ZIP checksums. The workflow generates an
-inner `SHA256SUMS.txt` and `BUILD-INFO.txt` in each artifact, but their contents
-and the packaged archives have not yet been independently downloaded, extracted
-and reviewed in this handoff. The owner now reports that the exact stable Actions packages work on both
-Windows and macOS. This is owner-reported functional/runtime acceptance of the
-two platform artifacts; the specific installed package checksums, host/version
-details and test matrix were not supplied. The independent archive/manifest
-review remains pending. Artifacts expire 2026-12-27.
-
-The frozen RC1 product source remains
-`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. The owner reports successful
-RC1 REAPER use and excellent DX7-faithful sound on Windows and macOS, plus a
-five-instance project with successful save/reopen. The macOS RC1 installed
-binary hash matched its candidate artifact; the Windows RC1 hash and REAPER
-version remain unrecorded. The owner has since separately reported successful use of the exact stable
-Actions packages on Windows and macOS. Keep that report distinct from RC1
-evidence and from independently verified binary identity. The broader host/audio/GUI matrix remains explicitly NOT RUN /
-DEFERRED as detailed below and in the
-[exact RC1 validation](../validation/VALIDATION_20260928_EXACT_RC1.md).
-
-Next gates: independently verify the embedded `SHA256SUMS.txt` and
-`BUILD-INFO.txt` against the artifact contents/source commit; inspect the VST3
-and corresponding-source ZIP contents (including no firmware/local data).
-Record the owner's successful Windows/macOS runtime report with its known
-limits, then review and explicitly accept/defer the remaining matrix and risks. No
-stable tag, GitHub Release or public release assets have been created or
-authorized. The workflow artifacts are temporary test downloads, not the
-public release.
+Important: the combined Actions artifact is validation-only. Its BUILD-INFO says “not accepted or approved for publication,” and the workflow cannot publish. Do not attach the files unchanged to a Release. Remaining steps are independent extraction/content review, final HU/EN notes and accurate release BUILD-INFO, regeneration/reverification of the final manifest, and review of deferred-test disclosures. Preserve the unsigned Windows and macOS Gatekeeper/notarization warnings; do not recommend disabling system-wide protections. AU is outside 1.0.0 distribution.
 
 ## Test-phase decision — 2026-09-28
 
