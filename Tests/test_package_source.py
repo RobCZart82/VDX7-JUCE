@@ -102,6 +102,7 @@ class SourcePackageTests(unittest.TestCase):
         manifest["package_label"] = "1.0.0"
         manifest["kind"] = "stable-release-corresponding-source"
         manifest["release_accepted"] = True
+        manifest["packager_commit"] = "b" * 40
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "accepted-stable.zip"
             p.write_zip(path, files, manifest)
