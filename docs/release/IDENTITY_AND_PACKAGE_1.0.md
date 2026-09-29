@@ -1,9 +1,11 @@
 # 1.0 build identity and package boundaries
 
-Preparation checkpoint (2026-09-29), after PR #98: current main is
-`f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec`; the frozen RC1 product source is
+Preparation checkpoint (2026-09-29): current main is
+`60ee843aaefb3033e36dbbd12c45a2944a6a1723` after documentation-only PR #99;
+the stable packages were built from product SHA
+`f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec`. The frozen RC1 product source is
 `aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. Non-publishing stable package
-workflow `36484917908` passed on the exact main SHA for Windows x64 and macOS
+workflow `36484917908` passed on the exact product SHA above for Windows x64 and macOS
 Universal VST3 and generated matching source archives, build identity and
 SHA-256 manifests. Artifact IDs and outer Actions ZIP digests are recorded in
 the [execution plan](EXECUTION_PLAN_1.0.md); they are not the inner package
@@ -25,7 +27,7 @@ installed plugins or change their identity.
   and displays `1.0.0`. The exact-candidate workflow is non-publishing and
   names artifacts with the RC label, platform and full source SHA. The separate
   non-publishing stable preparation workflow was merged in PR #98 and passed
-  as run `36484917908` on the exact main SHA above. It generated Windows x64
+  as run `36484917908` on the exact product SHA above. It generated Windows x64
   and macOS Universal packages and corresponding source/checksum material; it
   does not publish a release. The outer artifact hashes are not the inner
   package checksums. Record SHA, build options, platform/architecture,
@@ -54,14 +56,16 @@ matrix was not run and is deferred by owner decision; see the current
 ## Package review and remaining blockers
 
 The candidate and stable-package workflows do not publish tags or Releases.
-The exact stable workflow completed successfully on the main SHA above and
+The exact stable workflow completed successfully on the exact product SHA above and
 produced Windows/macOS VST3 artifacts plus corresponding source ZIPs, build
 identity and embedded checksum manifests. These remain Actions test artifacts,
 not stable release assets. Their independent content review is still pending;
 verify archive contents, versions, dependency revisions, embedded SHA-256 sums
 and absence of ROMs, credentials, local paths, caches and unrelated files.
-See [source packaging](SOURCE_PACKAGING_1.0.md). Exact stable-package runtime
-acceptance and separate publication authorization also remain outstanding.
+See [source packaging](SOURCE_PACKAGING_1.0.md). The owner reports that the exact Windows and macOS stable Actions packages
+work. This is owner-reported runtime acceptance; installed package hashes,
+host/version details and the full test matrix were not supplied. Independent
+archive review and separate publication authorization remain outstanding.
 
 - Owner decision (handoff dated 2026-09-28): distribute Windows without publisher
   signing and macOS with the existing ad-hoc signature, without Developer ID or
@@ -91,9 +95,10 @@ macOS/Windows, and a five-instance project save/reopen success. The macOS
 installed binary hash matches its candidate artifact; Windows hash and some
 host/test details remain unrecorded. Preserve these as OWNER-REPORTED. The
 owner deferred the wider host/audio/GUI matrix; do not infer unrun cells passed.
-The stable packages are built; their independent archive/content review, exact
-stable-package runtime acceptance, and separate publication approval remain
-outstanding.
+The stable packages are built, and the owner reports that the Windows and
+macOS Actions packages work. Their independent archive/content review and
+separate publication approval remain outstanding; package hashes and host/test
+details were not supplied.
 
 On 2026-09-28, the owner additionally reported installing the Windows VST3 from
 **Build Windows VST3 and Standalone #247**, source commit

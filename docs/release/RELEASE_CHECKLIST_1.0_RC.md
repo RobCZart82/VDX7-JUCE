@@ -10,19 +10,23 @@ this checklist. No proprietary firmware belongs in source, CI or artifacts.
 Current work order and audit disposition: [consolidated plan](EXECUTION_PLAN_1.0.md).
 GUI appearance approval does not close the technical/platform gates below.
 
-Current main checkpoint (2026-09-29): merge commit
-`f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` after PR #98. Its Windows #266,
-macOS #271 and optional ASan/UBSan #13 PR checks passed. Stable package workflow
+Current main checkpoint (2026-09-29): `60ee843aaefb3033e36dbbd12c45a2944a6a1723`,
+after documentation-only PR #99. Its Windows #269, macOS #274 and optional
+ASan/UBSan #15 checks passed. The stable packages were built from product SHA
+`f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` after PR #98; its Windows #266,
+macOS #271 and optional ASan/UBSan #13 checks passed. Stable package workflow
 [`36484917908`](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36484917908)
 passed on this exact main SHA and produced Windows x64 and macOS Universal
 artifacts with matching-source archives, build identity and SHA-256 manifests.
 GitHub artifact archive digests and IDs are recorded in the execution plan;
 these are outer artifact hashes, not inner package hashes. Inner manifests and
-archive contents have not yet been independently reviewed, and the owner has
-not yet installed the exact stable artifacts. The frozen RC1 source remains
-`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`; owner-reported RC1 REAPER/listening
-and five-instance save/reopen evidence remain separate from exact-stable testing.
-The broader matrix remains NOT RUN / DEFERRED; see
+archive contents have not yet been independently reviewed. The owner now
+reports that the exact stable Actions packages work on Windows and macOS; this
+is owner-reported runtime acceptance, while the installed package hashes,
+host/version details and test matrix were not supplied. The frozen RC1 source remains
+`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`; RC1 REAPER/listening and five-instance save/reopen evidence remain distinct
+from this stable-artifact test report.
+Independent inner-manifest/archive inspection remains pending. The broader matrix remains NOT RUN / DEFERRED; see
 [the RC1 validation report](../validation/VALIDATION_20260928_EXACT_RC1.md).
 GitHub has no stable 1.0.0 release. No tag or publication is authorized.
 
@@ -144,11 +148,12 @@ acceptance. Desktop-unavailable GUI tests must not be counted as passing.
   matching source archives and embedded checksum manifests were generated.
   See workflow run `36484917908` and execution plan for artifact IDs/outer
   archive digests. This is CI preparation evidence only.
-- [ ] Independently download and inspect both stable artifacts, verify each
+- [ ] Independently inspect the downloaded stable artifacts: verify each
   embedded `SHA256SUMS.txt` against its files, inspect VST3/source archive
   contents and build identity, and record inner asset hashes.
-- [ ] Owner installs and performs a bounded smoke test of the exact stable
-  artifact for the intended platform(s); do not substitute the earlier RC1 test.
+- [x] Owner reports that the exact stable Actions packages work on Windows and
+  macOS; installed package hashes, host/version details and test matrix were
+  not supplied.
 - [ ] Separate user authorization for any public release/tag/assets.
 
 ## Repository policy
