@@ -64,15 +64,18 @@ emulációs magjára és a JUCE-ra építve. Az 1.0.0 kiadást a tulajdonos ált
 jóváhagyott GUI-val és implementációval készítjük elő. A stabil kiadási
 azonosság, végleges csomagok és publikálás még nincs jóváhagyva vagy közzétéve.
 
-Előkészítési állapot (2026-09-29): a stabil csomagoló workflow
-(`36484917908`) sikeresen lefutott a `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec`
-termék-SHA-n Windows x64 és macOS Universal platformra. A tulajdonos jelzése
-szerint mindkét pontos Actions-csomag működik. Ez tulajdonosi futtatási
-elfogadás; a telepített csomagok hash-e, host/verzió és részletes tesztmátrix
-nincs megadva. A belső archívumok és checksum-manifestek független ellenőrzése
-még hátravan. A jelenlegi main dokumentációs utófrissítés, nem változtat a
-csomagolt termékforráson. Stabil GitHub Release, tag és publikálási jóváhagyás
-továbbra sincs; a korábbi nyilvános kiadások történeti pre-beta verziók.
+Előkészítési állapot (2026-09-29): a nem publikáló, stabil telepítő workflow
+(`36621909919`) sikeresen lefutott a `d79ed5214d82caf70e3941e5a620bab137d3f9ca`
+main termék-SHA-n Windows x64 és macOS Universal platformra. A tulajdonos
+mindkét telepítő és a REAPER-ben futó plugin működését megerősítette; macOS-en
+az aláíratlan csomag miatt per-app Gatekeeper “Open Anyway” kellett. Ez
+tulajdonosi valós gépes tesztjelentés, nem teljes host/audio/GUI tesztmátrix.
+Az ellenőrző artifact független vizsgálata PASS: a külső hash, mind a hét belső
+checksum, az 5082 fájlos forrásmanifest és a plugin-payload vizsgálata egyezett.
+Az artifact azonban továbbra is előkészítő státuszú, a BUILD-INFO és a
+SOURCE_MANIFEST nem engedi a változatlan publikálást. A végleges kiadási
+metaadatok és checksum-manifest újragenerálása, valamint a maradék tesztek és
+kockázatok pontos feltüntetése még hátravan.
 
 ### Főbb jellemzők
 
