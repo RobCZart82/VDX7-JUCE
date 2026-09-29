@@ -1,4 +1,4 @@
-name: Prepare stable 1.0.0 packages (no publication)
+name: Prepare stable 1.0.0 installers (VST3 only; no publication)
 
 on:
   workflow_dispatch:
@@ -64,6 +64,7 @@ jobs:
         run: python -m unittest discover -s Tests -p "test_*.py" -v
 
       - name: Prepare matching stable source archive
+        if: runner.os == 'Windows'
         shell: bash
         env:
           SOURCE_COMMIT: ${{ inputs.source_commit }}
@@ -79,50 +80,148 @@ jobs:
       - name: Run ROM-free tests
         run: ctest --test-dir build -C Release --output-on-failure --no-tests=error
 
-      - name: Verify and package macOS VST3
+      - name: Verify and package macOS VST3 installer and manual ZIP
         if: runner.os == 'macOS'
         shell: bash
         run: |
+          set -euo pipefail
           VST3="build/VDX7_artefacts/Release/VST3/VDX7.vst3"
           test -d "$VST3"
           lipo "$VST3/Contents/MacOS/VDX7" -verify_arch arm64 x86_64
           codesign --force --deep --sign - "$VST3"
           codesign --verify --deep --strict "$VST3"
-          mkdir release-assets
-          ditto -c -k --sequesterRsrc --keepParent "$VST3" \
-            release-assets/VDX7-1.0.0-macOS-universal-VST3.zip
 
-      - name: Verify and package Windows VST3
+          mkdir -p release-assets "$RUNNER_TEMP/vdx7-pkg-root/Library/Audio/Plug-Ins/VST3"
+          ditto "$VST3" "$RUNNER_TEMP/vdx7-pkg-root/Library/Audio/Plug-Ins/VST3/VDX7.vst3"
+          ditto -c -k --sequesterRsrc --keepParent "$VST3" \
+            release-assets/VDX7-1.0.0-macOS-universal-Manual.zip
+
+          pkgbuild \
+            --root "$RUNNER_TEMP/vdx7-pkg-root" \
+            --identifier com.robczart82.vdx7.vst3 \
+            --version 1.0.0 \
+            --install-location / \
+            --ownership recommended \
+            release-assets/VDX7-1.0.0-macOS-universal.pkg
+
+          pkgutil --payload-files release-assets/VDX7-1.0.0-macOS-universal.pkg > "$RUNNER_TEMP/vdx7-pkg-payload.txt"
+          grep -Fq "Library/Audio/Plug-Ins/VST3/VDX7.vst3/Contents/Info.plist" "$RUNNER_TEMP/vdx7-pkg-payload.txt"
+          grep -Fq "Library/Audio/Plug-Ins/VST3/VDX7.vst3/Contents/MacOS/VDX7" "$RUNNER_TEMP/vdx7-pkg-payload.txt"
+
+          cat > release-assets/BUILD-INFO-macOS-universal.txt <<EOF
+          Product: VDX7 Mk1.
+          Stable version: 1.0.0
+          Source commit: ${{ inputs.source_commit }}
+          Platform: macOS Universal (arm64 + x86_64), deployment target macOS 11.0
+          Included format: VST3 only. No AU component is built or packaged.
+          Installer: unsigned .pkg; plugin bundle has an ad-hoc signature only.
+          Not Developer ID signed or notarized. macOS may show a security warning.
+          EOF
+
+      - name: Verify and package Windows x64 VST3 installer and manual ZIP
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           $vst3 = Get-ChildItem -Path build -Recurse -Directory -Filter "VDX7.vst3" | Select-Object -First 1
           if (-not $vst3) { throw "VDX7.vst3 was not found" }
           New-Item -ItemType Directory -Path release-assets | Out-Null
-          Compress-Archive -Path $vst3.FullName -DestinationPath "release-assets/VDX7-1.0.0-Windows-x64-VST3.zip"
+          Compress-Archive -Path $vst3.FullName -DestinationPath "release-assets/VDX7-1.0.0-Windows-x64-Manual.zip"
 
-      - name: Assemble stable source and build identity assets
-        shell: bash
-        env:
-          SOURCE_COMMIT: ${{ inputs.source_commit }}
-          PLATFORM: ${{ matrix.platform }}
-        run: |
-          cp stable-source/VDX7-1.0.0-${SOURCE_COMMIT}-corresponding-source.zip release-assets/
-          cat > release-assets/BUILD-INFO.txt <<EOF
+          choco install innosetup --yes --no-progress
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found at $iscc" }
+          & $iscc "/DPluginBundle=$($vst3.FullName)" "/O$((Get-Location).Path)\release-assets" "installer\windows\VDX7.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
+
+          $setup = Join-Path (Get-Location) "release-assets\VDX7-1.0.0-Windows-x64-Setup.exe"
+          if (-not (Test-Path $setup)) { throw "Setup.exe was not produced" }
+          $installDir = Join-Path $env:ProgramFiles "Common Files\VST3\VDX7.vst3"
+          $install = Start-Process -FilePath $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Installer smoke test failed: $($install.ExitCode)" }
+          if (-not (Test-Path (Join-Path $installDir "Contents\Resources\moduleinfo.json"))) {
+            # JUCE bundle payloads vary; require the core bundle marker instead.
+            if (-not (Test-Path (Join-Path $installDir "Contents\Info.plist"))) {
+              throw "Installed VST3 bundle marker not found at $installDir"
+            }
+          }
+          $uninstaller = Join-Path $installDir "unins000.exe"
+          if (-not (Test-Path $uninstaller)) {
+            $uninstallKey = Get-ChildItem "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall" |
+              Get-ItemProperty | Where-Object { $_.DisplayName -eq "VDX7 Mk1." } | Select-Object -First 1
+            if (-not $uninstallKey) { throw "Installer uninstall registration missing" }
+            $uninstallExe = $uninstallKey.UninstallString.Trim('"')
+          } else {
+            $uninstallExe = $uninstaller
+          }
+          $uninstall = Start-Process -FilePath $uninstallExe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstaller smoke test failed: $($uninstall.ExitCode)" }
+          if (Test-Path $installDir) { throw "Uninstaller left the VST3 bundle behind" }
+
+          @"
           Product: VDX7 Mk1.
           Stable version: 1.0.0
-          Source commit: ${SOURCE_COMMIT}
-          Platform: ${PLATFORM}
-          VST3 distribution package; source archive and hashes included.
-          This is a non-publishing preparation artifact, not an approved GitHub Release.
-          Windows packages are unsigned; macOS uses an ad-hoc signature, not Developer ID/notarization.
-          EOF
-          python scripts/write_sha256_manifest.py --output release-assets/SHA256SUMS.txt \
-            release-assets/*.zip release-assets/BUILD-INFO.txt
+          Source commit: ${{ inputs.source_commit }}
+          Platform: Windows x64
+          Included format: VST3 only. No AU component is built or packaged.
+          Installer: unsigned Setup.exe; Windows may show an unknown-publisher warning.
+          "@ | Set-Content -Encoding utf8 release-assets/BUILD-INFO-Windows-x64.txt
 
-      - name: Upload stable preparation artifact (no publication)
+      - name: Upload platform validation artifact (not a release)
         uses: actions/upload-artifact@v4
         with:
           name: VDX7-1.0.0-${{ matrix.platform }}-${{ inputs.source_commit }}
+          path: |
+            release-assets/VDX7-1.0.0-*
+            release-assets/BUILD-INFO-*.txt
+            stable-source/*.zip
+          if-no-files-found: error
+
+  assemble-release-assets:
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+
+      - name: Download both platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: VDX7-1.0.0-*-${{ inputs.source_commit }}
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify complete asset inventory and SHA-256 manifest
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          set -euo pipefail
+          test -f "release-assets/VDX7-1.0.0-macOS-universal.pkg"
+          test -f "release-assets/VDX7-1.0.0-macOS-universal-Manual.zip"
+          test -f "release-assets/VDX7-1.0.0-Windows-x64-Setup.exe"
+          test -f "release-assets/VDX7-1.0.0-Windows-x64-Manual.zip"
+          test -f "release-assets/VDX7-1.0.0-${SOURCE_COMMIT}-corresponding-source.zip"
+          test -f "release-assets/BUILD-INFO-macOS-universal.txt"
+          test -f "release-assets/BUILD-INFO-Windows-x64.txt"
+
+          python scripts/write_sha256_manifest.py \
+            --output release-assets/SHA256SUMS.txt \
+            release-assets/VDX7-1.0.0-macOS-universal.pkg \
+            release-assets/VDX7-1.0.0-macOS-universal-Manual.zip \
+            release-assets/VDX7-1.0.0-Windows-x64-Setup.exe \
+            release-assets/VDX7-1.0.0-Windows-x64-Manual.zip \
+            "release-assets/VDX7-1.0.0-${SOURCE_COMMIT}-corresponding-source.zip" \
+            release-assets/BUILD-INFO-macOS-universal.txt \
+            release-assets/BUILD-INFO-Windows-x64.txt
+          (cd release-assets && sha256sum -c SHA256SUMS.txt)
+
+      - name: Upload complete validation artifact (not a release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: VDX7-1.0.0-Release-Assets-${{ inputs.source_commit }}
           path: release-assets/*
           if-no-files-found: error
