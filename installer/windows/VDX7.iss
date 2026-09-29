@@ -25,8 +25,3 @@ RestartApplications=no
 [Files]
 Source: "{#PluginBundle}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-[Icons]
-Name: "{group}\VDX7 uninstall"; Filename: "{uninstallexe}"; Tasks: createuninstallerlink
-
-[Tasks]
-Name: "createuninstallerlink"; Description: "Create an uninstall shortcut"; Flags: unchecked
