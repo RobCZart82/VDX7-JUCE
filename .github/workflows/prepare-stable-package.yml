@@ -111,6 +111,7 @@ jobs:
           cat > release-assets/BUILD-INFO-macOS-universal.txt <<EOF
           Product: VDX7 Mk1.
           Stable version: 1.0.0
+          Status: PREPARATION ARTIFACT; not accepted or approved for publication.
           Source commit: ${{ inputs.source_commit }}
           Platform: macOS Universal (arm64 + x86_64), deployment target macOS 11.0
           Included format: VST3 only. No AU component is built or packaged.
@@ -161,6 +162,7 @@ jobs:
           @"
           Product: VDX7 Mk1.
           Stable version: 1.0.0
+          Status: PREPARATION ARTIFACT; not accepted or approved for publication.
           Source commit: ${{ inputs.source_commit }}
           Platform: Windows x64
           Included format: VST3 only. No AU component is built or packaged.
