@@ -16,14 +16,16 @@ The combined Actions artifact (ID `11059321610`, outer ZIP digest `65d3ac7195a00
   label with stable mode, or supplying a malformed label, is rejected.
 - A stable package uses `VDX7_RELEASE_BUILD=ON` with an empty candidate label
   and displays `1.0.0`. The exact-candidate workflow is non-publishing and
-  names artifacts with the RC label, platform and full source SHA. The separate
-  non-publishing stable preparation workflow was merged in PR #98 and passed
-  as run `36484917908` on the exact product SHA above. It generated Windows x64
-  and macOS Universal packages and corresponding source/checksum material; it
-  does not publish a release. The outer artifact hashes are not the inner
-  package checksums. Record SHA, build options, platform/architecture,
-  dependency revisions and package checksums with each test; never describe a
-  dev binary as an RC or stable build.
+  names artifacts with the RC label, platform and full source SHA. The
+  non-publishing stable installer workflow run `36621909919` passed on exact
+  product SHA `d79ed5214d82caf70e3941e5a620bab137d3f9ca` (current main after PR
+  #101), producing Windows x64 and macOS Universal packages plus corresponding
+  source/checksum material. It does not publish a release. The independently
+  inspected validation artifact and its inner hashes are recorded in the
+  acceptance report; its preparation-only BUILD-INFO and source manifest are
+  not suitable for direct publication. Record SHA, build options,
+  platform/architecture, dependency revisions and package checksums with each
+  test; never describe a dev binary as an RC or stable build.
 - Keep `org.vdx7.prototype`, manufacturer `VdxP`, plugin code `VdX7`, product
   `VDX7`, and all 148 parameter IDs/order compatible. The historical bundle ID
   is an identity, not permission to rename it during release polish.
