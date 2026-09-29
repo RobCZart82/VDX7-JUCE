@@ -166,6 +166,7 @@ jobs:
           Included format: VST3 only. No AU component is built or packaged.
           Installer: unsigned Setup.exe; Windows may show an unknown-publisher warning.
           "@ | Set-Content -Encoding utf8 release-assets/BUILD-INFO-Windows-x64.txt
+          Copy-Item stable-source/*.zip release-assets/
 
       - name: Upload platform validation artifact (not a release)
         uses: actions/upload-artifact@v4
@@ -174,7 +175,6 @@ jobs:
           path: |
             release-assets/VDX7-1.0.0-*
             release-assets/BUILD-INFO-*.txt
-            stable-source/*.zip
           if-no-files-found: error
 
   assemble-release-assets:
