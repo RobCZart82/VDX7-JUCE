@@ -104,17 +104,19 @@ acceptance. Desktop-unavailable GUI tests must not be counted as passing.
 - [x] Source archive checker and manifest inspection found no firmware, local
   paths, secrets or build caches; only the VST3 bundle and source/docs are in
   the tested artifacts. Human review is recorded in the RC1 validation report.
-- [x] Stable `1.0.0` Windows x64 and macOS Universal VST3 preparation
-  workflow passes on main SHA `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec`;
-  matching source archives and embedded checksum manifests were generated.
-  See workflow run `36484917908` and execution plan for artifact IDs/outer
-  archive digests. This is CI preparation evidence only.
-- [ ] Independently inspect the downloaded stable artifacts: verify each
-  embedded `SHA256SUMS.txt` against its files, inspect VST3/source archive
-  contents and build identity, and record inner asset hashes.
-- [x] Owner reports that the exact stable Actions packages work on Windows and
-  macOS; installed package hashes, host/version details and test matrix were
-  not supplied.
+- [x] Stable `1.0.0` Windows x64 and macOS Universal VST3 installer
+  preparation passed on exact main SHA
+  `d79ed5214d82caf70e3941e5a620bab137d3f9ca`; see workflow run
+  `36621909919`, combined artifact ID `11059321610`, and the execution plan.
+  This is CI preparation evidence only, not a public release.
+- [x] Independently inspect the downloaded validation artifact: verify its
+  embedded `SHA256SUMS.txt`, VST3/source archive contents, build identity and
+  record inner asset hashes. Results and hashes are in
+  `docs/validation/VALIDATION_20260929_STABLE_INSTALLER_ACCEPTANCE.md`.
+- [x] Owner reports the Windows and macOS installers and installed VST3s work
+  in REAPER; macOS installation required per-app Gatekeeper “Open Anyway”.
+  Exact installed package hashes, host versions and the broader test matrix
+  were not supplied.
 - [ ] Separate user authorization for any public release/tag/assets.
 
 ## Repository policy
