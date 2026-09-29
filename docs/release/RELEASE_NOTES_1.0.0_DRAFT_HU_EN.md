@@ -118,10 +118,10 @@ kockázatok pontos feltüntetése még hátravan.
 | macOS REAPER | A tulajdonos macOS 26.7-en végzett tesztről számolt be; a pontos build/hash és a teljes mátrix nincs rögzítve |
 | #247 Windows VST3 telepítése | A tulajdonos a `fbea5ea` forrásból készült csomag telepítését jelezte; megadott VST3 SHA-256: `1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`; ez telepítési adat, új funkcionális teszteredményt nem közölt |
 | A teljes host/audio/GUI mátrix | NEM FUTOTT / TULAJDONOSI DÖNTÉS ALAPJÁN HALASZTVA; a konkrét tételek és korlátok a jegyzékben |
-| Stabil `1.0.0` Windows/macOS telepítő build és checksum ellenőrzés | PASS — `36621909919` workflow a `d79ed5214d82caf70e3941e5a620bab137d3f9ca` main SHA-n; artifact `11059321610`. A tulajdonos szerint mindkét telepítő és REAPER plugin működik; független archívumvizsgálat még hátra van. |
+| Stabil `1.0.0` Windows/macOS telepítő build és checksum ellenőrzés | PASS — `36621909919` workflow a `d79ed5214d82caf70e3941e5a620bab137d3f9ca` main SHA-n; artifact `11059321610`. A tulajdonos szerint mindkét telepítő és REAPER plugin működik; az artifact független tartalmi és checksum-ellenőrzése PASS. A preparation státusz miatt még nem publikálható változatlanul. |
 | Stabil Windows/macOS telepítő és REAPER-próba | TULAJDONOSI JELENTÉS: mindkét telepítő és plugin működik REAPER-ben; macOS-en per-app Open Anyway kellett. Pontos telepített checksumok és host-verziók nincsenek megadva. |
-| Belső archívumok/hash-ek független vizsgálata | MÉG HÁTRA VAN; az Actions külső artefaktumhash nem a belső ZIP hash-e |
-| Publikálás | MÉG NINCS KÖZZÉTÉVE. Az ellenőrző artifact előkészítő csomag; a független tartalmi vizsgálat és a végleges release csomag újragenerálása hátra van. |
+| Belső archívumok/hash-ek független vizsgálata | PASS az `11059321610` validációs artifacton: külső hash, mind a hét belső checksum, 5082 fájlos forrásmanifest/dependency pin-ek és VST3 payload ellenőrizve; a végleges release-metaadat/checksum frissítése még hátravan. |
+| Publikálás | MÉG NINCS KÖZZÉTÉVE. Az ellenőrző artifact előkészítő státuszú; végleges kiadási metaadatokkal és újraellenőrzött manifesttel kell elkészíteni a publikálható asseteket, majd a release előtti review következik. |
 
 Ez a dokumentum kiadási jegyzet-tervezet marad a stabil csomag véglegesítése,
 a hátralévő kockázatok áttekintése és a külön publikálási jóváhagyás előtt.
