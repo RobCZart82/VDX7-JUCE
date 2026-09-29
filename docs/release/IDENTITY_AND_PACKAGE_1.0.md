@@ -56,7 +56,7 @@ matrix was not run and is deferred by owner decision; see the current
 ## Package review and remaining blockers
 
 The candidate and stable-package workflows do not publish tags or Releases.
-The exact stable workflow completed successfully on the main SHA above and
+The exact stable workflow completed successfully on the exact product SHA above and
 produced Windows/macOS VST3 artifacts plus corresponding source ZIPs, build
 identity and embedded checksum manifests. These remain Actions test artifacts,
 not stable release assets. Their independent content review is still pending;
