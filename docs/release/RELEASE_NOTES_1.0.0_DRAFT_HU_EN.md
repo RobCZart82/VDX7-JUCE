@@ -1,23 +1,8 @@
 # VDX7 Mk1. 1.0.0 — draft release notes and test matrix
 
-**DRAFT — not an accepted release and not publication authorization.**
-Test-only RC1 has been built from an exact SHA and passed automated CI. The
-owner has completed focused cross-platform REAPER, listening-quality, and
-five-instance/project-reopen checks. Broader host/audio/GUI matrix cells remain
-not run or deferred by the owner's decision to close exploratory testing; they
-are not implied passes. Do not turn owner reports into CI results.
+**DRAFT — not final public release assets.** The exact stable product source is main commit `d79ed5214d82caf70e3941e5a620bab137d3f9ca`. The owner reports successful installation and REAPER use of the Windows x64 installer and macOS Universal package; the owner reports the plugin works and sounds good. The macOS installation required the per-app Gatekeeper “Open Anyway” action because the package is unsigned/not notarized. This is owner-reported acceptance, not a full host/audio/GUI matrix; unrun/deferred checks remain explicit below.
 
-Preparation checkpoint (2026-09-29): stable package workflow
-[`36484917908`](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36484917908)
-passed for main SHA `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` on Windows x64
-and macOS Universal. Matching source archives, `BUILD-INFO.txt` and embedded
-SHA-256 manifests were generated. The owner reports that these exact Windows and macOS Actions packages work.
-This is owner-reported runtime acceptance; installed package hashes,
-host/version details and the full test matrix were not supplied. Independent
-artifact-content and embedded-checksum inspection remains pending. RC1 results
-remain a separate evidence record. No stable GitHub
-Release, tag, or publication approval exists; prior public releases are
-historical pre-beta versions.
+The non-publishing installer workflow [36621909919](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36621909919) passed on that exact source SHA. Windows/macOS build, ROM-free tests, platform packaging checks and combined SHA-256 verification passed. Combined validation artifact ID `11059321610`; outer ZIP SHA-256 `65d3ac7195a00f7d3040816cbbd257ea247f0cb65d487c6823cc8c02675712a3`. This artifact is not a public Release: BUILD-INFO labels it as not approved for publication. Independent content inspection and final release copies of BUILD-INFO/checksum files remain pending. AU is not part of 1.0.0 distribution.
 
 ## English
 
