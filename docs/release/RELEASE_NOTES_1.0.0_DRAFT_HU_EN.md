@@ -52,10 +52,10 @@ and publication are not yet approved or published.
 | macOS REAPER | Owner reported testing on macOS 26.7; exact tested build/hash and complete matrix not recorded |
 | Windows VST3 build #247 installation | Owner reports installed artifact from source `fbea5ea`; reported VST3 SHA-256 `1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`; installation only, no new functional result stated |
 | Remaining broad host/audio/GUI matrix | NOT RUN / DEFERRED by owner's decision to wind down open-ended testing; see checklist for specific cells and limits |
-| Stable `1.0.0` package build and embedded checksum-manifest generation | PASS in workflow `36484917908` on main SHA `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec`; temporary Windows/macOS artifacts created |
-| Exact stable Windows/macOS Actions packages | OWNER REPORT: both work; exact installed package hashes, host/version details and test matrix were not supplied |
+| Stable `1.0.0` Windows/macOS installer build and checksum verification | PASS — workflow `36621909919` on main SHA `d79ed5214d82caf70e3941e5a620bab137d3f9ca`; artifact `11059321610`. Owner reports both installers and REAPER plugins work; independent archive review remains pending. |
+| Exact stable Windows/macOS installer and REAPER test | OWNER REPORT: both platforms install and work in REAPER; macOS Gatekeeper required per-app Open Anyway. Exact installed checksums and host versions were not supplied. |
 | Independent inner-archive/hash review | NOT YET DONE; Actions artifact metadata digests are recorded in execution plan but are not inner ZIP hashes |
-| Publication | NOT AUTHORIZED / NOT PUBLISHED |
+| Publication | NOT PUBLISHED. Validation artifact remains preparation-only; independent content review and final release asset regeneration remain pending. |
 
 ## Magyar
 
@@ -115,10 +115,10 @@ továbbra sincs; a korábbi nyilvános kiadások történeti pre-beta verziók.
 | macOS REAPER | A tulajdonos macOS 26.7-en végzett tesztről számolt be; a pontos build/hash és a teljes mátrix nincs rögzítve |
 | #247 Windows VST3 telepítése | A tulajdonos a `fbea5ea` forrásból készült csomag telepítését jelezte; megadott VST3 SHA-256: `1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`; ez telepítési adat, új funkcionális teszteredményt nem közölt |
 | A teljes host/audio/GUI mátrix | NEM FUTOTT / TULAJDONOSI DÖNTÉS ALAPJÁN HALASZTVA; a konkrét tételek és korlátok a jegyzékben |
-| Stabil `1.0.0` csomag buildje és beágyazott manifestjei | PASS a `36484917908` workflow-ban, `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` main SHA-n; ideiglenes Windows/macOS artefaktumok létrejöttek |
-| Stabil Windows/macOS Actions-csomag | TULAJDONOSI JELENTÉS: mindkettő működik; telepített csomaghash, host/verzió és részletes tesztmátrix nincs megadva |
+| Stabil `1.0.0` Windows/macOS telepítő build és checksum ellenőrzés | PASS — `36621909919` workflow a `d79ed5214d82caf70e3941e5a620bab137d3f9ca` main SHA-n; artifact `11059321610`. A tulajdonos szerint mindkét telepítő és REAPER plugin működik; független archívumvizsgálat még hátra van. |
+| Stabil Windows/macOS telepítő és REAPER-próba | TULAJDONOSI JELENTÉS: mindkét telepítő és plugin működik REAPER-ben; macOS-en per-app Open Anyway kellett. Pontos telepített checksumok és host-verziók nincsenek megadva. |
 | Belső archívumok/hash-ek független vizsgálata | MÉG HÁTRA VAN; az Actions külső artefaktumhash nem a belső ZIP hash-e |
-| Publikálás | NINCS JÓVÁHAGYVA / NINCS KÖZZÉTÉVE |
+| Publikálás | MÉG NINCS KÖZZÉTÉVE. Az ellenőrző artifact előkészítő csomag; a független tartalmi vizsgálat és a végleges release csomag újragenerálása hátra van. |
 
 Ez a dokumentum kiadási jegyzet-tervezet marad a stabil csomag véglegesítése,
 a hátralévő kockázatok áttekintése és a külön publikálási jóváhagyás előtt.
