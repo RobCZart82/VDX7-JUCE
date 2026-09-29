@@ -41,10 +41,17 @@ jobs:
         shell: bash
         env:
           SOURCE_COMMIT: ${{ inputs.source_commit }}
+          ACCEPTED_FOR_PUBLICATION: ${{ inputs.accepted_for_publication }}
         run: |
           [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
           git merge-base --is-ancestor "$SOURCE_COMMIT" origin/main
+          if [[ "$ACCEPTED_FOR_PUBLICATION" == "true" ]]; then
+            grep -q -- '--release-accepted' scripts/package_source.py || {
+              echo "Accepted publication metadata requires a source commit containing the accepted release packager."
+              exit 1
+            }
+          fi
 
       - name: Configure stable macOS Universal build
         if: runner.os == 'macOS'
