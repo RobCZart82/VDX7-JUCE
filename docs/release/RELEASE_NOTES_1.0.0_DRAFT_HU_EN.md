@@ -1,23 +1,8 @@
 # VDX7 Mk1. 1.0.0 — draft release notes and test matrix
 
-**DRAFT — not an accepted release and not publication authorization.**
-Test-only RC1 has been built from an exact SHA and passed automated CI. The
-owner has completed focused cross-platform REAPER, listening-quality, and
-five-instance/project-reopen checks. Broader host/audio/GUI matrix cells remain
-not run or deferred by the owner's decision to close exploratory testing; they
-are not implied passes. Do not turn owner reports into CI results.
+**DRAFT — not final public release assets.** The exact stable product source is main commit `d79ed5214d82caf70e3941e5a620bab137d3f9ca`. The owner reports successful installation and REAPER use of the Windows x64 installer and macOS Universal package; the owner reports the plugin works and sounds good. The macOS installation required the per-app Gatekeeper “Open Anyway” action because the package is unsigned/not notarized. This is owner-reported acceptance, not a full host/audio/GUI matrix; unrun/deferred checks remain explicit below.
 
-Preparation checkpoint (2026-09-29): stable package workflow
-[`36484917908`](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36484917908)
-passed for main SHA `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` on Windows x64
-and macOS Universal. Matching source archives, `BUILD-INFO.txt` and embedded
-SHA-256 manifests were generated. The owner reports that these exact Windows and macOS Actions packages work.
-This is owner-reported runtime acceptance; installed package hashes,
-host/version details and the full test matrix were not supplied. Independent
-artifact-content and embedded-checksum inspection remains pending. RC1 results
-remain a separate evidence record. No stable GitHub
-Release, tag, or publication approval exists; prior public releases are
-historical pre-beta versions.
+The non-publishing installer workflow [36621909919](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36621909919) passed on that exact source SHA. Windows/macOS build, ROM-free tests, platform packaging checks and combined SHA-256 verification passed. Combined validation artifact ID `11059321610`; outer ZIP SHA-256 `65d3ac7195a00f7d3040816cbbd257ea247f0cb65d487c6823cc8c02675712a3`. This artifact is not a public Release: BUILD-INFO labels it as not approved for publication. Independent review of this validation artifact is complete: all embedded hashes and the 5,082-file source manifest verify; see the detailed acceptance record. Final release BUILD-INFO/source status and checksum files remain pending. AU is not part of 1.0.0 distribution.
 
 ## English
 
@@ -67,10 +52,10 @@ and publication are not yet approved or published.
 | macOS REAPER | Owner reported testing on macOS 26.7; exact tested build/hash and complete matrix not recorded |
 | Windows VST3 build #247 installation | Owner reports installed artifact from source `fbea5ea`; reported VST3 SHA-256 `1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`; installation only, no new functional result stated |
 | Remaining broad host/audio/GUI matrix | NOT RUN / DEFERRED by owner's decision to wind down open-ended testing; see checklist for specific cells and limits |
-| Stable `1.0.0` package build and embedded checksum-manifest generation | PASS in workflow `36484917908` on main SHA `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec`; temporary Windows/macOS artifacts created |
-| Exact stable Windows/macOS Actions packages | OWNER REPORT: both work; exact installed package hashes, host/version details and test matrix were not supplied |
-| Independent inner-archive/hash review | NOT YET DONE; Actions artifact metadata digests are recorded in execution plan but are not inner ZIP hashes |
-| Publication | NOT AUTHORIZED / NOT PUBLISHED |
+| Stable `1.0.0` Windows/macOS installer build and checksum verification | PASS — workflow `36621909919` on main SHA `d79ed5214d82caf70e3941e5a620bab137d3f9ca`; artifact `11059321610`. Owner reports both installers and REAPER plugins work; independent content review passed for the validation artifact; its prep-only status still prevents direct publication. |
+| Exact stable Windows/macOS installer and REAPER test | OWNER REPORT: both platforms install and work in REAPER; macOS Gatekeeper required per-app Open Anyway. Exact installed checksums and host versions were not supplied. |
+| Independent inner-archive/hash review | PASS for validation artifact `11059321610`: outer digest, all seven inner sums, source manifest (5,082 files), dependencies and VST3 payload checks verified; final release metadata/manifest still pending. |
+| Publication | NOT PUBLISHED. Validation artifact remains preparation-only; independent content review and final release asset regeneration remain pending. |
 
 ## Magyar
 
@@ -79,15 +64,18 @@ emulációs magjára és a JUCE-ra építve. Az 1.0.0 kiadást a tulajdonos ált
 jóváhagyott GUI-val és implementációval készítjük elő. A stabil kiadási
 azonosság, végleges csomagok és publikálás még nincs jóváhagyva vagy közzétéve.
 
-Előkészítési állapot (2026-09-29): a stabil csomagoló workflow
-(`36484917908`) sikeresen lefutott a `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec`
-termék-SHA-n Windows x64 és macOS Universal platformra. A tulajdonos jelzése
-szerint mindkét pontos Actions-csomag működik. Ez tulajdonosi futtatási
-elfogadás; a telepített csomagok hash-e, host/verzió és részletes tesztmátrix
-nincs megadva. A belső archívumok és checksum-manifestek független ellenőrzése
-még hátravan. A jelenlegi main dokumentációs utófrissítés, nem változtat a
-csomagolt termékforráson. Stabil GitHub Release, tag és publikálási jóváhagyás
-továbbra sincs; a korábbi nyilvános kiadások történeti pre-beta verziók.
+Előkészítési állapot (2026-09-29): a nem publikáló, stabil telepítő workflow
+(`36621909919`) sikeresen lefutott a `d79ed5214d82caf70e3941e5a620bab137d3f9ca`
+main termék-SHA-n Windows x64 és macOS Universal platformra. A tulajdonos
+mindkét telepítő és a REAPER-ben futó plugin működését megerősítette; macOS-en
+az aláíratlan csomag miatt per-app Gatekeeper “Open Anyway” kellett. Ez
+tulajdonosi valós gépes tesztjelentés, nem teljes host/audio/GUI tesztmátrix.
+Az ellenőrző artifact független vizsgálata PASS: a külső hash, mind a hét belső
+checksum, az 5082 fájlos forrásmanifest és a plugin-payload vizsgálata egyezett.
+Az artifact azonban továbbra is előkészítő státuszú, a BUILD-INFO és a
+SOURCE_MANIFEST nem engedi a változatlan publikálást. A végleges kiadási
+metaadatok és checksum-manifest újragenerálása, valamint a maradék tesztek és
+kockázatok pontos feltüntetése még hátravan.
 
 ### Főbb jellemzők
 
@@ -130,10 +118,10 @@ továbbra sincs; a korábbi nyilvános kiadások történeti pre-beta verziók.
 | macOS REAPER | A tulajdonos macOS 26.7-en végzett tesztről számolt be; a pontos build/hash és a teljes mátrix nincs rögzítve |
 | #247 Windows VST3 telepítése | A tulajdonos a `fbea5ea` forrásból készült csomag telepítését jelezte; megadott VST3 SHA-256: `1602ea61092728538498303d1eb60f090bbdd718a0c43f626722dafddf45b1f6`; ez telepítési adat, új funkcionális teszteredményt nem közölt |
 | A teljes host/audio/GUI mátrix | NEM FUTOTT / TULAJDONOSI DÖNTÉS ALAPJÁN HALASZTVA; a konkrét tételek és korlátok a jegyzékben |
-| Stabil `1.0.0` csomag buildje és beágyazott manifestjei | PASS a `36484917908` workflow-ban, `f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec` main SHA-n; ideiglenes Windows/macOS artefaktumok létrejöttek |
-| Stabil Windows/macOS Actions-csomag | TULAJDONOSI JELENTÉS: mindkettő működik; telepített csomaghash, host/verzió és részletes tesztmátrix nincs megadva |
-| Belső archívumok/hash-ek független vizsgálata | MÉG HÁTRA VAN; az Actions külső artefaktumhash nem a belső ZIP hash-e |
-| Publikálás | NINCS JÓVÁHAGYVA / NINCS KÖZZÉTÉVE |
+| Stabil `1.0.0` Windows/macOS telepítő build és checksum ellenőrzés | PASS — `36621909919` workflow a `d79ed5214d82caf70e3941e5a620bab137d3f9ca` main SHA-n; artifact `11059321610`. A tulajdonos szerint mindkét telepítő és REAPER plugin működik; az artifact független tartalmi és checksum-ellenőrzése PASS. A preparation státusz miatt még nem publikálható változatlanul. |
+| Stabil Windows/macOS telepítő és REAPER-próba | TULAJDONOSI JELENTÉS: mindkét telepítő és plugin működik REAPER-ben; macOS-en per-app Open Anyway kellett. Pontos telepített checksumok és host-verziók nincsenek megadva. |
+| Belső archívumok/hash-ek független vizsgálata | PASS az `11059321610` validációs artifacton: külső hash, mind a hét belső checksum, 5082 fájlos forrásmanifest/dependency pin-ek és VST3 payload ellenőrizve; a végleges release-metaadat/checksum frissítése még hátravan. |
+| Publikálás | MÉG NINCS KÖZZÉTÉVE. Az ellenőrző artifact előkészítő státuszú; végleges kiadási metaadatokkal és újraellenőrzött manifesttel kell elkészíteni a publikálható asseteket, majd a release előtti review következik. |
 
 Ez a dokumentum kiadási jegyzet-tervezet marad a stabil csomag véglegesítése,
 a hátralévő kockázatok áttekintése és a külön publikálási jóváhagyás előtt.

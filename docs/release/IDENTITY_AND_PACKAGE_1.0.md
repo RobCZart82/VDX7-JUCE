@@ -1,17 +1,8 @@
 # 1.0 build identity and package boundaries
 
-Preparation checkpoint (2026-09-29): current main is
-`60ee843aaefb3033e36dbbd12c45a2944a6a1723` after documentation-only PR #99;
-the stable packages were built from product SHA
-`f7a1248b2cfff0b6fb159c189ca6a5b2cff766ec`. The frozen RC1 product source is
-`aeb4d5ee8439ba6a7346bfe7caba54ad90b21684`. Non-publishing stable package
-workflow `36484917908` passed on the exact product SHA above for Windows x64 and macOS
-Universal VST3 and generated matching source archives, build identity and
-SHA-256 manifests. Artifact IDs and outer Actions ZIP digests are recorded in
-the [execution plan](EXECUTION_PLAN_1.0.md); they are not the inner package
-checksums. The artifacts remain test downloads, not a published Release or
-approval to publish. This is a preparation record, not approval to rename
-installed plugins or change their identity.
+Preparation checkpoint (2026-09-29): main is `d79ed5214d82caf70e3941e5a620bab137d3f9ca`, after PR #101. Non-publishing workflow [36621909919](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36621909919) passed on this exact source SHA for Windows x64 and macOS Universal VST3. Both builds and ROM-free tests, platform package checks, and combined SHA-256 verification passed. The owner reports that the Windows/macOS installers and REAPER plugins work; the macOS package installed after the per-app Gatekeeper “Open Anyway” flow. This is owner-reported evidence; exact installed hashes, host versions and the full test matrix were not supplied. Full record: [stable installer acceptance](../validation/VALIDATION_20260929_STABLE_INSTALLER_ACCEPTANCE.md).
+
+The combined Actions artifact (ID `11059321610`, outer ZIP digest `65d3ac7195a00f7d3040816cbbd257ea247f0cb65d487c6823cc8c02675712a3`) is validation-only. Its BUILD-INFO files explicitly say not accepted/approved for publication. Do not publish unchanged. Independent review of validation artifact `11059321610` is complete: all seven inner hashes, the 5,082-file corresponding-source manifest/dependency pins, VST3 architecture/signature/payload and no-firmware/local-secret/path conditions passed. See [the detailed record](../validation/VALIDATION_20260929_STABLE_INSTALLER_ACCEPTANCE.md). Accurate final BUILD-INFO/source acceptance metadata and regenerated manifest, final HU/EN notes and review of deferred-test disclosures remain outstanding. Windows is unsigned; macOS package is unsigned and plugin bundle ad-hoc signed only. No stable tag or Release was created by this workflow.
 
 ## Identity (F17)
 
@@ -25,14 +16,16 @@ installed plugins or change their identity.
   label with stable mode, or supplying a malformed label, is rejected.
 - A stable package uses `VDX7_RELEASE_BUILD=ON` with an empty candidate label
   and displays `1.0.0`. The exact-candidate workflow is non-publishing and
-  names artifacts with the RC label, platform and full source SHA. The separate
-  non-publishing stable preparation workflow was merged in PR #98 and passed
-  as run `36484917908` on the exact product SHA above. It generated Windows x64
-  and macOS Universal packages and corresponding source/checksum material; it
-  does not publish a release. The outer artifact hashes are not the inner
-  package checksums. Record SHA, build options, platform/architecture,
-  dependency revisions and package checksums with each test; never describe a
-  dev binary as an RC or stable build.
+  names artifacts with the RC label, platform and full source SHA. The
+  non-publishing stable installer workflow run `36621909919` passed on exact
+  product SHA `d79ed5214d82caf70e3941e5a620bab137d3f9ca` (current main after PR
+  #101), producing Windows x64 and macOS Universal packages plus corresponding
+  source/checksum material. It does not publish a release. The independently
+  inspected validation artifact and its inner hashes are recorded in the
+  acceptance report; its preparation-only BUILD-INFO and source manifest are
+  not suitable for direct publication. Record SHA, build options,
+  platform/architecture, dependency revisions and package checksums with each
+  test; never describe a dev binary as an RC or stable build.
 - Keep `org.vdx7.prototype`, manufacturer `VdxP`, plugin code `VdX7`, product
   `VDX7`, and all 148 parameter IDs/order compatible. The historical bundle ID
   is an identity, not permission to rename it during release polish.
@@ -59,7 +52,7 @@ The candidate and stable-package workflows do not publish tags or Releases.
 The exact stable workflow completed successfully on the exact product SHA above and
 produced Windows/macOS VST3 artifacts plus corresponding source ZIPs, build
 identity and embedded checksum manifests. These remain Actions test artifacts,
-not stable release assets. Their independent content review is still pending;
+not stable release assets. The latest validation artifact's independent content review is recorded in the acceptance report;
 verify archive contents, versions, dependency revisions, embedded SHA-256 sums
 and absence of ROMs, credentials, local paths, caches and unrelated files.
 See [source packaging](SOURCE_PACKAGING_1.0.md). The owner reports that the exact Windows and macOS stable Actions packages
@@ -95,10 +88,7 @@ macOS/Windows, and a five-instance project save/reopen success. The macOS
 installed binary hash matches its candidate artifact; Windows hash and some
 host/test details remain unrecorded. Preserve these as OWNER-REPORTED. The
 owner deferred the wider host/audio/GUI matrix; do not infer unrun cells passed.
-The stable packages are built, and the owner reports that the Windows and
-macOS Actions packages work. Their independent archive/content review and
-separate publication approval remain outstanding; package hashes and host/test
-details were not supplied.
+The owner reports that the Windows and macOS installer/REAPER tests work. Independent content review of validation artifact `11059321610` passed; it remains prep-only because BUILD-INFO and SOURCE_MANIFEST mark it unaccepted. Final release metadata/manifest regeneration and release review remain outstanding.
 
 On 2026-09-28, the owner additionally reported installing the Windows VST3 from
 **Build Windows VST3 and Standalone #247**, source commit
