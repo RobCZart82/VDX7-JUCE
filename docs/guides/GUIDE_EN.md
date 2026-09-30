@@ -2,10 +2,10 @@
 
 [Back to overview](../../README.md) · [Magyar útmutató](GUIDE_HU.md)
 
-This guide describes the current **1.0.0-dev** development package. The final
-release version and download are valid only after an actual GitHub Release is
-published; until then, Actions artifacts linked from the README are development
-builds.
+The [published 1.0.0 release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0)
+provides Windows x64 and macOS Universal VST3 installers/manual ZIPs. Main is
+now preparing 1.0.1; sections marked 1.0.1 development describe unreleased
+corrections. Actions artifacts remain development builds, not new stable releases.
 
 ## 1. Platform and package
 

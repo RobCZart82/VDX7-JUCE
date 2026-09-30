@@ -14,15 +14,15 @@ This is the single active work ledger; do not create competing roadmaps.
 
 | ID | Priority / evidence | Implementation and next acceptance |
 | --- | --- | --- |
-| AUDIT-20260930-A1/A2 | P1, reproduced pending-project edit loss and wrong-engine capture | This change rejects unsupported persistent operations until the matching ROM is loaded; preserves pending voice/operator edits and prioritizes recovery status. Local regression evidence: [boundary validation](../validation/VALIDATION_20260930_PENDING_BOUNDARY.md). Remote checks/merge and exact-1.0.1 acceptance remain separate gates. |
-| AUDIT-20260930-A3 | P1 packaging, published ZIP fails its bundled verifier | IMPLEMENTED: separately pinned bundled checker, unchanged product source, cross-version prep/accepted and negative controls. Ten packaging tests PASS; two real old-source/new-tooling ZIPs have identical hashes. See [verification record](../validation/VALIDATION_20260930_SOURCE_VERIFIER.md). New final-release acceptance remains open; existing 1.0.0 assets unchanged. |
+| AUDIT-20260930-A1/A2 | P1, reproduced pending-project edit loss and wrong-engine capture | MERGED [#104](https://github.com/RobCZart82/VDX7-JUCE/pull/104); required platform/sanitizer checks PASS and local 36/36 CTests PASS. Rejects unsupported operations, preserves edits and prioritizes recovery. [Boundary validation](../validation/VALIDATION_20260930_PENDING_BOUNDARY.md). Exact-1.0.1 acceptance remains separate. |
+| AUDIT-20260930-A3 | P1 packaging, published ZIP fails its bundled verifier | MERGED [#105](https://github.com/RobCZart82/VDX7-JUCE/pull/105); all PR checks PASS. Ten packaging tests, real extracted checker and offline Windows build/11 CTests PASS. [Verification record](../validation/VALIDATION_20260930_SOURCE_VERIFIER.md). Final-release acceptance remains open; existing 1.0.0 assets unchanged. |
 | AUDIT-20260930-A4 | P2 provenance guard gap, not unauthorized publication | OPEN: bind accepted mode to an explicitly reviewed product/packager SHA pair and authorized workflow ref; keep read-only publication permissions. |
 | AUDIT-20260930-A5 | P2 installer layout; no reproduced host scan failure | OPEN: assess separate uninstall directory with tested 1.0.0 upgrade/uninstall migration; preserve AppId and USER data. Do not move the directory without migration evidence. |
 | AUDIT-20260930-A6 | P2 toolchain provenance | OPEN: pin Inno; record compiler, SDK, CMake, runner and dependency versions. Deterministic source archives do not imply bit-identical installers. |
-| AUDIT-20260930-A7 | P2 stale release evidence/docs | PARTIAL: active plan records publication; independently verify all published/accepted assets and update README, HU/EN guides and final validation, not merely the earlier prep artifact. |
-| AUDIT-20260930-A8 | P3 test-only C4805 | OPEN: type-correct test expression and Windows build verification. |
-| AUDIT-20260930-A9 | P2 missing sanitizer coverage, not a DSP defect | OPEN: instrument/run resampler tests. Python packaging checks remain a separate CI result, not ASan coverage. |
-| AUDIT-20260930-A10 | P3 descriptive prototype metadata | OPEN: clean description only; preserve bundle ID, plugin codes and parameter identity. |
+| AUDIT-20260930-A7 | P2 stale release evidence/docs | PARTIAL: plan, README and HU/EN guides distinguish published 1.0.0 from corrective development; final #104/#105 validation recorded. Full published/accepted binary asset reconciliation remains OPEN, distinct from earlier prep review. |
+| AUDIT-20260930-A8 | P3 test-only C4805 | IMPLEMENTED: explicitly convert the boolean carry flag before integer bitwise packing; fresh Windows rebuild without C4805 and focused trace regression PASS. |
+| AUDIT-20260930-A9 | P2 missing sanitizer coverage, not a DSP defect | IMPLEMENTED: resampler added to both instrumented build targets and CTest filter. Actual ASan/UBSan run is a required PR gate; Python packaging remains separate. |
+| AUDIT-20260930-A10 | P3 descriptive prototype metadata | IMPLEMENTED: description says instrument; bundle ID, plugin codes and parameter identity unchanged. Platform builds are required PR gates. |
 
 Work order: A1/A2 -> A3 -> A4/A6/A7 -> proportionate A5/A8/A9/A10 work
 -> frozen 1.0.1 build/acceptance. Each PR carries its validation and updates

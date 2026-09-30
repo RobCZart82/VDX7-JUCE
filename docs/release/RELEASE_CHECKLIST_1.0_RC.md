@@ -6,8 +6,8 @@
 Use [the active 1.0.1 plan](EXECUTION_PLAN_1.0.md) for A1–A10 dispositions.
 Do not carry earlier PASS results forward as exact-1.0.1 evidence.
 
-- [ ] Pending-project A1/A2 regression and required remote PR checks accepted.
-- [ ] A3 source archive verifies with its own documented bundled checker.
+- [x] Pending-project A1/A2 local 36/36 regressions and required remote PR checks accepted; #104 merged.
+- [x] A3 test source archive verifies with its documented bundled checker, offline build and 11/11 tests; #105 merged. Final 1.0.1 artifact remains a separate gate.
 - [ ] Published/next-candidate asset provenance and HU/EN docs reconciled.
 - [ ] Exact 1.0.1 source/platform tests, payload and installer upgrade checked.
 - [ ] Remaining host tests explicitly executed or deferred, never assumed PASS.

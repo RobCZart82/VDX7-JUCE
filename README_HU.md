@@ -8,9 +8,17 @@ Eredeti firmware, hardveres ihletésű felület és közvetlen hangszínszerkesz
 
 [English](README.md)
 
-> **1.0.0-dev — fejlesztői előzetes.** A GUI kinézete jóváhagyott;
-> a teljes kiadási ellenőrzés még folyamatban van. Saját, jogszerűen
-> rendelkezésre álló kompatibilis ROM szükséges. Yamaha firmware és gyári hangadat nincs mellékelve.
+> **[A stabil 1.0.0 letölthető](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0).**
+> Ez a main ág az **1.0.1 javítókiadás fejlesztését** tartalmazza, nem kiadott
+> 1.0.1-et; a fejlesztői csomagok megkülönböztető jelölése megmarad.
+> Saját, jogszerűen rendelkezésre álló kompatibilis ROM szükséges.
+> Yamaha firmware és gyári hangadat nincs mellékelve.
+
+**Az 1.0.0 ismert korlátja:** ha egy visszatöltött projekt hiányzó/eltérő ROM-ot
+jelez, előbb a megfelelő ROM-ot töltsd be, csak utána importálj/exportálj vagy
+válts bankot/programot/performance-beállítást. A projektvédelmi és forráscsomag-
+ellenőrzési javítás a következő kiadáshoz már beolvadt, az 1.0.0 telepített
+példányait nem frissíti automatikusan. [Aktív terv](docs/release/EXECUTION_PLAN_1.0.md).
 
 ![VDX7 Mk1. EDIT — operátorok, burkológörbék és algoritmusábra](docs/screenshots/vdx7-edit.png)
 

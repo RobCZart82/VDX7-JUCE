@@ -2,9 +2,10 @@
 
 [Vissza az áttekintéshez](../../README_HU.md) · [English guide](GUIDE_EN.md)
 
-Ez az útmutató az aktuális **1.0.0-dev** fejlesztői csomaghoz készült. A végleges
-kiadás letöltése és verziója csak a tényleges GitHub Release megjelenése után lesz
-érvényes; addig a README-ben jelzett Actions artifactok fejlesztői csomagok.
+A [publikált 1.0.0 kiadás](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0)
+Windows x64 és macOS Universal VST3 telepítőket/kézi ZIP-eket tartalmaz. A main
+már az 1.0.1-et készíti elő; az „1.0.1 fejlesztés” jelölésű részek még kiadatlan
+javításokat írnak le. Az Actions artifactok továbbra is fejlesztői csomagok.
 
 ## 1. Platform és csomag
 

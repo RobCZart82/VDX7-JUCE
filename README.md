@@ -8,9 +8,17 @@ Original firmware, a hardware-inspired interface and hands-on voice editing.
 
 [Magyar](README_HU.md)
 
-> **1.0.0-dev — development preview.** The GUI design is owner-approved;
-> full release acceptance is still in progress. A compatible, legally obtained
-> user-supplied ROM is required. No Yamaha firmware or factory voice data is included.
+> **[Stable 1.0.0 downloads](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0)**
+> are available. This main branch contains **1.0.1 corrective development**, not
+> a published 1.0.1 release; development builds remain visibly marked.
+> A legally obtained compatible user-supplied ROM is required. No Yamaha firmware
+> or factory voice data is included.
+
+**1.0.0 known limitation:** when a restored project reports a mismatched/missing
+ROM, load its matching ROM before import/export or bank/program/performance
+changes. The pending-project protection and source-package verifier corrections
+are merged for the next release, not retroactively installed in 1.0.0.
+See the [active corrective plan](docs/release/EXECUTION_PLAN_1.0.md).
 
 ![VDX7 Mk1. EDIT — operator controls, envelopes and algorithm display](docs/screenshots/vdx7-edit.png)
 

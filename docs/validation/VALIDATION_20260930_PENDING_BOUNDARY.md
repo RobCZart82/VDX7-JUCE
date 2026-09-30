@@ -37,11 +37,15 @@ identity without changing firmware instructions. No ROM is checked in.
 - FAIL (environment): complete ten-test Python invocation hits WinError 1314
   when creating a test symlink. This is not a product assertion failure;
   the symlink check is NOT RUN locally and must pass in remote CI.
-- Full local CTest run excluding the interactive `vdx7_processor` test:
-  IN PROGRESS when this record was prepared; update with the final result.
+- PASS: full local CTest run excluding only interactive `vdx7_processor`:
+  **36/36**, 1207.85 seconds, including the eight new boundary combinations.
 - NOT RUN: REAPER, interactive SAVE AS, macOS local runtime, concurrent
   public state-install stress, final 1.0.1 binaries and installer upgrade.
-- Remote PR checks and merge: pending; do not infer PASS from local results.
+- PASS: Windows, macOS and ASan/UBSan checks on PR head
+  `f79dfe7147c1416563954c0efda32856c026407e`; the remote Python checksum suite
+  also passed. [PR #104](https://github.com/RobCZart82/VDX7-JUCE/pull/104)
+  merged as `65e8c4cf7d13a241f39f00a761d8ebfcd6f32c5b` after verification.
+  Post-merge CI and exact-1.0.1 acceptance are separate evidence.
 
 Commands: configure with `VDX7_ENABLE_ROM_TESTS=ON` and an existing private
 48 KB v1.8 fixture; build `vdx7_all_tests VDX7_VST3`; run

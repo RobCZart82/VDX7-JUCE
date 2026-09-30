@@ -142,7 +142,7 @@ juce_add_plugin(VDX7
     PLUGIN_CODE VdX7
     FORMATS ${VDX7_FORMATS}
     PRODUCT_NAME "VDX7"
-    DESCRIPTION "Yamaha DX7 Mk I VDX7 hardware-emulation prototype"
+    DESCRIPTION "Yamaha DX7 Mk I VDX7 hardware-emulation instrument"
     IS_SYNTH TRUE
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT FALSE

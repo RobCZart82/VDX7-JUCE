@@ -39,7 +39,7 @@ struct VDX7MonoTrace
         const bool slot = d.IX >= 0x20b0 && d.IX < 0x20d0 && (d.IX & 1) == 0;
         return {d.cycle, d.PC, d.IX, slot ? word(d, d.IX) : uint16_t(0xffff),
                 d.A, d.B, uint8_t((d.H << 5) | (d.I << 4) | (d.N << 3)
-                                  | (d.Z << 2) | (d.V << 1) | d.C),
+                                  | (d.Z << 2) | (d.V << 1) | int(d.C)),
                 d.memory[0x81], d.memory[0x8e]};
     }
 
