@@ -253,6 +253,119 @@ struct VDX7RegressionAccess
         p.processBlock(audio, events);
         require(!p.engine_.hasHeldMidiNotes(), "note releases after deferred CC32 control");
     }
+    static void checkMidiPanicAndControllerReset(VDX7AudioProcessor& p)
+    {
+        p.prepareToPlay(48000, 64);
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        auto send = [&](const juce::MidiMessage& message)
+        {
+            midi.clear();
+            midi.addEvent(message, 0);
+            p.processBlock(audio, midi);
+        };
+        auto pump = [&](int blocks)
+        {
+            float peak = 0.0f;
+            for (int block = 0; block < blocks; ++block)
+            {
+                midi.clear();
+                p.processBlock(audio, midi);
+                peak = std::max(peak, audio.getMagnitude(0, audio.getNumSamples()));
+            }
+            return peak;
+        };
+
+        auto& engine = p.engine_;
+        std::vector<uint8_t> persistentBefore, persistentAfter;
+        require(engine.saveRam(persistentBefore), "capture persistent state before MIDI panic");
+        send(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)));
+        require(pump(256) > 1.0e-5f && engine.hasHeldMidiNotes(),
+                "All Sound Off fixture has an audible held note");
+        auto& serial = engine.dx7_.midiSerialRx;
+        const auto overloadBeforePanic = engine.midiOverloadCount();
+        serial.writeIdx = (serial.readIdx + serial.size - 1) & (serial.size - 1);
+        send(juce::MidiMessage::controllerEvent(1, 120, 0));
+        require(engine.midiOverloadCount() == overloadBeforePanic,
+                "CC120 takes its hard-reset path even when the serial queue is full");
+        const float postPanicPeak = pump(12000);
+        int firmwareMidi = 0, firmwareHeld = 0, firmwareSustained = 0;
+        for (int voice = 0; voice < 16; ++voice)
+        {
+            firmwareMidi += (engine.dx7_.memory[0x2168 + voice] & 0x80) != 0;
+            firmwareHeld += (engine.dx7_.memory[0x20b1 + 2 * voice] & 2) != 0;
+            firmwareSustained += (engine.dx7_.memory[0x20b1 + 2 * voice] & 1) != 0;
+        }
+        require(postPanicPeak < 1.0e-5f && !engine.isHostResetInProgress()
+                && !engine.hasHeldMidiNotes() && firmwareMidi == 0
+                && firmwareHeld == 0 && firmwareSustained == 0,
+                "CC120 immediately mutes and retires all firmware voice ownership");
+        require(engine.saveRam(persistentAfter), "capture persistent state after MIDI panic");
+        require(persistentBefore.size() == persistentAfter.size()
+                && std::equal(persistentBefore.begin(), persistentBefore.begin() + 4096,
+                              persistentAfter.begin()),
+                "CC120 leaves packed voice bank unchanged");
+        for (const int address : {0x20a9, 0x20aa, 0x20ab, 0x2311, 0x2312, 0x2328,
+                                  0x2329, 0x232e, 0x2330, 0x2332, 0x2334,
+                                  0x2336, 0x2338, 0x233a, 0x233c, 0x257d})
+            require(persistentBefore[static_cast<std::size_t>(address - 0x1000)]
+                        == persistentAfter[static_cast<std::size_t>(address - 0x1000)],
+                    "CC120 leaves persistent PERFORMANCE settings unchanged");
+
+        // Preserve an ordered Note On after CC120 in the same callback. It is
+        // replayed only after the muted firmware reset has completely drained.
+        send(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)));
+        midi.clear();
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 120, 0), 8);
+        midi.addEvent(juce::MidiMessage::noteOn(1, 62, juce::uint8(100)), 24);
+        p.processBlock(audio, midi);
+        require(engine.isHostResetInProgress() && p.deferredMidi_.active(),
+                "post-CC120 same-block MIDI enters the bounded deferred timeline");
+        int resetBlocks = 0;
+        while (engine.isHostResetInProgress() && resetBlocks < 1500)
+        {
+            midi.clear();
+            p.processBlock(audio, midi);
+            ++resetBlocks;
+        }
+        require(!engine.isHostResetInProgress(), "same-block panic firmware reset finishes");
+        midi.clear();
+        p.processBlock(audio, midi);
+        require(engine.activeMidiNotes_[62] != 0 && !engine.activeMidiNotes_[60],
+                "post-panic Note On is replayed after reset instead of being lost");
+        (void) pump(256);
+        send(juce::MidiMessage::noteOff(1, 62));
+        (void) pump(512);
+
+        send(juce::MidiMessage::controllerEvent(1, 11, 0));
+        send(juce::MidiMessage::controllerEvent(1, 1, 127));
+        send(juce::MidiMessage::controllerEvent(1, 64, 127));
+        send(juce::MidiMessage::pitchWheel(1, 16383));
+        send(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)));
+        send(juce::MidiMessage::noteOff(1, 60)); // Remains sustained until CC121.
+        send(juce::MidiMessage::noteOn(1, 62, juce::uint8(100)));
+        require(engine.activeMidiNotes_[62] != 0, "CC121 held-note fixture is active");
+        const auto overloadBeforeControllerReset = engine.midiOverloadCount();
+        const auto queueReadBeforeControllerReset = serial.readIdx;
+        serial.writeIdx = (serial.readIdx + serial.size - 1) & (serial.size - 1);
+        const auto fullWriteIdx = serial.writeIdx;
+        const uint8_t resetControllers[] {0xb0, 121, 0};
+        engine.handleMidi(resetControllers, 3);
+        require(engine.midiOverloadCount() == overloadBeforeControllerReset
+                && serial.readIdx == queueReadBeforeControllerReset
+                && serial.writeIdx == fullWriteIdx,
+                "CC121 resets controller state without reserving serial capacity");
+        serial.flush();
+        require(engine.midiExpression_ == 1.0f && !engine.sustainDown_
+                && engine.wheelIntent_[0] == 64 && engine.wheelIntent_[1] == 0,
+                "CC121 resets expression, sustain, pitch and modulation inputs");
+        require(engine.activeMidiNotes_[62] != 0,
+                "CC121 does not release a note that remains physically held");
+        require(pump(256) > 1.0e-5f, "CC121 restores expression for a held voice");
+        send(juce::MidiMessage::noteOff(1, 62));
+        (void) pump(512);
+        std::cout << "PASS: CC120 all-sound-off and CC121 controller reset preserve project settings\n";
+    }
     static void checkDeferredPartitionCapacity(VDX7AudioProcessor& p)
     {
         constexpr int eventCount = 257;
@@ -730,12 +843,21 @@ static void checkAudioPublication(const juce::File& romFile)
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
-    if (argc != 2) { std::cout << "SKIP: supply your own ROM path\n"; return 77; }
+    const bool midiResetOnly = argc == 3 && juce::String(argv[2]) == "--midi-reset-only";
+    if (argc != 2 && !midiResetOnly)
+    { std::cout << "SKIP: supply your own ROM path\n"; return 77; }
     try
     {
         juce::File romFile(juce::String::fromUTF8(argv[1]));
         juce::MemoryBlock rom;
         require(romFile.loadFileAsData(rom), "read local ROM");
+        if (midiResetOnly)
+        {
+            auto processor = std::make_unique<VDX7AudioProcessor>(false);
+            require(processor->loadRomFromFile(romFile), "load MIDI reset test ROM");
+            VDX7RegressionAccess::checkMidiPanicAndControllerReset(*processor);
+            return 0;
+        }
         checkPendingOperationBoundary(romFile);
         checkSettingsApplyAtomicity(romFile);
         checkAudioPublication(romFile);

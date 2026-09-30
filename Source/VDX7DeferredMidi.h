@@ -1,8 +1,10 @@
 #pragma once
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <type_traits>
 
 // Audio-owned delayed timeline. Input advances during contention; playback
 // advances only when rendering. Later MIDI joins the same shifted timeline.
@@ -48,14 +50,25 @@ public:
         if (panic_) { clear(); panic(); return; }
         const auto end = playbackTime_ + static_cast<uint64_t>(samples > 0 ? samples : 0);
         std::size_t consumed = 0, consumedBytes = 0;
+        bool continuePlayback = true;
         while (consumed < count_ && events_[consumed].time <= end)
         {
             const auto& e = events_[consumed++];
             const int position = e.time > playbackTime_ ? static_cast<int>(e.time - playbackTime_) : 0;
-            event(bytes_.data() + e.offset, e.size, position);
+            if constexpr (std::is_same_v<std::invoke_result_t<Event, const uint8_t*, std::size_t, int>, bool>)
+                continuePlayback = event(bytes_.data() + e.offset, e.size, position);
+            else
+                event(bytes_.data() + e.offset, e.size, position);
             consumedBytes = e.offset + e.size;
+            if (!continuePlayback) break;
         }
-        playbackTime_ = end;
+        // A stop (for example CC120 entering a multi-block reset) consumes the
+        // triggering event but leaves later events at their original offsets.
+        // Playback stays anchored at that event until the caller resumes it.
+        if (continuePlayback)
+            playbackTime_ = end;
+        else
+            playbackTime_ = std::max(playbackTime_, events_[consumed - 1].time);
         if (consumed != 0)
         {
             for (std::size_t i = consumed; i < count_; ++i)

@@ -183,7 +183,7 @@ cmake --build build-local --config Release --target vdx7_all_tests
 ctest --test-dir build-local -C Release --output-on-failure
 ```
 
-The current CMake configuration registers ten ROM-free CTest tests. The
+The current CMake configuration registers ROM-free CTest tests. The
 `vdx7_ci_checks` and `vdx7_all_tests` targets also compile the firmware-dependent
 integration runners and isolated MONO candidate experiment without executing
 them or needing a ROM. For the full local suite, configure with
@@ -257,18 +257,21 @@ same-value/ABA races. See [Q2 validation and limits](../validation/VALIDATION_PE
 
 This project uses [GNU AGPLv3](../../LICENSE.txt). The wrapper and original GUI resources are AGPL-3.0-only; the DX7 core retains GPL-3.0-or-later and its original notices. JUCE is used under AGPLv3. See [NOTICE.md](../../NOTICE.md) for the combined-work and third-party notices.
 
-The 1.0.0 release plan calls for a complete corresponding-source package beside
-the binary, including pinned JUCE and dx7Lib source, build scripts and license
-notices; that package is not a published download yet. This software comes
-without warranty. Firmware is excluded from the software license. Yamaha
-branding in descriptive text identifies compatibility, not endorsement; no
-Yamaha logo is included.
+The v1.0.0 stable release and its matching corresponding-source archive are
+published on the [GitHub Releases page](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0).
+The release includes macOS universal `.pkg` and manual ZIP, Windows x64 `.exe`
+and manual ZIP, checksums, build information and the source archive. It is
+VST3-only; no AU or Standalone package is included. Fixes discovered after
+publication are intended for a later maintenance release and do not alter the
+published v1.0.0 tag or assets. This software comes without warranty. Firmware
+is excluded from the software license. Yamaha branding in descriptive text
+identifies compatibility, not endorsement; no Yamaha logo is included.
 
 ## 13. Credits and next steps
 
 Thanks to [VDX7/chiaccona](https://github.com/chiaccona/VDX7), [Retromulator/dx7Lib](https://github.com/reales/retromulator) and [JUCE](https://github.com/juce-framework/JUCE). Only the portable DX7 core is integrated, not the complete Retromulator application.
 
-Next priorities are the local ROM-enabled regression suite; targeted REAPER
-boundary/transport tests; real-host, concurrency and platform acceptance; remaining
-cross-platform GUI checks; and release packaging. No 1.0.0 publication is authorized.
-See ROADMAP_1.0.md.
+The published 1.0.0 release has passed the project's release process and owner
+acceptance on Windows and macOS in REAPER. Current post-release maintenance
+work is tracked separately; it does not change the published tag or installer
+assets. See ROADMAP_1.0.md for the release and maintenance record.

@@ -43,6 +43,83 @@ static juce::MemoryBlock ram(const juce::MemoryBlock& state)
     return result;
 }
 
+static std::pair<int, int> restoredPreRomVoiceValues(VDX7AudioProcessor& processor)
+{
+    const auto state = save(processor);
+    auto xml = juce::AudioProcessor::getXmlFromBinary(state.getData(), int(state.getSize()));
+    require(xml != nullptr, "decode restored no-ROM state");
+    const auto tree = juce::ValueTree::fromXml(*xml);
+    juce::MemoryBlock packedRam;
+    require(packedRam.fromBase64Encoding(tree.getProperty("ram").toString()),
+            "decode restored no-ROM RAM");
+    const auto* bytes = static_cast<const uint8_t*>(packedRam.getData());
+    return {
+        VDX7VoiceData::getVoiceParameter(bytes, packedRam.getSize(),
+            VDX7VoiceData::VoiceParameter::feedback),
+        VDX7VoiceData::getOperatorParameter(bytes, packedRam.getSize(), 5,
+            VDX7VoiceData::Parameter::outputLevel)
+    };
+}
+
+static void testPreRomParameterEditsSurviveSave(const juce::File& romFile)
+{
+    const auto feedbackId = VDX7ParameterIDs::voiceParameter(
+        VDX7VoiceData::VoiceParameter::feedback);
+    const auto outputId = VDX7ParameterIDs::operatorParameter(5,
+        VDX7VoiceData::Parameter::outputLevel);
+
+    // Saving must not consume the pending edit before the first ROM can accept it.
+    auto sameInstance = std::make_unique<VDX7AudioProcessor>(false);
+    set(*sameInstance, feedbackId, 6.0f);
+    set(*sameInstance, outputId, 42.0f);
+    auto saved = save(*sameInstance);
+    require(sameInstance->loadRomFromFile(romFile), "first ROM after no-ROM save");
+    const auto sameInstanceValues = restoredPreRomVoiceValues(*sameInstance);
+    require(sameInstanceValues.first == 6 && sameInstanceValues.second == 42,
+            "same-instance first ROM load applies pre-save host edits");
+
+    // Restoring a no-ROM project suppresses parameter callbacks by design;
+    // explicit values therefore have to travel in DeferredVoiceEdits.
+    auto reopened = std::make_unique<VDX7AudioProcessor>(false);
+    reopened->setStateInformation(saved.getData(), int(saved.getSize()));
+    require(reopened->loadRomFromFile(romFile), "first ROM after reopening no-ROM project");
+    const auto reopenedValues = restoredPreRomVoiceValues(*reopened);
+    require(reopenedValues.first == 6 && reopenedValues.second == 42,
+            "reopened no-ROM project applies saved host edits on first ROM load");
+    std::cout << "PASS: explicit pre-ROM host edits survive save and first ROM load\n";
+}
+
+static void testPreRomDeferredStateIsSerialized()
+{
+    const auto feedbackId = VDX7ParameterIDs::voiceParameter(
+        VDX7VoiceData::VoiceParameter::feedback);
+    const auto outputId = VDX7ParameterIDs::operatorParameter(5,
+        VDX7VoiceData::Parameter::outputLevel);
+    auto source = std::make_unique<VDX7AudioProcessor>(false);
+    set(*source, feedbackId, 6.0f);
+    set(*source, outputId, 42.0f);
+    const auto saved = save(*source);
+
+    auto verifyDeferredValues = [&](const juce::MemoryBlock& bytes)
+    {
+        auto xml = juce::AudioProcessor::getXmlFromBinary(bytes.getData(), int(bytes.getSize()));
+        require(xml != nullptr, "decode no-ROM deferred project");
+        const auto state = juce::ValueTree::fromXml(*xml);
+        require(state.getProperty("ram").toString().isEmpty(), "no-ROM project has no packed RAM");
+        const auto edits = state.getChildWithName("DeferredVoiceEdits");
+        require(edits.isValid()
+                && static_cast<int>(edits.getProperty("voice9", -1)) == 6
+                && static_cast<int>(edits.getProperty("op113", -1)) == 42,
+                "no-ROM project serializes explicit feedback and OP6 level edits");
+    };
+    verifyDeferredValues(saved);
+
+    auto reopened = std::make_unique<VDX7AudioProcessor>(false);
+    reopened->setStateInformation(saved.getData(), int(saved.getSize()));
+    verifyDeferredValues(save(*reopened));
+    std::cout << "PASS: no-ROM explicit voice edits survive save and state restore\n";
+}
+
 // Project restore preserves persistent data, not CPU stack/working tables or
 // live voice ownership. In-place nonmutation tests below still compare all RAM.
 static bool sameProjectRam(const juce::MemoryBlock& a, const juce::MemoryBlock& b)
@@ -419,6 +496,16 @@ int main(int argc, char** argv)
     juce::ScopedJuceInitialiser_GUI gui;
     try
     {
+        if (argc == 2 && juce::String(argv[1]) == "--pre-rom-state-state-only")
+        {
+            testPreRomDeferredStateIsSerialized();
+            return 0;
+        }
+        if (argc == 3 && juce::String(argv[1]) == "--pre-rom-state")
+        {
+            testPreRomParameterEditsSurviveSave(juce::File(argv[2]));
+            return 0;
+        }
         auto originalStorage = std::make_unique<VDX7AudioProcessor>(false);
         auto& original = *originalStorage;
         {
@@ -448,6 +535,7 @@ int main(int argc, char** argv)
             return 77;
         }
         require(original.loadRomFromFile(testRomFile), "explicit local test ROM");
+        testPreRomParameterEditsSurviveSave(testRomFile);
         require(original.getParameters().size() == 148, "148 host parameters");
         for (int op = 0; op < 6; ++op)
             for (int p = 0; p < 15; ++p)

@@ -1,6 +1,8 @@
 """Release-manifest tests; checksum files contain only portable basenames."""
 import hashlib
+import errno
 import importlib.util
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -39,7 +41,19 @@ class ReleaseChecksumTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 checksums.write_manifest([first, second], root / "duplicates.txt")
             link = root / "link.zip"
-            link.symlink_to(first)
+            try:
+                link.symlink_to(first)
+            except (NotImplementedError, OSError) as error:
+                permission_errors = {errno.EACCES, errno.EPERM, errno.ENOSYS}
+                for name in ("ENOTSUP", "EOPNOTSUPP"):
+                    code = getattr(errno, name, None)
+                    if code is not None:
+                        permission_errors.add(code)
+                if ((os.name == "nt" and getattr(error, "winerror", None) == 1314)
+                        or getattr(error, "errno", None) in permission_errors
+                        or isinstance(error, NotImplementedError)):
+                    self.skipTest(f"symlink creation is unavailable: {error}")
+                raise
             with self.assertRaises(ValueError):
                 checksums.write_manifest([link], root / "link-check.txt")
 

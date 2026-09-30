@@ -170,7 +170,8 @@ def package(repo, juce, core, sha, output, package_label="1.0.0-dev",
     archive = output / filename
     write_zip(archive, files, manifest)
     checksum = hashlib.sha256(archive.read_bytes()).hexdigest()
-    (output / "SHA256SUMS.txt").write_text(f"{checksum}  {filename}\n", encoding="utf-8", newline="\n")
+    with (output / "SHA256SUMS.txt").open("w", encoding="utf-8", newline="\n") as sums_file:
+        sums_file.write(f"{checksum}  {filename}\n")
     print(f"PASS: {len(files)} source files; {filename}; SHA256={checksum}")
     return archive
 
