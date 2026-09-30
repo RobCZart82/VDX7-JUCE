@@ -1399,6 +1399,7 @@ void VDX7AudioProcessorEditor::refresh(bool refreshMetadata)
     internalUiUpdate_ = true;
 
     const bool loaded = processor_.isRomLoaded();
+    const bool ready = processor_.isProjectReady();
     const bool factories = processor_.hasFactoryVoices();
     const auto patchName = loaded ? processor_.getCurrentPatchName()
         + (processor_.isCurrentVoiceModified() ? " *" : "") : juce::String("LOAD DX7 ROM");
@@ -1412,15 +1413,15 @@ void VDX7AudioProcessorEditor::refresh(bool refreshMetadata)
     bank_.setTextWhenNothingSelected(loaded ? "CUSTOM" : "");
     program_.setSelectedId(programIndex + 1, juce::dontSendNotification);
     for (int i = 1; i <= 8; ++i) bank_.setItemEnabled(i, factories);
-    bank_.setEnabled(loaded);
-    program_.setEnabled(loaded);
-    loadSyx_.setEnabled(loaded);
-    saveAs_.setEnabled(loaded);
+    bank_.setEnabled(ready);
+    program_.setEnabled(ready);
+    loadSyx_.setEnabled(ready);
+    saveAs_.setEnabled(ready);
     algorithm_.setEnabled(loaded);
-    utilityTab_.setEnabled(loaded);
+    utilityTab_.setEnabled(ready);
     algorithmView_.setEnabled(loaded);
-    previous_.setEnabled(loaded);
-    next_.setEnabled(loaded);
+    previous_.setEnabled(ready);
+    next_.setEnabled(ready);
     keyboard_.setEnabled(loaded);
     for (auto& tab : operatorTabs_) tab.setEnabled(loaded);
     for (auto& slider : operatorKnobs_) slider.setEnabled(loaded);

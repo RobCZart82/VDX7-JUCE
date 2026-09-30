@@ -1,4 +1,14 @@
-# VDX7 1.0.0 release gate
+# VDX7 roadmap — 1.0.1 corrective work
+
+Current authority (2026-09-30): 1.0.0 is published. The active A1–A10 ledger,
+priorities and acceptance gates are in [the consolidated plan](EXECUTION_PLAN_1.0.md).
+Pending-project A1/A2 are reproduced defects, not just missing tests.
+The records below are historical 1.0.0 preparation evidence; statements about
+an unpublished stable release do not describe the current GitHub release.
+Preserve existing tags/assets and plugin identity. Green verified corrective
+PRs may merge under the owner's authorization; new publication is separate.
+
+## Historical 1.0.0 gate
 
 Target: stable 1.0.0, not another public pre-beta. Work-in-progress builds are
 not final releases. Do not publish or replace existing release assets until

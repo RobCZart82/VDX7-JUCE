@@ -9,6 +9,17 @@ builds.
 
 ## 1. Platform and package
 
+### Pending-project protection (1.0.1 development)
+
+If a restored project is waiting for its matching ROM, load that ROM before
+import/export, USER capture, renaming, operator copy/paste, bank/program
+selection or performance changes. These operations are rejected even if a
+different ROM is loaded. Live SysEx/program/bank and persistent MIDI settings
+are blocked too; notes, releases and transient expression remain available.
+Host voice/operator parameter edits and project save/reopen remain preserved.
+The recovery warning takes priority over the ordinary dirty-bank export advice.
+This correction is not present in the already published 1.0.0 binaries.
+
 CI builds **macOS Universal (arm64 + x86_64) VST3** and **Windows x64 VST3**
 targets. VST3 is the planned distribution format; AU and Standalone are build
 targets, not promised downloads. The owner reports macOS REAPER and Windows 10

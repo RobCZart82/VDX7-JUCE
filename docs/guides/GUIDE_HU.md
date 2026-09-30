@@ -8,6 +8,18 @@ kiadás letöltése és verziója csak a tényleges GitHub Release megjelenése 
 
 ## 1. Platform és csomag
 
+### Várakozó projekt védelme (1.0.1 fejlesztés)
+
+Ha a visszatöltött projekt a megfelelő ROM-ra vár, előbb azt töltsd be.
+Addig az import/export, USER-mentés, átnevezés, operator másolás/beillesztés,
+bank/program választás és performance-módosítás elutasításra kerül akkor is,
+ha másik ROM már be van töltve. A live SysEx/program/bank és tartós MIDI
+beállítások is blokkoltak; a hangjegyek, felengedés és átmeneti expression
+vezérlés megmarad. A host voice/operator szerkesztéseit és a projekt
+mentését/újranyitását a védelem megőrzi. A ROM-helyreállítási figyelmeztetés
+elsőbbséget kap az általános export-emlékeztetővel szemben.
+Ez a javítás a már kiadott 1.0.0 binárisokban még nincs benne.
+
 A CI **macOS Universal (arm64 + x86_64) VST3** és **Windows x64 VST3** célokat
 fordít. A kiadásra tervezett formátum a VST3; az AU és Standalone fordítási cél,
 nem ígért letöltési csomag. A tulajdonos macOS REAPER- és Windows 10 x64 REAPER-
