@@ -116,6 +116,8 @@ private:
     void queuePortamentoRefresh(); // Caller has reserved three serial bytes.
     void recoverMidiOverflow();
     void resetMidiControllers() noexcept;
+    bool deferMidiControllerDuringReset(int source, int value) noexcept;
+    bool processPendingMidiControllerReset() noexcept;
     int generateNative(float* out);
     float nextNativeSample();
     uint8_t mapVelocity(uint8_t velocity) const;
@@ -170,6 +172,16 @@ private:
     uint8_t lastPitchBendInput_ = 64;
     std::array<int, 2> wheelIntent_ {-1, -1}; // pitch, modulation; latest accepted input
     std::array<bool, 2> wheelPending_ {};
+    // CC121 must deliver the OFF/zero edges even when the application FIFO is
+    // full. Only after all six zeros do newer accepted source values follow.
+    // During this bounded reset transaction, retain one latest value/source;
+    // ordinary input resumes FIFO delivery once the reset has acknowledged.
+    // Source order: sustain, portamento, breath, foot, data, aftertouch.
+    std::array<bool, 6> controllerResetZerosPending_ {};
+    std::array<int, 6> controllerAfterReset_ {-1, -1, -1, -1, -1, -1};
+    bool controllerResetActive_ = false;
+    bool controllerResetAwaitingPedals_ = false;
+    uint64_t controllerResetZeroCycle_ = 0;
 
     bool hostResetInProgress_ = false;
     bool hostResetMuted_ = false; // Runtime-only; cleared by an accepted fresh Note On.

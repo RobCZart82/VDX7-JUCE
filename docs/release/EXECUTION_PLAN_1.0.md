@@ -24,7 +24,8 @@ This is the single active work ledger; do not create competing roadmaps.
 | AUDIT-20260930-A9 | P2 missing sanitizer coverage, not a DSP defect | IMPLEMENTED: resampler added to both instrumented build targets and CTest filter. Actual ASan/UBSan run is a required PR gate; Python packaging remains separate. |
 | AUDIT-20260930-A10 | P3 descriptive prototype metadata | IMPLEMENTED: description says instrument; bundle ID, plugin codes and parameter identity unchanged. Platform builds are required PR gates. |
 
-Work order: A1/A2 -> A3 -> A4/A6/A7 -> proportionate A5/A8/A9/A10 work
+Work order: A1/A2 -> A3 -> reproduced deep-audit runtime fixes below
+-> A4/A6/A7 -> proportionate A5/A8/A9/A10 work
 -> frozen 1.0.1 build/acceptance. Each PR carries its validation and updates
 this ledger. MERGED is not VERIFIED on the final candidate. Never convert
 NOT RUN / DEFERRED to PASS without execution.
@@ -41,6 +42,34 @@ Final gate: exact source and packager SHAs, Windows/macOS build and tests,
 private local-ROM regressions, self-verifying source archive, asset hashes,
 payload/licenses, installer upgrade smoke and explicit deferred-risk record.
 Present these before separately requesting 1.0.1 publication authorization.
+
+## Deep audit corrective round 2026-09-30
+
+The fresh audit baseline is main `3b943a893ca95c9b31ca43ee5a10cc05cd9ed7d0`
+after PR #107. Four reproduced P2 findings are recorded in the
+[Hungarian deep audit](../validation/VALIDATION_20260930_DEEP_AUDIT_HU.md).
+They are new boundary cases, not a reassignment of the earlier A1/A2 IDs.
+The owner authorizes implementation and merge after successful required PR
+checks; publishing another release remains a separate decision.
+
+| ID | Reproduced failure | Required acceptance |
+| --- | --- | --- |
+| DEEP-20260930-S1 | First ROM installation overlapping a no-ROM save loses accepted voice/operator edits | Detached deferred-edit snapshot; deterministic overlapping save/load and reopen; preserve both operator mask halves and the saved generation |
+| DEEP-20260930-S2 | Host edits during pending project ROM initialization are discarded | Retain later edits through firmware/RAM installation and final publication; with/without RAM, before/during/after installation and delayed listener routing |
+| DEEP-20260930-M1 | Direct CC120 does not advance/anchor the deferred timeline | Preserve next-block Note On/Off/CC, exact reset sample offset, empty tail, repeated reset and partition equivalence; ROM-free boundary cases under ASan/UBSan |
+| DEEP-20260930-M2 | CC121 loses non-wheel controller reset messages in a full application FIFO | Durable reset zeros, observed sustain OFF edge before later pedal ON, all six sources, full/near-full controls, held-note and persistent-setting preservation |
+
+All four fixes are IMPLEMENTED and locally validated: a fresh Release build,
+43/43 executable CTests (44 registered; desktop `vdx7_processor` NOT RUN),
+12/12 Python tests and the inventory contract/seven negative controls PASS.
+The instrumented CC121 runner passes 18 cases; ASan/UBSan deferred-MIDI and
+resampling component tests pass 2/2. Independent cross-review is complete.
+Details and scope limits: [fix validation](../validation/VALIDATION_20260930_DEEP_AUDIT_FIXES.md).
+Merge still requires successful Windows/macOS/ASan-UBSan PR checks on the final
+head and resolved review conversations. Post-merge platform builds must finish
+before the next merge/publication step. The approved GUI, 148 parameter
+identities, project format, existing stable tag and release assets remain
+unchanged. Exact-1.0.1 binary/host acceptance remains separate.
 
 ## Historical main checkpoint — stable installer acceptance (2026-09-29)
 

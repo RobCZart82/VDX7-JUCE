@@ -44,6 +44,18 @@ public:
         if (inputTime_ > playbackEnd && inputTime_ - playbackEnd > maximumLag)
         { clear(); panic_ = true; }
     }
+    // A directly delivered event may pause MIDI playback partway through a
+    // callback (CC120 starts a firmware reset). Queue its followers using this
+    // callback's input start, then retain the triggering sample as playback's
+    // anchor and advance input to the next callback. This matches renderBlock's
+    // stop semantics without inserting or delivering the triggering event twice.
+    void pauseDirectBlock(int samples, int samplePosition, uint64_t maximumLag) noexcept
+    {
+        if (panic_) return;
+        playbackTime_ = inputTime_ + static_cast<uint64_t>(
+            std::clamp(samplePosition, 0, std::max(samples, 0)));
+        advanceInputBlock(samples, maximumLag, Playback::paused);
+    }
     template<class Event, class Panic>
     void renderBlock(int samples, Event event, Panic panic)
     {

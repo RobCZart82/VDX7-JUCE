@@ -548,6 +548,7 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     else
     {
         bool deferFollowing = false;
+        int pausedPosition = 0;
         auto deliverOrDefer = [&](const uint8_t* data, std::size_t size, int eventPos)
         {
             if (deferFollowing)
@@ -556,6 +557,7 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
                 return;
             }
             deferFollowing = !deliver(data, size, eventPos);
+            if (deferFollowing) pausedPosition = eventPos;
         };
         for (std::size_t i = 0; i < keyboardCount; ++i)
             if (VDX7MidiValidation::acceptsHostEvent(keyboardEvents[i].data(), 3, 0,
@@ -567,6 +569,9 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
                     hasFactoryVoices))
                 deliverOrDefer(event.data, static_cast<std::size_t>(event.numBytes),
                                juce::jlimit(0, total, event.samplePosition));
+        if (deferFollowing)
+            deferredMidi_.pauseDirectBlock(total, pausedPosition,
+                static_cast<uint64_t>(currentSampleRate_ * 2.0));
     }
 
     if (programMemoryChanged)
@@ -574,7 +579,8 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
 
     if (cursor < total)
         engine_.render(left + cursor, right + cursor, total - cursor);
-    if (!engine_.hasHeldMidiNotes()) deferredMidi_.resetIfEmpty();
+    if (!engine_.hasHeldMidiNotes() && !engine_.isHostResetInProgress())
+        deferredMidi_.resetIfEmpty();
     publishPerformanceDisplay();
     midiOverloadSnapshot_.store(engine_.midiOverloadCount(), std::memory_order_relaxed);
 
@@ -979,10 +985,17 @@ void VDX7AudioProcessor::parameterChanged(const juce::String& parameterID, float
                 voicePublicationNeeded_.store(true, std::memory_order_release);
                 return;
             }
+#if defined(VDX7_TEST_STATE_TRANSITIONS)
+            extern void vdx7TestRomTransitionBoundary(int);
+            vdx7TestRomTransitionBoundary(4); // Routing chosen, before operator mailbox write.
+#endif
             pendingOperatorValues_[static_cast<std::size_t>(op)][static_cast<std::size_t>(p)]
                 .store(newValue, std::memory_order_relaxed);
             operatorParameterDirty_[static_cast<std::size_t>(index / 64)].fetch_or(
                 uint64_t { 1 } << (index % 64), std::memory_order_release);
+            // A callback may finish after ROM installation has published its
+            // host view. The mailbox must request the same retry as queued edits.
+            voicePublicationNeeded_.store(true, std::memory_order_release);
             return;
         }
     }
@@ -999,8 +1012,13 @@ void VDX7AudioProcessor::parameterChanged(const juce::String& parameterID, float
             voicePublicationNeeded_.store(true, std::memory_order_release);
             return;
         }
+#if defined(VDX7_TEST_STATE_TRANSITIONS)
+        extern void vdx7TestRomTransitionBoundary(int);
+        vdx7TestRomTransitionBoundary(5); // Routing chosen, before voice mailbox write.
+#endif
         pendingVoiceValues_[static_cast<std::size_t>(p)].store(newValue, std::memory_order_relaxed);
         voiceParameterDirty_.fetch_or(uint32_t { 1 } << p, std::memory_order_release);
+        voicePublicationNeeded_.store(true, std::memory_order_release);
         return;
     }
 }
@@ -1103,6 +1121,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     bool loaded = false;
     bool monoCorrection = false;
     juce::ValueTree pendingCopy;
+    juce::ValueTree deferredEdits;
     std::vector<uint8_t> ram;
     int bank = -1, program = 0, inputChannel = 0;
     uint32_t modified = 0;
@@ -1147,6 +1166,34 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
                             engine_.getOperatorParameter(op, static_cast<VDX7VoiceData::Parameter>(p));
                 for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
                     voiceValues[p] = engine_.getVoiceParameter(static_cast<VDX7VoiceData::VoiceParameter>(p));
+            }
+            else
+            {
+                // A first ROM install can consume these mailboxes as soon as
+                // the engine lock is released. Detach their values with the
+                // no-ROM generation; leave the masks pending for that install.
+                const auto low = operatorParameterDirty_[0].load(std::memory_order_acquire);
+                const auto high = operatorParameterDirty_[1].load(std::memory_order_acquire);
+                const auto voice = voiceParameterDirty_.load(std::memory_order_acquire);
+                if ((low | high | voice) != 0)
+                {
+                    deferredEdits = juce::ValueTree("DeferredVoiceEdits");
+                    for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
+                        for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
+                        {
+                            const int index = op * VDX7VoiceData::kParameterCount + p;
+                            const auto mask = uint64_t {1} << (index % 64);
+                            if (((index < 64 ? low : high) & mask) != 0)
+                                deferredEdits.setProperty(juce::Identifier("op" + juce::String(index)),
+                                    juce::roundToInt(pendingOperatorValues_[op][p].load(
+                                        std::memory_order_relaxed)), nullptr);
+                        }
+                    for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
+                        if ((voice & (uint32_t {1} << p)) != 0)
+                            deferredEdits.setProperty(juce::Identifier("voice" + juce::String(p)),
+                                juce::roundToInt(pendingVoiceValues_[p].load(
+                                    std::memory_order_relaxed)), nullptr);
+                }
             }
         }
     }
@@ -1197,36 +1244,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     }
     state.addChild(parameterState, -1, nullptr);
 
-    if (!loaded)
-    {
-        // A fresh project with no firmware has no authoritative packed RAM.
-        // Persist only host parameters explicitly edited in this instance;
-        // untouched parameter defaults must not overwrite the first voice
-        // supplied by the eventual ROM.
-        const auto low = operatorParameterDirty_[0].load(std::memory_order_acquire);
-        const auto high = operatorParameterDirty_[1].load(std::memory_order_acquire);
-        const auto voice = voiceParameterDirty_.load(std::memory_order_acquire);
-        if ((low | high | voice) != 0)
-        {
-            juce::ValueTree edits("DeferredVoiceEdits");
-            for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
-                for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
-                {
-                    const int index = op * VDX7VoiceData::kParameterCount + p;
-                    const auto mask = uint64_t { 1 } << (index % 64);
-                    if (((index < 64 ? low : high) & mask) != 0)
-                        edits.setProperty(juce::Identifier("op" + juce::String(index)),
-                            juce::roundToInt(pendingOperatorValues_[op][p].load(
-                                std::memory_order_relaxed)), nullptr);
-                }
-            for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
-                if ((voice & (uint32_t { 1 } << p)) != 0)
-                    edits.setProperty(juce::Identifier("voice" + juce::String(p)),
-                        juce::roundToInt(pendingVoiceValues_[p].load(std::memory_order_relaxed)),
-                        nullptr);
-            state.addChild(edits, -1, nullptr);
-        }
-    }
+    if (deferredEdits.isValid()) state.addChild(deferredEdits, -1, nullptr);
 
     if (auto xml = state.createXml())
         copyXmlToBinary(*xml, destData);
@@ -1378,6 +1396,15 @@ void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
         engine_.selectProgram(program);
         modifiedVoices_.store(static_cast<uint32_t>(static_cast<juce::int64>(
             state.getProperty("modifiedVoices", juce::int64(ramText.isNotEmpty() ? -1 : 0)))));
+#if defined(VDX7_TEST_STATE_TRANSITIONS)
+        extern void vdx7TestRomTransitionBoundary(int);
+        vdx7TestRomTransitionBoundary(2); // Project RAM installed, before deferred edits.
+#endif
+        // Loading firmware/project RAM may reboot for a substantial time.
+        // Automation accepted since the earlier capture must override the saved
+        // voice too. Requests arriving after this exchange stay in the mailbox
+        // for ordinary application once pendingProjectEdits_ becomes false.
+        capturePendingRestoreEditsLocked();
         const auto edits = state.getChildWithName("DeferredVoiceEdits");
         bool changed = false;
         for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
@@ -1400,9 +1427,9 @@ void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
             engine_.reloadCurrentProgram();
             modifiedVoices_.fetch_or(uint32_t{1} << engine_.currentProgram());
         }
-        operatorParameterDirty_[0].store(0, std::memory_order_release);
-        operatorParameterDirty_[1].store(0, std::memory_order_release);
-        voiceParameterDirty_.store(0, std::memory_order_release);
+#if defined(VDX7_TEST_STATE_TRANSITIONS)
+        vdx7TestRomTransitionBoundary(3); // Deferred edits installed, before publication.
+#endif
         pendingPerformanceDirty_.store(0, std::memory_order_release);
         editQueue_.discard();
         lastPitchMsb_ = -1;
@@ -1442,6 +1469,10 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
     {
         std::scoped_lock lock(engineMutex_);
         capturePendingRestoreEditsLocked();
+#if defined(VDX7_TEST_STATE_TRANSITIONS)
+        extern void vdx7TestRomTransitionBoundary(int);
+        vdx7TestRomTransitionBoundary(0); // Pending capture completed, before firmware warm-up.
+#endif
         const bool ok = engine_.loadRomImage(rom.data(), rom.size(),
                                              voices.empty() ? nullptr : voices.data(), voices.size());
         if (!ok)
@@ -1453,18 +1484,13 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         }
         loadedRomPath_ = file.getFullPathName();
         loadedRomIdentity_ = makeRomContentIdentity(rom, voices);
+#if defined(VDX7_TEST_STATE_TRANSITIONS)
+        vdx7TestRomTransitionBoundary(1); // Firmware warmed up, before pending installation.
+#endif
 
         engine_.prepare(currentSampleRate_);
         modifiedVoices_.store(0);
-        if (pendingRestore_.isValid())
-        {
-            // A saved project's packed RAM remains authoritative; explicit
-            // edits made while its ROM was unavailable were captured above.
-            operatorParameterDirty_[0].store(0, std::memory_order_release);
-            operatorParameterDirty_[1].store(0, std::memory_order_release);
-            voiceParameterDirty_.store(0, std::memory_order_release);
-        }
-        else if (applyOperatorParameters() | applyVoiceParameters())
+        if (!pendingRestore_.isValid() && (applyOperatorParameters() | applyVoiceParameters()))
         {
             // A fresh no-ROM instance has no packed project state to restore.
             // Keep any explicit host edits made before its first ROM load and
