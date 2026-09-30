@@ -86,6 +86,10 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     lastPitchBendInput_ = 64;
     wheelIntent_ = {-1, -1};
     wheelPending_.fill(false);
+    controllerResetZerosPending_.fill(false);
+    controllerAfterReset_.fill(-1);
+    controllerResetActive_ = controllerResetAwaitingPedals_ = false;
+    controllerResetZeroCycle_ = 0;
     midiExpression_ = 1.0f;
     currentBank_ = -1;
     currentProgram_ = 0;
@@ -168,12 +172,14 @@ void VDX7Engine::resetMidiControllers() noexcept
     // and must not be overwritten by a host controller reset.
     midiExpression_ = 1.0f;
     sustainDown_ = false;
-    toSynth_->sustain(false);
-    toSynth_->porta(false);
-    toSynth_->analog(dx7Emu::Message::CtrlID::breath, 0);
-    toSynth_->analog(dx7Emu::Message::CtrlID::foot, 0);
-    toSynth_->analog(dx7Emu::Message::CtrlID::data, 0);
-    toSynth_->analog(dx7Emu::Message::CtrlID::aftertouch, 0);
+    // Reset delivery cannot depend on six free FIFO slots. Retain each zero
+    // until the owner can submit it after older controller input has drained.
+    // Keep subsequent values separately: coalescing sustain OFF into a later
+    // ON would leave previously sustained/released voices playing forever.
+    controllerResetZerosPending_.fill(true);
+    controllerAfterReset_.fill(-1);
+    controllerResetActive_ = controllerResetAwaitingPedals_ = true;
+    controllerResetZeroCycle_ = 0;
     lastPitchBendInput_ = 64;
     pitchBendRefresh_ = false;
     // Do not use requestPerformanceWheel here: that helper reserves serial
@@ -184,6 +190,77 @@ void VDX7Engine::resetMidiControllers() noexcept
     wheelIntent_[1] = 0;
     wheelPending_[0] = true;
     wheelPending_[1] = true;
+}
+
+bool VDX7Engine::deferMidiControllerDuringReset(int source, int value) noexcept
+{
+    if (!controllerResetActive_) return false;
+    controllerAfterReset_[static_cast<std::size_t>(source)] = value;
+    if (source == 0) sustainDown_ = value != 0;
+    return true;
+}
+
+bool VDX7Engine::processPendingMidiControllerReset() noexcept
+{
+    if (!controllerResetActive_) return false;
+    constexpr std::array<dx7Emu::Message::CtrlID, 6> sources {
+        dx7Emu::Message::CtrlID::sustain, dx7Emu::Message::CtrlID::porta,
+        dx7Emu::Message::CtrlID::breath, dx7Emu::Message::CtrlID::foot,
+        dx7Emu::Message::CtrlID::data, dx7Emu::Message::CtrlID::aftertouch};
+    for (std::size_t source = 0; source < sources.size(); ++source)
+    {
+        if (!controllerResetZerosPending_[source]) continue;
+        controllerResetZerosPending_[source] = false;
+        processQueuedMessage({sources[source], 0});
+        return true;
+    }
+    if (controllerResetAwaitingPedals_)
+    {
+        // Hardware pin OFF is not yet firmware acknowledgment. Returning an
+        // immediate ON before the main-loop pedal poll can erase the OFF edge
+        // and retain old sustained voices even though both messages were sent.
+        if (controllerResetZeroCycle_ == 0) controllerResetZeroCycle_ = dx7_.cycle;
+        if (releaseRetirementProfile_)
+        {
+            if (dx7_.PC != 0xc708 || (dx7_.memory[0x20a7] & 3) != 0) return true;
+        }
+        else if (dx7_.cycle - controllerResetZeroCycle_ < 16384)
+        {
+            // Unrecognized firmware has no verified acknowledgment address.
+            // Pace the edge for a fixed emulated interval; never guess its RAM.
+            return true;
+        }
+        controllerResetAwaitingPedals_ = false;
+        controllerResetZeroCycle_ = 0;
+    }
+    for (std::size_t source = 0; source < sources.size(); ++source)
+    {
+        const int value = controllerAfterReset_[source];
+        if (value < 0) continue;
+        controllerAfterReset_[source] = -1;
+        processQueuedMessage({sources[source], static_cast<uint8_t>(value)});
+        return true;
+    }
+    // Let the existing wheel branch submit each retained input, but keep the
+    // CC121 gate closed until that branch and its final handshake have drained.
+    if (wheelPending_[0] || wheelPending_[1])
+    {
+        controllerResetZeroCycle_ = 0;
+        return false;
+    }
+    // The sub-CPU may clear haveMsg before its IRQ has stored/scaled the last
+    // wheel input. Do not resume notes in the middle of that firmware work.
+    if (releaseRetirementProfile_)
+    {
+        if (dx7_.PC != 0xc708) return true;
+    }
+    else
+    {
+        if (controllerResetZeroCycle_ == 0) controllerResetZeroCycle_ = dx7_.cycle;
+        if (dx7_.cycle - controllerResetZeroCycle_ < 16384) return true;
+    }
+    controllerResetActive_ = false;
+    return false;
 }
 
 void VDX7Engine::beginMidiReset(bool releaseEveryPitch)
@@ -206,6 +283,17 @@ void VDX7Engine::beginMidiReset(bool releaseEveryPitch)
     dx7_.sustain(false);
     dx7_.porta(false);
     sustainDown_ = false;
+    // An explicit host/panic reset supersedes older pending pedal ON input.
+    controllerAfterReset_[0] = controllerAfterReset_[1] = -1;
+    if (controllerResetActive_ && controllerResetAwaitingPedals_)
+    {
+        // Retry an interrupted mandatory-zero stage. Once its acknowledgment
+        // has finished, do not overwrite newer values already handed off to
+        // the preserved sub-CPU handshake with another round of zeros.
+        controllerResetZerosPending_.fill(true);
+        controllerResetAwaitingPedals_ = true;
+        controllerResetZeroCycle_ = 0;
+    }
 
     // Include earlier, already-released notes whose firmware Note Off could
     // have been discarded from the adapter FIFO. Running status encodes the
@@ -332,6 +420,13 @@ void VDX7Engine::recoverMidiOverflow()
     dx7_.sustain(false);
     dx7_.porta(false);
     sustainDown_ = false;
+    controllerAfterReset_[0] = controllerAfterReset_[1] = -1;
+    if (controllerResetActive_ && controllerResetAwaitingPedals_)
+    {
+        controllerResetZerosPending_.fill(true);
+        controllerResetAwaitingPedals_ = true;
+        controllerResetZeroCycle_ = 0;
+    }
     // Release every pitch, not just wrapper ownership: some previous bytes
     // may already have reached the firmware, or a note may be sustained.
     for (int note = 0; note < 128; ++note)
@@ -380,6 +475,12 @@ int VDX7Engine::generateNative(float* out)
         if (!dx7_.haveMsg)
         {
             if (toSynth_->pop(msg)) processQueuedMessage(msg);
+            else if (!midiRecovering_ && !hostResetInProgress_
+                     && processPendingMidiControllerReset())
+            {
+                // Direct owner-thread submission cannot lose a reset to a
+                // full application FIFO; earlier FIFO messages stay ordered.
+            }
             else if (!midiRecovering_ && !hostResetInProgress_
                      && (wheelPending_[0] || wheelPending_[1]))
             {
@@ -517,6 +618,9 @@ void VDX7Engine::retireCompletedReleaseHistory()
 
 void VDX7Engine::processQueuedMessage(dx7Emu::Message msg)
 {
+    // Final fallback pacing starts after the last actual transfer, including
+    // newer FIFO wheel input and controller values accepted during the wait.
+    if (controllerResetActive_ && !controllerResetAwaitingPedals_) controllerResetZeroCycle_ = 0;
     using CtrlID = dx7Emu::Message::CtrlID;
 
     switch (CtrlID(msg.byte1))
@@ -616,6 +720,30 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
             return;
         }
     }
+    // A source value received behind CC121 belongs after its mandatory zero
+    // edge. Retain it before ordinary capacity reservation, which could flush
+    // the old FIFO or reject the value while that reset is waiting to drain.
+    int resetSource = -1;
+    int resetValue = 0;
+    if ((data[0] & 0xf0) == 0xb0)
+    {
+        resetValue = data[2];
+        switch (data[1])
+        {
+            case 64: resetSource = 0; resetValue = data[2] >= 64; break;
+            case 65: resetSource = 1; resetValue = data[2] >= 64; break;
+            case 2: resetSource = 2; break;
+            case 4: resetSource = 3; break;
+            case 6: resetSource = 4; break;
+            default: break;
+        }
+    }
+    else if ((data[0] & 0xf0) == 0xd0)
+    {
+        resetSource = 5;
+        resetValue = data[1];
+    }
+    if (resetSource >= 0 && deferMidiControllerDuringReset(resetSource, resetValue)) return;
     const bool timeRequest = (data[0] & 0xf0) == 0xb0 && data[1] == 5;
     // After recovery, put the retained time BEFORE newly accepted notes.
     // A newer accepted physical CC5 supersedes the old request instead.
@@ -728,6 +856,9 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
 void VDX7Engine::allNotesOff(bool useRunningStatus)
 {
     sustainDown_ = false;
+    // A newer release request supersedes a pedal ON deferred by CC121.
+    // All Notes Off does not reset portamento or the other controllers.
+    controllerAfterReset_[0] = -1;
     if (!loaded_) return;
     int releaseBytes = 3; // Include a possible following CC123.
     int releases = 0;

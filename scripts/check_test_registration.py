@@ -7,6 +7,7 @@ import math
 ROM_FREE = set("""user_bank deferred_midi latest_display status_priority bounded_file
 voice_data algorithms resampling gui_header mono_correction version_identity""".split())
 ROM_FREE.add("pre_rom_state")
+ROM_FREE.add("cc120_timeline_unit")
 LOCAL_ROM = set("""stability midi_range timing processor stress v18_profile host_reset
 reactivation reset_history_pair firmware_ownership history_retirement overlap_retirement
 reset_gate_overflow expanded_lifecycle mono_boundary_characterization
@@ -14,6 +15,7 @@ mono_trace_characterization deferred_partition portamento wheel_delivery
 mono_candidate_experiment supported_note_range_acceptance direct_rom_reload_boundary
 state_rom_identity pending_rom_content_identity mono_corrected_processor mono_soak""".split())
 LOCAL_ROM.update({"pre_rom_state_integration", "midi_reset"})
+LOCAL_ROM.update({"state_transitions", "cc120_timeline", "controller_reset"})
 
 
 def validate(document, rom_enabled=True):

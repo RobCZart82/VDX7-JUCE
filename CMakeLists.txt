@@ -342,6 +342,60 @@ target_compile_definitions(vdx7_host_reset_tests PRIVATE
     $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
 add_dependencies(vdx7_ci_checks vdx7_host_reset_tests)
 
+# State snapshots and ROM recovery must preserve concurrent host edits.
+# Scheduling gates are compiled into this runner only, never the plugin.
+add_executable(vdx7_state_transition_tests EXCLUDE_FROM_ALL
+    Tests/VDX7StateTransitionTests.cpp Source/PluginProcessor.cpp)
+target_link_libraries(vdx7_state_transition_tests PRIVATE VDX7)
+target_include_directories(vdx7_state_transition_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,INCLUDE_DIRECTORIES>)
+target_compile_definitions(vdx7_state_transition_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>
+    VDX7_TEST_STATE_BOUNDARY=1 VDX7_TEST_STATE_TRANSITIONS=1)
+add_dependencies(vdx7_ci_checks vdx7_state_transition_tests)
+
+# MIDI resets must retain sample-relative timing when direct MIDI becomes
+# deferred; CC121 followers cannot overtake delayed controller zero/OFF edges.
+add_executable(vdx7_cc120_timeline_tests EXCLUDE_FROM_ALL
+    Tests/VDX7CC120TimelineTests.cpp)
+target_link_libraries(vdx7_cc120_timeline_tests PRIVATE VDX7)
+target_include_directories(vdx7_cc120_timeline_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,INCLUDE_DIRECTORIES>)
+target_compile_definitions(vdx7_cc120_timeline_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
+add_dependencies(vdx7_ci_checks vdx7_cc120_timeline_tests)
+add_test(NAME vdx7_cc120_timeline_unit
+    COMMAND vdx7_cc120_timeline_tests --timeline-only)
+set_tests_properties(vdx7_cc120_timeline_unit PROPERTIES
+    TIMEOUT 20 LABELS "rom-free")
+
+# Controller-reset edges must survive application-FIFO saturation.
+add_executable(vdx7_controller_reset_tests EXCLUDE_FROM_ALL
+    Tests/VDX7ControllerResetTests.cpp Source/VDX7Engine.cpp)
+target_include_directories(vdx7_controller_reset_tests PRIVATE Source)
+target_link_libraries(vdx7_controller_reset_tests PRIVATE vdx7_core vdx7_voice_data)
+add_dependencies(vdx7_ci_checks vdx7_controller_reset_tests)
+
+if(VDX7_ENABLE_ROM_TESTS)
+    add_test(NAME vdx7_state_transitions
+        COMMAND vdx7_state_transition_tests "${VDX7_TEST_ROM_FILE}")
+    set_tests_properties(vdx7_state_transitions PROPERTIES
+        TIMEOUT 180 FIXTURES_REQUIRED vdx7_v18_rom
+        LABELS "local-rom;firmware-v1_8;state-boundary;concurrency")
+
+    add_test(NAME vdx7_cc120_timeline
+        COMMAND vdx7_cc120_timeline_tests "${VDX7_TEST_ROM_FILE}")
+    set_tests_properties(vdx7_cc120_timeline PROPERTIES
+        TIMEOUT 180 FIXTURES_REQUIRED vdx7_v18_rom
+        LABELS "local-rom;firmware-v1_8;midi-timeline")
+
+    add_test(NAME vdx7_controller_reset
+        COMMAND vdx7_controller_reset_tests "${VDX7_TEST_ROM_FILE}")
+    set_tests_properties(vdx7_controller_reset PROPERTIES
+        TIMEOUT 180 FIXTURES_REQUIRED vdx7_v18_rom
+        LABELS "local-rom;firmware-v1_8;controller-reset")
+endif()
+
 # Compile the isolated counterfactual experiment on public CI; execute only
 # locally with the verified private firmware. Never link it into VDX7.
 add_executable(vdx7_mono_candidate_tests EXCLUDE_FROM_ALL Tests/VDX7MonoCandidateTests.cpp)

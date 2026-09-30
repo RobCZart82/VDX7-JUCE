@@ -13,6 +13,7 @@
 static void checkEditQueue();
 static void checkMidiTimeline();
 static void checkMidiLagAccounting();
+static void checkDirectResetTransition();
 static void checkKeyboardQueue();
 static void checkSysExAdmission();
 
@@ -112,6 +113,7 @@ int main()
         }
     checkMidiTimeline();
     checkMidiLagAccounting();
+    checkDirectResetTransition();
     checkKeyboardQueue();
     checkSysExAdmission();
     VDX7DeferredMidi queue;
@@ -474,6 +476,82 @@ static void checkMidiLagAccounting()
             }
         }
     std::cout << "PASS: lag bound counts skipped time, not successful block size; boundary/panic recovery preserved\n";
+}
+
+static void checkDirectResetTransition()
+{
+    const uint8_t on[] {0x90, 62, 100}, off[] {0x80, 62, 0};
+    const uint8_t reset[] {0xb0, 120, 0};
+    // Every possible reset offset, including both callback endpoints, maps the
+    // remaining input to the same clock. Include caller-boundary clamping.
+    for (int requestedPosition : {-7, 0, 1, 8, 63, 64, 90})
+    {
+        VDX7DeferredMidi queue;
+        const auto anchor = std::clamp(requestedPosition, 0, 64);
+        require(queue.push(on, sizeof(on), 64), "queue callback-end reset follower");
+        queue.pauseDirectBlock(64, requestedPosition, 64);
+        require(queue.push(off, sizeof(off), 0), "next callback starts after all prior followers");
+        queue.advanceInputBlock(64, 4096, VDX7DeferredMidi::Playback::paused);
+        std::vector<int> times, statuses;
+        queue.renderBlock(128, [&](const uint8_t* data, std::size_t, int position)
+        {
+            times.push_back(position);
+            statuses.push_back(data[0]);
+        }, [] { require(false, "valid direct-reset boundary cannot panic"); });
+        require(times == std::vector<int>({64 - anchor, 64 - anchor})
+                && statuses == std::vector<int>({0x90, 0x80}),
+                "callback-end and next-block events retain stable same-sample order");
+    }
+    // No follower is needed to establish the paused clock. Retain it until a
+    // future event can join or the processor explicitly retires the empty tail.
+    VDX7DeferredMidi empty;
+    empty.pauseDirectBlock(64, 8, 56);
+    require(empty.active() && empty.push(on, sizeof(on), 12),
+            "empty direct-reset tail retains its exact allowed delay");
+    int futureSample = -1;
+    empty.renderBlock(128, [&](const uint8_t*, std::size_t, int position)
+    { futureSample = position; }, [] { require(false, "exact lag boundary is accepted"); });
+    require(futureSample == 68, "future input begins after the direct reset callback");
+    empty.resetIfEmpty();
+    require(!empty.active(), "explicit empty-tail retirement removes completed delay");
+
+    VDX7DeferredMidi expired;
+    require(expired.push(on, sizeof(on), 24), "queue expiry fixture");
+    expired.pauseDirectBlock(64, 8, 55);
+    int panics = 0;
+    expired.renderBlock(64, [](const uint8_t*, std::size_t, int)
+    { require(false, "over-age reset tail must not deliver events"); }, [&] { ++panics; });
+    require(panics == 1, "one sample beyond the direct-reset lag bound requests panic");
+
+    // A zero/negative-sized callback cannot create imaginary elapsed time.
+    for (int samples : {0, -1})
+    {
+        VDX7DeferredMidi zero;
+        zero.pauseDirectBlock(samples, 7, 0);
+        require(!zero.active() && zero.push(on, sizeof(on), 0), "zero callback keeps equal clocks");
+        zero.renderBlock(0, [](const uint8_t* data, std::size_t, int position)
+        { require(data[0] == 0x90 && position == 0); }, [] { require(false); });
+    }
+
+    // An earlier empty, successful playback may leave nonzero equal clocks.
+    // A subsequent direct transition must use that input origin, not zero it.
+    VDX7DeferredMidi repeated;
+    repeated.advanceInputBlock(128, 4096, VDX7DeferredMidi::Playback::rendering);
+    repeated.renderBlock(128, [](const uint8_t*, std::size_t, int) { require(false); },
+                         [] { require(false); });
+    require(!repeated.active() && repeated.push(reset, sizeof(reset), 40)
+            && repeated.push(on, sizeof(on), 48), "second direct reset follows a nonzero timeline origin");
+    repeated.pauseDirectBlock(64, 8, 4096);
+    repeated.renderBlock(64, [](const uint8_t* data, std::size_t, int position) -> bool
+    { require(data[1] == 120 && position == 32); return false; }, [] { require(false); });
+    require(repeated.push(off, sizeof(off), 0), "future input remains sorted after repeated reset");
+    repeated.advanceInputBlock(64, 4096, VDX7DeferredMidi::Playback::paused);
+    std::vector<int> repeatedTimes;
+    repeated.renderBlock(64, [&](const uint8_t*, std::size_t, int position)
+    { repeatedTimes.push_back(position); }, [] { require(false); });
+    require(repeatedTimes == std::vector<int>({8, 24}),
+            "second reset reanchors remaining events without resetting their input origin");
+    std::cout << "PASS: direct-reset clocks, clamp/zero/empty/lag bounds and repeated transitions\n";
 }
 
 static void checkEditQueue()
