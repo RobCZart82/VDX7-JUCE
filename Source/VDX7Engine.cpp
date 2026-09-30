@@ -231,6 +231,7 @@ bool VDX7Engine::processPendingMidiControllerReset() noexcept
             return true;
         }
         controllerResetAwaitingPedals_ = false;
+        controllerResetZeroCycle_ = 0;
     }
     for (std::size_t source = 0; source < sources.size(); ++source)
     {
@@ -239,6 +240,24 @@ bool VDX7Engine::processPendingMidiControllerReset() noexcept
         controllerAfterReset_[source] = -1;
         processQueuedMessage({sources[source], static_cast<uint8_t>(value)});
         return true;
+    }
+    // Let the existing wheel branch submit each retained input, but keep the
+    // CC121 gate closed until that branch and its final handshake have drained.
+    if (wheelPending_[0] || wheelPending_[1])
+    {
+        controllerResetZeroCycle_ = 0;
+        return false;
+    }
+    // The sub-CPU may clear haveMsg before its IRQ has stored/scaled the last
+    // wheel input. Do not resume notes in the middle of that firmware work.
+    if (releaseRetirementProfile_)
+    {
+        if (dx7_.PC != 0xc708) return true;
+    }
+    else
+    {
+        if (controllerResetZeroCycle_ == 0) controllerResetZeroCycle_ = dx7_.cycle;
+        if (dx7_.cycle - controllerResetZeroCycle_ < 16384) return true;
     }
     controllerResetActive_ = false;
     return false;
@@ -599,6 +618,9 @@ void VDX7Engine::retireCompletedReleaseHistory()
 
 void VDX7Engine::processQueuedMessage(dx7Emu::Message msg)
 {
+    // Final fallback pacing starts after the last actual transfer, including
+    // newer FIFO wheel input and controller values accepted during the wait.
+    if (controllerResetActive_ && !controllerResetAwaitingPedals_) controllerResetZeroCycle_ = 0;
     using CtrlID = dx7Emu::Message::CtrlID;
 
     switch (CtrlID(msg.byte1))

@@ -76,12 +76,28 @@ the direct-engine sustain-loss witness. The corrected runner passes all six
 ROM-backed timeline cases, including actual firmware ownership in both
 directions and later pedal-OFF cleanup, with no overload recovery.
 
-The 18 regression cases include FIFO occupancies 0, 1018, 1020, 1023 and 1024;
+The final 24 regression cases include FIFO occupancies 0, 1018, 1020, 1023 and 1024;
 repeated CC121; later input during acknowledgment; newer sustain ON/OFF; a fresh
 note lifecycle; mandatory-zero and post-acknowledgment handshake interruption;
 and CC123/direct All Notes Off. They inspect actual v1.8 pedal/analog/voice
 state and the data-controller handshake, and preserve physically held notes,
 packed voice RAM and persistent performance settings.
+
+The second GitHub review found that the host gate could reopen before the
+pitch/modulation reset reached firmware. The transaction now keeps that gate
+closed while the existing wheel branch submits pending values and completes
+its handshake. For verified v1.8, completion also waits for the firmware main
+loop: transport `haveMsg` can clear before the IRQ stores/scales its input.
+Four tests inspect the very first gate-clear sample, with empty/full FIFOs and
+newer wheel input. The previous source fails the pending/handshake assertion;
+a transport-only intermediate fix fails the firmware wheel-value assertion.
+
+Independent review additionally found that late input through the ordinary
+FIFO could inherit an older fallback completion timer. The final fallback
+interval restarts after each actual controller submission. Two tests inject
+late wheel/breath input during the final interval, require a fresh 16384-cycle
+wait after the last transfer, and inspect firmware values at gate reopening.
+The late-wheel case fails before the timer fix; both pass afterward.
 
 Pedal acknowledgment uses a firmware address only for the verified v1.8
 profile. The unrecognized-profile path uses conservative emulated-cycle pacing.
@@ -101,13 +117,14 @@ bytes or personal ROM paths are committed.
   fails at occupancy 1020 on baseline. Delayed-publication and interrupted
   controller cases also failed before their corresponding fix. A failing
   assertion returns exit 1; passing runs return exit 0.
-- The final `vdx7_ci_checks` build and executable CTest suite pass: **43/43**.
+- The final `vdx7_ci_checks` build and executable CTest suite pass: **43/43**
+  in 178.55 seconds with three parallel tests.
   There are 44 registered tests: 13 ROM-free and 31 local-ROM. The existing
   desktop/save-dialog runner `vdx7_processor` is excluded, not counted as PASS.
 - Python source-packaging/checksum regression suite: **12/12 PASS**, no skip.
 - CTest inventory, labels, fixture/timeouts/failure policy and seven negative
   registration controls: **PASS**.
-- A separate fresh ASan/UBSan build passes all **18 CC121 cases**, plus the
+- A separate fresh ASan/UBSan build passes all **24 CC121 cases**, plus the
   deferred-MIDI and resampling component CTests (**2/2**). LeakSanitizer is
   disabled on this platform. This is not full-plugin sanitizer or TSan coverage.
 - Independent cross-review of the state, CC120 and final CC121 changes found
@@ -123,7 +140,7 @@ Reproduction commands use local-path placeholders:
 
 ```text
 cmake --build <release-build> --target vdx7_ci_checks -j4
-ctest --test-dir <release-build> --output-on-failure --no-tests=error -E '^vdx7_processor$' -j2
+ctest --test-dir <release-build> --output-on-failure --no-tests=error -E '^vdx7_processor$' -j3
 ctest --test-dir <release-build> -N --show-only=json-v1 > <inventory.json>
 python3 scripts/check_test_registration.py <inventory.json> --self-test
 python3 -m unittest discover -s Tests -p 'test_*.py' -v

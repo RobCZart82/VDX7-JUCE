@@ -381,6 +381,98 @@ struct VDX7RegressionAccess
                 && ownership(*engine, 62, 2) == 0, "All Notes Off releases held and sustained voices");
         std::cout << "PASS: CC121 delayed pedal followed by All Notes Off; direct request=" << directRequest << '\n';
     }
+
+    static void checkWheelGate(const std::vector<uint8_t>& image, int queuedControls,
+                               bool newerWheelInput)
+    {
+        auto engine = fixture(image);
+        const auto savedSettings = persistent(*engine);
+        require(engine->dx7_.memory[0x232a] == 254 && engine->dx7_.memory[0x2337] == 254,
+                "wheel-gate fixture starts with nonzero firmware wheel inputs");
+        fill(*engine, queuedControls);
+        const auto overloads = engine->midiOverloadCount();
+        cc(*engine, 121, 0);
+        if (newerWheelInput)
+        {
+            require(engine->requestPerformanceWheel(0, 81) && engine->requestPerformanceWheel(1, 27),
+                    "newer accepted wheel intents supersede their reset defaults");
+        }
+        int samples = 0;
+        while (engine->isControllerResetInProgress())
+        {
+            float discarded = 0;
+            engine->render(&discarded, nullptr, 1);
+            require(++samples < 256 * 1024, "controller reset completes within bounded render");
+        }
+        // Observe the very first host sample at which a caller may deliver a
+        // fresh note; later pumping would hide stale-wheel attack ordering.
+        require(!engine->wheelPending_[0] && !engine->wheelPending_[1]
+                && !engine->dx7_.haveMsg && !engine->dx7_.byte1Sent,
+                "CC121 completion includes both wheels and their final handshake");
+        require(engine->dx7_.memory[0x232a] == (newerWheelInput ? 162 : 128)
+                && engine->dx7_.memory[0x2337] == (newerWheelInput ? 54 : 0),
+                "first CC121 gate-clear sample exposes current firmware pitch and modulation inputs");
+        require(engine->midiOverloadCount() == overloads && persistent(*engine) == savedSettings,
+                "wheel completion preserves performance settings without overload");
+        const uint8_t on72[] {0x90, 72, 100};
+        engine->handleMidi(on72, 3);
+        pump(*engine);
+        require(ownership(*engine, 72, 2) == 1,
+                "fresh note is admitted after complete controller and wheel reset");
+        std::cout << "PASS: CC121 first wheel-gate sample; queued controls=" << queuedControls
+                  << "; newer input=" << newerWheelInput << '\n';
+    }
+
+    static void checkLateFallbackInput(const std::vector<uint8_t>& image, bool wheel)
+    {
+        auto engine = fixture(image);
+        // Exercise conservative scheduling on the same verified v1.8 image;
+        // this is not a compatibility test for arbitrary unknown firmware.
+        engine->releaseRetirementProfile_ = false;
+        cc(*engine, 121, 0);
+        int samples = 0;
+        while (engine->controllerResetAwaitingPedals_ || engine->wheelPending_[0]
+               || engine->wheelPending_[1] || engine->dx7_.haveMsg
+               || engine->controllerResetZeroCycle_ == 0
+               || engine->dx7_.cycle - engine->controllerResetZeroCycle_ < 12000)
+        {
+            float discarded = 0;
+            engine->render(&discarded, nullptr, 1);
+            require(++samples < 256 * 1024 && engine->isControllerResetInProgress(),
+                    "reach the final conservative controller pacing interval");
+        }
+        const auto oldInterval = engine->controllerResetZeroCycle_;
+        if (wheel)
+        {
+            require(engine->requestPerformanceWheel(1, 27), "accept a late wheel during fallback pacing");
+            require(!engine->wheelPending_[1] && !engine->appToSynth_.lfq.wasEmpty(),
+                    "late wheel uses the ordinary FIFO, not detached wheel retry");
+        }
+        else cc(*engine, 2, 37);
+        const auto source = wheel ? dx7Emu::Message::CtrlID::modulate
+                                  : dx7Emu::Message::CtrlID::breath;
+        const int value = wheel ? 27 : 37;
+        uint64_t lastInFlightCycle = 0;
+        while (engine->isControllerResetInProgress())
+        {
+            float discarded = 0;
+            engine->render(&discarded, nullptr, 1);
+            if (engine->dx7_.haveMsg && engine->dx7_.msg.byte1 == static_cast<uint8_t>(source)
+                && engine->dx7_.msg.byte2 == value)
+                lastInFlightCycle = engine->dx7_.cycle;
+            require(++samples < 256 * 1024, "late fallback controller completes within bounded render");
+        }
+        require(lastInFlightCycle != 0 && engine->controllerResetZeroCycle_ > oldInterval
+                && engine->controllerResetZeroCycle_ > lastInFlightCycle
+                && engine->dx7_.cycle - engine->controllerResetZeroCycle_ >= 16384,
+                "late controller transfer receives a fresh complete fallback pacing interval");
+        require(!engine->dx7_.haveMsg && !engine->dx7_.byte1Sent
+                && engine->dx7_.memory[0x232a] == 128
+                && engine->dx7_.memory[0x2337] == (wheel ? 54 : 0)
+                && engine->dx7_.memory[0x233b] == (wheel ? 0 : 74),
+                "first fallback gate-clear sample includes the late controller firmware update");
+        std::cout << "PASS: CC121 fresh fallback pacing after late input; wheel=" << wheel << '\n';
+    }
 };
 
 int main(int argc, char** argv)
@@ -406,6 +498,12 @@ int main(int argc, char** argv)
         VDX7RegressionAccess::checkPartialLaterInterruption(image, true);
         VDX7RegressionAccess::checkAllNotesOffSupersedesSustain(image, false);
         VDX7RegressionAccess::checkAllNotesOffSupersedesSustain(image, true);
+        VDX7RegressionAccess::checkWheelGate(image, 0, false);
+        VDX7RegressionAccess::checkWheelGate(image, 1024, false);
+        VDX7RegressionAccess::checkWheelGate(image, 0, true);
+        VDX7RegressionAccess::checkWheelGate(image, 100, true);
+        VDX7RegressionAccess::checkLateFallbackInput(image, true);
+        VDX7RegressionAccess::checkLateFallbackInput(image, false);
         return 0;
     }
     catch (const std::exception& error)
