@@ -621,7 +621,8 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
         if (status == 0x90 && data[2] != 0) keyboardSnapshot_[data[1]].fetch_or(mask);
         else if (status == 0x80 || (status == 0x90 && data[2] == 0))
             keyboardSnapshot_[data[1]].fetch_and(static_cast<uint16_t>(~mask));
-        else if (status == 0xb0 && data[1] == 123) clearKeyboardSnapshot();
+        else if (status == 0xb0 && (data[1] == 120 || data[1] == 123))
+            clearKeyboardSnapshot();
     }
     return bankChange || (size == 2 && (data[0] & 0xf0) == 0xc0);
 }
@@ -1110,7 +1111,12 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         {
             // Capture even the most recent GUI/automation edits if the host asks
             // for state before another audio block has had a chance to run.
-            if (applyOperatorParameters() | applyVoiceParameters())
+            // Before the first ROM is installed, these setters necessarily
+            // reject the edits. Keep their dirty masks intact and serialize
+            // them as deferred edits below instead of consuming a request the
+            // engine cannot yet apply.
+            loaded = engine_.isLoaded();
+            if (loaded && (applyOperatorParameters() | applyVoiceParameters()))
                 engine_.reloadCurrentProgram();
             applyPendingCommands();
             applyPendingPerformanceSettings();
@@ -1119,7 +1125,6 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
             program = engine_.currentProgram();
             modified = modifiedVoices_.load();
             if (!engine_.saveRam(ram)) ram.clear();
-            loaded = engine_.isLoaded();
             if (loaded)
             {
                 for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
@@ -1177,6 +1182,37 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
             setSavedValue(voiceParameterIDs_[p], voiceValues[p]);
     }
     state.addChild(parameterState, -1, nullptr);
+
+    if (!loaded)
+    {
+        // A fresh project with no firmware has no authoritative packed RAM.
+        // Persist only host parameters explicitly edited in this instance;
+        // untouched parameter defaults must not overwrite the first voice
+        // supplied by the eventual ROM.
+        const auto low = operatorParameterDirty_[0].load(std::memory_order_acquire);
+        const auto high = operatorParameterDirty_[1].load(std::memory_order_acquire);
+        const auto voice = voiceParameterDirty_.load(std::memory_order_acquire);
+        if ((low | high | voice) != 0)
+        {
+            juce::ValueTree edits("DeferredVoiceEdits");
+            for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
+                for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
+                {
+                    const int index = op * VDX7VoiceData::kParameterCount + p;
+                    const auto mask = uint64_t { 1 } << (index % 64);
+                    if (((index < 64 ? low : high) & mask) != 0)
+                        edits.setProperty(juce::Identifier("op" + juce::String(index)),
+                            juce::roundToInt(pendingOperatorValues_[op][p].load(
+                                std::memory_order_relaxed)), nullptr);
+                }
+            for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
+                if ((voice & (uint32_t { 1 } << p)) != 0)
+                    edits.setProperty(juce::Identifier("voice" + juce::String(p)),
+                        juce::roundToInt(pendingVoiceValues_[p].load(std::memory_order_relaxed)),
+                        nullptr);
+            state.addChild(edits, -1, nullptr);
+        }
+    }
 
     if (auto xml = state.createXml())
         copyXmlToBinary(*xml, destData);

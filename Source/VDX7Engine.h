@@ -115,6 +115,7 @@ private:
     bool reserveMidi(int bytes);
     void queuePortamentoRefresh(); // Caller has reserved three serial bytes.
     void recoverMidiOverflow();
+    void resetMidiControllers() noexcept;
     int generateNative(float* out);
     float nextNativeSample();
     uint8_t mapVelocity(uint8_t velocity) const;

@@ -161,6 +161,25 @@ void VDX7Engine::beginHostReset()
     beginMidiReset(false);
 }
 
+void VDX7Engine::resetMidiControllers() noexcept
+{
+    // Reset transient MIDI inputs only. The DX7's stored PERFORMANCE ranges,
+    // assignments, play mode and portamento-time setting are persistent state
+    // and must not be overwritten by a host controller reset.
+    midiExpression_ = 1.0f;
+    sustainDown_ = false;
+    toSynth_->sustain(false);
+    toSynth_->porta(false);
+    toSynth_->analog(dx7Emu::Message::CtrlID::breath, 0);
+    toSynth_->analog(dx7Emu::Message::CtrlID::foot, 0);
+    toSynth_->analog(dx7Emu::Message::CtrlID::data, 0);
+    toSynth_->analog(dx7Emu::Message::CtrlID::aftertouch, 0);
+    lastPitchBendInput_ = 64;
+    pitchBendRefresh_ = false;
+    requestPerformanceWheel(0, 64);
+    requestPerformanceWheel(1, 0);
+}
+
 void VDX7Engine::beginMidiReset(bool releaseEveryPitch)
 {
     // Keep accepted intent across the flush. With no time input yet, retain
@@ -637,6 +656,14 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
                     return;
                 case 65:
                     toSynth_->porta(data[2] >= 64);
+                    return;
+                case 120:
+                    // All Sound Off is a hard, muted lifecycle reset; unlike
+                    // CC123 it must not depend on the current envelope release.
+                    beginHostReset();
+                    return;
+                case 121:
+                    resetMidiControllers();
                     return;
                 case 123:
                     allNotesOff();

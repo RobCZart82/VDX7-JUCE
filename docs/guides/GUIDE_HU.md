@@ -194,7 +194,7 @@ cmake --build build-local --config Release --target vdx7_all_tests
 ctest --test-dir build-local -C Release --output-on-failure
 ```
 
-Az aktuális CMake-beállítás tíz ROM-mentes CTestet regisztrál. A
+Az aktuális CMake-beállítás ROM-mentes CTesteket regisztrál. A
 `vdx7_ci_checks` és `vdx7_all_tests` cél ezen felül a firmware-függő integrációs
 futtatókat és az elkülönített MONO-kísérletet is lefordítja, de ROM nélkül nem
 futtatja őket. A teljes helyi tesztsorhoz konfigurálj
@@ -215,10 +215,14 @@ a támogatását a teljes tesztkörben. A privát fixture nem kerül nyilvános 
 
 Ez a projekt [GNU AGPLv3](../../LICENSE.txt) szerint érhető el. A wrapper és az eredeti GUI-erőforrások AGPL-3.0-only licencűek; a DX7-mag megőrzi GPL-3.0-or-later licencét és eredeti közléseit. A JUCE-ot AGPLv3 alatt használjuk. Az egyesített mű és a komponensek közlései: [NOTICE.md](../../NOTICE.md).
 
-Az 1.0.0 kiadási terv a bináris mellett teljes corresponding-source csomagot,
-rögzített JUCE- és dx7Lib-forrást, build scripteket és licencközléseket irányoz
-elő; ez a csomag még nem tekinthető publikált letöltésnek. A szoftver garancia
-nélkül érhető el. A firmware nem része a szoftverlicencnek. A leírásban szereplő
+A v1.0.0 stabil kiadás és a hozzá tartozó corresponding-source forrásarchívum
+már letölthető a [GitHub Releases oldaláról](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0).
+A kiadás macOS universal `.pkg`-t és kézi telepítésű ZIP-et, Windows x64 `.exe`-
+telepítőt és kézi ZIP-et, ellenőrzőösszegeket, buildadatokat és forrásarchívumot
+tartalmaz. Kizárólag VST3-at ad; AU- és Standalone-csomag nincs benne. A kiadás
+után talált hibák javítása egy későbbi karbantartó kiadásba kerülhet; ez nem
+módosítja a publikált v1.0.0 taget vagy fájlokat. A szoftver garancia nélkül
+érhető el. A firmware nem része a szoftverlicencnek. A leírásban szereplő
 Yamaha-név kompatibilitást jelöl, nem támogatást vagy jóváhagyást; Yamaha-logó
 nincs mellékelve.
 
@@ -226,7 +230,8 @@ nincs mellékelve.
 
 Köszönet a [VDX7/chiaccona](https://github.com/chiaccona/VDX7), [Retromulator/dx7Lib](https://github.com/reales/retromulator) és [JUCE](https://github.com/juce-framework/JUCE) fejlesztőinek. Csak a hordozható DX7-mag épül be, nem a teljes Retromulator alkalmazás.
 
-Következő prioritások: teljes helyi ROM-os regressziós kör; célzott REAPER
-hangtartomány- és transportteszt; valódi host-, konkurencia- és platformelfogadás;
-hátralévő platformközi GUI-ellenőrzések; majd kiadási csomagolás. Az 1.0.0 publikálására
-nincs jóváhagyás. Részletek: ROADMAP_1.0.md.
+A publikált 1.0.0 kiadás végigment a kiadási ellenőrzéseken, és a tulajdonos
+Windows és macOS rendszeren, REAPER-ben is elfogadta. Az új, kiadás utáni
+karbantartási feladatok külön követendők; ezek nem módosítják a publikált taget
+vagy telepítőcsomagokat. A kiadási és karbantartási állapotot a ROADMAP_1.0.md
+rögzíti.

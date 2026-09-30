@@ -244,6 +244,9 @@ target_include_directories(vdx7_processor_tests PRIVATE
     $<TARGET_PROPERTY:VDX7,INCLUDE_DIRECTORIES>)
 target_compile_definitions(vdx7_processor_tests PRIVATE
     $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
+add_test(NAME vdx7_pre_rom_state
+    COMMAND vdx7_processor_tests --pre-rom-state-state-only)
+set_tests_properties(vdx7_pre_rom_state PROPERTIES TIMEOUT 30 LABELS "rom-free")
 
 add_executable(vdx7_stability_tests EXCLUDE_FROM_ALL Tests/VDX7StabilityTests.cpp)
 target_link_libraries(vdx7_stability_tests PRIVATE VDX7)
@@ -280,10 +283,15 @@ if(VDX7_ENABLE_ROM_TESTS)
     add_test(NAME vdx7_midi_range COMMAND vdx7_midi_range_tests "${VDX7_TEST_ROM_FILE}")
     add_test(NAME vdx7_timing COMMAND vdx7_timing_tests "${VDX7_TEST_ROM_FILE}")
     add_test(NAME vdx7_processor COMMAND vdx7_processor_tests)
+    add_test(NAME vdx7_pre_rom_state_integration
+        COMMAND vdx7_processor_tests --pre-rom-state "${VDX7_TEST_ROM_FILE}")
+    add_test(NAME vdx7_midi_reset
+        COMMAND vdx7_stability_tests "${VDX7_TEST_ROM_FILE}" --midi-reset-only)
     add_test(NAME vdx7_stress COMMAND vdx7_stress_tests "${VDX7_TEST_ROM_FILE}")
 
     set_tests_properties(vdx7_stability PROPERTIES TIMEOUT 180)
-    set_tests_properties(vdx7_midi_range vdx7_timing PROPERTIES TIMEOUT 60)
+    set_tests_properties(vdx7_midi_range vdx7_timing vdx7_pre_rom_state_integration
+        vdx7_midi_reset PROPERTIES TIMEOUT 90)
     set_tests_properties(vdx7_stress PROPERTIES TIMEOUT 120)
     set_tests_properties(vdx7_processor PROPERTIES
         TIMEOUT 120
@@ -291,7 +299,7 @@ if(VDX7_ENABLE_ROM_TESTS)
     # These tests are registered only after an existing ROM path is supplied.
     # A 77 exit now fails the test instead of hiding a bad or unloadable fixture as SKIPPED.
     set_tests_properties(vdx7_stability vdx7_midi_range vdx7_timing vdx7_processor vdx7_stress
-        PROPERTIES LABELS "local-rom")
+        vdx7_pre_rom_state_integration vdx7_midi_reset PROPERTIES LABELS "local-rom")
 endif()
 
 # -----------------------------------------------------------------------------
