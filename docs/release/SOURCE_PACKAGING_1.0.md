@@ -4,6 +4,22 @@ This prepares local/CI artifacts; it never uploads, tags or publishes a release.
 Python 3.10+ and Git are required. Use a full commit SHA that contains the new
 packager; the dirty working tree and untracked files are intentionally ignored.
 
+## Bundled verifier and product/tooling separation (1.0.1 development)
+
+New packages include `.vdx7-source-tools/package_source.py` and
+`SOURCE_PACKAGE_README.txt`. From the extracted folder, run
+`python .vdx7-source-tools/package_source.py verify <original-source.zip>`.
+These generated additions are hashed in the manifest; the selected product
+snapshot, including its original `scripts/package_source.py`, is unchanged.
+This fixes AUDIT-20260930-A3 for future packages, not the already published
+1.0.0 archive. Its older product checker does not understand accepted metadata.
+
+When packaging an older product commit, pass `--packager-commit <full-tooling-SHA>`.
+That commit must be available in `--repo`; the tool verifies that its committed
+script matches the executing script (CRLF checkout normalization allowed).
+Without the option, the product commit is also the packager commit. Commit
+tooling first; uncommitted checker changes are not valid provenance.
+
 ```text
 python -m unittest discover -s Tests -p test_package_source.py -v
 python scripts/package_source.py create --repo . --juce <JUCE-checkout>
