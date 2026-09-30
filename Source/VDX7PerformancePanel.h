@@ -76,7 +76,7 @@ public:
 
     void refresh()
     {
-        setEnabled(processor_.isRomLoaded());
+        setEnabled(processor_.isProjectReady());
         const auto snapshot = processor_.getPerformanceDisplay();
         const auto& settings = snapshot.controllers;
         const auto& play = snapshot.play;

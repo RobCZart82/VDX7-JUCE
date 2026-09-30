@@ -113,6 +113,10 @@ public:
     bool setControllerSettingFromUi(int controller, int field, int value);
 
     bool isRomLoaded() const;
+    // UI admission mirror. Mutating locked paths also check pendingRestore_.
+    bool isProjectReady() const noexcept
+    { return engineLoaded_.load(std::memory_order_acquire)
+          && !pendingProjectEdits_.load(std::memory_order_acquire); }
     bool hasFactoryVoices() const;
     int getCurrentBank() const;
     juce::String getCurrentPatchName() const;

@@ -13,6 +13,8 @@ namespace
 {
 constexpr const char* kStateType = "VDX7STATE";
 constexpr const char* kParameterStateType = "PARAMETERS";
+constexpr const char* kPendingProjectMessage =
+    "Project preserved: load the matching saved ROM before import/export or selection.";
 
 juce::String makeRomContentIdentity(const std::vector<uint8_t>& rom,
                                     const std::vector<uint8_t>& companionVoices)
@@ -579,6 +581,19 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
 bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
 {
     if (data == nullptr || size <= 0) return false;
+    // Do not edit the incompatible engine via live MIDI while restoring a
+    // different project. Keep notes/release and transient expression controls.
+    if (pendingRestore_.isValid())
+    {
+        const auto kind = data[0] & 0xf0;
+        if (data[0] == 0xf0 || kind == 0xc0) return false;
+        if (kind == 0xb0 && size >= 3)
+        {
+            const int cc = data[1];
+            if (cc != 1 && cc != 2 && cc != 4 && cc != 11 && cc != 64
+                && cc != 120 && cc != 121 && cc != 123) return false;
+        }
+    }
     if (data[0] == 0xf0)
     {
         if (!engine_.handleSysex(data, static_cast<std::size_t>(size))) return false;
@@ -613,6 +628,7 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
 
 void VDX7AudioProcessor::applyPendingCommands()
 {
+    if (pendingRestore_.isValid()) return;
     VDX7EditQueue::Command command;
     bool selectionChanged = false, edited = false;
     for (std::size_t n = 0; n < VDX7EditQueue::capacity && editQueue_.pop(command); ++n)
@@ -986,7 +1002,7 @@ int VDX7AudioProcessor::getCurrentProgram()
 
 void VDX7AudioProcessor::setCurrentProgram(int index)
 {
-    if (!engineLoaded_.load(std::memory_order_acquire))
+    if (!isProjectReady())
         return;
 
     const int program = juce::jlimit(0, 31, index);
@@ -1494,6 +1510,7 @@ juce::File VDX7AudioProcessor::userBankFile()
 bool VDX7AudioProcessor::captureUserPatch(VDX7UserBank::Voice& voice, juce::String& error)
 {
     std::scoped_lock lock(engineMutex_);
+    if (pendingRestore_.isValid()) { error = kPendingProjectMessage; return false; }
     if (!engine_.isLoaded()) { error = "Load the firmware first."; return false; }
     flushVoiceEditsLocked();
     std::vector<uint8_t> ram;
@@ -1537,6 +1554,11 @@ bool VDX7AudioProcessor::loadPackedVoices(const std::vector<uint8_t>& packed, ju
     }
     {
         std::scoped_lock lock(engineMutex_);
+        if (pendingRestore_.isValid())
+        {
+            if (error != nullptr) *error = kPendingProjectMessage;
+            return false;
+        }
         if (!engine_.isLoaded())
         {
             if (error != nullptr) *error = "Load the DX7 firmware first";
@@ -1599,7 +1621,7 @@ bool VDX7AudioProcessor::renameVoice(const juce::String& name)
     if (clean.isEmpty() || clean.length() > 10) return false;
     for (auto c : clean) if (c < 32 || c > 126) return false;
     std::unique_lock lock(engineMutex_);
-    if (!engine_.isLoaded()) return false;
+    if (!engine_.isLoaded() || pendingRestore_.isValid()) return false;
     flushVoiceEditsLocked();
     std::vector<uint8_t> ram;
     if (!engine_.saveRam(ram)) return false;
@@ -1627,7 +1649,7 @@ bool VDX7AudioProcessor::copyOperator(int op)
 {
     if (op < 0 || op > 5) return false;
     std::scoped_lock lock(engineMutex_);
-    if (!engine_.isLoaded()) return false;
+    if (!engine_.isLoaded() || pendingRestore_.isValid()) return false;
     flushVoiceEditsLocked();
     std::vector<uint8_t> ram;
     if (!engine_.saveRam(ram)) return false;
@@ -1641,7 +1663,7 @@ bool VDX7AudioProcessor::pasteOperator(int op)
 {
     if (op < 0 || op > 5) return false;
     std::unique_lock lock(engineMutex_);
-    if (!engine_.isLoaded() || !hasOperatorClipboard_.load()) return false;
+    if (!engine_.isLoaded() || pendingRestore_.isValid() || !hasOperatorClipboard_.load()) return false;
     flushVoiceEditsLocked();
     std::vector<uint8_t> ram;
     if (!engine_.saveRam(ram)) return false;
@@ -1664,6 +1686,7 @@ bool VDX7AudioProcessor::captureSyxExportSnapshot(bool entireBank, SyxExportSnap
     int program = 0;
     {
         std::scoped_lock lock(engineMutex_);
+        if (pendingRestore_.isValid()) { error = kPendingProjectMessage; return false; }
         if (!engine_.isLoaded()) { error = "Load the ROM first."; return false; }
         flushVoiceEditsLocked();
         std::vector<uint8_t> ram;
@@ -1804,6 +1827,7 @@ void VDX7AudioProcessor::setPerformanceDisplayBits(uint64_t mask, uint64_t value
 
 void VDX7AudioProcessor::applyPendingPerformanceSettings() noexcept
 {
+    if (pendingRestore_.isValid()) return;
     const auto pending = pendingPerformanceDirty_.exchange(0, std::memory_order_acq_rel);
     if (pending == 0) return;
 
@@ -1868,7 +1892,7 @@ std::array<int, 4> VDX7AudioProcessor::getPlaySettings() const
 bool VDX7AudioProcessor::setPlaySettingFromUi(int field, int value)
 {
     if (field < 0 || field > 3 || value < 0 || value > (field == 3 ? 99 : 1)
-        || !engineLoaded_.load(std::memory_order_acquire))
+        || !isProjectReady())
         return false;
 
     // POLY/MONO is an intentional firmware transaction: it drains the native
@@ -1880,6 +1904,7 @@ bool VDX7AudioProcessor::setPlaySettingFromUi(int field, int value)
         uint64_t lockWorkMicros = 0;
         {
             std::scoped_lock lock(engineMutex_);
+            if (pendingRestore_.isValid()) return false;
             const auto begin = std::chrono::steady_clock::now();
             const int previous = engine_.getPlaySetting(field);
             if (!engine_.setPlaySetting(field, value)) return false;
@@ -1926,7 +1951,7 @@ bool VDX7AudioProcessor::setMidiInputChannelFromUi(int channel)
 
 bool VDX7AudioProcessor::setMasterTuneFromUi(int value)
 {
-    if (value < -256 || value > 255 || !engineLoaded_.load(std::memory_order_acquire))
+    if (value < -256 || value > 255 || !isProjectReady())
         return false;
     pendingMasterTune_.store(value, std::memory_order_relaxed);
     pendingPerformanceDirty_.fetch_or(kMasterTunePerformanceMask, std::memory_order_release);
@@ -1948,7 +1973,7 @@ VDX7AudioProcessor::SettingsApplyResult VDX7AudioProcessor::applySettingsFromUi(
     const bool tuningChanged = tuning != getMasterTune();
     // Validate this before the MONO operation: when no ROM is loaded, changing
     // MONO policy is allowed but master tuning is not.
-    if (tuningChanged && !engineLoaded_.load(std::memory_order_acquire))
+    if (tuningChanged && !isProjectReady())
         return SettingsApplyResult::tuningUnavailable;
 
     // MONO correction can fail while a project restore is pending. Run this
@@ -1967,7 +1992,7 @@ VDX7AudioProcessor::SettingsApplyResult VDX7AudioProcessor::applySettingsFromUi(
 bool VDX7AudioProcessor::setPitchBendSettingFromUi(int field, int value)
 {
     if (field < 0 || field > 1 || value < 0 || value > 12
-        || !engineLoaded_.load(std::memory_order_acquire))
+        || !isProjectReady())
         return false;
     const auto previous = getPerformanceDisplay().bend[field];
     pendingPitchBendSettings_[field].store(value, std::memory_order_relaxed);
@@ -1982,7 +2007,7 @@ bool VDX7AudioProcessor::setControllerSettingFromUi(int controller, int field, i
 {
     if (controller < 0 || controller >= 4 || field < 0 || field >= 4
         || value < 0 || value > (field == 0 ? 99 : 1)
-        || !engineLoaded_.load(std::memory_order_acquire))
+        || !isProjectReady())
         return false;
     const auto index = controller * 4 + field;
     const auto previous = getPerformanceDisplay().controllers[index];
@@ -1998,7 +2023,7 @@ bool VDX7AudioProcessor::setControllerSettingFromUi(int controller, int field, i
 
 bool VDX7AudioProcessor::selectFactoryBank(int bank)
 {
-    if (!engineLoaded_.load(std::memory_order_acquire)
+    if (!isProjectReady()
         || !factoryVoicesAvailable_.load(std::memory_order_acquire)
         || bank < 0 || bank > 7)
         return false;
@@ -2072,6 +2097,11 @@ juce::String VDX7AudioProcessor::getStatusText() const
 
 juce::String VDX7AudioProcessor::getCriticalStatusText() const
 {
+    if (pendingProjectEdits_.load(std::memory_order_acquire))
+    {
+        std::scoped_lock lock(metadataMutex_);
+        return juce::String(kPendingProjectMessage) + "\n" + statusText_;
+    }
     if (editQueue_.overflowed())
         return "Edit queue full: further edits blocked; save/export accepted edits, then reload the project";
     if (midiOverloadSnapshot_.load(std::memory_order_relaxed) != 0)

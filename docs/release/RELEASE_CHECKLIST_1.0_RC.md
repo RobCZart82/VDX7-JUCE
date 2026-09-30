@@ -1,5 +1,20 @@
 # 1.0 release-preparation checklist — not a publication authorization
 
+## Current correction checkpoint — 2026-09-30
+
+1.0.0 is already published; the old preparation checklist below is historical.
+Use [the active 1.0.1 plan](EXECUTION_PLAN_1.0.md) for A1–A10 dispositions.
+Do not carry earlier PASS results forward as exact-1.0.1 evidence.
+
+- [ ] Pending-project A1/A2 regression and required remote PR checks accepted.
+- [ ] A3 source archive verifies with its own documented bundled checker.
+- [ ] Published/next-candidate asset provenance and HU/EN docs reconciled.
+- [ ] Exact 1.0.1 source/platform tests, payload and installer upgrade checked.
+- [ ] Remaining host tests explicitly executed or deferred, never assumed PASS.
+- [ ] Separate approval for new tag/release/assets (not granted by merge approval).
+
+## Historical 1.0.0 preparation record
+
 This checklist distinguishes completed evidence from items the owner has
 deferred. An unchecked item is not a pass. The owner has chosen to close
 open-ended exploratory testing and handle any later confirmed issue after

@@ -1,6 +1,48 @@
-# 1.0 consolidated execution plan — release preparation 2026-09-29
+# Consolidated execution plan — 1.0.1 corrective development
 
-## Current main checkpoint — stable installer acceptance (2026-09-29)
+## Active checkpoint — 2026-09-30
+
+1.0.0 is published at product `d79ed5214d82caf70e3941e5a620bab137d3f9ca`;
+release tools/main reviewed at `3fa8c2e00ad4dcd1860551cf3596ee4ad29de789`.
+Publication time: 2026-09-29 23:49:49 UTC. Preserve that tag and its assets.
+The owner authorized corrective development and merging green, verified PRs
+into main for 1.0.1. This is **not** authorization to publish 1.0.1.
+Earlier checkpoints below describe their own historical states, not current
+release availability or a continuing absence of known defects.
+
+This is the single active work ledger; do not create competing roadmaps.
+
+| ID | Priority / evidence | Implementation and next acceptance |
+| --- | --- | --- |
+| AUDIT-20260930-A1/A2 | P1, reproduced pending-project edit loss and wrong-engine capture | This change rejects unsupported persistent operations until the matching ROM is loaded; preserves pending voice/operator edits and prioritizes recovery status. Local regression evidence: [boundary validation](../validation/VALIDATION_20260930_PENDING_BOUNDARY.md). Remote checks/merge and exact-1.0.1 acceptance remain separate gates. |
+| AUDIT-20260930-A3 | P1 packaging, published ZIP fails its bundled verifier | OPEN: bundle a compatible, separately identified packager verifier without falsifying product-source identity; test old-source/new-packager prep/accepted combinations and corruption controls. |
+| AUDIT-20260930-A4 | P2 provenance guard gap, not unauthorized publication | OPEN: bind accepted mode to an explicitly reviewed product/packager SHA pair and authorized workflow ref; keep read-only publication permissions. |
+| AUDIT-20260930-A5 | P2 installer layout; no reproduced host scan failure | OPEN: assess separate uninstall directory with tested 1.0.0 upgrade/uninstall migration; preserve AppId and USER data. Do not move the directory without migration evidence. |
+| AUDIT-20260930-A6 | P2 toolchain provenance | OPEN: pin Inno; record compiler, SDK, CMake, runner and dependency versions. Deterministic source archives do not imply bit-identical installers. |
+| AUDIT-20260930-A7 | P2 stale release evidence/docs | PARTIAL: active plan records publication; independently verify all published/accepted assets and update README, HU/EN guides and final validation, not merely the earlier prep artifact. |
+| AUDIT-20260930-A8 | P3 test-only C4805 | OPEN: type-correct test expression and Windows build verification. |
+| AUDIT-20260930-A9 | P2 missing sanitizer coverage, not a DSP defect | OPEN: instrument/run resampler tests. Python packaging checks remain a separate CI result, not ASan coverage. |
+| AUDIT-20260930-A10 | P3 descriptive prototype metadata | OPEN: clean description only; preserve bundle ID, plugin codes and parameter identity. |
+
+Work order: A1/A2 -> A3 -> A4/A6/A7 -> proportionate A5/A8/A9/A10 work
+-> frozen 1.0.1 build/acceptance. Each PR carries its validation and updates
+this ledger. MERGED is not VERIFIED on the final candidate. Never convert
+NOT RUN / DEFERRED to PASS without execution.
+
+Preserve the earlier fixes, all 148 parameter IDs/order, state compatibility,
+Notes 12–120, Native default, keyboard PITCH value retention and approved GUI.
+No ROM, secrets, caches or installed binaries in GitHub. No REAPER launch or
+installed-plugin replacement during non-host development. Broader host/rate/
+buffer/offline/instance/GUI/Intel acceptance remains explicitly deferred;
+tail=0, try-lock silence and bounded queues are characterization items, not
+new proven defects. A targeted final-binary host check needs separate consent.
+
+Final gate: exact source and packager SHAs, Windows/macOS build and tests,
+private local-ROM regressions, self-verifying source archive, asset hashes,
+payload/licenses, installer upgrade smoke and explicit deferred-risk record.
+Present these before separately requesting 1.0.1 publication authorization.
+
+## Historical main checkpoint — stable installer acceptance (2026-09-29)
 
 Current main is `d79ed5214d82caf70e3941e5a620bab137d3f9ca`, merge of PR #101. PR checks and post-merge Windows/macOS CI passed. The non-publishing stable VST3 installer workflow [36621909919](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36621909919) passed on this exact SHA. Both platform builds and ROM-free CTests passed; Windows installer install/uninstall smoke test, macOS package payload checks, and combined SHA-256 manifest verification also passed. It uploaded `VDX7-1.0.0-Release-Assets-d79ed5214d82caf70e3941e5a620bab137d3f9ca` (ID `11059321610`, outer artifact SHA-256 `65d3ac7195a00f7d3040816cbbd257ea247f0cb65d487c6823cc8c02675712a3`, expires 2026-12-28).
 

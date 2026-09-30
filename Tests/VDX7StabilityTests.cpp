@@ -524,7 +524,8 @@ static void checkSettingsApplyAtomicity(const juce::File& romFile)
     atomic.setStateInformation(atomicPendingState.getData(),
                                static_cast<int>(atomicPendingState.getSize()));
     const auto result = atomic.applySettingsFromUi(requestedTune, requestedChannel, true);
-    require(result == VDX7AudioProcessor::SettingsApplyResult::monoCorrectionUnavailable,
+    // Pending ROM now rejects tuning before attempting any MONO/channel work.
+    require(result == VDX7AudioProcessor::SettingsApplyResult::tuningUnavailable,
             "atomic Apply reports pending restore");
     require(atomic.getMasterTune() == 0 && atomic.getMidiInputChannel() == 0
                 && !atomic.getMonoCorrectionStatus().requested,
@@ -724,6 +725,8 @@ static void checkAudioPublication(const juce::File& romFile)
     require(listener.coherent, "reentrant saves contain voice parameters matching packed RAM");
 }
 
+#include "VDX7PendingBoundaryTests.h"
+
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -733,6 +736,7 @@ int main(int argc, char** argv)
         juce::File romFile(juce::String::fromUTF8(argv[1]));
         juce::MemoryBlock rom;
         require(romFile.loadFileAsData(rom), "read local ROM");
+        checkPendingOperationBoundary(romFile);
         checkSettingsApplyAtomicity(romFile);
         checkAudioPublication(romFile);
         checkEditOrdering(romFile);
