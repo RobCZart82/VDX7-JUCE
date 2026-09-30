@@ -382,6 +382,27 @@ static void checkMidiTimeline()
     require(q.push(on, 3)); q.advanceInputBlock(512, 256);
     q.renderBlock(64, [](const uint8_t*, std::size_t, int) { require(false); }, [&] { panic = true; });
     require(panic);
+
+    // If CC120 stops playback mid-block, later queued events keep their order
+    // and their sample offsets while the reset transaction pauses playback.
+    q.clear();
+    const uint8_t allSoundOff[] {0xb0, 120, 0};
+    require(q.push(allSoundOff, sizeof(allSoundOff), 10)
+            && q.push(on, sizeof(on), 22) && q.push(off, sizeof(off), 32));
+    q.advanceInputBlock(64, 4096, VDX7DeferredMidi::Playback::rendering);
+    std::vector<int> panicTimes, resumedTimes;
+    q.renderBlock(64, [&](const uint8_t* data, std::size_t, int position) -> bool {
+        panicTimes.push_back(position);
+        return data[1] != 120;
+    }, [] { require(false); });
+    require(panicTimes == std::vector<int>({10}) && q.active(),
+            "CC120 stops deferred playback and retains following events");
+    q.advanceInputBlock(64, 4096, VDX7DeferredMidi::Playback::paused);
+    q.renderBlock(64, [&](const uint8_t*, std::size_t, int position) {
+        resumedTimes.push_back(position);
+    }, [] { require(false); });
+    require(resumedTimes == std::vector<int>({12, 22}),
+            "events after CC120 resume at their original relative offsets");
     std::cout << "PASS: deferred sample positions, multiblock ordering, short notes, future offs and lag bound\n";
 }
 

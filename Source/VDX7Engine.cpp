@@ -176,8 +176,14 @@ void VDX7Engine::resetMidiControllers() noexcept
     toSynth_->analog(dx7Emu::Message::CtrlID::aftertouch, 0);
     lastPitchBendInput_ = 64;
     pitchBendRefresh_ = false;
-    requestPerformanceWheel(0, 64);
-    requestPerformanceWheel(1, 0);
+    // Do not use requestPerformanceWheel here: that helper reserves serial
+    // capacity for ordinary host input and could turn CC121 into overflow
+    // recovery while the queue is full. Pending intents are drained directly
+    // by the existing bounded controller-refresh path.
+    wheelIntent_[0] = 64;
+    wheelIntent_[1] = 0;
+    wheelPending_[0] = true;
+    wheelPending_[1] = true;
 }
 
 void VDX7Engine::beginMidiReset(bool releaseEveryPitch)
@@ -594,6 +600,22 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
     // Unsupported bank requests must not trigger serial-overflow recovery.
     if ((data[0] & 0xf0) == 0xb0 && size == 3 && data[1] == 32
         && (data[2] >= 8 || !hasFactoryVoices())) return;
+    // Channel-mode resets do not enter the serial queue. Handle them before
+    // reserving capacity so a full queue cannot turn CC120 into soft overflow
+    // recovery or silently discard CC121.
+    if ((data[0] & 0xf0) == 0xb0 && size == 3)
+    {
+        if (data[1] == 120)
+        {
+            beginHostReset();
+            return;
+        }
+        if (data[1] == 121)
+        {
+            resetMidiControllers();
+            return;
+        }
+    }
     const bool timeRequest = (data[0] & 0xf0) == 0xb0 && data[1] == 5;
     // After recovery, put the retained time BEFORE newly accepted notes.
     // A newer accepted physical CC5 supersedes the old request instead.
@@ -656,14 +678,6 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
                     return;
                 case 65:
                     toSynth_->porta(data[2] >= 64);
-                    return;
-                case 120:
-                    // All Sound Off is a hard, muted lifecycle reset; unlike
-                    // CC123 it must not depend on the current envelope release.
-                    beginHostReset();
-                    return;
-                case 121:
-                    resetMidiControllers();
                     return;
                 case 123:
                     allNotesOff();

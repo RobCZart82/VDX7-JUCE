@@ -282,7 +282,12 @@ struct VDX7RegressionAccess
         send(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)));
         require(pump(256) > 1.0e-5f && engine.hasHeldMidiNotes(),
                 "All Sound Off fixture has an audible held note");
+        auto& serial = engine.dx7_.midiSerialRx;
+        const auto overloadBeforePanic = engine.midiOverloadCount();
+        serial.writeIdx = (serial.readIdx + serial.size - 1) & (serial.size - 1);
         send(juce::MidiMessage::controllerEvent(1, 120, 0));
+        require(engine.midiOverloadCount() == overloadBeforePanic,
+                "CC120 takes its hard-reset path even when the serial queue is full");
         const float postPanicPeak = pump(12000);
         int firmwareMidi = 0, firmwareHeld = 0, firmwareSustained = 0;
         for (int voice = 0; voice < 16; ++voice)
@@ -307,6 +312,31 @@ struct VDX7RegressionAccess
                         == persistentAfter[static_cast<std::size_t>(address - 0x1000)],
                     "CC120 leaves persistent PERFORMANCE settings unchanged");
 
+        // Preserve an ordered Note On after CC120 in the same callback. It is
+        // replayed only after the muted firmware reset has completely drained.
+        send(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)));
+        midi.clear();
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 120, 0), 8);
+        midi.addEvent(juce::MidiMessage::noteOn(1, 62, juce::uint8(100)), 24);
+        p.processBlock(audio, midi);
+        require(engine.isHostResetInProgress() && p.deferredMidi_.active(),
+                "post-CC120 same-block MIDI enters the bounded deferred timeline");
+        int resetBlocks = 0;
+        while (engine.isHostResetInProgress() && resetBlocks < 1500)
+        {
+            midi.clear();
+            p.processBlock(audio, midi);
+            ++resetBlocks;
+        }
+        require(!engine.isHostResetInProgress(), "same-block panic firmware reset finishes");
+        midi.clear();
+        p.processBlock(audio, midi);
+        require(engine.activeMidiNotes_[62] != 0 && !engine.activeMidiNotes_[60],
+                "post-panic Note On is replayed after reset instead of being lost");
+        (void) pump(256);
+        send(juce::MidiMessage::noteOff(1, 62));
+        (void) pump(512);
+
         send(juce::MidiMessage::controllerEvent(1, 11, 0));
         send(juce::MidiMessage::controllerEvent(1, 1, 127));
         send(juce::MidiMessage::controllerEvent(1, 64, 127));
@@ -315,7 +345,17 @@ struct VDX7RegressionAccess
         send(juce::MidiMessage::noteOff(1, 60)); // Remains sustained until CC121.
         send(juce::MidiMessage::noteOn(1, 62, juce::uint8(100)));
         require(engine.activeMidiNotes_[62] != 0, "CC121 held-note fixture is active");
-        send(juce::MidiMessage::controllerEvent(1, 121, 0));
+        const auto overloadBeforeControllerReset = engine.midiOverloadCount();
+        const auto queueReadBeforeControllerReset = serial.readIdx;
+        serial.writeIdx = (serial.readIdx + serial.size - 1) & (serial.size - 1);
+        const auto fullWriteIdx = serial.writeIdx;
+        const uint8_t resetControllers[] {0xb0, 121, 0};
+        engine.handleMidi(resetControllers, 3);
+        require(engine.midiOverloadCount() == overloadBeforeControllerReset
+                && serial.readIdx == queueReadBeforeControllerReset
+                && serial.writeIdx == fullWriteIdx,
+                "CC121 resets controller state without reserving serial capacity");
+        serial.flush();
         require(engine.midiExpression_ == 1.0f && !engine.sustainDown_
                 && engine.wheelIntent_[0] == 64 && engine.wheelIntent_[1] == 0,
                 "CC121 resets expression, sustain, pitch and modulation inputs");

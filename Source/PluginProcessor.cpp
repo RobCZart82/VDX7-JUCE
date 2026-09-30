@@ -537,22 +537,36 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         }
 
         programMemoryChanged |= handleMidiEventLocked(data, static_cast<int>(size));
+        // CC120 may begin a multi-block firmware reset. Stop consuming this
+        // callback's MIDI timeline at that exact event; following events are
+        // retained for the existing bounded deferred path.
+        return !engine_.isHostResetInProgress();
     };
     if (useDeferred)
         deferredMidi_.renderBlock(total, deliver,
             [&] { engine_.allNotesOff(); clearKeyboardSnapshot(); });
     else
     {
+        bool deferFollowing = false;
+        auto deliverOrDefer = [&](const uint8_t* data, std::size_t size, int eventPos)
+        {
+            if (deferFollowing)
+            {
+                (void) deferredMidi_.push(data, size, eventPos);
+                return;
+            }
+            deferFollowing = !deliver(data, size, eventPos);
+        };
         for (std::size_t i = 0; i < keyboardCount; ++i)
             if (VDX7MidiValidation::acceptsHostEvent(keyboardEvents[i].data(), 3, 0,
                     hasFactoryVoices))
-                deliver(keyboardEvents[i].data(), 3, 0);
+                deliverOrDefer(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
             if (event.numBytes > 0 && VDX7MidiValidation::acceptsHostEvent(
                     event.data, static_cast<std::size_t>(event.numBytes), inputChannel,
                     hasFactoryVoices))
-                deliver(event.data, static_cast<std::size_t>(event.numBytes),
-                        juce::jlimit(0, total, event.samplePosition));
+                deliverOrDefer(event.data, static_cast<std::size_t>(event.numBytes),
+                               juce::jlimit(0, total, event.samplePosition));
     }
 
     if (programMemoryChanged)
