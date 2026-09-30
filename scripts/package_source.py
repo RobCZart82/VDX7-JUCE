@@ -11,6 +11,8 @@ import zipfile
 JUCE_SHA = "e18f7f506c0b96f2c738a0bcd7fe6467a5005ad8"
 CORE_SHA = "d5473776a0449d60a997b91bdc888598a33265ac"
 MANIFEST = "SOURCE_MANIFEST.json"
+VERIFIER = ".vdx7-source-tools/package_source.py"
+PACKAGE_README = "SOURCE_PACKAGE_README.txt"
 
 
 def git(repo, *args):
@@ -115,8 +117,28 @@ def package(repo, juce, core, sha, output, package_label="1.0.0-dev",
         raise ValueError("Source dependency pins changed; review/update the packager")
     for name, (data, _) in files.items():
         inspect_payload(name, data)
+        if name.startswith(".vdx7-source-tools/") or name in (PACKAGE_README, MANIFEST):
+            raise ValueError(f"Reserved generated-package path: {name}")
         if name.startswith("third_party/"):
             raise ValueError("Wrapper snapshot must not already contain vendored dependencies")
+    # Keep the exact product snapshot, including its potentially older checker.
+    # Package separately identified tooling from the actual packager commit.
+    packager_commit = packager_commit or sha
+    tooling = snapshot(repo, packager_commit, ("scripts/package_source.py",))
+    checker = tooling["scripts/package_source.py"]
+    if checker[0] != Path(__file__).read_bytes().replace(b"\r\n", b"\n"):
+        raise ValueError("Running packager differs from packager_commit; commit tooling first")
+    inspect_payload(VERIFIER, checker[0])
+    files[VERIFIER] = checker
+    files[PACKAGE_README] = ((
+        "Corresponding-source package verification\n"
+        f"Product commit: {sha}\nPackager commit: {packager_commit}\n"
+        f"From the extracted folder run: python {VERIFIER} verify <original-source.zip>\n"
+        "Use this bundled checker, not the older product scripts/package_source.py.\n"
+        "The product snapshot is unchanged; .vdx7-source-tools and this readme are\n"
+        "generated packaging additions recorded in SOURCE_MANIFEST.json.\n"
+        "Hashes establish integrity, not publisher identity.\n"
+    ).encode("utf-8"), 0o644)
     for name, item in snapshot(juce, JUCE_SHA).items():
         inspect_payload(name, item[0], upstream=True)
         files["third_party/JUCE/" + name] = item

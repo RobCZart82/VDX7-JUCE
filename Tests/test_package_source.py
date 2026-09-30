@@ -6,6 +6,8 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
+import sys
 import zipfile
 
 spec = importlib.util.spec_from_file_location("package_source", Path(__file__).parents[1] / "scripts/package_source.py")
@@ -14,6 +16,41 @@ spec.loader.exec_module(p)
 
 
 class SourcePackageTests(unittest.TestCase):
+    def test_reserved_tooling_and_false_packager_identity_rejected(self):
+        minimal = {"CMakeLists.txt": ((p.JUCE_SHA + p.CORE_SHA).encode(), 0o644)}
+        for name in (p.VERIFIER, p.PACKAGE_README, p.MANIFEST):
+            with patch.object(p, "snapshot", return_value={**minimal, name: (b"collision", 0o644)}):
+                with self.assertRaisesRegex(ValueError, "Reserved"):
+                    p.package("repo", "juce", "core", "a" * 40, Path("unused"))
+        with patch.object(p, "snapshot", side_effect=[minimal, {"scripts/package_source.py": (b"wrong", 0o644)}]):
+            with self.assertRaisesRegex(ValueError, "Running packager differs"):
+                p.package("repo", "juce", "core", "a" * 40, Path("unused"))
+
+    def test_old_product_new_packager_bundled_verifier(self):
+        old_checker = b"raise SystemExit('old product checker rejects accepted format')\n"
+        wrapper = {"CMakeLists.txt": ((p.JUCE_SHA + p.CORE_SHA).encode(), 0o644),
+                   "scripts/package_source.py": (old_checker, 0o644),
+                   **{name: (b"notice\n", 0o644) for name in ("LICENSE.txt", "NOTICE.md", "THIRD_PARTY.md")}}
+        checker = Path(p.__file__).read_bytes().replace(b"\r\n", b"\n")
+        def snapshot(repo, sha, paths=()):
+            if sha == "b" * 40:
+                return {"scripts/package_source.py": (checker, 0o644)}
+            if repo == "wrapper": return dict(wrapper)
+            if repo == "juce": return {"LICENSE.md": (b"notice\n", 0o644)}
+            return {"source/dx7Lib/dx7.cpp": (b"// core\n", 0o644), "LICENSE.txt": (b"notice\n", 0o644)}
+        with tempfile.TemporaryDirectory() as folder, patch.object(p, "snapshot", side_effect=snapshot):
+            root = Path(folder)
+            for accepted in (False, True):
+                archive = p.package("wrapper", "juce", "core", "a" * 40,
+                                    root / str(accepted), "1.0.0", accepted, "b" * 40)
+                p.verify(archive)
+                with zipfile.ZipFile(archive) as z:
+                    self.assertEqual(z.read("scripts/package_source.py"), old_checker)
+                    bundled = root / (str(accepted) + "-verify.py")
+                    bundled.write_bytes(z.read(".vdx7-source-tools/package_source.py"))
+                    self.assertIn(b".vdx7-source-tools/package_source.py", z.read("SOURCE_PACKAGE_README.txt"))
+                subprocess.run([sys.executable, str(bundled), "verify", str(archive)], check=True)
+
     def fixture(self):
         data = b"example source\n"
         return {"Source/example.cpp": (data, 0o644)}, {
