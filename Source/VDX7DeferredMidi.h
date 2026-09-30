@@ -45,7 +45,7 @@ public:
         { clear(); panic_ = true; }
     }
     // A directly delivered event may pause MIDI playback partway through a
-    // callback (CC120 starts a firmware reset). Queue its followers using this
+    // callback (CC120/CC121 starts a firmware reset). Queue its followers using this
     // callback's input start, then retain the triggering sample as playback's
     // anchor and advance input to the next callback. This matches renderBlock's
     // stop semantics without inserting or delivering the triggering event twice.

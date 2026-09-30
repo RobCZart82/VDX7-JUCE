@@ -57,6 +57,25 @@ An explicit host/panic reset supersedes old pedal ON intent; CC123/direct
 All Notes Off supersedes only old sustain ON, preserving other controllers.
 Partial delivery interrupted by a reset/overflow preserves later analog values.
 
+GitHub review also identified post-CC121 notes overtaking a deferred sustain
+ON. A direct-engine held-note release reproduced sustain loss without overload.
+The processor now pauses the
+existing bounded MIDI timeline at CC121, retains all followers together and
+resumes only after the controller-reset transaction drains. Unlike CC120, this
+wait renders ordinary audio rather than muting existing voices. The engine
+exposes its busy state to its owner; direct engine callers must obey this
+sequencing boundary, as they already do for the host-reset boundary. No second
+engine event queue or heap allocation is added.
+
+Two additional processor regressions check sustain ON before held/fresh note
+releases, and an earlier release fully consumed before pedal ON in a later
+callback. The new runner linked against committed `794b933` fails its retained
+sample-order assertion. That particular host burst does not fail firmware
+ownership on the old source; it is ordering-invariant evidence, distinct from
+the direct-engine sustain-loss witness. The corrected runner passes all six
+ROM-backed timeline cases, including actual firmware ownership in both
+directions and later pedal-OFF cleanup, with no overload recovery.
+
 The 18 regression cases include FIFO occupancies 0, 1018, 1020, 1023 and 1024;
 repeated CC121; later input during acknowledgment; newer sustain ON/OFF; a fresh
 note lifecycle; mandatory-zero and post-acknowledgment handshake interruption;

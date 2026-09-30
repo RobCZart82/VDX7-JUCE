@@ -354,7 +354,8 @@ target_compile_definitions(vdx7_state_transition_tests PRIVATE
     VDX7_TEST_STATE_BOUNDARY=1 VDX7_TEST_STATE_TRANSITIONS=1)
 add_dependencies(vdx7_ci_checks vdx7_state_transition_tests)
 
-# CC120 must retain sample-relative timing when direct MIDI becomes deferred.
+# MIDI resets must retain sample-relative timing when direct MIDI becomes
+# deferred; CC121 followers cannot overtake delayed controller zero/OFF edges.
 add_executable(vdx7_cc120_timeline_tests EXCLUDE_FROM_ALL
     Tests/VDX7CC120TimelineTests.cpp)
 target_link_libraries(vdx7_cc120_timeline_tests PRIVATE VDX7)

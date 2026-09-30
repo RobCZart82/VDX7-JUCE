@@ -57,7 +57,7 @@ checks; publishing another release remains a separate decision.
 | DEEP-20260930-S1 | First ROM installation overlapping a no-ROM save loses accepted voice/operator edits | Detached deferred-edit snapshot; deterministic overlapping save/load and reopen; preserve both operator mask halves and the saved generation |
 | DEEP-20260930-S2 | Host edits during pending project ROM initialization are discarded | Retain later edits through firmware/RAM installation and final publication; with/without RAM, before/during/after installation and delayed listener routing |
 | DEEP-20260930-M1 | Direct CC120 does not advance/anchor the deferred timeline | Preserve next-block Note On/Off/CC, exact reset sample offset, empty tail, repeated reset and partition equivalence; ROM-free boundary cases under ASan/UBSan |
-| DEEP-20260930-M2 | CC121 loses non-wheel controller reset messages in a full application FIFO | Durable reset zeros, observed sustain OFF edge before later pedal ON, all six sources, full/near-full controls, held-note and persistent-setting preservation |
+| DEEP-20260930-M2 | CC121 loses non-wheel controller reset messages in a full application FIFO | Durable reset zeros, observed sustain OFF edge before later pedal ON, all six sources, full/near-full controls, held-note and persistent-setting preservation; post-reset host notes and controllers retained in order on the bounded timeline |
 
 All four fixes are IMPLEMENTED and locally validated: a fresh Release build,
 43/43 executable CTests (44 registered; desktop `vdx7_processor` NOT RUN),

@@ -240,6 +240,93 @@ struct VDX7RegressionAccess
                 "ordered repeated reset retires the intermediate note and delivers its followers");
         std::cout << "PASS: repeated CC120 resets reanchor deferred playback in order\n";
     }
+
+    static int ownership(const VDX7Engine& engine, int note, int flag)
+    {
+        int count = 0;
+        for (int voice = 0; voice < 16; ++voice)
+            count += engine.dx7_.memory[0x20b0 + 2 * voice] == note
+                && (engine.dx7_.memory[0x20b1 + 2 * voice] & flag) != 0;
+        return count;
+    }
+
+    static void checkControllerResetNoteOrder(const juce::File& rom, bool sustainBeforeRelease)
+    {
+        auto processor = create(rom);
+        require(processor->engine_.releaseRetirementProfile_,
+                "controller/note ownership assertions require verified v1.8 firmware");
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        for (int block = 0; block < 128; ++block) processor->processBlock(audio, midi);
+        require(ownership(processor->engine_, 60, 2) == 1
+                && (processor->engine_.dx7_.P_CRT_PEDALS_LCD & 1) == 0,
+                "controller/note fixture has a physically held note with sustain OFF");
+        const auto overloads = processor->engine_.midiOverloadCount();
+        // Earlier accepted analog input makes CC121 a multi-callback operation
+        // without filling a queue or triggering a capacity-recovery panic.
+        const uint8_t breath[] {0xb0, 2, 127};
+        for (int event = 0; event < 100; ++event) processor->engine_.handleMidi(breath, 3);
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 121, 0), 8);
+        if (sustainBeforeRelease)
+        {
+            midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 16);
+            midi.addEvent(juce::MidiMessage::noteOn(1, 72, juce::uint8(100)), 24);
+            midi.addEvent(juce::MidiMessage::noteOff(1, 60), 40);
+            midi.addEvent(juce::MidiMessage::noteOff(1, 72), 48);
+        }
+        else
+            midi.addEvent(juce::MidiMessage::noteOff(1, 60), 16);
+        processor->processBlock(audio, midi);
+        require(processor->engine_.controllerResetActive_, "earlier controller FIFO keeps CC121 in progress");
+        const auto retained = inspectTimeline(processor->deferredMidi_);
+        const std::vector<TimelineEvent> expected = sustainBeforeRelease
+            ? std::vector<TimelineEvent> {{{0xb0, 64, 127}, 8}, {{0x90, 72, 100}, 16},
+                                         {{0x80, 60, 0}, 32}, {{0x80, 72, 0}, 40}}
+            : std::vector<TimelineEvent> {{{0x80, 60, 0}, 8}};
+        int blocks = 0;
+        while (processor->engine_.controllerResetActive_ && blocks++ < 1500)
+            processor->processBlock(audio, midi);
+        require(!processor->engine_.controllerResetActive_, "CC121 controller acknowledgment completes");
+        for (int block = 0; block < 256; ++block) processor->processBlock(audio, midi);
+        if (sustainBeforeRelease)
+        {
+            // Check the actual firmware effect before the detached timeline
+            // assertion, so an old Processor reports the audible order defect.
+            require(ownership(processor->engine_, 60, 1) == 1
+                    && ownership(processor->engine_, 60, 2) == 0,
+                    "CC121 then sustain ON precedes the held-note release");
+            require(ownership(processor->engine_, 72, 1) == 1
+                    && ownership(processor->engine_, 72, 2) == 0,
+                    "fresh Note On/Off after CC121 and sustain ON remains sustained");
+        }
+        else
+        {
+            require(ownership(processor->engine_, 60, 1) == 0
+                    && ownership(processor->engine_, 60, 2) == 0,
+                    "release before a later pedal ON is consumed while sustain is OFF");
+            // Cross a real render/firmware-dispatch boundary before the later
+            // input. An immediate raw burst could mask opposite-order bugs via
+            // the independently paced serial and physical-pedal transports.
+            midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 16);
+            processor->processBlock(audio, midi);
+            for (int block = 0; block < 256; ++block) processor->processBlock(audio, midi);
+            require((processor->engine_.dx7_.P_CRT_PEDALS_LCD & 1) != 0
+                    && ownership(processor->engine_, 60, 1) == 0
+                    && ownership(processor->engine_, 60, 2) == 0,
+                    "later sustain ON cannot resurrect an earlier released note");
+        }
+        require(retained == expected, "CC121 retains controller/note followers in their original sample order");
+        require(processor->engine_.midiOverloadCount() == overloads,
+                "controller reset ordering needs no overflow recovery");
+        midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), 0);
+        processor->processBlock(audio, midi);
+        for (int block = 0; block < 256; ++block) processor->processBlock(audio, midi);
+        require(ownership(processor->engine_, 60, 1) == 0
+                && ownership(processor->engine_, 72, 1) == 0,
+                "later pedal OFF releases all post-reset sustained ownership");
+        std::cout << "PASS: CC121 controller/note timeline; sustain before release="
+                  << sustainBeforeRelease << '\n';
+    }
 };
 
 int main(int argc, char** argv)
@@ -258,6 +345,8 @@ int main(int argc, char** argv)
         VDX7RegressionAccess::checkEmptyResetTail(rom);
         VDX7RegressionAccess::checkPartitionEquivalence(rom);
         VDX7RegressionAccess::checkRepeatedReset(rom);
+        VDX7RegressionAccess::checkControllerResetNoteOrder(rom, true);
+        VDX7RegressionAccess::checkControllerResetNoteOrder(rom, false);
         return 0;
     }
     catch (const std::exception& error)

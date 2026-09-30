@@ -455,7 +455,8 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         audioContendedRunSamples_ = 0;
     const bool useDeferred = deferredMidi_.active() || !lock.owns_lock()
         || hostResetPending_
-        || (lock.owns_lock() && engine_.isHostResetInProgress());
+        || (lock.owns_lock() && (engine_.isHostResetInProgress()
+                                || engine_.isControllerResetInProgress()));
     if (engineLoaded_.load(std::memory_order_acquire) && useDeferred)
     {
         for (std::size_t i = 0; i < keyboardCount; ++i)
@@ -471,10 +472,12 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
             deferredMidi_.push(event.data, static_cast<std::size_t>(event.numBytes),
                                juce::jlimit(0, total, event.samplePosition));
         }
-        // Only a callback that reaches renderBlock can advance this timeline.
-        // Reset drain renders muted firmware time, NOT deferred MIDI playback.
+        // Advance playback only when this callback can reach renderBlock.
+        // CC120 muted drain and CC121 ordinary audio advance firmware time,
+        // not deferred MIDI playback; incoming MIDI still advances input time.
         const bool rendersDeferred = lock.owns_lock() && engine_.isLoaded()
-            && !hostResetPending_ && !engine_.isHostResetInProgress();
+            && !hostResetPending_ && !engine_.isHostResetInProgress()
+            && !engine_.isControllerResetInProgress();
         // Keep the two-second limit on actual accumulated delay. A successful
         // block (including a large offline block) adds no new delay of its own.
         deferredMidi_.advanceInputBlock(total,
@@ -537,15 +540,15 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         }
 
         programMemoryChanged |= handleMidiEventLocked(data, static_cast<int>(size));
-        // CC120 may begin a multi-block firmware reset. Stop consuming this
+        // CC120/CC121 may begin a multi-block firmware reset. Stop consuming this
         // callback's MIDI timeline at that exact event; following events are
-        // retained for the existing bounded deferred path.
-        return !engine_.isHostResetInProgress();
+        // retained together, so later notes cannot overtake delayed pedal input.
+        return !engine_.isHostResetInProgress() && !engine_.isControllerResetInProgress();
     };
-    if (useDeferred)
+    if (useDeferred && !engine_.isControllerResetInProgress())
         deferredMidi_.renderBlock(total, deliver,
             [&] { engine_.allNotesOff(); clearKeyboardSnapshot(); });
-    else
+    else if (!useDeferred)
     {
         bool deferFollowing = false;
         int pausedPosition = 0;
@@ -579,7 +582,8 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
 
     if (cursor < total)
         engine_.render(left + cursor, right + cursor, total - cursor);
-    if (!engine_.hasHeldMidiNotes() && !engine_.isHostResetInProgress())
+    if (!engine_.hasHeldMidiNotes() && !engine_.isHostResetInProgress()
+        && !engine_.isControllerResetInProgress())
         deferredMidi_.resetIfEmpty();
     publishPerformanceDisplay();
     midiOverloadSnapshot_.store(engine_.midiOverloadCount(), std::memory_order_relaxed);

@@ -53,6 +53,9 @@ public:
     void beginHostReset();
     void advanceHostReset(int sampleBudget);
     bool isHostResetInProgress() const noexcept { return hostResetInProgress_; }
+    // Caller retains subsequent MIDI in order until the CC121 zero/OFF
+    // transaction has drained. Ordinary audio continues, unlike CC120 mute.
+    bool isControllerResetInProgress() const noexcept { return controllerResetActive_; }
     void render(float* left, float* right, int numSamples);
 
     void handleMidi(const uint8_t* data, int size);
