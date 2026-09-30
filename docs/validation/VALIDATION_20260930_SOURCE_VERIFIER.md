@@ -27,8 +27,12 @@ tooling identity and generated-path collisions fail before creating output.
 - PASS: generation-time manifest verification of both full archives.
 - PASS: full real archive extracted and its bundled checker independently
   executed against the original ZIP; all 5084 files verified.
-- NOT RUN: new offline rebuild of this extracted archive (the product sources
-  are unchanged); do not infer it from checker success.
+- PASS: clean offline extracted-source Windows VST3/Standalone/CI-target
+  build with `FETCHCONTENT_FULLY_DISCONNECTED=ON`; **11/11 ROM-free CTests**.
+- PASS: Windows, macOS and ASan/UBSan PR checks on
+  `123855a10924a19e335230ae4dd30e4f53e76431`.
+  [PR #105](https://github.com/RobCZart82/VDX7-JUCE/pull/105) merged as
+  `f509e25545f0f4de73e87732ed2775e8029b6fd2` after #104 and verified green checks.
 - NOT RUN: final 1.0.1 candidate packaging, installed-host acceptance.
 
 Reproduce with committed tooling, pinned dependency Git checkouts and fresh
