@@ -465,7 +465,7 @@ if(VDX7_ENABLE_ROM_TESTS)
         TIMEOUT 120 FIXTURES_REQUIRED vdx7_v18_rom LABELS "local-rom;firmware-v1_8;integration-stage")
 
     set_tests_properties(vdx7_stability vdx7_midi_range vdx7_timing vdx7_processor vdx7_stress
-        PROPERTIES FIXTURES_REQUIRED vdx7_v18_rom)
+        vdx7_pre_rom_state_integration vdx7_midi_reset PROPERTIES FIXTURES_REQUIRED vdx7_v18_rom)
     if(WIN32)
         # Measured MSVC x64 Release completion: MIDI 292.44 s, corrected MONO
         # 130.88 s. These exhaustive emulation matrices are not realtime timers.
