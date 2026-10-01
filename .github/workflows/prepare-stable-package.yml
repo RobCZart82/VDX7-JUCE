@@ -348,9 +348,28 @@ jobs:
             release-assets/BUILD-INFO-Windows-x64.txt
           (cd release-assets && sha256sum -c SHA256SUMS.txt)
 
+      - name: Stage exactly four user downloads (not publication)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 approval-tools/scripts/stage_release_downloads.py \
+            --assets release-assets --output publishable-downloads \
+            --package-label "$PACKAGE_LABEL"
+
       - name: Upload complete validation artifact (not a release)
         uses: actions/upload-artifact@v4
         with:
           name: VDX7-${{ needs.authorize-package.outputs.package_label }}-Release-Assets-${{ needs.authorize-package.outputs.source_commit }}-${{ needs.authorize-package.outputs.release_accepted == 'true' && 'accepted' || 'prep' }}
           path: release-assets/*
+          if-no-files-found: error
+
+      - name: Upload four user downloads (not a release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: VDX7-${{ needs.authorize-package.outputs.package_label }}-Four-Downloads-${{ needs.authorize-package.outputs.source_commit }}-${{ needs.authorize-package.outputs.release_accepted == 'true' && 'accepted' || 'prep' }}
+          path: |
+            publishable-downloads/VDX7-${{ needs.authorize-package.outputs.package_label }}-Windows-x64-Setup.exe
+            publishable-downloads/VDX7-${{ needs.authorize-package.outputs.package_label }}-Windows-x64-Manual.zip
+            publishable-downloads/VDX7-${{ needs.authorize-package.outputs.package_label }}-macOS-universal.pkg
+            publishable-downloads/VDX7-${{ needs.authorize-package.outputs.package_label }}-macOS-universal-Manual.zip
           if-no-files-found: error

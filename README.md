@@ -30,6 +30,13 @@ The screenshots retain their development labels; they are not a stable-release c
 
 ## Download
 
+Future releases, starting with the planned 1.0.1, will have **four user-download
+assets**: Windows x64 EXE installer and Manual Install ZIP, plus macOS Universal
+PKG installer and Manual Install ZIP. This is a future publication policy, not
+an announcement that 1.0.1 is available. Checksums/source links belong in the
+release description; validation evidence stays separate. See the
+[four-download policy](docs/release/PUBLIC_DOWNLOADS.md).
+
 Development VST3 builds are available from [GitHub Actions](https://github.com/RobCZart82/VDX7-JUCE/actions).
 Choose a successful run for the desired branch and commit, then download its artifact:
 
