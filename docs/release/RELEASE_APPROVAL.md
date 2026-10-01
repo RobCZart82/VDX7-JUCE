@@ -3,7 +3,8 @@
 This is the procedure for AUDIT-20260930-A4, not a second development plan.
 The [execution plan](EXECUTION_PLAN_1.0.md) remains the active ledger.
 The guard creates validation artifacts only; it cannot publish a tag, Release
-or assets. Published 1.0.0 is unchanged. No 1.0.1 publication is authorized.
+or assets. Published 1.0.0 is unchanged. The owner requests work toward 1.0.1
+publication; no exact 1.0.1 product/tooling pair or assets are approved yet.
 
 ## Default state
 
@@ -49,7 +50,7 @@ commit SHAs substituted for the placeholders:
 {
   "schema": 1,
   "approved_release": {
-    "package_label": "1.0.0",
+    "package_label": "1.0.1",
     "source_commit": "<reviewed-product-SHA>",
     "packager_commit": "<frozen-packager-SHA>",
     "workflow_ref": "RobCZart82/VDX7-JUCE/.github/workflows/prepare-stable-package.yml@refs/heads/main"
@@ -57,10 +58,11 @@ commit SHAs substituted for the placeholders:
 }
 ```
 
-This is an illustrative shape, not a usable approval. The existing workflow
-still labels stable artifacts 1.0.0. Do not dispatch it to regenerate or
-replace the published release. A future 1.0.1 candidate needs a separately
-reviewed version/asset-label update before its approval record can be used.
+This is an illustrative shape, not a usable approval. The coordinated update
+targets 1.0.1-labelled stable preparation. Before platform work, the guard
+checks the immutable source's project and Windows installer versions against
+1.0.1. Do not dispatch it to regenerate or replace the published 1.0.0 release.
+Review the exact candidate and freeze the packager before committing approval.
 Missing, malformed, duplicate-key, null or mismatched records are rejected.
 
 ## Trust boundary

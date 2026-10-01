@@ -6,11 +6,12 @@
 release tools/main reviewed at `3fa8c2e00ad4dcd1860551cf3596ee4ad29de789`.
 Publication time: 2026-09-29 23:49:49 UTC. Preserve that tag and its assets.
 This development round starts from main
-`98ad6797b178035539962c710516c119ed1213a6`, after PR #110. Its final-head
+`01c54c2e4709e97a69a67fffbbc257647a03688e`, after PR #111. Its final-head
 Windows/macOS/ASan-UBSan PR gates and post-merge Windows/macOS checks passed.
 Exact-candidate packaging remains separate; this does not accept a 1.0.1 binary.
 The owner authorized corrective development and merging green, verified PRs
-into main for 1.0.1. This is **not** authorization to publish 1.0.1.
+into main for 1.0.1, and now identifies 1.0.1 publication as the goal.
+No exact product/tooling pair or final binary assets have yet been approved.
 Earlier checkpoints below describe their own historical states, not current
 release availability or a continuing absence of known defects.
 
@@ -23,7 +24,7 @@ This is the single active work ledger; do not create competing roadmaps.
 | AUDIT-20260930-A4 | P2 provenance guard gap, not unauthorized publication | MERGED [#109](https://github.com/RobCZart82/VDX7-JUCE/pull/109): exact reviewed source/packager pair, committed approval snapshot and canonical main workflow context required before accepted packaging. Final-head Windows/macOS/ASan-UBSan and post-merge Windows/macOS checks PASS. Null approval fails closed; preparation and legacy integrity verification remain available. [Approval procedure](RELEASE_APPROVAL.md), [regression evidence](../validation/VALIDATION_20261001_RELEASE_APPROVAL.md). No release is approved by this change. |
 | AUDIT-20260930-A5 | P2 installer layout; no reproduced host scan failure | OPEN: assess separate uninstall directory with tested 1.0.0 upgrade/uninstall migration; preserve AppId and USER data. Do not move the directory without migration evidence. |
 | AUDIT-20260930-A6 | P2 toolchain provenance | MERGED [#110](https://github.com/RobCZart82/VDX7-JUCE/pull/110); final-head Windows/macOS/ASan-UBSan PR checks PASS. Pins/verifies Inno 6.7.1 and records configured compiler, SDK, CMake, runner image and verified dependency commits in hashed BUILD-INFO assets. [Mechanism](BUILD_TOOLCHAIN_PROVENANCE.md), [validation](../validation/VALIDATION_20261001_TOOLCHAIN_PROVENANCE.md). Actual exact-candidate packaging capture remains required; the installer workflow was NOT RUN. Observed tool versions do not imply bit-identical installers or an immutable runner. |
-| AUDIT-20260930-A7 | P2 stale release evidence/docs | PARTIAL: plan, README and HU/EN guides distinguish published 1.0.0 from corrective development; final #104/#105 validation recorded. Owner's future [four-download policy](PUBLIC_DOWNLOADS.md) is implemented/tested on `codex/four-release-downloads`; final PR gates/merge and actual payload staging NOT RUN at this local checkpoint. Full accepted binary asset reconciliation and durable matching-source access remain OPEN. |
+| AUDIT-20260930-A7 | P2 stale release evidence/docs | PARTIAL: plan, README and HU/EN guides distinguish published 1.0.0 from corrective development; final #104/#105 validation recorded. Owner's future [four-download policy](PUBLIC_DOWNLOADS.md) is MERGED [#111](https://github.com/RobCZart82/VDX7-JUCE/pull/111); final-head Windows/macOS/ASan-UBSan and post-merge Windows/macOS checks PASS. Actual candidate payload staging, full accepted binary asset reconciliation and durable matching-source access remain OPEN. |
 | AUDIT-20260930-A8 | P3 test-only C4805 | IMPLEMENTED: explicitly convert the boolean carry flag before integer bitwise packing; fresh Windows rebuild without C4805 and focused trace regression PASS. |
 | AUDIT-20260930-A9 | P2 missing sanitizer coverage, not a DSP defect | IMPLEMENTED: resampler added to both instrumented build targets and CTest filter. Actual ASan/UBSan run is a required PR gate; Python packaging remains separate. |
 | AUDIT-20260930-A10 | P3 descriptive prototype metadata | IMPLEMENTED: description says instrument; bundle ID, plugin codes and parameter identity unchanged. Platform builds are required PR gates. |
@@ -46,6 +47,25 @@ Final gate: exact source and packager SHAs, Windows/macOS build and tests,
 private local-ROM regressions, self-verifying source archive, asset hashes,
 payload/licenses, installer upgrade smoke and explicit deferred-risk record.
 Present these before separately requesting 1.0.1 publication authorization.
+
+### Next release steps — 1.0.1
+
+1. Review and merge the coordinated project/installer/workflow version update.
+   Development remains visibly `1.0.1-dev`; stable preparation is `1.0.1`,
+   not accepted. New packaging rejects mismatched source/installer versions
+   before platform work; historical 1.0.0 verification remains compatible.
+2. After final-head PR gates and post-merge main Actions pass, freeze the exact
+   candidate and run the non-publishing stable installer workflow. Inspect
+   actual compiler/SDK provenance, both native installers, source archive,
+   combined checksums and the separate four-file staging artifact.
+3. Close A5 upgrade/uninstall evidence, review durable matching-source access
+   under the four-download policy and record exact-candidate acceptance or
+   explicit deferred risks. Do not reuse 1.0.0 host passes as 1.0.1 evidence.
+4. Freeze the reviewed source/tooling pair, commit approval separately, and
+   regenerate accepted metadata. Reconcile final hashes and publication notes
+   before publishing a new v1.0.1 tag/release. Preserve v1.0.0 unchanged.
+
+Version-update validation: [1.0.1 candidate preparation](../validation/VALIDATION_20261001_VERSION_101.md).
 
 Owner publication-layout decision (2026-10-01): exactly four manually uploaded
 user downloads — Windows x64 EXE installer + Manual Install ZIP, macOS Universal

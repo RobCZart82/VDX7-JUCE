@@ -1,4 +1,4 @@
-name: Prepare stable 1.0.0 installers (VST3 only; no publication)
+name: Prepare stable 1.0.1 installers (VST3 only; no publication)
 
 on:
   workflow_dispatch:
@@ -61,7 +61,7 @@ jobs:
           esac
           python3 approval-tools/scripts/package_source.py authorize \
             --repo approval-tools --approval-commit "$WORKFLOW_COMMIT" \
-            --commit "$SOURCE_COMMIT" --package-label 1.0.0 \
+            --commit "$SOURCE_COMMIT" --package-label 1.0.1 \
             --workflow-ref "$WORKFLOW_REF" --workflow-git-ref "$WORKFLOW_GIT_REF" \
             "${package_args[@]}" --github-output "$GITHUB_OUTPUT"
 
@@ -185,17 +185,17 @@ jobs:
           mkdir -p release-assets "$RUNNER_TEMP/vdx7-pkg-root/Library/Audio/Plug-Ins/VST3"
           ditto "$VST3" "$RUNNER_TEMP/vdx7-pkg-root/Library/Audio/Plug-Ins/VST3/VDX7.vst3"
           ditto -c -k --sequesterRsrc --keepParent "$VST3" \
-            release-assets/VDX7-1.0.0-macOS-universal-Manual.zip
+            release-assets/VDX7-1.0.1-macOS-universal-Manual.zip
 
           pkgbuild \
             --root "$RUNNER_TEMP/vdx7-pkg-root" \
             --identifier com.robczart82.vdx7.vst3 \
-            --version 1.0.0 \
+            --version 1.0.1 \
             --install-location / \
             --ownership recommended \
-            release-assets/VDX7-1.0.0-macOS-universal.pkg
+            release-assets/VDX7-1.0.1-macOS-universal.pkg
 
-          pkgutil --payload-files release-assets/VDX7-1.0.0-macOS-universal.pkg > "$RUNNER_TEMP/vdx7-pkg-payload.txt"
+          pkgutil --payload-files release-assets/VDX7-1.0.1-macOS-universal.pkg > "$RUNNER_TEMP/vdx7-pkg-payload.txt"
           grep -Fq "Library/Audio/Plug-Ins/VST3/VDX7.vst3/Contents/Info.plist" "$RUNNER_TEMP/vdx7-pkg-payload.txt"
           grep -Fq "Library/Audio/Plug-Ins/VST3/VDX7.vst3/Contents/MacOS/VDX7" "$RUNNER_TEMP/vdx7-pkg-payload.txt"
 
@@ -227,7 +227,7 @@ jobs:
           $vst3 = Get-ChildItem -Path build -Recurse -Directory -Filter "VDX7.vst3" | Select-Object -First 1
           if (-not $vst3) { throw "VDX7.vst3 was not found" }
           New-Item -ItemType Directory -Path release-assets | Out-Null
-          Compress-Archive -Path $vst3.FullName -DestinationPath "release-assets/VDX7-1.0.0-Windows-x64-Manual.zip"
+          Compress-Archive -Path $vst3.FullName -DestinationPath "release-assets/VDX7-1.0.1-Windows-x64-Manual.zip"
 
           choco install innosetup --version=$env:INNO_SETUP_VERSION --yes --no-progress --allow-downgrade
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup installation failed: $LASTEXITCODE" }
@@ -239,7 +239,7 @@ jobs:
           & $iscc "/DPluginBundle=$($vst3.FullName)" "/O$((Get-Location).Path)\release-assets" "installer\windows\VDX7.iss"
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
 
-          $setup = Join-Path (Get-Location) "release-assets\VDX7-1.0.0-Windows-x64-Setup.exe"
+          $setup = Join-Path (Get-Location) "release-assets\VDX7-1.0.1-Windows-x64-Setup.exe"
           if (-not (Test-Path $setup)) { throw "Setup.exe was not produced" }
           $installDir = Join-Path $env:ProgramFiles "Common Files\VST3\VDX7.vst3"
           $install = Start-Process -FilePath $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait -PassThru
@@ -295,7 +295,7 @@ jobs:
         with:
           name: VDX7-${{ needs.authorize-package.outputs.package_label }}-${{ matrix.platform }}-${{ needs.authorize-package.outputs.source_commit }}-${{ needs.authorize-package.outputs.release_accepted == 'true' && 'accepted' || 'prep' }}
           path: |
-            release-assets/VDX7-1.0.0-*
+            release-assets/VDX7-1.0.1-*
             release-assets/BUILD-INFO-*.txt
           if-no-files-found: error
 
@@ -329,20 +329,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f "release-assets/VDX7-1.0.0-macOS-universal.pkg"
-          test -f "release-assets/VDX7-1.0.0-macOS-universal-Manual.zip"
-          test -f "release-assets/VDX7-1.0.0-Windows-x64-Setup.exe"
-          test -f "release-assets/VDX7-1.0.0-Windows-x64-Manual.zip"
+          test -f "release-assets/VDX7-1.0.1-macOS-universal.pkg"
+          test -f "release-assets/VDX7-1.0.1-macOS-universal-Manual.zip"
+          test -f "release-assets/VDX7-1.0.1-Windows-x64-Setup.exe"
+          test -f "release-assets/VDX7-1.0.1-Windows-x64-Manual.zip"
           test -f "release-assets/VDX7-${PACKAGE_LABEL}-${SOURCE_COMMIT}-corresponding-source.zip"
           test -f "release-assets/BUILD-INFO-macOS-universal.txt"
           test -f "release-assets/BUILD-INFO-Windows-x64.txt"
 
           python3 approval-tools/scripts/write_sha256_manifest.py \
             --output release-assets/SHA256SUMS.txt \
-            release-assets/VDX7-1.0.0-macOS-universal.pkg \
-            release-assets/VDX7-1.0.0-macOS-universal-Manual.zip \
-            release-assets/VDX7-1.0.0-Windows-x64-Setup.exe \
-            release-assets/VDX7-1.0.0-Windows-x64-Manual.zip \
+            release-assets/VDX7-1.0.1-macOS-universal.pkg \
+            release-assets/VDX7-1.0.1-macOS-universal-Manual.zip \
+            release-assets/VDX7-1.0.1-Windows-x64-Setup.exe \
+            release-assets/VDX7-1.0.1-Windows-x64-Manual.zip \
             "release-assets/VDX7-${PACKAGE_LABEL}-${SOURCE_COMMIT}-corresponding-source.zip" \
             release-assets/BUILD-INFO-macOS-universal.txt \
             release-assets/BUILD-INFO-Windows-x64.txt

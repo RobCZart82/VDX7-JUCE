@@ -47,8 +47,8 @@ manually uploaded user-download assets or offline dependency bundles.
 
 ## Current scope and acceptance
 
-Published v1.0.0 is untouched. The workflow and guarded packager remain
-1.0.0-labelled until the separately reviewed coherent 1.0.1 version update.
+Published v1.0.0 is untouched. The coordinated version update targets
+1.0.1-labelled preparation assets; this is not final binary acceptance.
 Do not dispatch this workflow to replace existing 1.0.0 assets. Null approval,
 read-only workflow permissions and separate publication authorization remain.
 Use the [single execution plan](EXECUTION_PLAN_1.0.md) for remaining work.

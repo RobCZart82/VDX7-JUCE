@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(VDX7_JUCE
-    VERSION 1.0.0
+    VERSION 1.0.1
     DESCRIPTION "VDX7 Yamaha DX7 Mk I hardware-emulation instrument"
     LANGUAGES C CXX)
 

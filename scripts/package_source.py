@@ -15,6 +15,7 @@ VERIFIER = ".vdx7-source-tools/package_source.py"
 PACKAGE_README = "SOURCE_PACKAGE_README.txt"
 APPROVAL_PATH = "docs/release/RELEASE_APPROVAL.json"
 APPROVED_GIT_REF = "refs/heads/main"
+SUPPORTED_LABEL = r"1\.0\.[01](?:-dev|-rc[1-9][0-9]*)?"
 APPROVED_WORKFLOW_REF = (
     "RobCZart82/VDX7-JUCE/.github/workflows/prepare-stable-package.yml@" + APPROVED_GIT_REF)
 
@@ -39,10 +40,21 @@ def full_commit(repo, sha, description):
 def package_identity(label, accepted):
     if type(accepted) is not bool:
         raise ValueError("Release acceptance must be a boolean")
-    if not isinstance(label, str) or not re.fullmatch(r"1\.0\.0(?:-dev|-rc[1-9][0-9]*)?", label):
-        raise ValueError("Package label must be 1.0.0-dev, 1.0.0-rcN, or 1.0.0")
-    if accepted and label != "1.0.0":
-        raise ValueError("Only a stable 1.0.0 source package may be accepted for publication")
+    if not isinstance(label, str) or not re.fullmatch(SUPPORTED_LABEL, label):
+        raise ValueError("Package label must be 1.0.0 or 1.0.1, optionally followed by -dev or -rcN")
+    if accepted and "-" in label:
+        raise ValueError("Only a stable source package may be accepted for publication")
+
+
+def validate_source_version(cmake, installer, label):
+    # Keep historical 1.0.0 verification/fixtures compatible. New 1.0.1
+    # creation must not relabel an old product or use an old installer version.
+    if label.split("-", 1)[0] != "1.0.1":
+        return
+    project = re.search(r"project\(VDX7_JUCE\s+VERSION\s+(\d+\.\d+\.\d+)\s", cmake)
+    app = re.search(r'^#define AppVersion "([^"]+)"$', installer, re.MULTILINE)
+    if project is None or app is None or project[1] != "1.0.1" or app[1] != "1.0.1":
+        raise ValueError("Source project and installer versions must both match 1.0.1")
 
 
 def strict_json_object(pairs):
@@ -67,6 +79,14 @@ def release_authorization(repo, approval_commit, source_commit, package_label,
     package_identity(package_label, accepted)
     full_commit(repo, approval_commit, "Approval commit")
     full_commit(repo, source_commit, "Source commit")
+    if package_label.startswith("1.0.1"):
+        try:
+            validate_source_version(
+                git(repo, "show", source_commit + ":CMakeLists.txt").decode(),
+                git(repo, "show", source_commit + ":installer/windows/VDX7.iss").decode(),
+                package_label)
+        except subprocess.CalledProcessError as error:
+            raise ValueError("Source version metadata is missing") from error
     if git(repo, "rev-parse", "HEAD").decode().strip() != approval_commit:
         raise ValueError("Approval checkout must match the exact approval commit")
     # Preparation can run on branches/tags or forks, but cannot export unsafe
@@ -202,7 +222,7 @@ def write_zip(destination, files, manifest):
             archive.writestr(item, data)
 
 
-def package(repo, juce, core, sha, output, package_label="1.0.0-dev",
+def package(repo, juce, core, sha, output, package_label="1.0.1-dev",
             accepted_for_publication=False, packager_commit=None, approval_repo=None,
             approval_commit=None, workflow_ref=None, workflow_git_ref=None):
     package_identity(package_label, accepted_for_publication)
@@ -218,6 +238,8 @@ def package(repo, juce, core, sha, output, package_label="1.0.0-dev",
             workflow_ref, workflow_git_ref, True, packager_commit)
     files = snapshot(repo, sha)
     cmake = files["CMakeLists.txt"][0].decode()
+    validate_source_version(cmake, files.get("installer/windows/VDX7.iss", (b"", 0))[0].decode(),
+                            package_label)
     if JUCE_SHA not in cmake or CORE_SHA not in cmake:
         raise ValueError("Source dependency pins changed; review/update the packager")
     for name, (data, _) in files.items():
@@ -256,7 +278,7 @@ def package(repo, juce, core, sha, output, package_label="1.0.0-dev",
                      "third_party/retromulator-notices/LICENSE.txt", "third_party/dx7Lib/dx7.cpp"):
         if required not in files:
             raise ValueError(f"Required source/notice missing: {required}")
-    kind = ("development-corresponding-source" if package_label == "1.0.0-dev"
+    kind = ("development-corresponding-source" if package_label.endswith("-dev")
             else "release-candidate-corresponding-source" if "-rc" in package_label
             else "stable-release-corresponding-source" if accepted_for_publication
             else "stable-release-preparation-corresponding-source")
@@ -298,12 +320,14 @@ def verify(archive_path):
         stable_kind = ("stable-release-corresponding-source" if accepted is True
                        else "stable-release-preparation-corresponding-source" if accepted is False
                        else None)
-        kind = ("development-corresponding-source" if label == "1.0.0-dev"
-                else "release-candidate-corresponding-source" if re.fullmatch(r"1\.0\.0-rc[1-9][0-9]*", label)
-                else stable_kind if label == "1.0.0"
+        valid_label = isinstance(label, str) and re.fullmatch(SUPPORTED_LABEL, label)
+        kind = ("development-corresponding-source" if valid_label and label.endswith("-dev")
+                else "release-candidate-corresponding-source" if valid_label and "-rc" in label
+                else stable_kind if valid_label and "-" not in label
                 else None)
         if (manifest.get("schema") != 1
-                or (label != "1.0.0" and accepted is not False)
+                or (kind in ("development-corresponding-source", "release-candidate-corresponding-source")
+                    and accepted is not False)
                 or (accepted is True and not re.fullmatch(r"[0-9a-f]{40}", packager_commit or ""))
                 or (packager_commit is not None and not re.fullmatch(r"[0-9a-f]{40}", packager_commit))
                 or kind is None
@@ -354,10 +378,10 @@ if __name__ == "__main__":
     for option in ("repo", "juce", "core", "output"):
         create.add_argument("--" + option, type=Path, required=True)
     create.add_argument("--commit", required=True)
-    create.add_argument("--package-label", default="1.0.0-dev",
-                        help="1.0.0-dev, 1.0.0-rcN or 1.0.0 (prepublication stable package)")
+    create.add_argument("--package-label", default="1.0.1-dev",
+                        help="1.0.0 or 1.0.1, optionally followed by -dev or -rcN")
     create.add_argument("--release-accepted", action="store_true",
-                        help="mark a stable 1.0.0 source package accepted for publication")
+                        help="mark a reviewed stable source package accepted for publication")
     create.add_argument("--packager-commit",
                         help="full commit SHA of the source packager used to generate the manifest")
     create.add_argument("--approval-repo", type=Path,
