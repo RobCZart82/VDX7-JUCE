@@ -40,6 +40,32 @@ under `third_party/retromulator-notices`. `SOURCE_MANIFEST.json` records exact
 revisions, file sizes, modes and SHA-256 hashes. `SHA256SUMS.txt` hashes the ZIP.
 Manifest integrity is not a digital signature or independent proof of authorship.
 
+## Reviewed acceptance guard (1.0.1 development)
+
+`--release-accepted` is no longer sufficient to mark a newly created archive
+accepted. The packager requires an exact source/packager approval from
+`docs/release/RELEASE_APPROVAL.json` at a separately committed approval SHA,
+with the canonical main workflow context. The current record is null: no new
+release is approved. Preparation mode does not require that record.
+
+Accepted creation supplies `--packager-commit`, `--approval-commit`,
+`--workflow-ref` and `--workflow-git-ref`; use `--approval-repo` when the
+approval checkout is separate from the product checkout. The approval
+checkout must be exactly at the specified approval commit. The workflow
+checks authorization before any platform packaging and passes only validated
+identities downstream. See the [approval procedure](RELEASE_APPROVAL.md) for
+the separate frozen-tooling and approval commits and the trust boundary.
+
+New accepted manifests contain the approval identity and policy digest.
+Verification checks their internal consistency, not publisher authentication.
+Older schema-1 archives without this record remain verifiable for integrity;
+their historical acceptance flag is explicitly reported as unvalidated
+approval metadata. This does not repair, replace or reapprove existing 1.0.0
+assets. The public archive's older bundled verifier limitation remains a
+historical A3 finding.
+
+## Archive determinism and payload boundaries
+
 Ordering, ZIP timestamps, file modes and stored (uncompressed) entries are fixed.
 The same Git inputs should therefore produce byte-identical ZIPs across hosts;
 this does not claim reproducible compiler output or signed plugin binaries.

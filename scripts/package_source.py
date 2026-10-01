@@ -13,10 +13,111 @@ CORE_SHA = "d5473776a0449d60a997b91bdc888598a33265ac"
 MANIFEST = "SOURCE_MANIFEST.json"
 VERIFIER = ".vdx7-source-tools/package_source.py"
 PACKAGE_README = "SOURCE_PACKAGE_README.txt"
+APPROVAL_PATH = "docs/release/RELEASE_APPROVAL.json"
+APPROVED_GIT_REF = "refs/heads/main"
+APPROVED_WORKFLOW_REF = (
+    "RobCZart82/VDX7-JUCE/.github/workflows/prepare-stable-package.yml@" + APPROVED_GIT_REF)
 
 
 def git(repo, *args):
-    return subprocess.check_output(["git", "-C", str(repo), *args])
+    # A local refs/replace entry must not substitute a different object's
+    # policy/source while rev-parse still reports the requested original SHA.
+    return subprocess.check_output(["git", "--no-replace-objects", "-C", str(repo), *args])
+
+
+def full_commit(repo, sha, description):
+    if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ValueError(f"{description} must be a full lowercase 40-character commit SHA")
+    try:
+        actual = git(repo, "rev-parse", f"{sha}^{{commit}}").decode().strip()
+    except subprocess.CalledProcessError as error:
+        raise ValueError(f"{description} is not an available commit") from error
+    if actual != sha:
+        raise ValueError(f"{description} identity mismatch")
+
+
+def package_identity(label, accepted):
+    if type(accepted) is not bool:
+        raise ValueError("Release acceptance must be a boolean")
+    if not isinstance(label, str) or not re.fullmatch(r"1\.0\.0(?:-dev|-rc[1-9][0-9]*)?", label):
+        raise ValueError("Package label must be 1.0.0-dev, 1.0.0-rcN, or 1.0.0")
+    if accepted and label != "1.0.0":
+        raise ValueError("Only a stable 1.0.0 source package may be accepted for publication")
+
+
+def strict_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"Duplicate approval JSON key: {key}")
+        result[key] = value
+    return result
+
+
+def release_authorization(repo, approval_commit, source_commit, package_label,
+                          workflow_ref, workflow_git_ref, accepted=False, packager_commit=None):
+    """Resolve exact packaging provenance, not a publisher signature.
+
+    The canonical main workflow supplies the real GitHub context and checks out
+    its own approval commit. CLI-supplied context alone cannot authenticate a
+    publisher or replace human review of that protected-main approval record.
+    """
+    if type(accepted) is not bool:
+        raise ValueError("Release acceptance must be a boolean")
+    package_identity(package_label, accepted)
+    full_commit(repo, approval_commit, "Approval commit")
+    full_commit(repo, source_commit, "Source commit")
+    if git(repo, "rev-parse", "HEAD").decode().strip() != approval_commit:
+        raise ValueError("Approval checkout must match the exact approval commit")
+    # Preparation can run on branches/tags or forks, but cannot export unsafe
+    # output strings. Accepted mode is restricted to the canonical main ref.
+    if (not isinstance(workflow_git_ref, str)
+            or not re.fullmatch(r"refs/(?:heads|tags)/[A-Za-z0-9._/-]+", workflow_git_ref)
+            or not isinstance(workflow_ref, str)
+            or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/\.github/workflows/"
+                                r"prepare-stable-package\.yml@" + re.escape(workflow_git_ref), workflow_ref)):
+        raise ValueError("Invalid workflow ref context")
+    result = {
+        "source_commit": source_commit, "approval_commit": approval_commit,
+        "package_label": package_label, "workflow_ref": workflow_ref,
+        "workflow_git_ref": workflow_git_ref, "release_accepted": accepted,
+    }
+    if not accepted:
+        packager_commit = packager_commit or approval_commit
+        full_commit(repo, packager_commit, "Packager commit")
+        result["packager_commit"] = packager_commit
+        return result
+    if workflow_ref != APPROVED_WORKFLOW_REF or workflow_git_ref != APPROVED_GIT_REF:
+        raise ValueError("Accepted packaging requires the canonical main workflow ref")
+    policy_files = snapshot(repo, approval_commit, (APPROVAL_PATH,))
+    if APPROVAL_PATH not in policy_files:
+        raise ValueError("Committed release approval policy is missing")
+    policy_bytes = policy_files[APPROVAL_PATH][0]
+    policy = json.loads(policy_bytes, object_pairs_hook=strict_json_object)
+    if (not isinstance(policy, dict) or set(policy) != {"schema", "approved_release"}
+            or type(policy["schema"]) is not int or policy["schema"] != 1):
+        raise ValueError("Invalid release approval policy schema")
+    approved = policy["approved_release"]
+    if not isinstance(approved, dict) or set(approved) != {
+            "package_label", "source_commit", "packager_commit", "workflow_ref"}:
+        raise ValueError("No valid approved release tuple is committed")
+    if (approved["package_label"] != package_label or approved["source_commit"] != source_commit
+            or approved["workflow_ref"] != workflow_ref):
+        raise ValueError("Requested release does not match the approved release tuple")
+    approved_packager = approved["packager_commit"]
+    full_commit(repo, approved_packager, "Approved packager commit")
+    if packager_commit is not None and packager_commit != approved_packager:
+        raise ValueError("Packager commit does not match the approved release tuple")
+    if approved_packager == approval_commit:
+        raise ValueError("Freeze the packager before the separate approval commit")
+    for commit in (source_commit, approved_packager):
+        try:
+            git(repo, "merge-base", "--is-ancestor", commit, approval_commit)
+        except subprocess.CalledProcessError as error:
+            raise ValueError("Approved source and packager must be ancestors of the approval commit") from error
+    result["packager_commit"] = approved_packager
+    result["policy_sha256"] = hashlib.sha256(policy_bytes).hexdigest()
+    return result
 
 
 def safe_path(name):
@@ -70,7 +171,7 @@ def snapshot(repo, sha, paths=()):
         records.append((name, int(mode, 8) & 0o777, oid))
     # Read blobs directly: git archive can apply machine-specific CRLF or
     # local export attributes, which would violate cross-platform identity.
-    data = subprocess.check_output(["git", "-C", str(repo), "cat-file", "--batch"],
+    data = subprocess.check_output(["git", "--no-replace-objects", "-C", str(repo), "cat-file", "--batch"],
                                    input="".join(oid + "\n" for _, _, oid in records).encode())
     result = {}
     stream = io.BytesIO(data)
@@ -102,16 +203,20 @@ def write_zip(destination, files, manifest):
 
 
 def package(repo, juce, core, sha, output, package_label="1.0.0-dev",
-            accepted_for_publication=False, packager_commit=None):
-    files = snapshot(repo, sha)
-    if not re.fullmatch(r"1\.0\.0(?:-dev|-rc[1-9][0-9]*)?", package_label):
-        raise ValueError("Package label must be 1.0.0-dev, 1.0.0-rcN, or 1.0.0")
-    if accepted_for_publication and package_label != "1.0.0":
-        raise ValueError("Only a stable 1.0.0 source package may be accepted for publication")
-    if packager_commit is not None and not re.fullmatch(r"[0-9a-f]{40}", packager_commit):
+            accepted_for_publication=False, packager_commit=None, approval_repo=None,
+            approval_commit=None, workflow_ref=None, workflow_git_ref=None):
+    package_identity(package_label, accepted_for_publication)
+    if packager_commit is not None and (not isinstance(packager_commit, str)
+                                       or not re.fullmatch(r"[0-9a-f]{40}", packager_commit)):
         raise ValueError("Packager commit must be a full lowercase 40-character SHA")
     if accepted_for_publication and packager_commit is None:
         raise ValueError("Accepted stable source packages must identify the release packager commit")
+    authorization = None
+    if accepted_for_publication:
+        authorization = release_authorization(
+            approval_repo or repo, approval_commit, sha, package_label,
+            workflow_ref, workflow_git_ref, True, packager_commit)
+    files = snapshot(repo, sha)
     cmake = files["CMakeLists.txt"][0].decode()
     if JUCE_SHA not in cmake or CORE_SHA not in cmake:
         raise ValueError("Source dependency pins changed; review/update the packager")
@@ -164,6 +269,9 @@ def package(repo, juce, core, sha, output, package_label="1.0.0-dev",
     }
     if packager_commit is not None:
         manifest["packager_commit"] = packager_commit
+    if authorization is not None:
+        manifest["release_approval"] = {
+            key: value for key, value in authorization.items() if key != "release_accepted"}
     # Refuse any existing destination, even an empty directory; never overwrite.
     output.mkdir(parents=True, exist_ok=False)
     filename = f"VDX7-{package_label}-{sha}-corresponding-source.zip"
@@ -203,6 +311,22 @@ def verify(archive_path):
                 or manifest.get("dependencies") != {"JUCE": JUCE_SHA, "Retromulator": CORE_SHA}
                 or not re.fullmatch(r"[0-9a-f]{40}", manifest.get("source_commit", ""))):
             raise ValueError("Invalid corresponding-source package identity")
+        approval = manifest.get("release_approval")
+        if "release_approval" in manifest:
+            required = {"source_commit", "packager_commit", "approval_commit", "package_label",
+                        "workflow_ref", "workflow_git_ref", "policy_sha256"}
+            if (accepted is not True or not isinstance(approval, dict) or set(approval) != required
+                    or approval["source_commit"] != manifest["source_commit"]
+                    or approval["packager_commit"] != packager_commit
+                    or approval["package_label"] != label
+                    or approval["workflow_ref"] != APPROVED_WORKFLOW_REF
+                    or approval["workflow_git_ref"] != APPROVED_GIT_REF
+                    or not isinstance(approval["approval_commit"], str)
+                    or not re.fullmatch(r"[0-9a-f]{40}", approval["approval_commit"])
+                    or approval["approval_commit"] == packager_commit
+                    or not isinstance(approval["policy_sha256"], str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", approval["policy_sha256"])):
+                raise ValueError("Invalid release approval provenance")
         entries = manifest["files"]
         expected = [entry["path"] for entry in entries]
         if len(expected) != len(set(expected)) or set(names) != set(expected) | {MANIFEST}:
@@ -216,6 +340,11 @@ def verify(archive_path):
             if entry["mode"] not in (0o644, 0o755) or info.external_attr >> 16 != (0o100000 | entry["mode"]):
                 raise ValueError("ZIP mode mismatch")
         print(f"PASS: verified {len(entries)} files against embedded manifest")
+        if accepted is True:
+            if approval is None:
+                print("Legacy acceptance metadata: integrity only; release approval was not validated.")
+            else:
+                print("Approval provenance is internally consistent; integrity is not publisher authentication.")
 
 
 if __name__ == "__main__":
@@ -231,11 +360,36 @@ if __name__ == "__main__":
                         help="mark a stable 1.0.0 source package accepted for publication")
     create.add_argument("--packager-commit",
                         help="full commit SHA of the source packager used to generate the manifest")
+    create.add_argument("--approval-repo", type=Path,
+                        help="checkout of the exact canonical workflow/approval commit")
+    create.add_argument("--approval-commit")
+    create.add_argument("--workflow-ref")
+    create.add_argument("--workflow-git-ref")
+    authorize = commands.add_parser("authorize", help="validate packaging context before building/output")
+    authorize.add_argument("--repo", type=Path, required=True)
+    authorize.add_argument("--approval-commit", required=True)
+    authorize.add_argument("--commit", required=True)
+    authorize.add_argument("--package-label", required=True)
+    authorize.add_argument("--workflow-ref", required=True)
+    authorize.add_argument("--workflow-git-ref", required=True)
+    authorize.add_argument("--release-accepted", action="store_true")
+    authorize.add_argument("--packager-commit")
+    authorize.add_argument("--github-output", type=Path)
     check = commands.add_parser("verify")
     check.add_argument("archive", type=Path)
     args = parser.parse_args()
     if args.command == "create":
         verify(package(args.repo, args.juce, args.core, args.commit, args.output,
-                      args.package_label, args.release_accepted, args.packager_commit))
+                      args.package_label, args.release_accepted, args.packager_commit,
+                      args.approval_repo, args.approval_commit, args.workflow_ref, args.workflow_git_ref))
+    elif args.command == "authorize":
+        authorization = release_authorization(
+            args.repo, args.approval_commit, args.commit, args.package_label,
+            args.workflow_ref, args.workflow_git_ref, args.release_accepted, args.packager_commit)
+        if args.github_output is not None:
+            with args.github_output.open("a", encoding="utf-8", newline="\n") as output:
+                for key, value in authorization.items():
+                    output.write(f"{key}={str(value).lower() if type(value) is bool else value}\n")
+        print(json.dumps(authorization, sort_keys=True))
     else:
         verify(args.archive)
