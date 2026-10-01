@@ -112,6 +112,25 @@ class StableWorkflowTests(unittest.TestCase):
         self.assertEqual(package.count('--juce build/_deps/juce-src --core build/_deps/retromulator-src'), 3)
         self.assertIn('Build provenance capture failed', package)
 
+    def test_only_four_user_downloads_are_staged_after_checksum_verification(self):
+        assembly = self.jobs["assemble-release-assets"]
+        self.assertIn('approval-tools/scripts/stage_release_downloads.py', assembly)
+        self.assertLess(assembly.index('sha256sum -c SHA256SUMS.txt'),
+                        assembly.index('stage_release_downloads.py'))
+        self.assertIn('--assets release-assets --output publishable-downloads', assembly)
+        self.assertIn('--package-label "$PACKAGE_LABEL"', assembly)
+        # Internal provenance/source evidence must not be dropped to enforce the public count.
+        self.assertIn('path: release-assets/*', assembly)
+        public = assembly.split('- name: Upload four user downloads', 1)[1]
+        for suffix in ('Windows-x64-Setup.exe', 'Windows-x64-Manual.zip',
+                       'macOS-universal.pkg', 'macOS-universal-Manual.zip'):
+            self.assertIn('publishable-downloads/VDX7-${{ needs.authorize-package.outputs.package_label }}-' + suffix, public)
+        self.assertEqual(public.count('publishable-downloads/'), 4)
+        self.assertNotIn('corresponding-source.zip', public)
+        self.assertNotIn('BUILD-INFO', public)
+        self.assertNotIn('SHA256SUMS', public)
+        self.assertNotIn('publishable-downloads/*', public)
+
 
 if __name__ == "__main__":
     unittest.main()

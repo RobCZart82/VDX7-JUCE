@@ -62,3 +62,17 @@ published assets. No new accepted packaging was dispatched. Observed versions
 do not freeze all tools/transitive components or guarantee bit-identical output.
 The [single execution plan](../release/EXECUTION_PLAN_1.0.md) keeps these gates
 open. A separate publication request is still required.
+
+## Final PR and merge closure
+
+PR [#110](https://github.com/RobCZart82/VDX7-JUCE/pull/110) is merged at
+`98ad6797b178035539962c710516c119ed1213a6`. On final head
+`4e3db20e8d4f40a14417cf19eb5fc3649366d324`,
+[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36844542776),
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36844542886) and
+[ASan/UBSan](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36844542494)
+PASS. Post-merge
+[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36846727543) and
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36846727561) PASS.
+These close the pending PR gates, not actual installer workflow/collector
+capture or final-candidate acceptance. No published assets were changed.

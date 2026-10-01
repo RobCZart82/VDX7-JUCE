@@ -31,6 +31,13 @@ ez nem a stabil kiadás minősítése.*
 
 ## Letöltés
 
+A készülő 1.0.1-től a jövőbeli kiadások **négy felhasználói letöltést**
+tartalmaznak: Windows x64 EXE telepítőt és Manual Install ZIP-et, valamint
+macOS Universal PKG telepítőt és Manual Install ZIP-et. Ez a jövőbeli kiadások
+szabálya, nem az 1.0.1 megjelenésének bejelentése. Az ellenőrzőösszegek és
+forráslinkek a release leírásába kerülnek; a validációs bizonyíték külön marad.
+Lásd a [négy letöltés szabályát](docs/release/PUBLIC_DOWNLOADS.md).
+
 Fejlesztői VST3-változatok a [GitHub Actions](https://github.com/RobCZart82/VDX7-JUCE/actions)
 oldalról tölthetők le. Válaszd ki a kívánt ág és commit sikeres futását, majd az artifactot:
 
