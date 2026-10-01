@@ -263,6 +263,10 @@ jobs:
           if ($uninstall.ExitCode -ne 0) { throw "Uninstaller smoke test failed: $($uninstall.ExitCode)" }
           if (Test-Path $installDir) { throw "Uninstaller left the VST3 bundle behind" }
 
+          $upgradeEvidence = Join-Path $env:RUNNER_TEMP "vdx7-upgrade.txt"
+          & release-tools/scripts/smoke_windows_upgrade.ps1 `
+            -CandidateSetup "$setup" -PluginBundle "$($vst3.FullName)" -Output "$upgradeEvidence"
+
           $status = if ($env:ACCEPTED_FOR_PUBLICATION -eq "true") {
             "ACCEPTED FOR PUBLICATION; not yet published."
           } else {
@@ -288,6 +292,7 @@ jobs:
             --platform Windows-x64 --inno "$iscc" --inno-version "$innoVersion" --output "$provenance"
           if ($LASTEXITCODE -ne 0) { throw "Build provenance capture failed: $LASTEXITCODE" }
           Get-Content -LiteralPath $provenance | Add-Content -Encoding utf8 release-assets/BUILD-INFO-Windows-x64.txt
+          Get-Content -LiteralPath $upgradeEvidence | Add-Content -Encoding utf8 release-assets/BUILD-INFO-Windows-x64.txt
           Copy-Item stable-source/*.zip release-assets/
 
       - name: Upload platform validation artifact (not a release)
@@ -306,6 +311,8 @@ jobs:
       SOURCE_COMMIT: ${{ needs.authorize-package.outputs.source_commit }}
       PACKAGE_LABEL: ${{ needs.authorize-package.outputs.package_label }}
       APPROVAL_COMMIT: ${{ needs.authorize-package.outputs.approval_commit }}
+      PACKAGER_COMMIT: ${{ needs.authorize-package.outputs.packager_commit }}
+      ACCEPTED_FOR_PUBLICATION: ${{ needs.authorize-package.outputs.release_accepted }}
     steps:
       - name: Checkout guarded checksum tooling
         uses: actions/checkout@v4
@@ -361,6 +368,30 @@ jobs:
         with:
           name: VDX7-${{ needs.authorize-package.outputs.package_label }}-Release-Assets-${{ needs.authorize-package.outputs.source_commit }}-${{ needs.authorize-package.outputs.release_accepted == 'true' && 'accepted' || 'prep' }}
           path: release-assets/*
+          if-no-files-found: error
+
+      - name: Stage separate matching source downloads (not publication)
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_args=()
+          if [[ "$ACCEPTED_FOR_PUBLICATION" == "true" ]]; then
+            source_args+=(--release-accepted)
+          fi
+          python3 approval-tools/scripts/stage_source_downloads.py \
+            --assets release-assets --output source-downloads \
+            --package-label "$PACKAGE_LABEL" --source-commit "$SOURCE_COMMIT" \
+            --packager-commit "$PACKAGER_COMMIT" --approval-commit "$APPROVAL_COMMIT" \
+            "${source_args[@]}"
+          (cd source-downloads && sha256sum -c SHA256SUMS.txt)
+
+      - name: Upload separate source downloads (not a release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: VDX7-${{ needs.authorize-package.outputs.package_label }}-Source-Downloads-${{ needs.authorize-package.outputs.source_commit }}-${{ needs.authorize-package.outputs.release_accepted == 'true' && 'accepted' || 'prep' }}
+          path: |
+            source-downloads/VDX7-${{ needs.authorize-package.outputs.package_label }}-${{ needs.authorize-package.outputs.source_commit }}-corresponding-source.zip
+            source-downloads/SHA256SUMS.txt
           if-no-files-found: error
 
       - name: Upload four user downloads (not a release)

@@ -157,6 +157,45 @@ class StableWorkflowTests(unittest.TestCase):
         self.assertNotIn('SHA256SUMS', public)
         self.assertNotIn('publishable-downloads/*', public)
 
+    def test_separate_source_allowlist_uses_guarded_tuple_and_checksum_validation(self):
+        assembly = self.jobs["assemble-release-assets"]
+        self.assertIn("approval-tools/scripts/stage_source_downloads.py", assembly)
+        self.assertLess(assembly.index("sha256sum -c SHA256SUMS.txt"),
+                        assembly.index("stage_source_downloads.py"))
+        for token in ('--package-label "$PACKAGE_LABEL"', '--source-commit "$SOURCE_COMMIT"',
+                      '--packager-commit "$PACKAGER_COMMIT"', '--approval-commit "$APPROVAL_COMMIT"',
+                      'source_args+=(--release-accepted)'):
+            self.assertIn(token, assembly)
+        upload = assembly.split("- name: Upload separate source downloads", 1)[1].split(
+            "- name: Upload four user downloads", 1)[0]
+        self.assertEqual(upload.count("source-downloads/"), 2)
+        self.assertIn("source-downloads/SHA256SUMS.txt", upload)
+        self.assertNotIn("source-downloads/*", upload)
+        self.assertNotIn("Setup.exe", upload)
+        self.assertNotIn("gh release", self.text)
+
+    def test_upgrade_smoke_is_hosted_only_and_preserves_published_layout(self):
+        root = WORKFLOW.parents[2]
+        script = (root / "scripts/smoke_windows_upgrade.ps1").read_text()
+        for token in ('$env:GITHUB_ACTIONS -ne "true"', '$env:RUNNER_OS -ne "Windows"',
+                      '$env:RUNNER_ENVIRONMENT -ne "github-hosted"',
+                      "670b18160fd67c3534c5ca2914353762a730e324765189750434fd8e202206e3",
+                      'Assert-RegisteredVersion "1.0.0"', 'Assert-RegisteredVersion "1.0.1"',
+                      "Assert-PreservedUserFiles", "Upgraded plugin payload differs",
+                      "Upgrade smoke refuses existing installation"):
+            self.assertIn(token, script)
+        self.assertLess(script.index("Published 1.0.0 installer digest mismatch"),
+                        script.index("Invoke-Installer $oldSetup"))
+        self.assertNotIn("Remove-Item", script)
+        package = self.jobs["package"]
+        self.assertIn("& release-tools/scripts/smoke_windows_upgrade.ps1", package)
+        self.assertIn("Get-Content -LiteralPath $upgradeEvidence", package)
+        windows = (root / ".github/workflows/build-windows.yml").read_text()
+        self.assertIn("[System.Management.Automation.Language.Parser]::ParseFile", windows)
+        self.assertNotIn("Invoke-Installer", windows)
+        installer = (root / "installer/windows/VDX7.iss").read_text()
+        self.assertNotIn("UninstallFilesDir=", installer)
+
 
 if __name__ == "__main__":
     unittest.main()
