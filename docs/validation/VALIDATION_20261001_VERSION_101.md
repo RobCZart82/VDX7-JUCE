@@ -38,6 +38,15 @@ Local macOS, Python 3.9.6:
   candidate and stable forms; invalid combinations fail.
 - PASS: stable/candidate workflow actionlint 1.7.12 checks, with optional
   shellcheck/pyflakes integrations disabled; whitespace check.
+- PASS: fresh local Ninja Release build of `vdx7_ci_checks` with ROM tests
+  disabled, AppleClang 21.0.0.21000334; 13/13 executable CTests passed.
+  Generated project version is 1.0.1 and display version is 1.0.1-dev.
+- PASS: actual complete preparation source archive from
+  `6e638f1b47d895d030d2ee506c336aab6776468c`, with pinned JUCE/core Git
+  objects: 5,108 files; SHA-256
+  `6feeced2a439fc0cc5dcefd68dd624eaf2cff0065ebc9bf3fcdbf5e48fc03df5`.
+  Its extracted standalone checker verified it with no Git executable on PATH.
+  This is local source-preparation evidence, not a final release asset.
 
 ## Remaining release gates
 
