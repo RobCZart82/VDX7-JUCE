@@ -35,6 +35,18 @@ class StableWorkflowTests(unittest.TestCase):
         self.assertNotIn("1.0.0", self.text)
         self.assertNotIn("1.0.0", candidate)
 
+    def test_active_candidate_and_source_instructions_match_101(self):
+        root = WORKFLOW.parents[2]
+        guide = (root / "docs/release/CANDIDATE_README_HU_EN.md").read_text()
+        notice = (root / "NOTICE.md").read_text()
+        source = (root / "docs/release/SOURCE_PACKAGING_1.0.md").read_text()
+        for text in (guide, notice, source):
+            self.assertIn("1.0.1-dev", text)
+            self.assertNotIn("1.0.0-dev", text)
+            self.assertNotIn("1.0.0-rcN", text)
+        self.assertIn("--package-label 1.0.1-dev", source)
+        self.assertEqual(guide.count("1.0.1-rcN"), 2)
+
     def test_trusted_authorization_precedes_platform_jobs(self):
         self.assertIn("authorize-package", self.jobs)
         guard = self.jobs["authorize-package"]

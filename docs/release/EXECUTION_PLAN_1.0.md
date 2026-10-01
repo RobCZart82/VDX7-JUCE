@@ -75,6 +75,12 @@ Use the checked four-file staging allowlist, not a wildcard upload of the
 validation artifact. [Policy](PUBLIC_DOWNLOADS.md). This neither publishes
 1.0.1 nor changes existing v1.0.0 assets or the separate acceptance gates.
 
+Owner source-delivery decision (2026-10-01): separate `v1.0.1-source` GitHub
+release in this repository, not marked latest, containing matching complete
+source ZIP plus checksum manifest. Link it from the main `v1.0.1` release,
+which remains latest with exactly four user downloads. Do not put source in
+the Manual ZIPs. Mechanism selected; final tuple/hash/source review stays OPEN.
+
 ## Deep audit corrective round 2026-09-30
 
 The fresh audit baseline is main `3b943a893ca95c9b31ca43ee5a10cc05cd9ed7d0`

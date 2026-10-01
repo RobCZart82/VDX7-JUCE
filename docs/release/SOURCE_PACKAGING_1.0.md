@@ -1,7 +1,7 @@
 # Reproducible development source package
 
 This prepares local/CI artifacts; it never uploads, tags or publishes a release.
-Python 3.10+ and Git are required. Use a full commit SHA that contains the new
+Python 3.9+ and Git are required. Use a full commit SHA that contains the new
 packager; the dirty working tree and untracked files are intentionally ignored.
 
 ## Bundled verifier and product/tooling separation (1.0.1 development)
@@ -24,7 +24,7 @@ tooling first; uncommitted checker changes are not valid provenance.
 python -m unittest discover -s Tests -p test_package_source.py -v
 python scripts/package_source.py create --repo . --juce <JUCE-checkout>
   --core <Retromulator-checkout> --commit <40-character-SHA>
-  --package-label 1.0.0-dev --output <new-folder>
+  --package-label 1.0.1-dev --output <new-folder>
 python scripts/package_source.py verify <new-folder>/<source-package>.zip
 ```
 
@@ -33,6 +33,15 @@ branches and local edits are irrelevant: only committed Git blobs are read.
 The packager validates pins against the selected wrapper's CMakeLists.txt and
 fails if they drift. It does not fetch dependencies or require ROMs. A destination
 that already exists is refused rather than overwritten.
+
+The default label is 1.0.1-dev; use 1.0.1-rcN for an exact candidate or 1.0.1
+for stable preparation. New 1.0.1 creation/authorization requires both the
+selected source's project version and installer AppVersion to be 1.0.1.
+Historical 1.0.0 labels remain explicitly supported for compatibility, not
+permission to replace published assets. The planned public matching-source
+download is a separate v1.0.1-source GitHub release, with its ZIP and SHA-256
+manifest linked from the four-download main release. See
+[the publication policy](PUBLIC_DOWNLOADS.md); no final assets are approved yet.
 
 Contents: the wrapper snapshot, full pinned JUCE source with all bundled notices,
 the pinned dx7Lib subset under `third_party/dx7Lib`, and Retromulator LICENSE/README

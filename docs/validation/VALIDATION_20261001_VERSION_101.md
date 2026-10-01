@@ -60,3 +60,19 @@ deferral, separate frozen-tool approval and final hashes remain open.
 No installed plugin was replaced, no REAPER session was modified and no
 release/tag/assets were published. The committed approval record stays null.
 The [execution plan](../release/EXECUTION_PLAN_1.0.md) remains the sole ledger.
+
+## Review follow-up
+
+PR #112 review identified stale active candidate/source instructions in
+NOTICE, the HU/EN candidate guide and the source-packaging example. They now
+use 1.0.1 forms, with a regression checking those active instructions.
+After this follow-up, the complete local Python suite passed 58/58 with no
+skips; workflow syntax and whitespace checks passed again.
+Historical 1.0.0 validation records and actual 1.0.0-dev screenshot captions
+remain unchanged. The identity guide separates current 1.0.1 instructions
+from historical 1.0.0 evidence.
+
+The owner selected a separate v1.0.1-source GitHub release for durable source
+access, not source inside the Manual ZIPs. That source release will not be
+latest; the main v1.0.1 remains latest with four user downloads. This decision
+does not approve the final candidate or create a release in this round.
