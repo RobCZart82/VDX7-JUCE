@@ -28,6 +28,17 @@ def regular(path):
         raise ValueError(f"Expected a regular file: {path.name}")
 
 
+def read_checksums(manifest):
+    regular(manifest)
+    entries = {}
+    for line in manifest.read_text(encoding="utf-8").splitlines():
+        match = re.fullmatch(r"([0-9a-f]{64})  ([^/\\\x00]+)", line)
+        if not match or match[2] in (".", "..") or match[2] in entries:
+            raise ValueError("Malformed or duplicate checksum entry")
+        entries[match[2]] = match[1]
+    return entries
+
+
 def stage(assets, output, label):
     assets, output = Path(assets), Path(output)
     names = download_names(label)
@@ -37,14 +48,7 @@ def stage(assets, output, label):
         raise ValueError("Use a new staging directory; existing files will not be overwritten")
     if assets.resolve() in output.resolve().parents:
         raise ValueError("Public staging must be outside the retained validation directory")
-    manifest = assets / "SHA256SUMS.txt"
-    regular(manifest)
-    entries = {}
-    for line in manifest.read_text(encoding="utf-8").splitlines():
-        match = re.fullmatch(r"([0-9a-f]{64})  ([^/\\\x00]+)", line)
-        if not match or match[2] in (".", "..") or match[2] in entries:
-            raise ValueError("Malformed or duplicate checksum entry")
-        entries[match[2]] = match[1]
+    entries = read_checksums(assets / "SHA256SUMS.txt")
     # Verify all selected assets before creating any public payload.
     for name in names:
         path = assets / name

@@ -76,3 +76,18 @@ The owner selected a separate v1.0.1-source GitHub release for durable source
 access, not source inside the Manual ZIPs. That source release will not be
 latest; the main v1.0.1 remains latest with four user downloads. This decision
 does not approve the final candidate or create a release in this round.
+
+## Merge and private-ROM regression closure
+
+PR #112 final head `15f11830e432018809630d2d9cce6085c7103ef6` passed Windows
+`36907192768`, macOS `36907192756` and ASan/UBSan `36907192754`; the
+review conversation was resolved after the documented correction.
+It merged as `d4f589764284e72a2d532a6055ac8d918cb53d9c`.
+Post-merge Windows `36908721471` and macOS `36908721498` both completed
+successfully at that exact merge commit, before the next round was submitted.
+
+The fresh 1.0.1 development harness also passed 43/43 executable CTests using
+the private local ROM in 152.10 seconds, parallel 4. Of 44 registered tests,
+interactive `vdx7_processor` save-dialog coverage was explicitly NOT RUN.
+No ROM data, installed plugin or REAPER state was changed/uploaded. This
+closes source-level regression evidence, not final stable binary/host acceptance.

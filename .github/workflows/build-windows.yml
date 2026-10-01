@@ -15,6 +15,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate installer upgrade smoke syntax
+        # Installer integration runs only in prepare-stable-package.yml.
+        # Parse its helper here so syntax errors are caught by the PR gate.
+        shell: pwsh
+        run: |
+          $parseTokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD/scripts/smoke_windows_upgrade.ps1", [ref]$parseTokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -ne 0) { throw ($parseErrors | Out-String) }
+
       - name: Configure Windows x64 build
         shell: cmd
         run: >

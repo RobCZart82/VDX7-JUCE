@@ -6,8 +6,9 @@
 release tools/main reviewed at `3fa8c2e00ad4dcd1860551cf3596ee4ad29de789`.
 Publication time: 2026-09-29 23:49:49 UTC. Preserve that tag and its assets.
 This development round starts from main
-`01c54c2e4709e97a69a67fffbbc257647a03688e`, after PR #111. Its final-head
-Windows/macOS/ASan-UBSan PR gates and post-merge Windows/macOS checks passed.
+`d4f589764284e72a2d532a6055ac8d918cb53d9c`, after PR #112. Its final-head
+Windows/macOS/ASan-UBSan PR gates passed; post-merge Windows `36908721471`
+and macOS `36908721498` also completed successfully at that exact main commit.
 Exact-candidate packaging remains separate; this does not accept a 1.0.1 binary.
 The owner authorized corrective development and merging green, verified PRs
 into main for 1.0.1, and now identifies 1.0.1 publication as the goal.
@@ -22,7 +23,7 @@ This is the single active work ledger; do not create competing roadmaps.
 | AUDIT-20260930-A1/A2 | P1, reproduced pending-project edit loss and wrong-engine capture | MERGED [#104](https://github.com/RobCZart82/VDX7-JUCE/pull/104); required platform/sanitizer checks PASS and local 36/36 CTests PASS. Rejects unsupported operations, preserves edits and prioritizes recovery. [Boundary validation](../validation/VALIDATION_20260930_PENDING_BOUNDARY.md). Exact-1.0.1 acceptance remains separate. |
 | AUDIT-20260930-A3 | P1 packaging, published ZIP fails its bundled verifier | MERGED [#105](https://github.com/RobCZart82/VDX7-JUCE/pull/105); all PR checks PASS. Ten packaging tests, real extracted checker and offline Windows build/11 CTests PASS. [Verification record](../validation/VALIDATION_20260930_SOURCE_VERIFIER.md). Final-release acceptance remains open; existing 1.0.0 assets unchanged. |
 | AUDIT-20260930-A4 | P2 provenance guard gap, not unauthorized publication | MERGED [#109](https://github.com/RobCZart82/VDX7-JUCE/pull/109): exact reviewed source/packager pair, committed approval snapshot and canonical main workflow context required before accepted packaging. Final-head Windows/macOS/ASan-UBSan and post-merge Windows/macOS checks PASS. Null approval fails closed; preparation and legacy integrity verification remain available. [Approval procedure](RELEASE_APPROVAL.md), [regression evidence](../validation/VALIDATION_20261001_RELEASE_APPROVAL.md). No release is approved by this change. |
-| AUDIT-20260930-A5 | P2 installer layout; no reproduced host scan failure | OPEN: assess separate uninstall directory with tested 1.0.0 upgrade/uninstall migration; preserve AppId and USER data. Do not move the directory without migration evidence. |
+| AUDIT-20260930-A5 | P2 installer layout; no reproduced host scan failure | ASSESSED: retain AppId and current uninstall directory for 1.0.1. Inno explicitly warns that changing that directory prevents appending prior uninstall logs. A guarded hosted-Windows upgrade smoke is implemented for the checksum-pinned published 1.0.0 installer -> candidate -> uninstall, with installed-payload hashes, one AppId registration and synthetic user-file preservation. Actual native execution remains OPEN. [Validation](../validation/VALIDATION_20261001_INSTALLER_UPGRADE_SOURCE.md). Do not claim a host scan defect was reproduced or fixed. |
 | AUDIT-20260930-A6 | P2 toolchain provenance | MERGED [#110](https://github.com/RobCZart82/VDX7-JUCE/pull/110); final-head Windows/macOS/ASan-UBSan PR checks PASS. Pins/verifies Inno 6.7.1 and records configured compiler, SDK, CMake, runner image and verified dependency commits in hashed BUILD-INFO assets. [Mechanism](BUILD_TOOLCHAIN_PROVENANCE.md), [validation](../validation/VALIDATION_20261001_TOOLCHAIN_PROVENANCE.md). Actual exact-candidate packaging capture remains required; the installer workflow was NOT RUN. Observed tool versions do not imply bit-identical installers or an immutable runner. |
 | AUDIT-20260930-A7 | P2 stale release evidence/docs | PARTIAL: plan, README and HU/EN guides distinguish published 1.0.0 from corrective development; final #104/#105 validation recorded. Owner's future [four-download policy](PUBLIC_DOWNLOADS.md) is MERGED [#111](https://github.com/RobCZart82/VDX7-JUCE/pull/111); final-head Windows/macOS/ASan-UBSan and post-merge Windows/macOS checks PASS. Actual candidate payload staging, full accepted binary asset reconciliation and durable matching-source access remain OPEN. |
 | AUDIT-20260930-A8 | P3 test-only C4805 | IMPLEMENTED: explicitly convert the boolean carry flag before integer bitwise packing; fresh Windows rebuild without C4805 and focused trace regression PASS. |
@@ -66,6 +67,14 @@ Present these before separately requesting 1.0.1 publication authorization.
    before publishing a new v1.0.1 tag/release. Preserve v1.0.0 unchanged.
 
 Version-update validation: [1.0.1 candidate preparation](../validation/VALIDATION_20261001_VERSION_101.md).
+
+PR #112 merged as `d4f589764284e72a2d532a6055ac8d918cb53d9c`.
+Final head `15f11830e432018809630d2d9cce6085c7103ef6` passed Windows
+`36907192768`, macOS `36907192756` and ASan/UBSan `36907192754`.
+Its fresh local development harness passed 43/43 executable CTests with the
+private ROM (44 registered; interactive save-dialog case NOT RUN), plus
+58/58 Python tests. This is source/harness evidence, not accepted stable binaries.
+New source staging and installer-upgrade tooling have their own review/gates.
 
 Owner publication-layout decision (2026-10-01): exactly four manually uploaded
 user downloads — Windows x64 EXE installer + Manual Install ZIP, macOS Universal

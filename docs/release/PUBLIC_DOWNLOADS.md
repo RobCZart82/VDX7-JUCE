@@ -53,6 +53,14 @@ Publish verified matching source no later than the corresponding binaries;
 an expired Actions URL or GitHub's dependency-free automatic source ZIP is
 not a substitute.
 
+The non-publishing workflow also stages a separate `Source-Downloads`
+artifact with exactly the matching source ZIP and its one-file SHA256SUMS
+manifest. It verifies the complete source archive against guarded source/tool
+identities and acceptance status; accepted mode additionally requires the
+exact approval commit proof. This is the future source-release payload,
+not an extra asset for the four-download main release. Final native workflow
+execution and publication review remain required.
+
 GitHub may additionally display its automatically generated **Source code
 (zip/tar.gz)** links. Those are platform-generated source links, not extra
 manually uploaded user-download assets or offline dependency bundles.
