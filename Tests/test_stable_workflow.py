@@ -93,10 +93,24 @@ class StableWorkflowTests(unittest.TestCase):
         for token in ("-DCMAKE_OSX_ARCHITECTURES=\"arm64;x86_64\"", "-A x64",
                       "--target VDX7_VST3 vdx7_ci_checks", "--no-tests=error",
                       "lipo", "codesign --verify --deep --strict", "pkgutil --payload-files",
-                      "choco install innosetup --yes --no-progress", "Uninstaller smoke test failed",
+                      "Uninstaller smoke test failed",
                       "VDX7-1.0.0-macOS-universal.pkg", "VDX7-1.0.0-Windows-x64-Setup.exe"):
             self.assertIn(token, package)
         self.assertNotIn("--target VDX7_AU", package)
+
+    def test_packaging_records_observed_toolchain_and_checks_pinned_inno(self):
+        package = self.jobs["package"]
+        for token in ('INNO_SETUP_VERSION: "6.7.1"',
+                      'choco install innosetup --version=$env:INNO_SETUP_VERSION --yes --no-progress',
+                      'Inno Setup installation failed', 'Inno Setup version mismatch',
+                      'python release-tools/scripts/write_build_provenance.py',
+                      '--platform Windows-x64', '--platform macOS-universal',
+                      '--inno "$iscc" --inno-version "$innoVersion"',
+                      'BUILD-INFO-Windows-x64.txt', 'BUILD-INFO-macOS-universal.txt'):
+            self.assertIn(token, package)
+        self.assertEqual(package.count('write_build_provenance.py'), 2)
+        self.assertEqual(package.count('--juce build/_deps/juce-src --core build/_deps/retromulator-src'), 3)
+        self.assertIn('Build provenance capture failed', package)
 
 
 if __name__ == "__main__":

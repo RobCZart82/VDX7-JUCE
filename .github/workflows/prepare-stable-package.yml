@@ -84,6 +84,7 @@ jobs:
       WORKFLOW_REF: ${{ needs.authorize-package.outputs.workflow_ref }}
       WORKFLOW_GIT_REF: ${{ needs.authorize-package.outputs.workflow_git_ref }}
       ACCEPTED_FOR_PUBLICATION: ${{ needs.authorize-package.outputs.release_accepted }}
+      INNO_SETUP_VERSION: "6.7.1"
     steps:
       - name: Checkout exact source commit
         uses: actions/checkout@v4
@@ -212,6 +213,11 @@ jobs:
           Installer: unsigned .pkg; plugin bundle has an ad-hoc signature only.
           Not Developer ID signed or notarized. macOS may show a security warning.
           EOF
+          python release-tools/scripts/write_build_provenance.py \
+            --build build --source . \
+            --juce build/_deps/juce-src --core build/_deps/retromulator-src \
+            --platform macOS-universal --output "$RUNNER_TEMP/vdx7-toolchain.txt"
+          cat "$RUNNER_TEMP/vdx7-toolchain.txt" >> release-assets/BUILD-INFO-macOS-universal.txt
 
       - name: Verify and package Windows x64 VST3 installer and manual ZIP
         if: runner.os == 'Windows'
@@ -223,9 +229,13 @@ jobs:
           New-Item -ItemType Directory -Path release-assets | Out-Null
           Compress-Archive -Path $vst3.FullName -DestinationPath "release-assets/VDX7-1.0.0-Windows-x64-Manual.zip"
 
-          choco install innosetup --yes --no-progress
+          choco install innosetup --version=$env:INNO_SETUP_VERSION --yes --no-progress --allow-downgrade
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup installation failed: $LASTEXITCODE" }
           $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found at $iscc" }
+          $innoInfo = (Get-Item -LiteralPath $iscc).VersionInfo
+          $innoVersion = "$($innoInfo.ProductMajorPart).$($innoInfo.ProductMinorPart).$($innoInfo.ProductBuildPart)"
+          if ($innoVersion -ne $env:INNO_SETUP_VERSION) { throw "Inno Setup version mismatch: $innoVersion" }
           & $iscc "/DPluginBundle=$($vst3.FullName)" "/O$((Get-Location).Path)\release-assets" "installer\windows\VDX7.iss"
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
 
@@ -271,6 +281,13 @@ jobs:
           Included format: VST3 only. No AU component is built or packaged.
           Installer: unsigned Setup.exe; Windows may show an unknown-publisher warning.
           "@ | Set-Content -Encoding utf8 release-assets/BUILD-INFO-Windows-x64.txt
+          $provenance = Join-Path $env:RUNNER_TEMP "vdx7-toolchain.txt"
+          python release-tools/scripts/write_build_provenance.py `
+            --build build --source . `
+            --juce build/_deps/juce-src --core build/_deps/retromulator-src `
+            --platform Windows-x64 --inno "$iscc" --inno-version "$innoVersion" --output "$provenance"
+          if ($LASTEXITCODE -ne 0) { throw "Build provenance capture failed: $LASTEXITCODE" }
+          Get-Content -LiteralPath $provenance | Add-Content -Encoding utf8 release-assets/BUILD-INFO-Windows-x64.txt
           Copy-Item stable-source/*.zip release-assets/
 
       - name: Upload platform validation artifact (not a release)

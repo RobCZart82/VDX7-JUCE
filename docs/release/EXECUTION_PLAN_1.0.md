@@ -5,8 +5,8 @@
 1.0.0 is published at product `d79ed5214d82caf70e3941e5a620bab137d3f9ca`;
 release tools/main reviewed at `3fa8c2e00ad4dcd1860551cf3596ee4ad29de789`.
 Publication time: 2026-09-29 23:49:49 UTC. Preserve that tag and its assets.
-Current corrective-development baseline is main
-`ff1df3619824cc8d1642869216b19280ad88e8d0`, after PR #108. Its post-merge
+This development round starts from main
+`e3f87eae65d76c718e307180f5eb74abbe7f2662`, after PR #109. Its post-merge
 Windows and macOS builds passed; this does not accept a 1.0.1 release binary.
 The owner authorized corrective development and merging green, verified PRs
 into main for 1.0.1. This is **not** authorization to publish 1.0.1.
@@ -19,9 +19,9 @@ This is the single active work ledger; do not create competing roadmaps.
 | --- | --- | --- |
 | AUDIT-20260930-A1/A2 | P1, reproduced pending-project edit loss and wrong-engine capture | MERGED [#104](https://github.com/RobCZart82/VDX7-JUCE/pull/104); required platform/sanitizer checks PASS and local 36/36 CTests PASS. Rejects unsupported operations, preserves edits and prioritizes recovery. [Boundary validation](../validation/VALIDATION_20260930_PENDING_BOUNDARY.md). Exact-1.0.1 acceptance remains separate. |
 | AUDIT-20260930-A3 | P1 packaging, published ZIP fails its bundled verifier | MERGED [#105](https://github.com/RobCZart82/VDX7-JUCE/pull/105); all PR checks PASS. Ten packaging tests, real extracted checker and offline Windows build/11 CTests PASS. [Verification record](../validation/VALIDATION_20260930_SOURCE_VERIFIER.md). Final-release acceptance remains open; existing 1.0.0 assets unchanged. |
-| AUDIT-20260930-A4 | P2 provenance guard gap, not unauthorized publication | IMPLEMENTED locally: exact reviewed source/packager pair, committed approval snapshot and canonical main workflow context required before accepted packaging. Null approval fails closed; preparation and legacy integrity verification remain available. [Approval procedure](RELEASE_APPROVAL.md), [regression evidence](../validation/VALIDATION_20261001_RELEASE_APPROVAL.md). Final-head platform/sanitizer PR gates and merge remain required; no release is approved by this change. |
+| AUDIT-20260930-A4 | P2 provenance guard gap, not unauthorized publication | MERGED [#109](https://github.com/RobCZart82/VDX7-JUCE/pull/109): exact reviewed source/packager pair, committed approval snapshot and canonical main workflow context required before accepted packaging. Final-head Windows/macOS/ASan-UBSan and post-merge Windows/macOS checks PASS. Null approval fails closed; preparation and legacy integrity verification remain available. [Approval procedure](RELEASE_APPROVAL.md), [regression evidence](../validation/VALIDATION_20261001_RELEASE_APPROVAL.md). No release is approved by this change. |
 | AUDIT-20260930-A5 | P2 installer layout; no reproduced host scan failure | OPEN: assess separate uninstall directory with tested 1.0.0 upgrade/uninstall migration; preserve AppId and USER data. Do not move the directory without migration evidence. |
-| AUDIT-20260930-A6 | P2 toolchain provenance | OPEN: pin Inno; record compiler, SDK, CMake, runner and dependency versions. Deterministic source archives do not imply bit-identical installers. |
+| AUDIT-20260930-A6 | P2 toolchain provenance | IMPLEMENTED locally on `codex/1.0.1-toolchain-provenance`: pin/verify Inno 6.7.1; record configured compiler, SDK, CMake, runner image and verified dependency commits in hashed BUILD-INFO assets. [Mechanism](BUILD_TOOLCHAIN_PROVENANCE.md), [validation](../validation/VALIDATION_20261001_TOOLCHAIN_PROVENANCE.md). PR gates/merge and actual exact-candidate packaging capture remain required; the installer workflow was NOT RUN. Observed tool versions do not imply bit-identical installers or an immutable runner. |
 | AUDIT-20260930-A7 | P2 stale release evidence/docs | PARTIAL: plan, README and HU/EN guides distinguish published 1.0.0 from corrective development; final #104/#105 validation recorded. Full published/accepted binary asset reconciliation remains OPEN, distinct from earlier prep review. |
 | AUDIT-20260930-A8 | P3 test-only C4805 | IMPLEMENTED: explicitly convert the boolean carry flag before integer bitwise packing; fresh Windows rebuild without C4805 and focused trace regression PASS. |
 | AUDIT-20260930-A9 | P2 missing sanitizer coverage, not a DSP defect | IMPLEMENTED: resampler added to both instrumented build targets and CTest filter. Actual ASan/UBSan run is a required PR gate; Python packaging remains separate. |
