@@ -38,8 +38,20 @@ identities, matching source/dependency access links, install/manual guidance,
 unsigned/not-notarized status and explicit deferred-test disclosures. Corresponding
 source generation and verification are retained, not removed by this policy.
 Durable matching-source access must be reviewed before publication; an expiring
-private/Actions artifact alone must not be treated as that access. This change
-does not approve a replacement source-delivery mechanism or any new release.
+private/Actions artifact alone must not be treated as that access. Final
+candidate acceptance remains separate from the owner's delivery decision.
+
+Owner source-delivery decision, 2026-10-01: use a separate public
+`v1.0.1-source` GitHub release in this repository. It contains the complete
+matching corresponding-source ZIP and its checksum manifest; it is not the
+latest product release. The main `v1.0.1` notes link directly to this durable
+source download and record its source/tooling identities and SHA-256.
+Do not include source in either Manual Install ZIP. The main product release
+keeps exactly four manually uploaded user downloads and remains the latest.
+This selects the delivery mechanism, not the final candidate or approval tuple.
+Publish verified matching source no later than the corresponding binaries;
+an expired Actions URL or GitHub's dependency-free automatic source ZIP is
+not a substitute.
 
 GitHub may additionally display its automatically generated **Source code
 (zip/tar.gz)** links. Those are platform-generated source links, not extra
@@ -47,8 +59,8 @@ manually uploaded user-download assets or offline dependency bundles.
 
 ## Current scope and acceptance
 
-Published v1.0.0 is untouched. The workflow and guarded packager remain
-1.0.0-labelled until the separately reviewed coherent 1.0.1 version update.
+Published v1.0.0 is untouched. The coordinated version update targets
+1.0.1-labelled preparation assets; this is not final binary acceptance.
 Do not dispatch this workflow to replace existing 1.0.0 assets. Null approval,
 read-only workflow permissions and separate publication authorization remain.
 Use the [single execution plan](EXECUTION_PLAN_1.0.md) for remaining work.

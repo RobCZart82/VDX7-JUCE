@@ -1,6 +1,6 @@
 # Licensing and attribution / Licenc és köszönet
 
-VDX7-JUCE 1.0.0 development sources use the free-software combined-work route
+VDX7-JUCE 1.0.1 development sources use the free-software combined-work route
 under GNU AGPL version 3, without warranty. The project owner authorised the
 AGPLv3 publication route. Wrapper contributions and original GUI resources
 are offered under AGPL-3.0-only; see LICENSE.txt. Development artifacts are not
@@ -20,10 +20,13 @@ Existing upstream components retain their own notices and licenses:
   included source files. No commercial JUCE license is claimed.
 
 For each development candidate, prepare matching complete source as
-VDX7-1.0.0-dev-<full-source-SHA>-corresponding-source.zip. Its embedded
+VDX7-<version-label>-<full-source-SHA>-corresponding-source.zip, with the exact
+1.0.1-dev, 1.0.1-rcN or stable 1.0.1 label used by that build. Its embedded
 SOURCE_MANIFEST.json identifies the exact source and dependency revisions and
 hashes the payload files; SHA256SUMS.txt hashes the ZIP. Publication must not
-proceed without the matching source package alongside the binary.
+proceed without durable public access to matching source. The planned 1.0.1
+uses a separate v1.0.1-source GitHub release linked from the main release notes;
+the four binary user downloads remain separate.
 The source package includes the wrapper, GUI resources, build scripts, exact JUCE sources
 and the portable dx7Lib source subset used by the build. See
 docs/guides/SOURCE_DEPENDENCIES.md for pinned revisions and offline build instructions.

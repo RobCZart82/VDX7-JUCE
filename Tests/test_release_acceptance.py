@@ -35,7 +35,9 @@ class ReleaseAcceptanceTests(unittest.TestCase):
         self.git("config", "commit.gpgSign", "false")
         self.git("config", "core.autocrlf", "false")
         self.old_checker = b"raise SystemExit('old product checker is intentionally obsolete')\n"
-        self.write("CMakeLists.txt", (p.JUCE_SHA + "\n" + p.CORE_SHA + "\n").encode())
+        self.write("CMakeLists.txt", ("project(VDX7_JUCE VERSION 1.0.1 LANGUAGES C CXX)\n"
+                                    + p.JUCE_SHA + "\n" + p.CORE_SHA + "\n").encode())
+        self.write("installer/windows/VDX7.iss", b'#define AppVersion "1.0.1"\n')
         for name in ("LICENSE.txt", "NOTICE.md", "THIRD_PARTY.md"):
             self.write(name, b"Synthetic fixture notice\n")
         self.write("scripts/package_source.py", self.old_checker)
@@ -96,6 +98,26 @@ class ReleaseAcceptanceTests(unittest.TestCase):
         self.assertEqual(actual, expected)
         self.assertEqual(self.authorize(packager_commit=self.tool), expected)
         self.assertNotEqual(self.tool, self.approval)
+
+    def test_101_approval_requires_its_own_exact_tuple(self):
+        self.approval = self.approve({"package_label": "1.0.1"})
+        actual = self.authorize(package_label="1.0.1")
+        self.assertEqual(actual["package_label"], "1.0.1")
+        self.assertEqual(actual["packager_commit"], self.tool)
+        with self.assertRaises(ValueError):
+            self.authorize(package_label="1.0.0")
+
+    def test_101_preparation_rejects_old_project_or_installer_before_outputs(self):
+        for path, content in (
+                ("CMakeLists.txt", b"project(VDX7_JUCE VERSION 1.0.0 LANGUAGES C CXX)\n"),
+                ("installer/windows/VDX7.iss", b'#define AppVersion "1.0.0"\n')):
+            with self.subTest(path=path):
+                self.git("checkout", self.approval, "--", "CMakeLists.txt", "installer/windows/VDX7.iss")
+                self.write(path, content)
+                bad = self.commit("wrong source version")
+                with self.assertRaisesRegex(ValueError, "versions must both match"):
+                    self.authorize(approval_commit=bad, source_commit=bad,
+                                   package_label="1.0.1", accepted=False)
 
     def test_preparation_has_no_policy_read_or_acceptance(self):
         workflow_path = p.APPROVED_WORKFLOW_REF.rsplit("@", 1)[0]
@@ -286,7 +308,7 @@ class ReleaseAcceptanceTests(unittest.TestCase):
                           workflow_git_ref=p.APPROVED_GIT_REF)
             self.assertFalse(output.exists())
 
-    def make_accepted_archive(self):
+    def make_accepted_archive(self, label="1.0.0"):
         original_snapshot = p.snapshot
         def minimal_dependencies(repo, sha, paths=()):
             if repo == "fixture-juce":
@@ -299,7 +321,7 @@ class ReleaseAcceptanceTests(unittest.TestCase):
             return original_snapshot(repo, sha, paths)
         with patch.object(p, "snapshot", side_effect=minimal_dependencies):
             return p.package(self.repo, "fixture-juce", "fixture-core", self.source,
-                             self.root / "accepted-package", "1.0.0", True, self.tool,
+                             self.root / "accepted-package", label, True, self.tool,
                              approval_repo=self.repo, approval_commit=self.approval,
                              workflow_ref=p.APPROVED_WORKFLOW_REF, workflow_git_ref=p.APPROVED_GIT_REF)
 
@@ -313,6 +335,21 @@ class ReleaseAcceptanceTests(unittest.TestCase):
                 key: value for key, value in self.authorize().items() if key != "release_accepted"})
             contents.extractall(extracted)
         self.assertFalse((extracted / ".git").exists())
+        no_git_env = dict(self.env, PATH=str(self.root / "no-executables"))
+        verified = subprocess.run([sys.executable, str(extracted / p.VERIFIER), "verify", str(archive)],
+                                  cwd=extracted, env=no_git_env, capture_output=True, text=True)
+        self.assertEqual(verified.returncode, 0, verified.stderr)
+        self.assertIn("not publisher authentication", verified.stdout)
+
+    def test_101_approved_archive_and_git_free_bundled_verifier(self):
+        self.approval = self.approve({"package_label": "1.0.1"})
+        archive = self.make_accepted_archive("1.0.1")
+        extracted = self.root / "extracted"
+        with zipfile.ZipFile(archive) as contents:
+            manifest = json.loads(contents.read(p.MANIFEST))
+            self.assertEqual(manifest["package_label"], "1.0.1")
+            self.assertEqual(manifest["release_approval"]["packager_commit"], self.tool)
+            contents.extractall(extracted)
         no_git_env = dict(self.env, PATH=str(self.root / "no-executables"))
         verified = subprocess.run([sys.executable, str(extracted / p.VERIFIER), "verify", str(archive)],
                                   cwd=extracted, env=no_git_env, capture_output=True, text=True)

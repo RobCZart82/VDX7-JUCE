@@ -21,10 +21,31 @@ class SourcePackageTests(unittest.TestCase):
         for name in (p.VERIFIER, p.PACKAGE_README, p.MANIFEST):
             with patch.object(p, "snapshot", return_value={**minimal, name: (b"collision", 0o644)}):
                 with self.assertRaisesRegex(ValueError, "Reserved"):
-                    p.package("repo", "juce", "core", "a" * 40, Path("unused"))
+                    p.package("repo", "juce", "core", "a" * 40, Path("unused"), "1.0.0-dev")
         with patch.object(p, "snapshot", side_effect=[minimal, {"scripts/package_source.py": (b"wrong", 0o644)}]):
             with self.assertRaisesRegex(ValueError, "Running packager differs"):
-                p.package("repo", "juce", "core", "a" * 40, Path("unused"))
+                p.package("repo", "juce", "core", "a" * 40, Path("unused"), "1.0.0-dev")
+
+    def test_101_creation_rejects_version_mismatch_before_output(self):
+        files = {"CMakeLists.txt": (b"project(VDX7_JUCE VERSION 1.0.0 LANGUAGES C CXX)\n", 0o644),
+                 "installer/windows/VDX7.iss": (b'#define AppVersion "1.0.1"\n', 0o644)}
+        with tempfile.TemporaryDirectory() as folder, patch.object(p, "snapshot", return_value=files):
+            output = Path(folder) / "rejected"
+            with self.assertRaisesRegex(ValueError, "versions must both match"):
+                p.package("repo", "juce", "core", "a" * 40, output)
+            self.assertFalse(output.exists())
+
+    def test_supported_labels_and_negative_controls(self):
+        for version in ("1.0.0", "1.0.1"):
+            for suffix in ("", "-dev", "-rc1", "-rc12"):
+                p.package_identity(version + suffix, False)
+            p.package_identity(version, True)
+            for suffix in ("-dev", "-rc1"):
+                with self.assertRaises(ValueError):
+                    p.package_identity(version + suffix, True)
+        for label in ("1.0.2", "1.0.1-rc0", "1.0.1-rc01", "1.0.1\n", "../1.0.1", None):
+            with self.assertRaises(ValueError):
+                p.package_identity(label, False)
 
     def test_old_product_new_packager_bundled_verifier(self):
         old_checker = b"raise SystemExit('old product checker rejects accepted format')\n"
@@ -136,6 +157,9 @@ class SourcePackageTests(unittest.TestCase):
             "1.0.0-dev": "development-corresponding-source",
             "1.0.0-rc2": "release-candidate-corresponding-source",
             "1.0.0": "stable-release-preparation-corresponding-source",
+            "1.0.1-dev": "development-corresponding-source",
+            "1.0.1-rc2": "release-candidate-corresponding-source",
+            "1.0.1": "stable-release-preparation-corresponding-source",
         }
         with tempfile.TemporaryDirectory() as folder:
             for index, (label, kind) in enumerate(labels.items()):
@@ -153,10 +177,12 @@ class SourcePackageTests(unittest.TestCase):
         manifest["kind"] = "stable-release-corresponding-source"
         manifest["release_accepted"] = True
         manifest["packager_commit"] = "b" * 40
-        with tempfile.TemporaryDirectory() as folder:
-            path = Path(folder) / "accepted-stable.zip"
-            p.write_zip(path, files, manifest)
-            p.verify(path)
+        for version in ("1.0.0", "1.0.1"):
+            manifest["package_label"] = version
+            with tempfile.TemporaryDirectory() as folder:
+                path = Path(folder) / "accepted-stable.zip"
+                p.write_zip(path, files, manifest)
+                p.verify(path)
 
         manifest["package_label"] = "1.0.0-rc1"
         manifest["kind"] = "release-candidate-corresponding-source"

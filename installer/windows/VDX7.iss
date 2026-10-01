@@ -1,5 +1,5 @@
 #define AppName "VDX7 Mk1."
-#define AppVersion "1.0.0"
+#define AppVersion "1.0.1"
 #ifndef PluginBundle
   #error "Pass /DPluginBundle=<absolute path to VDX7.vst3>"
 #endif
@@ -15,7 +15,7 @@ PrivilegesRequired=admin
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 Uninstallable=yes
-OutputBaseFilename=VDX7-1.0.0-Windows-x64-Setup
+OutputBaseFilename=VDX7-{#AppVersion}-Windows-x64-Setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -24,4 +24,3 @@ RestartApplications=no
 
 [Files]
 Source: "{#PluginBundle}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-

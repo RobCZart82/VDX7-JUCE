@@ -1,16 +1,16 @@
-# 1.0 development candidate / fejlesztői jelölt
+# 1.0.1 development candidate / fejlesztői jelölt
 
 ## English
 
-Not an accepted stable release. The host may report numeric version 1.0.0 while
-the interface correctly displays 1.0.0-dev. Identify each artifact by its full
+Not an accepted stable release. The host may report numeric version 1.0.1 while
+the interface correctly displays 1.0.1-dev. Identify each artifact by its full
 source SHA, not that version label alone. Verify source ZIP checksums and keep
 its SOURCE_MANIFEST.json with the test record. Binary checksums/signature status
 must be recorded separately for the exact artifact actually tested.
 
-For an exact 1.0.0-rcN build, use the non-publishing release-candidate workflow
+For an exact 1.0.1-rcN build, use the non-publishing release-candidate workflow
 and its explicit `candidate_label` input; it builds with the matching RC display
-version. Ordinary development builds remain `1.0.0-dev`.
+version. Ordinary development builds remain `1.0.1-dev`.
 
 Primary distribution target: Windows x64 and macOS Universal VST3. AU and
 Standalone compile coverage is not a claim of completed runtime acceptance.
@@ -25,6 +25,7 @@ No Yamaha firmware or factory bank is supplied. The local complete test suite
 requires a private combined 48 KB v1.8 fixture; product ROM support is broader.
 There is one persistent 32-slot USER bank, not a named-bank library manager.
 
+Earlier 1.0.0 owner reports do not accept this 1.0.1 candidate.
 Known acceptance work: exact-SHA host matrix, interactive Settings/About/HiDPI,
 offline render and tail/dense-MIDI characterization, final package/signature
 review. See [the checklist](RELEASE_CHECKLIST_1.0_RC.md). Do not treat compilation,
@@ -32,13 +33,13 @@ pluginval or sanitizer PASS as complete host/audio acceptance.
 
 ## Magyar
 
-Ez fejlesztői jelölt, nem jóváhagyott stabil kiadás. A host 1.0.0 száma mellett
-a felület 1.0.0-dev jelölése szándékos. A tesztelt fájlt mindig a teljes
+Ez fejlesztői jelölt, nem jóváhagyott stabil kiadás. A host 1.0.1 száma mellett
+a felület 1.0.1-dev jelölése szándékos. A tesztelt fájlt mindig a teljes
 forrás-SHA-val, ellenőrzőösszeggel és platformmal azonosítsd.
 
-A pontos 1.0.0-rcN buildhez a kiadást nem publikáló jelölt-workflow-t és a
+A pontos 1.0.1-rcN buildhez a kiadást nem publikáló jelölt-workflow-t és a
 `candidate_label` mezőt használd; a felületen is a megfelelő RC-verzió jelenik
-meg. A szokásos fejlesztői buildek továbbra is `1.0.0-dev` jelzésűek.
+meg. A szokásos fejlesztői buildek továbbra is `1.0.1-dev` jelzésűek.
 
 A fő célformátum Windows x64 és macOS Universal VST3. Az AU/Standalone sikeres
 fordítása önmagában nem futásidejű elfogadás. A Windows-csomagon nincs kiadói
@@ -51,3 +52,4 @@ a projekteket, USER bankot és a meglévő plugint. A csomagkészítés nem tele
 ROM nem része a csomagnak. Egyetlen, 32 helyes USER bank támogatott.
 A végleges host-, felület- és csomagellenőrzések még külön feladatok; a sikeres
 automatikus tesztek nem jelentik a stabil kiadás jóváhagyását.
+A korábbi 1.0.0 felhasználói tesztek nem igazolják ezt az 1.0.1 jelöltet.

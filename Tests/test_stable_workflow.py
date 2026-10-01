@@ -21,6 +21,32 @@ class StableWorkflowTests(unittest.TestCase):
         self.text = WORKFLOW.read_text(encoding="utf-8")
         self.jobs = jobs(self.text)
 
+    def test_product_installer_and_workflow_versions_are_coherent(self):
+        root = WORKFLOW.parents[2]
+        cmake = (root / "CMakeLists.txt").read_text()
+        installer = (root / "installer/windows/VDX7.iss").read_text()
+        candidate = (root / ".github/workflows/release-candidate.yml").read_text()
+        self.assertRegex(cmake, r"project\(VDX7_JUCE\s+VERSION\s+1\.0\.1\s")
+        self.assertIn('#define AppVersion "1.0.1"', installer)
+        self.assertIn('OutputBaseFilename=VDX7-{#AppVersion}-Windows-x64-Setup', installer)
+        self.assertIn('AppId={{9F5E28E9-1D9A-4B25-99CA-1F0B08C6C087}', installer)
+        self.assertIn('--version 1.0.1', self.text)
+        self.assertIn('--package-label "1.0.1-$CANDIDATE_LABEL"', candidate)
+        self.assertNotIn("1.0.0", self.text)
+        self.assertNotIn("1.0.0", candidate)
+
+    def test_active_candidate_and_source_instructions_match_101(self):
+        root = WORKFLOW.parents[2]
+        guide = (root / "docs/release/CANDIDATE_README_HU_EN.md").read_text()
+        notice = (root / "NOTICE.md").read_text()
+        source = (root / "docs/release/SOURCE_PACKAGING_1.0.md").read_text()
+        for text in (guide, notice, source):
+            self.assertIn("1.0.1-dev", text)
+            self.assertNotIn("1.0.0-dev", text)
+            self.assertNotIn("1.0.0-rcN", text)
+        self.assertIn("--package-label 1.0.1-dev", source)
+        self.assertEqual(guide.count("1.0.1-rcN"), 2)
+
     def test_trusted_authorization_precedes_platform_jobs(self):
         self.assertIn("authorize-package", self.jobs)
         guard = self.jobs["authorize-package"]
@@ -41,7 +67,7 @@ class StableWorkflowTests(unittest.TestCase):
         self.assertIn("authorize-package", self.jobs)
         guard = self.jobs["authorize-package"]
         for token in ('--repo approval-tools', '--approval-commit "$WORKFLOW_COMMIT"',
-                      '--commit "$SOURCE_COMMIT"', '--package-label 1.0.0',
+                      '--commit "$SOURCE_COMMIT"', '--package-label 1.0.1',
                       '--workflow-ref "$WORKFLOW_REF"', '--workflow-git-ref "$WORKFLOW_GIT_REF"',
                       '--github-output "$GITHUB_OUTPUT"'):
             self.assertIn(token, guard)
@@ -94,7 +120,7 @@ class StableWorkflowTests(unittest.TestCase):
                       "--target VDX7_VST3 vdx7_ci_checks", "--no-tests=error",
                       "lipo", "codesign --verify --deep --strict", "pkgutil --payload-files",
                       "Uninstaller smoke test failed",
-                      "VDX7-1.0.0-macOS-universal.pkg", "VDX7-1.0.0-Windows-x64-Setup.exe"):
+                      "VDX7-1.0.1-macOS-universal.pkg", "VDX7-1.0.1-Windows-x64-Setup.exe"):
             self.assertIn(token, package)
         self.assertNotIn("--target VDX7_AU", package)
 

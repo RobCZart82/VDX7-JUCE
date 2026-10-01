@@ -51,3 +51,13 @@ The current workflow still builds 1.0.0-labelled assets; do not dispatch it to
 replace the published release. The generic staging selector's future-version
 tests do not claim that the guarded packager already accepts 1.0.1.
 The [single plan](../release/EXECUTION_PLAN_1.0.md) keeps those gates separate.
+
+## Subsequent merge closure
+
+PR #111 merged as `01c54c2e4709e97a69a67fffbbc257647a03688e`.
+Final-head Windows `36854641618`, macOS `36854641650` and ASan/UBSan
+`36854641585` passed; post-merge Windows `36857991965` and macOS
+`36857991988` also passed. This closes the pending PR/merge item above,
+not native candidate packaging or release acceptance. A fresh local macOS
+Python 3.9.6 run of that merged tree passed all 51 tests without skips.
+The later 1.0.1 version migration is recorded separately in the active plan.
