@@ -38,11 +38,22 @@ class SourcePackageTests(unittest.TestCase):
             if repo == "wrapper": return dict(wrapper)
             if repo == "juce": return {"LICENSE.md": (b"notice\n", 0o644)}
             return {"source/dx7Lib/dx7.cpp": (b"// core\n", 0o644), "LICENSE.txt": (b"notice\n", 0o644)}
-        with tempfile.TemporaryDirectory() as folder, patch.object(p, "snapshot", side_effect=snapshot):
+        authorization = {
+            "source_commit": "a" * 40, "packager_commit": "b" * 40,
+            "approval_commit": "c" * 40, "package_label": "1.0.0",
+            "workflow_ref": p.APPROVED_WORKFLOW_REF, "workflow_git_ref": p.APPROVED_GIT_REF,
+            "release_accepted": True, "policy_sha256": "d" * 64,
+        }
+        # This case isolates old-product/new-tool packaging. Real Git-policy
+        # authorization and CLI negatives live in test_release_acceptance.py.
+        with tempfile.TemporaryDirectory() as folder, patch.object(p, "snapshot", side_effect=snapshot), \
+                patch.object(p, "release_authorization", return_value=authorization) as guard:
             root = Path(folder)
             for accepted in (False, True):
                 archive = p.package("wrapper", "juce", "core", "a" * 40,
-                                    root / str(accepted), "1.0.0", accepted, "b" * 40)
+                                    root / str(accepted), "1.0.0", accepted, "b" * 40,
+                                    approval_repo="wrapper", approval_commit="c" * 40,
+                                    workflow_ref=p.APPROVED_WORKFLOW_REF, workflow_git_ref=p.APPROVED_GIT_REF)
                 p.verify(archive)
                 with zipfile.ZipFile(archive) as z:
                     self.assertEqual(z.read("scripts/package_source.py"), old_checker)
@@ -50,6 +61,8 @@ class SourcePackageTests(unittest.TestCase):
                     bundled.write_bytes(z.read(".vdx7-source-tools/package_source.py"))
                     self.assertIn(b".vdx7-source-tools/package_source.py", z.read("SOURCE_PACKAGE_README.txt"))
                 subprocess.run([sys.executable, str(bundled), "verify", str(archive)], check=True)
+            guard.assert_called_once_with("wrapper", "c" * 40, "a" * 40, "1.0.0",
+                                          p.APPROVED_WORKFLOW_REF, p.APPROVED_GIT_REF, True, "b" * 40)
 
     def fixture(self):
         data = b"example source\n"

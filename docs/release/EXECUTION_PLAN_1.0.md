@@ -1,10 +1,13 @@
 # Consolidated execution plan — 1.0.1 corrective development
 
-## Active checkpoint — 2026-09-30
+## Active checkpoint — 2026-10-01
 
 1.0.0 is published at product `d79ed5214d82caf70e3941e5a620bab137d3f9ca`;
 release tools/main reviewed at `3fa8c2e00ad4dcd1860551cf3596ee4ad29de789`.
 Publication time: 2026-09-29 23:49:49 UTC. Preserve that tag and its assets.
+Current corrective-development baseline is main
+`ff1df3619824cc8d1642869216b19280ad88e8d0`, after PR #108. Its post-merge
+Windows and macOS builds passed; this does not accept a 1.0.1 release binary.
 The owner authorized corrective development and merging green, verified PRs
 into main for 1.0.1. This is **not** authorization to publish 1.0.1.
 Earlier checkpoints below describe their own historical states, not current
@@ -16,7 +19,7 @@ This is the single active work ledger; do not create competing roadmaps.
 | --- | --- | --- |
 | AUDIT-20260930-A1/A2 | P1, reproduced pending-project edit loss and wrong-engine capture | MERGED [#104](https://github.com/RobCZart82/VDX7-JUCE/pull/104); required platform/sanitizer checks PASS and local 36/36 CTests PASS. Rejects unsupported operations, preserves edits and prioritizes recovery. [Boundary validation](../validation/VALIDATION_20260930_PENDING_BOUNDARY.md). Exact-1.0.1 acceptance remains separate. |
 | AUDIT-20260930-A3 | P1 packaging, published ZIP fails its bundled verifier | MERGED [#105](https://github.com/RobCZart82/VDX7-JUCE/pull/105); all PR checks PASS. Ten packaging tests, real extracted checker and offline Windows build/11 CTests PASS. [Verification record](../validation/VALIDATION_20260930_SOURCE_VERIFIER.md). Final-release acceptance remains open; existing 1.0.0 assets unchanged. |
-| AUDIT-20260930-A4 | P2 provenance guard gap, not unauthorized publication | OPEN: bind accepted mode to an explicitly reviewed product/packager SHA pair and authorized workflow ref; keep read-only publication permissions. |
+| AUDIT-20260930-A4 | P2 provenance guard gap, not unauthorized publication | IMPLEMENTED locally: exact reviewed source/packager pair, committed approval snapshot and canonical main workflow context required before accepted packaging. Null approval fails closed; preparation and legacy integrity verification remain available. [Approval procedure](RELEASE_APPROVAL.md), [regression evidence](../validation/VALIDATION_20261001_RELEASE_APPROVAL.md). Final-head platform/sanitizer PR gates and merge remain required; no release is approved by this change. |
 | AUDIT-20260930-A5 | P2 installer layout; no reproduced host scan failure | OPEN: assess separate uninstall directory with tested 1.0.0 upgrade/uninstall migration; preserve AppId and USER data. Do not move the directory without migration evidence. |
 | AUDIT-20260930-A6 | P2 toolchain provenance | OPEN: pin Inno; record compiler, SDK, CMake, runner and dependency versions. Deterministic source archives do not imply bit-identical installers. |
 | AUDIT-20260930-A7 | P2 stale release evidence/docs | PARTIAL: plan, README and HU/EN guides distinguish published 1.0.0 from corrective development; final #104/#105 validation recorded. Full published/accepted binary asset reconciliation remains OPEN, distinct from earlier prep review. |
@@ -59,15 +62,19 @@ checks; publishing another release remains a separate decision.
 | DEEP-20260930-M1 | Direct CC120 does not advance/anchor the deferred timeline | Preserve next-block Note On/Off/CC, exact reset sample offset, empty tail, repeated reset and partition equivalence; ROM-free boundary cases under ASan/UBSan |
 | DEEP-20260930-M2 | CC121 loses non-wheel controller reset messages in a full application FIFO | Durable reset zeros, observed sustain OFF edge before later pedal ON, all six sources, full/near-full controls, held-note and persistent-setting preservation; post-reset host notes and controllers retained in order on the bounded timeline; gate remains closed through wheel firmware completion and fresh fallback pacing after late input |
 
-All four fixes are IMPLEMENTED and locally validated: a fresh Release build,
+All four fixes are MERGED in [#108](https://github.com/RobCZart82/VDX7-JUCE/pull/108).
+The round was locally validated with a fresh Release build,
 43/43 executable CTests (44 registered; desktop `vdx7_processor` NOT RUN),
 12/12 Python tests and the inventory contract/seven negative controls PASS.
 The instrumented CC121 runner passes 24 cases; ASan/UBSan deferred-MIDI and
 resampling component tests pass 2/2. Independent cross-review is complete.
 Details and scope limits: [fix validation](../validation/VALIDATION_20260930_DEEP_AUDIT_FIXES.md).
-Merge still requires successful Windows/macOS/ASan-UBSan PR checks on the final
-head and resolved review conversations. Post-merge platform builds must finish
-before the next merge/publication step. The approved GUI, 148 parameter
+Windows/macOS/ASan-UBSan PR checks passed on final head
+`2d30e59d56ab2a7ccf8d4b0166551a79db1a3038` (runs `36780563928`,
+`36780563512`, `36780563385`); review conversations were resolved. Post-merge
+Windows `36781795966` and macOS `36781795912` passed on
+`ff1df3619824cc8d1642869216b19280ad88e8d0`. These are development checks,
+not acceptance of a new release candidate. The approved GUI, 148 parameter
 identities, project format, existing stable tag and release assets remain
 unchanged. Exact-1.0.1 binary/host acceptance remains separate.
 

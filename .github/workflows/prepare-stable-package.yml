@@ -8,18 +8,65 @@ on:
         required: true
         type: string
       accepted_for_publication:
-        description: Mark the validation assets accepted for publication after final review (does not publish)
+        description: Mark assets accepted only with an exact reviewed committed approval record (does not publish)
         required: true
         default: false
         type: boolean
 
-# Creates downloadable artifacts only. The acceptance input controls truthful
-# release metadata; this workflow still cannot create tags/releases.
+# Creates downloadable artifacts only. Accepted metadata requires a committed
+# approval for the exact product/tooling pair; this workflow cannot publish.
 permissions:
   contents: read
 
 jobs:
+  authorize-package:
+    runs-on: ubuntu-latest
+    outputs:
+      source_commit: ${{ steps.authorization.outputs.source_commit }}
+      packager_commit: ${{ steps.authorization.outputs.packager_commit }}
+      approval_commit: ${{ steps.authorization.outputs.approval_commit }}
+      package_label: ${{ steps.authorization.outputs.package_label }}
+      workflow_ref: ${{ steps.authorization.outputs.workflow_ref }}
+      workflow_git_ref: ${{ steps.authorization.outputs.workflow_git_ref }}
+      release_accepted: ${{ steps.authorization.outputs.release_accepted }}
+    steps:
+      - name: Checkout trusted approval policy and guard
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: approval-tools
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Authorize exact package before platform work
+        id: authorization
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          ACCEPTED_FOR_PUBLICATION: ${{ inputs.accepted_for_publication }}
+          WORKFLOW_COMMIT: ${{ github.sha }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          WORKFLOW_GIT_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git --no-replace-objects -C approval-tools rev-parse HEAD)" = "$WORKFLOW_COMMIT"
+          test "$(git --no-replace-objects -C approval-tools rev-parse "${SOURCE_COMMIT}^{commit}")" = "$SOURCE_COMMIT"
+          git --no-replace-objects -C approval-tools merge-base --is-ancestor "$SOURCE_COMMIT" origin/main
+          package_args=()
+          case "$ACCEPTED_FOR_PUBLICATION" in
+            true) package_args+=(--release-accepted) ;;
+            false) ;;
+            *) exit 1 ;;
+          esac
+          python3 approval-tools/scripts/package_source.py authorize \
+            --repo approval-tools --approval-commit "$WORKFLOW_COMMIT" \
+            --commit "$SOURCE_COMMIT" --package-label 1.0.0 \
+            --workflow-ref "$WORKFLOW_REF" --workflow-git-ref "$WORKFLOW_GIT_REF" \
+            "${package_args[@]}" --github-output "$GITHUB_OUTPUT"
+
   package:
+    needs: authorize-package
     strategy:
       fail-fast: false
       matrix:
@@ -29,35 +76,52 @@ jobs:
           - os: windows-2022
             platform: Windows-x64
     runs-on: ${{ matrix.os }}
+    env:
+      SOURCE_COMMIT: ${{ needs.authorize-package.outputs.source_commit }}
+      PACKAGER_COMMIT: ${{ needs.authorize-package.outputs.packager_commit }}
+      APPROVAL_COMMIT: ${{ needs.authorize-package.outputs.approval_commit }}
+      PACKAGE_LABEL: ${{ needs.authorize-package.outputs.package_label }}
+      WORKFLOW_REF: ${{ needs.authorize-package.outputs.workflow_ref }}
+      WORKFLOW_GIT_REF: ${{ needs.authorize-package.outputs.workflow_git_ref }}
+      ACCEPTED_FOR_PUBLICATION: ${{ needs.authorize-package.outputs.release_accepted }}
     steps:
       - name: Checkout exact source commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.source_commit }}
+          ref: ${{ needs.authorize-package.outputs.source_commit }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Verify exact product source identity and main ancestry
         shell: bash
-        env:
-          SOURCE_COMMIT: ${{ inputs.source_commit }}
         run: |
+          set -euo pipefail
           [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
-          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
-          git merge-base --is-ancestor "$SOURCE_COMMIT" origin/main
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git --no-replace-objects merge-base --is-ancestor "$SOURCE_COMMIT" origin/main
 
       - name: Checkout release packager and regression tests
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ needs.authorize-package.outputs.packager_commit }}
           path: release-tools
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Checkout exact committed approval policy
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.authorize-package.outputs.approval_commit }}
+          path: approval-tools
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Verify release tooling identity
         shell: bash
-        env:
-          PACKAGER_COMMIT: ${{ github.sha }}
-        run: test "$(git -C release-tools rev-parse HEAD)" = "$PACKAGER_COMMIT"
+        run: |
+          set -euo pipefail
+          test "$(git --no-replace-objects -C release-tools rev-parse HEAD)" = "$PACKAGER_COMMIT"
+          test "$(git --no-replace-objects -C approval-tools rev-parse HEAD)" = "$APPROVAL_COMMIT"
 
       - name: Configure stable macOS Universal build
         if: runner.os == 'macOS'
@@ -85,19 +149,18 @@ jobs:
       - name: Prepare matching stable source archive
         if: runner.os == 'Windows'
         shell: bash
-        env:
-          SOURCE_COMMIT: ${{ inputs.source_commit }}
-          ACCEPTED_FOR_PUBLICATION: ${{ inputs.accepted_for_publication }}
-          PACKAGER_COMMIT: ${{ github.sha }}
         run: |
+          set -euo pipefail
           package_args=()
           if [[ "$ACCEPTED_FOR_PUBLICATION" == "true" ]]; then
             package_args+=(--release-accepted)
           fi
           python release-tools/scripts/package_source.py create --repo . \
             --juce build/_deps/juce-src --core build/_deps/retromulator-src \
-            --commit "$SOURCE_COMMIT" --package-label 1.0.0 \
+            --commit "$SOURCE_COMMIT" --package-label "$PACKAGE_LABEL" \
             --packager-commit "$PACKAGER_COMMIT" \
+            --approval-repo approval-tools --approval-commit "$APPROVAL_COMMIT" \
+            --workflow-ref "$WORKFLOW_REF" --workflow-git-ref "$WORKFLOW_GIT_REF" \
             "${package_args[@]}" \
             --output stable-source
 
@@ -110,9 +173,6 @@ jobs:
       - name: Verify and package macOS VST3 installer and manual ZIP
         if: runner.os == 'macOS'
         shell: bash
-        env:
-          ACCEPTED_FOR_PUBLICATION: ${{ inputs.accepted_for_publication }}
-          PACKAGER_COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
           VST3="build/VDX7_artefacts/Release/VST3/VDX7.vst3"
@@ -140,10 +200,13 @@ jobs:
 
           cat > release-assets/BUILD-INFO-macOS-universal.txt <<EOF
           Product: VDX7 Mk1.
-          Stable version: 1.0.0
+          Stable version: $PACKAGE_LABEL
           Status: $([[ "$ACCEPTED_FOR_PUBLICATION" == "true" ]] && echo "ACCEPTED FOR PUBLICATION; not yet published." || echo "PREPARATION ARTIFACT; not accepted or approved for publication.")
-          Source commit: ${{ inputs.source_commit }}
+          Source commit: $SOURCE_COMMIT
           Release packager commit: $PACKAGER_COMMIT
+          Approval/workflow commit: $APPROVAL_COMMIT
+          Workflow ref: $WORKFLOW_REF
+          Workflow Git ref: $WORKFLOW_GIT_REF
           Platform: macOS Universal (arm64 + x86_64), deployment target macOS 11.0
           Included format: VST3 only. No AU component is built or packaged.
           Installer: unsigned .pkg; plugin bundle has an ad-hoc signature only.
@@ -153,9 +216,6 @@ jobs:
       - name: Verify and package Windows x64 VST3 installer and manual ZIP
         if: runner.os == 'Windows'
         shell: pwsh
-        env:
-          ACCEPTED_FOR_PUBLICATION: ${{ inputs.accepted_for_publication }}
-          PACKAGER_COMMIT: ${{ github.sha }}
         run: |
           $ErrorActionPreference = "Stop"
           $vst3 = Get-ChildItem -Path build -Recurse -Directory -Filter "VDX7.vst3" | Select-Object -First 1
@@ -200,10 +260,13 @@ jobs:
           }
           @"
           Product: VDX7 Mk1.
-          Stable version: 1.0.0
+          Stable version: $env:PACKAGE_LABEL
           Status: $status
-          Source commit: ${{ inputs.source_commit }}
+          Source commit: $env:SOURCE_COMMIT
           Release packager commit: $env:PACKAGER_COMMIT
+          Approval/workflow commit: $env:APPROVAL_COMMIT
+          Workflow ref: $env:WORKFLOW_REF
+          Workflow Git ref: $env:WORKFLOW_GIT_REF
           Platform: Windows x64
           Included format: VST3 only. No AU component is built or packaged.
           Installer: unsigned Setup.exe; Windows may show an unknown-publisher warning.
@@ -213,50 +276,57 @@ jobs:
       - name: Upload platform validation artifact (not a release)
         uses: actions/upload-artifact@v4
         with:
-          name: VDX7-1.0.0-${{ matrix.platform }}-${{ inputs.source_commit }}-${{ inputs.accepted_for_publication && 'accepted' || 'prep' }}
+          name: VDX7-${{ needs.authorize-package.outputs.package_label }}-${{ matrix.platform }}-${{ needs.authorize-package.outputs.source_commit }}-${{ needs.authorize-package.outputs.release_accepted == 'true' && 'accepted' || 'prep' }}
           path: |
             release-assets/VDX7-1.0.0-*
             release-assets/BUILD-INFO-*.txt
           if-no-files-found: error
 
   assemble-release-assets:
-    needs: package
+    needs: [authorize-package, package]
     runs-on: ubuntu-latest
+    env:
+      SOURCE_COMMIT: ${{ needs.authorize-package.outputs.source_commit }}
+      PACKAGE_LABEL: ${{ needs.authorize-package.outputs.package_label }}
+      APPROVAL_COMMIT: ${{ needs.authorize-package.outputs.approval_commit }}
     steps:
-      - name: Checkout exact source commit
+      - name: Checkout guarded checksum tooling
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.source_commit }}
+          ref: ${{ needs.authorize-package.outputs.approval_commit }}
+          path: approval-tools
           persist-credentials: false
+
+      - name: Verify checksum tooling identity
+        shell: bash
+        run: test "$(git --no-replace-objects -C approval-tools rev-parse HEAD)" = "$APPROVAL_COMMIT"
 
       - name: Download both platform artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: VDX7-1.0.0-*-${{ inputs.source_commit }}-${{ inputs.accepted_for_publication && 'accepted' || 'prep' }}
+          pattern: VDX7-${{ needs.authorize-package.outputs.package_label }}-*-${{ needs.authorize-package.outputs.source_commit }}-${{ needs.authorize-package.outputs.release_accepted == 'true' && 'accepted' || 'prep' }}
           path: release-assets
           merge-multiple: true
 
       - name: Verify complete asset inventory and SHA-256 manifest
         shell: bash
-        env:
-          SOURCE_COMMIT: ${{ inputs.source_commit }}
         run: |
           set -euo pipefail
           test -f "release-assets/VDX7-1.0.0-macOS-universal.pkg"
           test -f "release-assets/VDX7-1.0.0-macOS-universal-Manual.zip"
           test -f "release-assets/VDX7-1.0.0-Windows-x64-Setup.exe"
           test -f "release-assets/VDX7-1.0.0-Windows-x64-Manual.zip"
-          test -f "release-assets/VDX7-1.0.0-${SOURCE_COMMIT}-corresponding-source.zip"
+          test -f "release-assets/VDX7-${PACKAGE_LABEL}-${SOURCE_COMMIT}-corresponding-source.zip"
           test -f "release-assets/BUILD-INFO-macOS-universal.txt"
           test -f "release-assets/BUILD-INFO-Windows-x64.txt"
 
-          python scripts/write_sha256_manifest.py \
+          python3 approval-tools/scripts/write_sha256_manifest.py \
             --output release-assets/SHA256SUMS.txt \
             release-assets/VDX7-1.0.0-macOS-universal.pkg \
             release-assets/VDX7-1.0.0-macOS-universal-Manual.zip \
             release-assets/VDX7-1.0.0-Windows-x64-Setup.exe \
             release-assets/VDX7-1.0.0-Windows-x64-Manual.zip \
-            "release-assets/VDX7-1.0.0-${SOURCE_COMMIT}-corresponding-source.zip" \
+            "release-assets/VDX7-${PACKAGE_LABEL}-${SOURCE_COMMIT}-corresponding-source.zip" \
             release-assets/BUILD-INFO-macOS-universal.txt \
             release-assets/BUILD-INFO-Windows-x64.txt
           (cd release-assets && sha256sum -c SHA256SUMS.txt)
@@ -264,6 +334,6 @@ jobs:
       - name: Upload complete validation artifact (not a release)
         uses: actions/upload-artifact@v4
         with:
-          name: VDX7-1.0.0-Release-Assets-${{ inputs.source_commit }}-${{ inputs.accepted_for_publication && 'accepted' || 'prep' }}
+          name: VDX7-${{ needs.authorize-package.outputs.package_label }}-Release-Assets-${{ needs.authorize-package.outputs.source_commit }}-${{ needs.authorize-package.outputs.release_accepted == 'true' && 'accepted' || 'prep' }}
           path: release-assets/*
           if-no-files-found: error

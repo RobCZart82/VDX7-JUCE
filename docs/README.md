@@ -9,6 +9,7 @@
 - [Roadmap and milestone history](release/ROADMAP_1.0.md)
 - [1.0 build identity and package boundaries](release/IDENTITY_AND_PACKAGE_1.0.md)
 - [Reproducible source packaging](release/SOURCE_PACKAGING_1.0.md)
+- [Reviewed release approval and provenance](release/RELEASE_APPROVAL.md)
 - [Candidate instructions / jelölt útmutató](release/CANDIDATE_README_HU_EN.md)
 - [Draft 1.0.0 release notes and test matrix / kiadási jegyzet és tesztmátrix](release/RELEASE_NOTES_1.0.0_DRAFT_HU_EN.md)
 - [Current runtime GUI resources](design/GUI_RUNTIME_ASSETS.md)
