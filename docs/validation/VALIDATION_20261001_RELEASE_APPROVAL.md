@@ -75,3 +75,17 @@ Prior runtime/ROM evidence remains dated in the
 [deep-fix validation](VALIDATION_20260930_DEEP_AUDIT_FIXES.md), not relabeled as
 a new A4 execution. A5/A6/A7 and exact-1.0.1 acceptance remain open in the
 [single execution plan](../release/EXECUTION_PLAN_1.0.md).
+
+## Final PR and merge closure — 2026-10-01
+
+PR [#109](https://github.com/RobCZart82/VDX7-JUCE/pull/109) merged at
+06:15:11 UTC. Final head `6988d4e64a65649a716d69d72817791b2b328097`:
+[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36822687506),
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36822687459) and
+[ASan/UBSan](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36822687452)
+PASS. On merge `e3f87eae65d76c718e307180f5eb74abbe7f2662`, post-merge
+[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36823791168) and
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36823791174) PASS.
+These remote results close the pending PR gates above, not the separately
+listed stable-workflow, installer or exact-candidate host acceptance.
+Null approval, published 1.0.0 and its assets remain unchanged.
