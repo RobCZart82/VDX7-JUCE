@@ -2,6 +2,9 @@
 
 Baseline main: `e3f87eae65d76c718e307180f5eb74abbe7f2662` after PR #109.
 Branch: `codex/1.0.1-toolchain-provenance`.
+Pull request: [#110](https://github.com/RobCZart82/VDX7-JUCE/pull/110).
+Implementation commit: `a9998a20b1aae76c23503521cd842ab321980b3c`;
+the subsequent PR-link ledger update changes documentation only.
 Scope: packaging-only Inno pin and observed compiler/SDK/CMake/runner/dependency
 evidence, plus completion of the already merged A4 ledger. Runtime sources,
 parameter identities, GUI, project format, product versions and package labels
