@@ -1,6 +1,128 @@
 # Consolidated execution plan — 1.0.1 corrective development
 
-## Active checkpoint — 2026-10-02
+## Release publikálási terv — 1.0.1
+
+Állapotellenőrzés: 2026-10-02. Ez a **következő munkák egyetlen irányadó
+terve**; az alatta szereplő auditok és korábbi kiadási feladatsorok történeti
+bizonyítékok, nem újra végrehajtandó párhuzamos tervek.
+
+### Hol tartunk most?
+
+- Ellenőrzött main: `6cc8cda30e9e66d3ab97699bcb9d2014a78b8b14`, #115 beolvadt.
+- [#116](https://github.com/RobCZart82/VDX7-JUCE/pull/116) még nyitott dokumentációs
+  PR; az itt hozzáadott terv is ezen az ágon kerül fel. Nem tekinthető beolvadtnak
+  pusztán azért, mert a helyi dokumentum elkészült.
+- A [36998278475 csomagolási próba](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36998278475)
+  PASS: Windows EXE és kézi ZIP, macOS Universal PKG és kézi ZIP, platformonként
+  13/13 ROM nélküli teszt, Windows telepítés/frissítés/eltávolítás, forrásellenőrzés
+  és közös checksum/staging. Ez `prep`, nem elfogadott vagy publikált release.
+- A rögzített, reprodukált javítások beolvadtak; a lent felsorolt auditokból
+  nincs itt megjelölt, még implementálandó bizonyított runtime hiba. Ez **nem
+  új teljes audit, és nem általános hibamentességi állítás**. Az eredeti érvénytelen
+  kombinált ROM elutasítása tudatos kompatibilitási határ, nem letesztelt migráció.
+- A független letöltött-csomag vizsgálat NOT RUN: a böngészős letöltés nem
+  sikerült. Végső 1.0.1 hostelfogadás és publikálási jóváhagyás nincs rögzítve.
+  `RELEASE_APPROVAL.json` üres; a publikált `v1.0.0` változatlan.
+
+### Végrehajtási sorrend és lezárási feltételek
+
+| Kapu | Hátralévő munka | Mikor kész? | REAPER kell? |
+| --- | --- | --- | --- |
+| R1 — dokumentáció és befagyasztás | #116 végső ellenőrzései, felülvizsgálata és zöld beolvasztása; friss main ellenőrzése. Kiválasztani a végleges termékforrást A és csomagolót B, teljes SHA-val. | A/B és a hozzájuk tartozó bizonyítékok rögzítve; nincs véletlenül kimaradt main-változás. | Nem |
+| R2 — független csomagvizsgálat | Letölteni a teljes `Release-Assets`, `Four-Downloads`, `Source-Downloads` csomagokat; GitHub külső ZIP-digest, majd belső fájlhash-ek ellenőrzése; tartalom, buildazonosság és licencek vizsgálata. | Az alábbi R2-lista PASS, a négy bináris végső hash-e ismert; letöltési hiba nem címkézhető PASS-nak. | Nem |
+| R3 — végleges forrás és regressziók | Ha A/B eltér a tesztelt jelölttől, a változás arányában új build/teszt/csomagolás. A végleges A privát-ROM tesztjeinek és forráscsomagjának megfeleltetése. | Pontos A/B-n Windows/macOS/érintett sanitizer és Python tesztek sikeresek; ROM-os eredmények és negatív kontrollok tényleges állapota dokumentált. | Nem |
+| R4 — host- és kompatibilitási döntés | A végső binárisokra célzott hostteszt, vagy a tulajdonos külön, tételes döntése a nem futtatott vizsgálatok halasztásáról és a ROM-kockázatról. | Pontos binárishash, OS/host verzió és eredmények, illetve explicit DEFERRED kockázatlista; régi 1.0.0 eredmény nem 1.0.1 PASS. | A REAPER-specifikus részekhez igen; most nem indítjuk |
+| R5 — elfogadott csomag előállítása | A/B jóváhagyása után külön C commitban jóváhagyási rekord; canonical main workflow elfogadott módban, majd új csomag- és hashvizsgálat. | Érvényes A/B/C kötés, minden workflow-kapu PASS, a ténylegesen publikálandó fájlok újra ellenőrizve. | Csak ha a bináris változott vagy R4 ezt előírja |
+| R6 — végső kiadási dokumentáció és engedély | HU/EN release notes/README/kézikönyv, négy hash, pontos verzió és forráslink, halasztások/aláírási/ROM-figyelmeztetések; külön publikálási engedély kérése. | Tulajdonos a pontos verziót, SHA-kat, fájlokat és kockázatokat jóváhagyta; nem pusztán a fejlesztési tervet. | Nem |
+| R7 — publikálás és utóellenőrzés | Csak engedély után külön tartós `v1.0.1-source` és `v1.0.1` termékkiadás, megfelelő tagek/forrásazonosság; publikus linkek és letöltések újraellenőrzése. | Forrás legkésőbb a binárisokkal elérhető; négy termékletöltés, helyes latest állapot, publikus fájlhash-ek PASS. | Nem |
+
+### R2: mit kell még REAPER nélkül ellenőrizni?
+
+1. Az outer Actions ZIP-digestet a GitHub artifact digesttel összevetni. Ez nem
+   helyettesíti az inner EXE/PKG/Manual ZIP hash-eket; mind a hét belső ellenőrzési
+   fájlt a `SHA256SUMS.txt` alapján vizsgálni, és a négy publikálandó hash-t kiírni.
+2. A négy felhasználói letöltésben csak a kiválasztott VST3 legyen; teljes bundle,
+   Windows x64, macOS arm64+x86_64, helyes `1.0.1` címke/azonosság, megfelelő
+   telepítési helyek, megőrzött plug-in/paraméterazonosságok és licenc-/notice-fájlok.
+3. A két `BUILD-INFO` A/B/workflow és verzió/fordító/SDK/dependency adatait
+   ellenőrizni; `prep` ne legyen átnevezéssel elfogadottá alakítva. Yamaha ROM,
+   titok, cache vagy helyi személyes útvonal nem kerülhet a csomagokba.
+4. A megfelelő corresponding-source ZIP-et a mellékelt önálló checkerrel
+   ellenőrizni; forrás/dependency pinek, minimumtartalom és licencek megfeleljenek
+   A/B-nek. Rögzíteni egy hálózat nélküli build/tesztet a végleges forráscsomagból,
+   vagy ennek külön, indokolt tulajdonosi halasztását; régi ZIP tesztje nem elég.
+5. A `Four-Downloads` pontosan négy fájlos, a `Source-Downloads` forrás ZIP +
+   checksum kétfájlos készlet legyen. Letöltési akadály esetén kérni a konkrét
+   artifact ZIP átadását; nem kell hozzá REAPER vagy a telepített plug-in cseréje.
+
+### R3/R4: milyen tesztek és esetleges javítások maradtak?
+
+- A befagyasztott forrás privát, jogszerű ROM-mal végzett célzott/full tesztjében:
+  no-ROM mentés/első ROM-betöltés, függő projekt és későbbi szerkesztések,
+  host reset, CC120/CC121 és telített/sűrű MIDI, sérült bank elutasításakor
+  állapotmegőrzés. A már rögzített 43/43 valid-kontroll eredményt csak azonos
+  releváns kód/konfiguráció bizonyításával lehet felhasználni, nem automatikusan
+  új bináris elfogadásaként. Az eredeti sérült fixture-t változatlanul megtartani;
+  szerkesztett tesztmásolat nem minősített ROM vagy migrációs megoldás.
+- Javasolt végső REAPER smoke: telepítés utáni felismerés és verzió, jogszerű ROM
+  betöltése, megszólalás; tartott hang+sustain mellett Stop/reset majd új hang;
+  Pitch/Mod és hostautomatizáció; USER import/export; projekt mentés–bezárás–újra-
+  megnyitás, matching ROM, hiányzó/eltérő ROM-ból helyreállítás és függő szerkesztés.
+  A rossz kombinált ROM elutasítását és a korábbi állapot megőrzését is ellenőrizni.
+- További, eddig nem elfogadott végső hostmátrix: offline render vs realtime,
+  44.1/48/96 kHz és pl. 64/256/1024 buffer, több példány, sűrű MIDI/kontenció,
+  GUI/Settings/About/HiDPI, fizikai Intel Mac és nem tesztelt OS/host változatok.
+  Ezek nem bizonyított hibák. Mindegyikről PASS/FAIL/NOT RUN és, ha vállaltan
+  kihagyjuk, tulajdonosi DEFERRED döntés kell; nem végtelen új audit a cél.
+- REAPER az általános csomagoláshoz, checksumhoz, forrás- és CTest-vizsgálathoz
+  nem szükséges. A hosttesztet a tulajdonos is elvégezheti; más VST3 host eredménye
+  annak a hostnak bizonyíték, nem REAPER PASS. Helyi telepítés/REAPER-indítás előtt
+  külön engedély és mentés szükséges, a mostani terv ezt nem végzi el.
+- Ha új FAIL valódi hiba: pontos A/OS/host/hash és reprodukáló kontroll,
+  külön javítóág + regressziós teszt, célzott javítás, minden szükséges zöld PR-kapu,
+  felülvizsgálat, beolvasztás, új jelölt és érintett kapuk újrafuttatása. Ne
+  fagyasszunk be ismert adatvesztési/állapot- vagy csomagintegritási hibát pusztán
+  arra hivatkozva, hogy majd egy következő kiadás javítja.
+
+### R5–R7: publikálás előtti és publikálási lépések
+
+Az [A/B/C jóváhagyási eljárás](RELEASE_APPROVAL.md) kötelező. A mostani
+`6cc8cda…` csak jelölt, nem előre jóváhagyott végső A/B. Ha az új dokumentáció
+is a végleges forráscsomag része lesz, új A-t kell kiválasztani és annak pontos
+csomagját ellenőrizni. C külön jóváhagyási commit, B nem lehet C.
+Elfogadott módban új build készültével a régi prep bináris hash-jeit nem szabad
+átvinni; ha byteszinten változik egy fájl, az érintett bináris/hostelfogadást
+újra el kell végezni vagy külön vállalt halasztásként rögzíteni.
+
+A [négy-letöltés politika](PUBLIC_DOWNLOADS.md) szerint a termékkiadás:
+Windows `Setup.exe` + `Manual.zip`, macOS Universal `.pkg` + `Manual.zip`.
+Nem kerül fel ötödik termékassetként a teljes Actions ZIP, BUILD-INFO, forrás
+vagy checksumfájl. A négy SHA-256 a leírásban szerepel. A kiválasztott külön
+`v1.0.1-source` release a megfelelő teljes forrást és checksumját tartalmazza,
+nem latest; a termék `v1.0.1` erre közvetlenül hivatkozik és csak engedély után
+lehet latest. Tartós forráslink nélkül nincs kész publikálás.
+
+Az [új HU/EN release-note tervezet](RELEASE_NOTES_1.0.1_DRAFT_HU_EN.md) és a
+README/kézikönyv végső szövege őrizze meg: unsigned Windows, macOS technikai
+ad-hoc aláírás, nincs Developer ID/notarizáció; rendszerbiztonság kikapcsolása
+nem ajánlható. Aláírási fiók/tanúsítvány beszerzése a tulajdonos döntése szerint
+nem ennek a kiadásnak a feladata. A ROM és régi projektek kockázata, minden
+halasztás, a forrásazonosság és a valódi támogatási korlátok legyenek láthatók.
+
+Publikálás után frissen letölteni és hash-elni a nyilvános négy termékfájlt és
+a külön forrást; linkek, nevek, latest és forráschecker PASS. Jegyzőkönyvben
+rögzíteni a release URL-t, időt, A/B/C-t, tesztelt binárishash-eket és kockázatokat.
+Meglévő `v1.0.0` tag/asset módosítása nincs engedélyezve.
+
+### Nem kiadásblokkoló karbantartás
+
+Node 20 action-runtime figyelmeztetés és ubuntu-latest közelgő image-váltás,
+tesztcél-elnevezés és általános warning/refaktor igények: külön, tesztelt
+karbantartási munka. Nem új bizonyított szoftverhiba és nem indok az A/B
+ellenőrzés nélküli megváltoztatására. Az érintett környezetet/provenance-t
+rögzíteni; ha tényleges FAIL vagy támogatási akadály lesz, visszaemelni R3-ba.
+
+## Earlier corrective checkpoint — 2026-10-02
 
 The current corrective round starts from main
 `928c8b7dbea9816df8e5cc3700354859aaa4d8d1`, after PR #113.
@@ -49,8 +171,8 @@ This is the single active work ledger; do not create competing roadmaps.
 | AUDIT-20260930-A1/A2 | P1, reproduced pending-project edit loss and wrong-engine capture | MERGED [#104](https://github.com/RobCZart82/VDX7-JUCE/pull/104); required platform/sanitizer checks PASS and local 36/36 CTests PASS. Rejects unsupported operations, preserves edits and prioritizes recovery. [Boundary validation](../validation/VALIDATION_20260930_PENDING_BOUNDARY.md). Exact-1.0.1 acceptance remains separate. |
 | AUDIT-20260930-A3 | P1 packaging, published ZIP fails its bundled verifier | MERGED [#105](https://github.com/RobCZart82/VDX7-JUCE/pull/105); all PR checks PASS. Ten packaging tests, real extracted checker and offline Windows build/11 CTests PASS. [Verification record](../validation/VALIDATION_20260930_SOURCE_VERIFIER.md). Final-release acceptance remains open; existing 1.0.0 assets unchanged. |
 | AUDIT-20260930-A4 | P2 provenance guard gap, not unauthorized publication | MERGED [#109](https://github.com/RobCZart82/VDX7-JUCE/pull/109): exact reviewed source/packager pair, committed approval snapshot and canonical main workflow context required before accepted packaging. Final-head Windows/macOS/ASan-UBSan and post-merge Windows/macOS checks PASS. Null approval fails closed; preparation and legacy integrity verification remain available. [Approval procedure](RELEASE_APPROVAL.md), [regression evidence](../validation/VALIDATION_20261001_RELEASE_APPROVAL.md). No release is approved by this change. |
-| AUDIT-20260930-A5 | P2 installer layout; no reproduced host scan failure | ASSESSED: retain AppId and current uninstall directory for 1.0.1. Inno explicitly warns that changing that directory prevents appending prior uninstall logs. A guarded hosted-Windows upgrade smoke is implemented for the checksum-pinned published 1.0.0 installer -> candidate -> uninstall, with installed-payload hashes, one AppId registration and synthetic user-file preservation. Actual native execution remains OPEN. [Validation](../validation/VALIDATION_20261001_INSTALLER_UPGRADE_SOURCE.md). Do not claim a host scan defect was reproduced or fixed. |
-| AUDIT-20260930-A6 | P2 toolchain provenance | MERGED [#110](https://github.com/RobCZart82/VDX7-JUCE/pull/110); final-head Windows/macOS/ASan-UBSan PR checks PASS. Pins/verifies Inno 6.7.1 and records configured compiler, SDK, CMake, runner image and verified dependency commits in hashed BUILD-INFO assets. [Mechanism](BUILD_TOOLCHAIN_PROVENANCE.md), [validation](../validation/VALIDATION_20261001_TOOLCHAIN_PROVENANCE.md). Actual exact-candidate packaging capture remains required; the installer workflow was NOT RUN. Observed tool versions do not imply bit-identical installers or an immutable runner. |
+| AUDIT-20260930-A5 | P2 installer layout; no reproduced host scan failure | ASSESSED: retain AppId and current uninstall directory for 1.0.1. Guarded hosted-Windows checksum-pinned 1.0.0 -> candidate -> uninstall, installed-payload hashes, one AppId registration and synthetic user-file preservation PASS in run `36998278475`. [Native evidence](../validation/VALIDATION_20261002_PACKAGE_PREPARATION.md), [mechanism](../validation/VALIDATION_20261001_INSTALLER_UPGRADE_SOURCE.md). No host scan defect was reproduced or claimed fixed; exact local-host acceptance remains separate. |
+| AUDIT-20260930-A6 | P2 toolchain provenance | MERGED [#110](https://github.com/RobCZart82/VDX7-JUCE/pull/110); Windows/macOS/ASan-UBSan PR checks PASS. Compiler-engine verification correction MERGED [#115](https://github.com/RobCZart82/VDX7-JUCE/pull/115), all three final-head checks and post-merge Windows/macOS PASS. Pins Inno 6.7.1 and records configured compiler, SDK, CMake, runner image and verified dependency commits in hashed BUILD-INFO assets. [Mechanism](BUILD_TOOLCHAIN_PROVENANCE.md), [correction](../validation/VALIDATION_20261002_INNO_VERSION.md). Run `36993835698` failed at numeric PE metadata; fresh unaccepted run `36998278475` tests the corrected mechanism. Final candidate provenance review remains required; observed versions do not imply bit-identical installers or an immutable runner. |
 | AUDIT-20260930-A7 | P2 stale release evidence/docs | PARTIAL: plan, README and HU/EN guides distinguish published 1.0.0 from corrective development; final #104/#105 validation recorded. Owner's future [four-download policy](PUBLIC_DOWNLOADS.md) is MERGED [#111](https://github.com/RobCZart82/VDX7-JUCE/pull/111); final-head Windows/macOS/ASan-UBSan and post-merge Windows/macOS checks PASS. Actual candidate payload staging, full accepted binary asset reconciliation and durable matching-source access remain OPEN. |
 | AUDIT-20260930-A8 | P3 test-only C4805 | IMPLEMENTED: explicitly convert the boolean carry flag before integer bitwise packing; fresh Windows rebuild without C4805 and focused trace regression PASS. |
 | AUDIT-20260930-A9 | P2 missing sanitizer coverage, not a DSP defect | IMPLEMENTED: resampler added to both instrumented build targets and CTest filter. Actual ASan/UBSan run is a required PR gate; Python packaging remains separate. |
@@ -77,9 +199,8 @@ Present these before separately requesting 1.0.1 publication authorization.
 
 ### Next release steps — 1.0.1
 
-Current order after #114: close post-merge main gates, reconcile this record,
-then freeze a reviewed main SHA and run `prepare-stable-package.yml` with that
-full `source_commit` and `accepted_for_publication=false`. Never treat a
+Historical order after #114 (now superseded by R1–R7 above): close post-merge
+main gates and run unaccepted preparation. The run below completed. Never treat a
 running Action, a constructed private fixture, or an earlier source-only
 archive as acceptance of the final installable binaries. Keep the approval
 JSON null until reviewing actual candidate evidence.
@@ -100,12 +221,32 @@ Local mocked probe and workflow regression tests do not certify native ISCC.
 A fresh non-publishing preparation run using the merged correction is required;
 rerunning the old immutable workflow cannot test the fix. Approval remains null.
 
+PR #115 is now MERGED as `6cc8cda30e9e66d3ab97699bcb9d2014a78b8b14`.
+Final-head Windows/macOS/ASan-UBSan checks PASS; post-merge main Windows
+`36996855918` and macOS `36996855952` PASS. Fresh non-publishing preparation
+[36998278475](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36998278475)
+uses that exact product/tooling/workflow SHA, acceptance disabled; authorization,
+Windows/macOS packaging and assembly all PASS (9m 37s). Windows native Inno
+6.7.1 verification, clean install/uninstall and checksum-pinned 1.0.0 -> 1.0.1
+upgrade/uninstall/user-file preservation PASS; both platforms' ROM-free CTests
+13/13 PASS. Seven-asset checksums, four-download staging and source self-check
+(5117 files) PASS on the hosted runners. Full local packaging regressions:
+77 discovered, 76 PASS, one symlink-capability SKIP. Native result must be
+reviewed independently before publication: the local artifact download timed
+out, so independent downloaded-payload/hash reconciliation is NOT RUN. No host
+acceptance or publication approval is inferred from the green preparation.
+See [exact-candidate evidence](../validation/VALIDATION_20261002_PACKAGE_PREPARATION.md).
+The [1.0.1 HU/EN release-note draft](RELEASE_NOTES_1.0.1_DRAFT_HU_EN.md)
+records compatibility/signing warnings and the still-open publication gates.
+
 The strict combined-bank rejection is a deliberate compatibility boundary:
 previously accepted out-of-range factory images cannot be loaded by 1.0.1.
 An old project bound to such an image may remain pending rather than silently
 installing different ROM content. The valid test copy is not a user migration
 or matching-ROM solution. Document this risk prominently and do not claim old
 1.0.0 REAPER reports certify the new packages or all legacy-ROM projects.
+
+Historical checkpoint order; for remaining work use R1–R7 above:
 
 1. DONE: coordinated project/installer/workflow version update merged in #112.
    Development remains visibly `1.0.1-dev`; stable preparation is `1.0.1`,
