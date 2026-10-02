@@ -8,8 +8,11 @@ Candidate product/tooling source: `6cc8cda30e9e66d3ab97699bcb9d2014a78b8b14`.
 Preparation: [36998278475](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36998278475),
 acceptance disabled, all jobs PASS. Hosted Windows install/upgrade/uninstall,
 macOS payload/signature guards, source verification and staged checksums PASS.
-Independent downloaded-payload/hash review remains NOT RUN (browser download
-timeout). Final acceptance and hashes must be reconciled before turning this
+Independent download/hash, provenance, source and macOS payload review now
+passes for that preparation artifact; see the
+[2026-10-02 review](../validation/VALIDATION_20261002_RELEASE_REVIEW.md).
+Final archive offline-build and host acceptance remain open.
+Final acceptance and hashes must be reconciled before turning this
 draft into public notes. No 1.0.1 host acceptance is inferred
 from the owner's earlier 1.0.0 REAPER tests.
 

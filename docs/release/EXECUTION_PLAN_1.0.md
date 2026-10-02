@@ -8,10 +8,10 @@ bizonyítékok, nem újra végrehajtandó párhuzamos tervek.
 
 ### Hol tartunk most?
 
-- Ellenőrzött main: `6cc8cda30e9e66d3ab97699bcb9d2014a78b8b14`, #115 beolvadt.
-- [#116](https://github.com/RobCZart82/VDX7-JUCE/pull/116) még nyitott dokumentációs
-  PR; az itt hozzáadott terv is ezen az ágon kerül fel. Nem tekinthető beolvadtnak
-  pusztán azért, mert a helyi dokumentum elkészült.
+- Újra ellenőrzött main: `5298373020374293302c3db806fbf44958046a02`, #116
+  már beolvadt. Windows `37002235337` és macOS `37002235328` PASS ezen a mainen;
+  a #116 végső ágának Windows/macOS/ASan-UBSan ellenőrzései is PASS.
+  Az ellenőrzés időpontjában nincs nyitott PR vagy hibajegy.
 - A [36998278475 csomagolási próba](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36998278475)
   PASS: Windows EXE és kézi ZIP, macOS Universal PKG és kézi ZIP, platformonként
   13/13 ROM nélküli teszt, Windows telepítés/frissítés/eltávolítás, forrásellenőrzés
@@ -20,16 +20,22 @@ bizonyítékok, nem újra végrehajtandó párhuzamos tervek.
   nincs itt megjelölt, még implementálandó bizonyított runtime hiba. Ez **nem
   új teljes audit, és nem általános hibamentességi állítás**. Az eredeti érvénytelen
   kombinált ROM elutasítása tudatos kompatibilitási határ, nem letesztelt migráció.
-- A független letöltött-csomag vizsgálat NOT RUN: a böngészős letöltés nem
-  sikerült. Végső 1.0.1 hostelfogadás és publikálási jóváhagyás nincs rögzítve.
+- A független letöltött-csomag vizsgálat most részben lezárt: a GitHub API-val
+  letöltött három artifact külső hash-e, hét belső hash, pontos négy/kétfájlos
+  készlet, 5 117 fájlos forráschecker, 276 termékforrás Git-összevetése és Mac
+  PKG/Manual payloadazonosság PASS. A korábbi letöltési akadály megszűnt.
+  A végső forráscsomagból offline build, helyi Windows EXE-kibontás/telepítés és
+  végső hostelfogadás továbbra sem történt meg ebben a körben.
+  [Friss felülvizsgálat és határok](../validation/VALIDATION_20261002_RELEASE_REVIEW.md).
+  Végső 1.0.1 hostelfogadás és publikálási jóváhagyás nincs rögzítve.
   `RELEASE_APPROVAL.json` üres; a publikált `v1.0.0` változatlan.
 
 ### Végrehajtási sorrend és lezárási feltételek
 
 | Kapu | Hátralévő munka | Mikor kész? | REAPER kell? |
 | --- | --- | --- | --- |
-| R1 — dokumentáció és befagyasztás | #116 végső ellenőrzései, felülvizsgálata és zöld beolvasztása; friss main ellenőrzése. Kiválasztani a végleges termékforrást A és csomagolót B, teljes SHA-val. | A/B és a hozzájuk tartozó bizonyítékok rögzítve; nincs véletlenül kimaradt main-változás. | Nem |
-| R2 — független csomagvizsgálat | Letölteni a teljes `Release-Assets`, `Four-Downloads`, `Source-Downloads` csomagokat; GitHub külső ZIP-digest, majd belső fájlhash-ek ellenőrzése; tartalom, buildazonosság és licencek vizsgálata. | Az alábbi R2-lista PASS, a négy bináris végső hash-e ismert; letöltési hiba nem címkézhető PASS-nak. | Nem |
+| R1 — dokumentáció és befagyasztás | #116 és main zöld, lezárt. A friss felülvizsgálati terv mentése után kiválasztani a végleges termékforrást A és csomagolót B, teljes SHA-val; nem szükséges új funkciókör. | A/B és a hozzájuk tartozó bizonyítékok rögzítve; nincs véletlenül kimaradt main-változás. | Nem |
+| R2 — független csomagvizsgálat | A 6cc8cda próba letöltése, hash-, készlet-, eredet- és Mac payloadvizsgálata PASS. A végleges A/B csomagján ismételni, a forráscsomag offline buildjét és a nyitott helyi/platform határokat lezárni vagy indokoltan halasztani. | Az alábbi R2-lista megfelelő részei PASS; a négy végső binárishash ismert, a fennmaradó határok kifejezettek. | Nem |
 | R3 — végleges forrás és regressziók | Ha A/B eltér a tesztelt jelölttől, a változás arányában új build/teszt/csomagolás. A végleges A privát-ROM tesztjeinek és forráscsomagjának megfeleltetése. | Pontos A/B-n Windows/macOS/érintett sanitizer és Python tesztek sikeresek; ROM-os eredmények és negatív kontrollok tényleges állapota dokumentált. | Nem |
 | R4 — host- és kompatibilitási döntés | A végső binárisokra célzott hostteszt, vagy a tulajdonos külön, tételes döntése a nem futtatott vizsgálatok halasztásáról és a ROM-kockázatról. | Pontos binárishash, OS/host verzió és eredmények, illetve explicit DEFERRED kockázatlista; régi 1.0.0 eredmény nem 1.0.1 PASS. | A REAPER-specifikus részekhez igen; most nem indítjuk |
 | R5 — elfogadott csomag előállítása | A/B jóváhagyása után külön C commitban jóváhagyási rekord; canonical main workflow elfogadott módban, majd új csomag- és hashvizsgálat. | Érvényes A/B/C kötés, minden workflow-kapu PASS, a ténylegesen publikálandó fájlok újra ellenőrizve. | Csak ha a bináris változott vagy R4 ezt előírja |
@@ -37,6 +43,14 @@ bizonyítékok, nem újra végrehajtandó párhuzamos tervek.
 | R7 — publikálás és utóellenőrzés | Csak engedély után külön tartós `v1.0.1-source` és `v1.0.1` termékkiadás, megfelelő tagek/forrásazonosság; publikus linkek és letöltések újraellenőrzése. | Forrás legkésőbb a binárisokkal elérhető; négy termékletöltés, helyes latest állapot, publikus fájlhash-ek PASS. | Nem |
 
 ### R2: mit kell még REAPER nélkül ellenőrizni?
+
+Az alábbi lista a végső A/B csomagra vonatkozik. A `6cc8cda…` próba hash-,
+inventory-, forrás- és Mac payloadellenőrzése már dokumentált PASS; nem kell
+úgy kezelni, mintha a letöltés továbbra is akadály lenne. A main azóta csak
+dokumentációban változott: `Source/`, `Resources/`, `Tests/`, `scripts/`, CMake,
+installer és workflow fájlok byte-ra változatlanok a próba forrásához képest.
+Ez a regressziós bizonyíték újrafelhasználását indokolja, nem jelenti azt, hogy
+a régi forrás ZIP a friss main dokumentációját is tartalmazza.
 
 1. Az outer Actions ZIP-digestet a GitHub artifact digesttel összevetni. Ez nem
    helyettesíti az inner EXE/PKG/Manual ZIP hash-eket; mind a hét belső ellenőrzési
