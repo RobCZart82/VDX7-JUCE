@@ -12,6 +12,13 @@ bizonyítékok, nem újra végrehajtandó párhuzamos tervek.
   már beolvadt. Windows `37002235337` és macOS `37002235328` PASS ezen a mainen;
   a #116 végső ágának Windows/macOS/ASan-UBSan ellenőrzései is PASS.
   Az ellenőrzés időpontjában nincs nyitott PR vagy hibajegy.
+- Következő jelölt: `b7fce0503059c8c2e3c61d6ccf5af33612739e32`, #118 után;
+  post-merge Windows/macOS PASS. Az ebből készített pontos, 5 120 fájlos
+  forráscsomagból friss offline függőségű build, 13/13 CTest, 77/77 Python és
+  VST3 fordítás PASS; célzott privát-firmware bankteszt PASS. A nagyobb
+  ROM-optimalizálás nem indul, a részletes hibajelzés tulajdonosi döntéssel
+  a következő javítókiadásra halasztva. [Forrásbuild](../validation/VALIDATION_20261002_SOURCE_BUILD_101.md).
+  Új, nem elfogadott natív csomagolás: `37051589142`, még folyamatban.
 - A [36998278475 csomagolási próba](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36998278475)
   PASS: Windows EXE és kézi ZIP, macOS Universal PKG és kézi ZIP, platformonként
   13/13 ROM nélküli teszt, Windows telepítés/frissítés/eltávolítás, forrásellenőrzés
@@ -24,8 +31,8 @@ bizonyítékok, nem újra végrehajtandó párhuzamos tervek.
   letöltött három artifact külső hash-e, hét belső hash, pontos négy/kétfájlos
   készlet, 5 117 fájlos forráschecker, 276 termékforrás Git-összevetése és Mac
   PKG/Manual payloadazonosság PASS. A korábbi letöltési akadály megszűnt.
-  A végső forráscsomagból offline build, helyi Windows EXE-kibontás/telepítés és
-  végső hostelfogadás továbbra sem történt meg ebben a körben.
+  A b7fce05 jelölt forráscsomag offline buildje már PASS; a helyi Windows
+  EXE-kibontás/telepítés és végső hostelfogadás továbbra sem történt meg.
   [Friss felülvizsgálat és határok](../validation/VALIDATION_20261002_RELEASE_REVIEW.md).
   Végső 1.0.1 hostelfogadás és publikálási jóváhagyás nincs rögzítve.
   `RELEASE_APPROVAL.json` üres; a publikált `v1.0.0` változatlan.
@@ -35,7 +42,7 @@ bizonyítékok, nem újra végrehajtandó párhuzamos tervek.
 | Kapu | Hátralévő munka | Mikor kész? | REAPER kell? |
 | --- | --- | --- | --- |
 | R1 — dokumentáció és befagyasztás | #116 és main zöld, lezárt. A friss felülvizsgálati terv mentése után kiválasztani a végleges termékforrást A és csomagolót B, teljes SHA-val; nem szükséges új funkciókör. | A/B és a hozzájuk tartozó bizonyítékok rögzítve; nincs véletlenül kimaradt main-változás. | Nem |
-| R2 — független csomagvizsgálat | A 6cc8cda próba letöltése, hash-, készlet-, eredet- és Mac payloadvizsgálata PASS. A végleges A/B csomagján ismételni, a forráscsomag offline buildjét és a nyitott helyi/platform határokat lezárni vagy indokoltan halasztani. | Az alábbi R2-lista megfelelő részei PASS; a négy végső binárishash ismert, a fennmaradó határok kifejezettek. | Nem |
+| R2 — független csomagvizsgálat | A 6cc8cda próba letöltése, hash-, készlet-, eredet- és Mac payloadvizsgálata PASS; b7fce05 pontos forráscsomagjának offline buildje PASS. A végleges A/B bináris csomagján ismételni az ellenőrzést, a nyitott helyi/platform határokat lezárni vagy indokoltan halasztani; új A esetén érintett forrásellenőrzés is kell. | Az alábbi R2-lista megfelelő részei PASS; a négy végső binárishash ismert, a fennmaradó határok kifejezettek. | Nem |
 | R3 — végleges forrás és regressziók | Ha A/B eltér a tesztelt jelölttől, a változás arányában új build/teszt/csomagolás. A végleges A privát-ROM tesztjeinek és forráscsomagjának megfeleltetése. | Pontos A/B-n Windows/macOS/érintett sanitizer és Python tesztek sikeresek; ROM-os eredmények és negatív kontrollok tényleges állapota dokumentált. | Nem |
 | R4 — host- és kompatibilitási döntés | A végső binárisokra célzott hostteszt, vagy a tulajdonos külön, tételes döntése a nem futtatott vizsgálatok halasztásáról és a ROM-kockázatról. | Pontos binárishash, OS/host verzió és eredmények, illetve explicit DEFERRED kockázatlista; régi 1.0.0 eredmény nem 1.0.1 PASS. | A REAPER-specifikus részekhez igen; most nem indítjuk |
 | R5 — elfogadott csomag előállítása | A/B jóváhagyása után külön C commitban jóváhagyási rekord; canonical main workflow elfogadott módban, majd új csomag- és hashvizsgálat. | Érvényes A/B/C kötés, minden workflow-kapu PASS, a ténylegesen publikálandó fájlok újra ellenőrizve. | Csak ha a bináris változott vagy R4 ezt előírja |
@@ -104,7 +111,14 @@ Tulajdonosi tervjóváhagyás: 2026-10-02. Ez az R3 része, nem külön roadmap,
 és nem jelenti az alábbi kódmódosítások elkészültét vagy a kiadás elfogadását.
 A cél jobb diagnosztika és mérhető egyszerűsítés, a szigorúság csökkentése nélkül.
 
-1. **Első lépés, javasolt 1.0.1 finomítás:** közös ellenőrzőből részletes
+Végleges diszpozíció az 1.0.1-hez, tulajdonosi válasz 2026-10-02:
+**DEFERRED a következő javítókiadásra** a részletesebb ROM-hibajelzés;
+nagyobb optimalizálás továbbra is mérhető előnyhöz kötött. Az alábbi sorrend
+a későbbi munkát vezeti, nem új 1.0.1 blokkoló. A jelenlegi szigorú ellenőrzés
+és állapotvédelem változatlan marad. Ez nem a végső binárisok/hosttesztek
+elfogadása, és nem külön publikálási engedély.
+
+1. **Első lépés a következő javítókiadásban:** közös ellenőrzőből részletes
    eredmény: hibakategória, bank/hangszín, mező vagy bájtpozíció, tényleges érték
    és megengedett tartomány. A felhasználói üzenet egyértelműen különböztesse
    meg a méret-/olvasási hibát, hibás kombinált képet és kihagyott opcionális
@@ -133,7 +147,7 @@ Nincs automatikus 99-re korlátozás, néma javítás vagy kombinált-ROM fallba
 Az elutasított régi ROM eredetét/kompatibilitását ez az optimalizálás nem dönti
 el, nem teszi minősítetté a módosított tesztmásolatot, és nem garantál régi
 projekt-visszaállítást. Nagyobb optimalizálás mérhető előny hiányában halasztható;
-a diagnosztikai finomítás a forrásbefagyasztás előtt kapjon végleges diszpozíciót.
+a diagnosztikai finomítás 1.0.1 előtti diszpozíciója fent rögzítve: DEFERRED.
 
 ### R5–R7: publikálás előtti és publikálási lépések
 
