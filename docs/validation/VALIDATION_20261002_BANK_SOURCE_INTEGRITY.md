@@ -72,7 +72,31 @@ not a defense against hostile concurrent filesystem races.
   inventory entry removed, then rehashed, fails both checkers and staging;
   rejection leaves no staging output. These are diagnostic fixtures, not final
   candidate assets or accepted publication metadata.
-- PENDING: full executable CTest suite and inventory contract.
+- PASS: 44 registered CTests, registration/label/fixture/timeout/failure-policy
+  contract and seven negative controls.
+- FAIL: full original-fixture CTest run, 15/43 PASS and 28/43 FAIL. All 13
+  ROM-free tests passed. The new focused bank test passes within the state
+  transition executable, then later combined-ROM loading fails. This is not
+  acceptable full-suite verification and the PR must remain Draft.
+
+## Compatibility finding and required decision
+
+The previously used local 48 KB combined fixture has no high-bit bytes or
+invalid detune codes, but four factory voices in later banks contain fields
+outside the existing single-voice validator's ranges: slots 147, 161, 174 and
+199; three offending values are 127 and one is 100. The new whole-bank scan
+rejects it before engine mutation, explaining the 28 ROM-loading failures.
+Earlier tests exercised the firmware and selected voices, not validation of
+every factory voice. The original fixture was not modified or normalized.
+
+This does not establish whether those bytes are accidental corruption or
+intentional legacy factory data. Do not claim that the original fixture is now
+compatible, or that all firmware tests pass. The owner must resolve the public
+combined-image behavior (strict rejection versus firmware-only fallback with
+a visible warning), and acceptance must include a valid full-bank fixture.
+Do not silently clamp factory patch values or weaken the shared SysEx/state
+validator. Source/checksum fixes are independently verified; bank compatibility
+and the complete native suite remain open before merge.
 
 ## NOT RUN / acceptance boundaries
 
