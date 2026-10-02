@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import patch
 import sys
 import zipfile
+import source_package_fixture as fixture
 
 spec = importlib.util.spec_from_file_location("package_source", Path(__file__).parents[1] / "scripts/package_source.py")
 p = importlib.util.module_from_spec(spec)
@@ -87,14 +88,41 @@ class SourcePackageTests(unittest.TestCase):
 
     def fixture(self):
         data = b"example source\n"
-        return {"Source/example.cpp": (data, 0o644)}, {
+        payload = {**fixture.files(), "Source/example.cpp": (data, 0o644)}
+        return payload, {
             "schema": 1, "kind": "development-corresponding-source",
             "package_label": "1.0.0-dev", "source_commit": "a" * 40,
             "release_accepted": False,
             "dependencies": {"JUCE": p.JUCE_SHA, "Retromulator": p.CORE_SHA},
-            "files": [{"path": "Source/example.cpp", "size": len(data), "mode": 0o644,
-                       "sha256": hashlib.sha256(data).hexdigest()}],
+            "files": fixture.entries(payload),
         }
+
+    def test_required_file_removed_with_manifest_is_rejected(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for missing in fixture.REQUIRED:
+                with self.subTest(missing=missing):
+                    payload, manifest = self.fixture()
+                    del payload[missing]
+                    manifest["files"] = fixture.entries(payload)
+                    archive = Path(folder) / (missing.replace("/", "_") + ".zip")
+                    p.write_zip(archive, payload, manifest)
+                    with self.assertRaises(ValueError):
+                        p.verify(archive)
+
+    def test_historical_100_without_generated_tools_remains_verifiable(self):
+        payload, manifest = self.fixture()
+        for name in (p.VERIFIER, p.PACKAGE_README):
+            del payload[name]
+        manifest["files"] = fixture.entries(payload)
+        with tempfile.TemporaryDirectory() as folder:
+            archive = Path(folder) / "historical.zip"
+            p.write_zip(archive, payload, manifest)
+            p.verify(archive)
+            manifest.update(package_label="1.0.1-dev")
+            modern = Path(folder) / "modern.zip"
+            p.write_zip(modern, payload, manifest)
+            with self.assertRaises(ValueError):
+                p.verify(modern)
 
     def test_deterministic_archive_and_verification(self):
         with tempfile.TemporaryDirectory() as folder:

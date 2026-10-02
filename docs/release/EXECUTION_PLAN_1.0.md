@@ -1,6 +1,23 @@
 # Consolidated execution plan — 1.0.1 corrective development
 
-## Active checkpoint — 2026-10-01
+## Active checkpoint — 2026-10-02
+
+The current corrective round starts from main
+`928c8b7dbea9816df8e5cc3700354859aaa4d8d1`, after PR #113.
+The owner approved fixing the three reproduced findings below on a separate
+branch, `codex/factory-bank-source-integrity`. Implementation is local;
+native regression verification and required final-head PR gates are pending.
+Do not treat this as acceptance of a release candidate.
+
+| ID | Reproduced failure | Current correction / acceptance |
+| --- | --- | --- |
+| BH-20261002-01 | P2: invalid optional/combined factory voice data accepted into engine state | Validate all 256 seven-bit packed voices before engine mutation; ignore a bad optional companion with a warning, reject bad combined images. Boundary, state preservation, export and reopen regressions added; native execution pending. |
+| BH-20261002-02 | P2: verifier/staging accepts a regenerated inventory missing mandatory LICENSE | Share mandatory source/notice minimum with archive creation; require bundled checker/readme for 1.0.1 while retaining historical 1.0.0 compatibility. Missing-file negative tests PASS. This is a minimum-content check, not publisher authentication or a complete independent Git comparison. |
+| BH-20261002-03 | P3: checksum output aliases an input and destroys the asset | Reject identical/resolved paths, hardlinks and symbolic-link outputs before writing. Same-path/alias/hardlink regressions PASS; Windows symbolic-link capability test NOT RUN. |
+
+[Round validation](../validation/VALIDATION_20261002_BANK_SOURCE_INTEGRITY.md)
+records actual executed checks and remaining gates. Prior ledger entries below
+retain their historical baselines and do not imply final 1.0.1 acceptance.
 
 1.0.0 is published at product `d79ed5214d82caf70e3941e5a620bab137d3f9ca`;
 release tools/main reviewed at `3fa8c2e00ad4dcd1860551cf3596ee4ad29de789`.
@@ -51,7 +68,7 @@ Present these before separately requesting 1.0.1 publication authorization.
 
 ### Next release steps — 1.0.1
 
-1. Review and merge the coordinated project/installer/workflow version update.
+1. DONE: coordinated project/installer/workflow version update merged in #112.
    Development remains visibly `1.0.1-dev`; stable preparation is `1.0.1`,
    not accepted. New packaging rejects mismatched source/installer versions
    before platform work; historical 1.0.0 verification remains compatible.

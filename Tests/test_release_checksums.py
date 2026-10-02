@@ -14,6 +14,28 @@ spec.loader.exec_module(checksums)
 
 
 class ReleaseChecksumTests(unittest.TestCase):
+    def test_output_cannot_overwrite_input_or_path_alias(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            asset = root / "asset.zip"
+            asset.write_bytes(b"keep original asset")
+            for output in (asset, root / "sub" / ".." / "asset.zip"):
+                (root / "sub").mkdir(exist_ok=True)
+                with self.subTest(output=output), self.assertRaises(ValueError):
+                    checksums.write_manifest([asset], output)
+                self.assertEqual(asset.read_bytes(), b"keep original asset")
+
+    def test_hardlink_output_cannot_overwrite_input(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            asset, alias = root / "asset.zip", root / "checksums.txt"
+            asset.write_bytes(b"keep original asset")
+            os.link(asset, alias)
+            with self.assertRaises(ValueError):
+                checksums.write_manifest([asset], alias)
+            self.assertEqual(asset.read_bytes(), b"keep original asset")
+            self.assertEqual(alias.read_bytes(), b"keep original asset")
+
     def test_manifest_hashes_sorted_files_by_basename(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

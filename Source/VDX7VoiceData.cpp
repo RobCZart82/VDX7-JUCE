@@ -62,6 +62,17 @@ bool hasValidPackedVoice(const uint8_t* packedVoice, std::size_t size) noexcept
     return true;
 }
 
+bool hasValidPackedVoices(const uint8_t* data, std::size_t size) noexcept
+{
+    if (data == nullptr || size == 0 || size % kPackedVoiceSize != 0)
+        return false;
+    if (std::any_of(data, data + size, [](uint8_t value) { return value > 127; }))
+        return false;
+    for (std::size_t offset = 0; offset < size; offset += kPackedVoiceSize)
+        if (!hasValidPackedVoice(data + offset, kPackedVoiceSize)) return false;
+    return true;
+}
+
 int getOperatorParameter(const uint8_t* packedVoice, std::size_t size,
                          int operatorIndex, Parameter parameter) noexcept
 {

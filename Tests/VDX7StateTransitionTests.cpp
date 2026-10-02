@@ -1,6 +1,7 @@
 // Deterministic state-save/ROM-install regressions. Private compatible ROM only;
 // the public CI target compiles this test but never supplies firmware.
 #include "PluginProcessor.h"
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <future>
@@ -332,6 +333,67 @@ void testLateMailboxPublication(const juce::File& rom)
     }
     std::cout << "PASS: delayed pending-route listeners request publication after ROM installation\n";
 }
+void testFactoryVoiceValidation(const juce::File& rom)
+{
+    juce::MemoryBlock image;
+    require(rom.loadFileAsData(image) && image.getSize() >= VDX7Engine::kFirmwareSize,
+            "read private firmware for bank validation");
+    const auto* firmware = static_cast<const uint8_t*>(image.getData());
+    std::vector<uint8_t> voices(VDX7Engine::kFactoryVoicesSize, 0);
+    for (std::size_t offset = 0; offset < voices.size(); offset += 128)
+        std::fill_n(voices.begin() + offset + 118, 10, uint8_t('A'));
+    VDX7Engine engine;
+    require(engine.loadRomImage(firmware, VDX7Engine::kFirmwareSize, voices.data(), voices.size()),
+            "valid synthetic factory bank accepted");
+    std::vector<uint8_t> before, after;
+    require(engine.saveRam(before), "capture existing engine before invalid bank");
+    for (const int slot : {0, 31, 32, 255})
+    {
+        auto bad = voices;
+        bad[slot * 128 + 12] = 15 << 3;
+        require(!engine.loadRomImage(firmware, VDX7Engine::kFirmwareSize, bad.data(), bad.size()),
+                "invalid optional factory detune rejected before engine mutation");
+        require(engine.saveRam(after) && before == after, "failed optional load preserves engine RAM");
+        std::vector<uint8_t> combined(firmware, firmware + VDX7Engine::kFirmwareSize);
+        combined.insert(combined.end(), bad.begin(), bad.end());
+        require(!engine.loadRomImage(combined.data(), combined.size()),
+                "invalid combined bank rejected before engine mutation");
+        require(engine.saveRam(after) && before == after, "failed combined load preserves engine RAM");
+    }
+    auto bad = voices;
+    bad.back() = 128;
+    require(!engine.loadRomImage(firmware, VDX7Engine::kFirmwareSize, bad.data(), bad.size()),
+            "non-seven-bit factory name rejected");
+    require(engine.saveRam(after) && before == after, "high-bit rejection preserves engine RAM");
+
+    const auto folder = juce::File::getSpecialLocation(juce::File::tempDirectory)
+        .getChildFile("vdx7-bank-validation-" + juce::Uuid().toString());
+    require(folder.createDirectory().wasOk(), "create private bank-validation fixture directory");
+    struct Cleanup { juce::File folder; ~Cleanup() { folder.deleteRecursively(); } } cleanup {folder};
+    const auto firmwareFile = folder.getChildFile("firmware.bin");
+    const auto companion = folder.getChildFile("dx7_factory_voices_32KB.bin");
+    require(firmwareFile.replaceWithData(firmware, VDX7Engine::kFirmwareSize), "write local firmware fixture");
+    bad = voices;
+    bad[12] = 15 << 3;
+    require(companion.replaceWithData(bad.data(), bad.size()), "write invalid synthetic companion");
+    VDX7AudioProcessor processor(false);
+    require(processor.loadRomFromFile(firmwareFile), "valid firmware survives invalid optional companion");
+    require(!processor.hasFactoryVoices() && processor.getStatusText().contains("ignored"),
+            "invalid companion is ignored with a visible warning");
+    juce::String error;
+    require(processor.exportSyx(folder.getChildFile("export.syx"), true, error),
+            "remaining valid RAM bank remains exportable");
+    const auto state = save(processor);
+    VDX7AudioProcessor reopened(false);
+    reopened.setStateInformation(state.getData(), int(state.getSize()));
+    require(reopened.isProjectReady(), "ignored-companion project state reopens");
+    require(companion.replaceWithData(voices.data(), voices.size()), "write valid synthetic companion");
+    require(processor.loadRomFromFile(firmwareFile) && processor.hasFactoryVoices(),
+            "valid companion accepted as positive control");
+    require(processor.exportSyx(folder.getChildFile("valid-export.syx"), true, error),
+            "valid companion remains exportable");
+    std::cout << "PASS: factory validation, preservation, warning, export and reopen\n";
+}
 } // namespace
 
 void vdx7TestStateBoundary(std::size_t) {}
@@ -346,12 +408,13 @@ int main(int argc, char** argv)
     try
     {
         juce::ScopedJuceInitialiser_GUI initialise;
-        require(argc == 2 || argc == 3, "usage: vdx7_state_transition_tests <private compatible ROM> [--save-only|--pending-only|--routing-only]");
+        require(argc == 2 || argc == 3, "usage: vdx7_state_transition_tests <private compatible ROM> [--save-only|--pending-only|--routing-only|--bank-only]");
         const juce::File rom(argv[1]);
         require(rom.existsAsFile(), "private test ROM exists");
         const auto mode = argc == 3 ? juce::String(argv[2]) : juce::String();
         require(mode.isEmpty() || mode == "--save-only" || mode == "--pending-only"
-                || mode == "--routing-only", "valid test selection");
+                || mode == "--routing-only" || mode == "--bank-only", "valid test selection");
+        if (mode.isEmpty() || mode == "--bank-only") testFactoryVoiceValidation(rom);
         if (mode.isEmpty() || mode == "--save-only") testNoRomSave(rom);
         if (mode.isEmpty() || mode == "--pending-only")
         {

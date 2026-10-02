@@ -1,0 +1,75 @@
+# Factory-bank and source-integrity fixes — 2026-10-02
+
+Baseline: main `928c8b7dbea9816df8e5cc3700354859aaa4d8d1`, after PR #113.
+Branch: `codex/factory-bank-source-integrity`. Owner-approved implementation
+of three reproduced audit findings; no tag, release or asset publication.
+
+## BH-20261002-01 — factory-bank validation (P2)
+
+The old engine accepted a synthetic 32 KB bank containing detune code 15
+(+8, outside -7..+7), even though the shared packed-voice validator and SysEx
+export rejected it. A valid same-size control loaded/exported successfully.
+
+The engine now validates all 256 voices and all bytes, including names, as
+seven-bit data before replacing firmware or live state. Semantic validation
+reuses the existing packed-voice rules; reserved-bit compatibility of that
+single-voice API is unchanged. A bad optional companion is ignored with the
+existing visible warning; a bad 48 KB combined image is rejected.
+
+ROM-free tests cover empty/null/partial buffers, slots 0/31/32/255, invalid
+detune and high-bit names, with valid controls. Private local-firmware tests
+cover optional and combined rejection, engine RAM preservation, processor
+warning, SysEx export, project reopen and valid-companion loading. Firmware
+fixtures remain local and are cleaned up; no firmware is embedded in tests.
+
+## BH-20261002-02 — mandatory source contents (P2)
+
+The baseline full archive passed verification. Removing LICENSE.txt without
+changing the manifest correctly failed; removing both the file and inventory
+entry and regenerating the outer hash incorrectly passed verification and
+preparation staging. This models a defective/rehashed package, not defeating
+a trusted immutable external checksum or publisher authentication.
+
+Creation and verification now share a mandatory minimum: CMakeLists.txt,
+LICENSE.txt, NOTICE.md, THIRD_PARTY.md, dependency licenses and dx7.cpp.
+1.0.1 also requires the generated checker and source-package README. Historical
+1.0.0 archives without both generated files remain supported. Presence, payload
+hashes and modes are checked; this is not an independent comparison of the
+entire archive against authenticated Git objects. Exact-candidate source review
+and committed release approval remain separate requirements.
+
+Regression fixtures independently enumerate required paths. Each required-file
+removal with a matching regenerated inventory must fail; staging must leave no
+output when the license is missing. Valid preparation/accepted fixtures and
+existing approval checks remain covered.
+
+## BH-20261002-03 — checksum output preservation (P3)
+
+The baseline overwrote a synthetic input asset when it was also the output.
+The writer now rejects equal/resolved paths, existing hardlink aliases and
+symbolic-link outputs before opening the destination. Distinct normal output
+still produces sorted portable checksum entries. This is local file safety,
+not a defense against hostile concurrent filesystem races.
+
+## Executed evidence
+
+- PASS: before production fixes, new Python negative regressions exposed the
+  expected rejection/preservation failures (14 failure/subtest results).
+- PASS: after fixes, Python discovery completed 73 tests: 72 executed, one
+  skipped due to Windows symbolic-link creation privilege (WinError 1314).
+  Existing approval, staging, download-policy and packaging tests also passed.
+- PASS: fresh Windows/MSVC x64 Release configuration using the pinned JUCE and
+  retromulator dependencies, with private ROM tests enabled.
+- PENDING: fresh VST3 and regression-target build; focused factory-bank test;
+  full executable CTest suite and inventory contract; full corresponding-source
+  creation, bundled checker and source staging on the committed fix.
+
+## NOT RUN / acceptance boundaries
+
+Windows symlink capability test: NOT RUN, not a logic failure. Final-head remote
+Windows/macOS/ASan-UBSan gates: NOT RUN at this checkpoint. Interactive desktop
+save-dialog test, REAPER, installed-plugin replacement, native installers,
+upgrade/uninstall and exact 1.0.1 binary acceptance: NOT RUN in this round.
+The approval JSON remains unchanged and no final product/tooling tuple is
+accepted. Parameter identities, approved GUI/PITCH policy and DSP are unchanged.
+The [single execution plan](../release/EXECUTION_PLAN_1.0.md) is authoritative.

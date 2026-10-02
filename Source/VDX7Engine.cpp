@@ -57,7 +57,11 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
 
     std::vector<uint8_t> newFactoryVoices;
     if (voices != nullptr && voicesSize >= kFactoryVoicesSize)
+    {
+        // Check all eight banks before replacing firmware or any live state.
+        if (!VDX7VoiceData::hasValidPackedVoices(voices, kFactoryVoicesSize)) return false;
         newFactoryVoices.assign(voices, voices + kFactoryVoicesSize);
+    }
 
     if (!dx7_.loadFirmware(firmware, kFirmwareSize))
         return false;
