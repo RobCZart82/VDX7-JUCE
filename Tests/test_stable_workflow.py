@@ -128,7 +128,8 @@ class StableWorkflowTests(unittest.TestCase):
         package = self.jobs["package"]
         for token in ('INNO_SETUP_VERSION: "6.7.1"',
                       'choco install innosetup --version=$env:INNO_SETUP_VERSION --yes --no-progress',
-                      'Inno Setup installation failed', 'Inno Setup version mismatch',
+                      'Inno Setup installation failed', 'Inno Setup version verification failed',
+                      'python release-tools/scripts/verify_inno_version.py --inno "$iscc" --expected "$env:INNO_SETUP_VERSION"',
                       'python release-tools/scripts/write_build_provenance.py',
                       '--platform Windows-x64', '--platform macOS-universal',
                       '--inno "$iscc" --inno-version "$innoVersion"',
@@ -137,6 +138,8 @@ class StableWorkflowTests(unittest.TestCase):
         self.assertEqual(package.count('write_build_provenance.py'), 2)
         self.assertEqual(package.count('--juce build/_deps/juce-src --core build/_deps/retromulator-src'), 3)
         self.assertIn('Build provenance capture failed', package)
+        self.assertNotIn('ProductMajorPart', package)
+        self.assertLess(package.index('verify_inno_version.py'), package.index('& $iscc'))
 
     def test_only_four_user_downloads_are_staged_after_checksum_verification(self):
         assembly = self.jobs["assemble-release-assets"]
