@@ -98,6 +98,43 @@ a régi forrás ZIP a friss main dokumentációját is tartalmazza.
   fagyasszunk be ismert adatvesztési/állapot- vagy csomagintegritási hibát pusztán
   arra hivatkozva, hogy majd egy következő kiadás javítja.
 
+### ROM ellenőrzés finomítása és optimalizálása
+
+Tulajdonosi tervjóváhagyás: 2026-10-02. Ez az R3 része, nem külön roadmap,
+és nem jelenti az alábbi kódmódosítások elkészültét vagy a kiadás elfogadását.
+A cél jobb diagnosztika és mérhető egyszerűsítés, a szigorúság csökkentése nélkül.
+
+1. **Első lépés, javasolt 1.0.1 finomítás:** közös ellenőrzőből részletes
+   eredmény: hibakategória, bank/hangszín, mező vagy bájtpozíció, tényleges érték
+   és megengedett tartomány. A felhasználói üzenet egyértelműen különböztesse
+   meg a méret-/olvasási hibát, hibás kombinált képet és kihagyott opcionális
+   bankot. Érvénytelen méretnél/pointernél ne olvasson mezőértéket; teljes ROM
+   adatot vagy személyes útvonalat ne írjon naplóba.
+2. **Mérés után választható optimalizálás:** vizsgálni a külön hétbites és
+   szemantikai bejárás, valamint a processor/engine ismételt ellenőrzésének
+   költségét. Mérni érvényes bankot, korai/késői hibát, külön companiont és
+   kombinált képet, továbbá a zárolás idejét. Mérés nélkül nincs bizonyított
+   lassulás vagy ígért gyorsulás; ez önmagában nem kiadásblokkoló runtime hiba.
+3. **Csak igazolt előnynél átalakítás:** az ellenőrzést lehetőleg a motor
+   zárolása és állapotmódosítása előtt végezni, közös szabályrendszerrel.
+   Ismétlés csak akkor hagyható el, ha a pontos, változatlanul átadott adatok
+   ellenőrzöttsége garantált; a motor közvetlen betöltési útja nem válhat
+   védtelenné. A bonyolultabb struktúra nem indokolt pusztán egy bejárás miatt.
+4. **Elfogadási feltételek:** a korábbi és új ellenőrzés ugyanazokat az
+   adatokat fogadja el/utasítsa el. Regressziók: minden bankhatár, hétbites
+   és szemantikai hibák, pontos diagnosztika, teljes állapotmegőrzés sikertelen
+   betöltéskor, függő projekt/szerkesztés megőrzése, közvetlen motorhívás és
+   érvényes kontroll. Új PR és szükséges zöld platform/sanitizer kapuk után
+   változó termékforrás esetén új végső jelölt és érintett csomagellenőrzés kell.
+
+Változatlan szabály: hibás kombinált ROM teljes elutasítása, a korábbi hangszer
+megőrzésével; hibás opcionális külön bank kihagyása látható figyelmeztetéssel.
+Nincs automatikus 99-re korlátozás, néma javítás vagy kombinált-ROM fallback.
+Az elutasított régi ROM eredetét/kompatibilitását ez az optimalizálás nem dönti
+el, nem teszi minősítetté a módosított tesztmásolatot, és nem garantál régi
+projekt-visszaállítást. Nagyobb optimalizálás mérhető előny hiányában halasztható;
+a diagnosztikai finomítás a forrásbefagyasztás előtt kapjon végleges diszpozíciót.
+
 ### R5–R7: publikálás előtti és publikálási lépések
 
 Az [A/B/C jóváhagyási eljárás](RELEASE_APPROVAL.md) kötelező. A mostani
