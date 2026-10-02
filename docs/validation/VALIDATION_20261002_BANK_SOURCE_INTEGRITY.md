@@ -60,9 +60,19 @@ not a defense against hostile concurrent filesystem races.
   Existing approval, staging, download-policy and packaging tests also passed.
 - PASS: fresh Windows/MSVC x64 Release configuration using the pinned JUCE and
   retromulator dependencies, with private ROM tests enabled.
-- PENDING: fresh VST3 and regression-target build; focused factory-bank test;
-  full executable CTest suite and inventory contract; full corresponding-source
-  creation, bundled checker and source staging on the committed fix.
+- PASS: fresh Windows/MSVC x64 Release VST3 and regression-target build.
+- PASS: focused factory-bank test with private compatible firmware: validation,
+  live RAM preservation, processor warning, export and project reopen.
+- PASS: development and non-accepted stable-preparation corresponding-source
+  creation at source/tooling commit `7f654b5643d695312085581ccb23ffe51dc17c01`,
+  5,114 files. Preparation ZIP SHA-256:
+  `b4aa81157167fa43f49d5ed9d3b99110bdd905f38195e95f9b9535a5249439cb`.
+  Its bundled standalone checker passes. Separate preparation staging produces
+  exactly ZIP + checksums. The same full archive with LICENSE.txt and its
+  inventory entry removed, then rehashed, fails both checkers and staging;
+  rejection leaves no staging output. These are diagnostic fixtures, not final
+  candidate assets or accepted publication metadata.
+- PENDING: full executable CTest suite and inventory contract.
 
 ## NOT RUN / acceptance boundaries
 

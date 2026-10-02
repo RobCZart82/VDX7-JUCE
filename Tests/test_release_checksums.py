@@ -78,6 +78,9 @@ class ReleaseChecksumTests(unittest.TestCase):
                 raise
             with self.assertRaises(ValueError):
                 checksums.write_manifest([link], root / "link-check.txt")
+            with self.assertRaises(ValueError):
+                checksums.write_manifest([first], link)
+            self.assertEqual(first.read_bytes(), b"one")
 
 
 if __name__ == "__main__":
