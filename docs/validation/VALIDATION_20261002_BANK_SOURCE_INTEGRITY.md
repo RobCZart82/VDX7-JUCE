@@ -119,8 +119,8 @@ Final-head `c370aec016dafcc3f33f3e71077c2d0c35c1ecab` remote gates: PASS,
 Windows `36990444825`, macOS `36990444757`, ASan/UBSan `36990444781`.
 PR #114 merged at `9d53e9ee578ae614f76025d36ef7a258659de3f6` after owner
 authorization, with no unresolved review threads or merge conflicts.
-Post-merge Windows `36992554669` and macOS `36992554670`: RUNNING, not PASS
-at this dated checkpoint. Main checks and final installer acceptance remain
+Post-merge Windows `36992554669` and macOS `36992554670`: PASS at the exact
+merge SHA. Main checks and final installer acceptance remain
 separate from the successful PR checks.
 
 Windows symlink capability test: NOT RUN, not a logic failure. Interactive desktop

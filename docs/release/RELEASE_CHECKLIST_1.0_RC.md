@@ -9,8 +9,9 @@ Do not carry earlier PASS results forward as exact-1.0.1 evidence.
 - [x] Pending-project A1/A2 local 36/36 regressions and required remote PR checks accepted; #104 merged.
 - [x] A3 test source archive verifies with its documented bundled checker, offline build and 11/11 tests; #105 merged. Final 1.0.1 artifact remains a separate gate.
 - [x] #114 merged at `9d53e9ee578ae614f76025d36ef7a258659de3f6`; exact final-head Windows/macOS/sanitizer checks PASS. Bank validation, mandatory source contents and non-destructive checksums implemented. Local valid-control 43/43 CTests and 72 executed Python tests PASS; original invalid-ROM failures retained, not relabeled as passes.
-- [ ] Post-merge Windows/macOS checks completed at the intended main checkpoint (currently running).
-- [ ] Freeze reviewed source/tooling SHAs; run non-publishing stable preparation with acceptance disabled. Retain separate four-download and two-file source staging plus full validation assets.
+- [x] Post-merge Windows/macOS checks PASS at `9d53e9ee578ae614f76025d36ef7a258659de3f6` (runs `36992554669`, `36992554670`).
+- [x] Non-publishing preparation dispatched as run `36993835698` from main for that exact source SHA, acceptance disabled. Local version/context/approval preflight PASS; approval JSON remains null.
+- [ ] Complete preparation run and inspect separate four-download/two-file source staging plus full validation assets. Dispatch is not success or final product/tooling acceptance.
 - [ ] Inspect Windows EXE/manual ZIP and macOS PKG/manual ZIP, architecture/version/identity, payload/licenses, toolchain provenance, source self-verification and all hashes.
 - [ ] Record actual 1.0.0 -> 1.0.1 Windows upgrade/uninstall results on disposable hosted runner; verify user-file preservation. No local installed plugin is replaced by preparation.
 - [ ] Review strict invalid-combined-ROM rejection and pending legacy-project risk. A constructed valid test copy is not a certified replacement or matching-ROM migration; original ROM remains unchanged.

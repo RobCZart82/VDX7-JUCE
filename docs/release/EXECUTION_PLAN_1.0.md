@@ -12,8 +12,8 @@ macOS `36990444757` and ASan/UBSan `36990444781`; no unresolved review threads
 or merge conflicts remained. Owner decision (2026-10-02): reject
 the entire invalid combined ROM, preserving the previous state. No automatic
 factory-data clamping or firmware-only fallback for a bad combined image.
-Post-merge Windows `36992554669` and macOS `36992554670` are still running at
-this checkpoint; they are not yet PASS. The owner now requests completion of
+Post-merge Windows `36992554669` and macOS `36992554670` both completed PASS
+on that exact main SHA. The owner now requests completion of
 the publishable 1.0.1 product and release preparation. This is not approval of
 an exact product/tooling pair or authorization to publish a tag/release.
 Do not treat this as acceptance of a release candidate.
@@ -83,6 +83,17 @@ full `source_commit` and `accepted_for_publication=false`. Never treat a
 running Action, a constructed private fixture, or an earlier source-only
 archive as acceptance of the final installable binaries. Keep the approval
 JSON null until reviewing actual candidate evidence.
+
+Preparation run [36993835698](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36993835698)
+has been dispatched from main for product source
+`9d53e9ee578ae614f76025d36ef7a258659de3f6`, with
+`accepted_for_publication=false`. The local authorization preflight passed
+with source/tooling/approval-workflow identities at that SHA and
+`release_accepted=false`; typed local context is not publisher authentication.
+Actual installers, upgrade/uninstall and artifact reconciliation remain
+PENDING until that run completes and its payloads are inspected. The run
+creates artifacts only, not a tag/release. This documentation-only branch does
+not alter the queued product code or supply release approval.
 
 The strict combined-bank rejection is a deliberate compatibility boundary:
 previously accepted out-of-range factory images cannot be loaded by 1.0.1.
