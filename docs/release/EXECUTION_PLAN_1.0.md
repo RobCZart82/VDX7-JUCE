@@ -49,8 +49,8 @@ This is the single active work ledger; do not create competing roadmaps.
 | AUDIT-20260930-A1/A2 | P1, reproduced pending-project edit loss and wrong-engine capture | MERGED [#104](https://github.com/RobCZart82/VDX7-JUCE/pull/104); required platform/sanitizer checks PASS and local 36/36 CTests PASS. Rejects unsupported operations, preserves edits and prioritizes recovery. [Boundary validation](../validation/VALIDATION_20260930_PENDING_BOUNDARY.md). Exact-1.0.1 acceptance remains separate. |
 | AUDIT-20260930-A3 | P1 packaging, published ZIP fails its bundled verifier | MERGED [#105](https://github.com/RobCZart82/VDX7-JUCE/pull/105); all PR checks PASS. Ten packaging tests, real extracted checker and offline Windows build/11 CTests PASS. [Verification record](../validation/VALIDATION_20260930_SOURCE_VERIFIER.md). Final-release acceptance remains open; existing 1.0.0 assets unchanged. |
 | AUDIT-20260930-A4 | P2 provenance guard gap, not unauthorized publication | MERGED [#109](https://github.com/RobCZart82/VDX7-JUCE/pull/109): exact reviewed source/packager pair, committed approval snapshot and canonical main workflow context required before accepted packaging. Final-head Windows/macOS/ASan-UBSan and post-merge Windows/macOS checks PASS. Null approval fails closed; preparation and legacy integrity verification remain available. [Approval procedure](RELEASE_APPROVAL.md), [regression evidence](../validation/VALIDATION_20261001_RELEASE_APPROVAL.md). No release is approved by this change. |
-| AUDIT-20260930-A5 | P2 installer layout; no reproduced host scan failure | ASSESSED: retain AppId and current uninstall directory for 1.0.1. Inno explicitly warns that changing that directory prevents appending prior uninstall logs. A guarded hosted-Windows upgrade smoke is implemented for the checksum-pinned published 1.0.0 installer -> candidate -> uninstall, with installed-payload hashes, one AppId registration and synthetic user-file preservation. Actual native execution remains OPEN. [Validation](../validation/VALIDATION_20261001_INSTALLER_UPGRADE_SOURCE.md). Do not claim a host scan defect was reproduced or fixed. |
-| AUDIT-20260930-A6 | P2 toolchain provenance | MERGED [#110](https://github.com/RobCZart82/VDX7-JUCE/pull/110); final-head Windows/macOS/ASan-UBSan PR checks PASS. Pins/verifies Inno 6.7.1 and records configured compiler, SDK, CMake, runner image and verified dependency commits in hashed BUILD-INFO assets. [Mechanism](BUILD_TOOLCHAIN_PROVENANCE.md), [validation](../validation/VALIDATION_20261001_TOOLCHAIN_PROVENANCE.md). Actual exact-candidate packaging capture remains required; the installer workflow was NOT RUN. Observed tool versions do not imply bit-identical installers or an immutable runner. |
+| AUDIT-20260930-A5 | P2 installer layout; no reproduced host scan failure | ASSESSED: retain AppId and current uninstall directory for 1.0.1. Guarded hosted-Windows checksum-pinned 1.0.0 -> candidate -> uninstall, installed-payload hashes, one AppId registration and synthetic user-file preservation PASS in run `36998278475`. [Native evidence](../validation/VALIDATION_20261002_PACKAGE_PREPARATION.md), [mechanism](../validation/VALIDATION_20261001_INSTALLER_UPGRADE_SOURCE.md). No host scan defect was reproduced or claimed fixed; exact local-host acceptance remains separate. |
+| AUDIT-20260930-A6 | P2 toolchain provenance | MERGED [#110](https://github.com/RobCZart82/VDX7-JUCE/pull/110); Windows/macOS/ASan-UBSan PR checks PASS. Compiler-engine verification correction MERGED [#115](https://github.com/RobCZart82/VDX7-JUCE/pull/115), all three final-head checks and post-merge Windows/macOS PASS. Pins Inno 6.7.1 and records configured compiler, SDK, CMake, runner image and verified dependency commits in hashed BUILD-INFO assets. [Mechanism](BUILD_TOOLCHAIN_PROVENANCE.md), [correction](../validation/VALIDATION_20261002_INNO_VERSION.md). Run `36993835698` failed at numeric PE metadata; fresh unaccepted run `36998278475` tests the corrected mechanism. Final candidate provenance review remains required; observed versions do not imply bit-identical installers or an immutable runner. |
 | AUDIT-20260930-A7 | P2 stale release evidence/docs | PARTIAL: plan, README and HU/EN guides distinguish published 1.0.0 from corrective development; final #104/#105 validation recorded. Owner's future [four-download policy](PUBLIC_DOWNLOADS.md) is MERGED [#111](https://github.com/RobCZart82/VDX7-JUCE/pull/111); final-head Windows/macOS/ASan-UBSan and post-merge Windows/macOS checks PASS. Actual candidate payload staging, full accepted binary asset reconciliation and durable matching-source access remain OPEN. |
 | AUDIT-20260930-A8 | P3 test-only C4805 | IMPLEMENTED: explicitly convert the boolean carry flag before integer bitwise packing; fresh Windows rebuild without C4805 and focused trace regression PASS. |
 | AUDIT-20260930-A9 | P2 missing sanitizer coverage, not a DSP defect | IMPLEMENTED: resampler added to both instrumented build targets and CTest filter. Actual ASan/UBSan run is a required PR gate; Python packaging remains separate. |
@@ -99,6 +99,24 @@ compiler engine version, still requiring exactly 6.7.1 and successful exit.
 Local mocked probe and workflow regression tests do not certify native ISCC.
 A fresh non-publishing preparation run using the merged correction is required;
 rerunning the old immutable workflow cannot test the fix. Approval remains null.
+
+PR #115 is now MERGED as `6cc8cda30e9e66d3ab97699bcb9d2014a78b8b14`.
+Final-head Windows/macOS/ASan-UBSan checks PASS; post-merge main Windows
+`36996855918` and macOS `36996855952` PASS. Fresh non-publishing preparation
+[36998278475](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36998278475)
+uses that exact product/tooling/workflow SHA, acceptance disabled; authorization,
+Windows/macOS packaging and assembly all PASS (9m 37s). Windows native Inno
+6.7.1 verification, clean install/uninstall and checksum-pinned 1.0.0 -> 1.0.1
+upgrade/uninstall/user-file preservation PASS; both platforms' ROM-free CTests
+13/13 PASS. Seven-asset checksums, four-download staging and source self-check
+(5117 files) PASS on the hosted runners. Full local packaging regressions:
+77 discovered, 76 PASS, one symlink-capability SKIP. Native result must be
+reviewed independently before publication: the local artifact download timed
+out, so independent downloaded-payload/hash reconciliation is NOT RUN. No host
+acceptance or publication approval is inferred from the green preparation.
+See [exact-candidate evidence](../validation/VALIDATION_20261002_PACKAGE_PREPARATION.md).
+The [1.0.1 HU/EN release-note draft](RELEASE_NOTES_1.0.1_DRAFT_HU_EN.md)
+records compatibility/signing warnings and the still-open publication gates.
 
 The strict combined-bank rejection is a deliberate compatibility boundary:
 previously accepted out-of-range factory images cannot be loaded by 1.0.1.

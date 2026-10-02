@@ -70,6 +70,11 @@ separate optional 32 KB file is ignored with a warning, while the 16 KB firmware
 can still load. The program does not automatically repair or clamp invalid
 voice data; supply a valid bank.
 
+Upgrade caution: an older project bound to an invalid combined ROM may remain
+pending in 1.0.1. A different or manually edited ROM is not a matching-ROM
+recovery guarantee. Keep the original ROM, plug-in and project backups; verify
+project recall on a copy before overwriting your working project.
+
 Automatic search folders:
 
 | System | Locations |

@@ -33,3 +33,12 @@ Existing provenance still records the verified version and executable SHA-256.
 
 No product C++ changes, ROM, release approval, tag or published asset changes.
 No REAPER, user plugin replacement, or local installer installation.
+
+## Native follow-up
+
+Correction merged in #115 as `6cc8cda30e9e66d3ab97699bcb9d2014a78b8b14`.
+Fresh non-publishing run `36998278475` PASS on both platforms and assembly.
+Actual Inno 6.7.1 verification, Windows clean install/uninstall and 1.0.0 ->
+1.0.1 upgrade/uninstall/user-file preservation PASS. [Candidate record](VALIDATION_20261002_PACKAGE_PREPARATION.md).
+This supersedes the initial remote NOT RUN checkpoint, not the local native
+NOT RUN or final publication-acceptance boundary.

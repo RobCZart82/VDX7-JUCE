@@ -76,6 +76,12 @@ megmarad. A külön, opcionális 32 KB-os fájlt hiba esetén figyelmeztetéssel
 kihagyja, a 16 KB-os firmware betölthető marad. A program nem javítja vagy
 korlátozza automatikusan a sérült hangadatokat; használj érvényes bankot.
 
+Frissítési kockázat: az érvénytelen kombinált ROM-hoz kötött régi projekt
+az 1.0.1-ben függőben maradhat. Másik vagy kézzel módosított ROM nem jelent
+garantált, azonos-ROM-os helyreállítást. Őrizd meg az eredeti ROM, a plug-in
+és a projekt mentését; projektmásolaton ellenőrizd a visszatöltést, mielőtt
+felülírnád a munkapéldányt.
+
 Automatikus keresési mappák:
 
 | Rendszer | Helyek |

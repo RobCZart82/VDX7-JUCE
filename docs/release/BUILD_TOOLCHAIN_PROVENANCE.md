@@ -4,7 +4,12 @@ This describes A6's packaging evidence, not a second development plan.
 Use the [single execution plan](EXECUTION_PLAN_1.0.md) for completion status.
 
 The stable packaging workflow selects Chocolatey Inno Setup **6.7.1** explicitly
-and verifies ISCC's product-version components before compiling the installer.
+and verifies the loaded compiler engine with a no-output stdin probe before
+compiling the installer. The former numeric PE product-version check failed
+with `0.0.0` in run `36993835698`; the correction is merged in #115.
+The verifier requires a successful probe and exactly one complete 6.7.1 engine
+version record. Inno 6.7.1 has no `--version` option, and help alone does not
+load its engine; see the [pinned compiler source](https://github.com/jrsoftware/issrc/blob/is-6_7_1/Projects/ISCC.dpr).
 A failed package installation or mismatched compiler version stops the job.
 This is a deliberate 6.x pin, not a claim to select the newest Inno release.
 References: [Inno 6 revision history](https://jrsoftware.org/files/is6-whatsnew.htm),
@@ -39,6 +44,7 @@ locked. A deterministic source ZIP does not prove bit-identical VST3/EXE/pkg
 output. Required final-candidate payload, license, checksum, installer migration
 and host acceptance remain separate. The null release approval stays null.
 
-The workflow still uses 1.0.0 package labels. Do not dispatch it to regenerate
-or replace published 1.0.0 assets. A separately reviewed coordinated 1.0.1
-version/label update must precede the new candidate's packaging and acceptance.
+The coordinated 1.0.1 version/label update is merged in #112. The active
+workflow now prepares 1.0.1 VST3 installers and manual ZIPs without publication;
+do not regenerate or replace published 1.0.0 assets. Exact candidate evidence
+and separate publication approval remain necessary.

@@ -11,9 +11,11 @@ Do not carry earlier PASS results forward as exact-1.0.1 evidence.
 - [x] #114 merged at `9d53e9ee578ae614f76025d36ef7a258659de3f6`; exact final-head Windows/macOS/sanitizer checks PASS. Bank validation, mandatory source contents and non-destructive checksums implemented. Local valid-control 43/43 CTests and 72 executed Python tests PASS; original invalid-ROM failures retained, not relabeled as passes.
 - [x] Post-merge Windows/macOS checks PASS at `9d53e9ee578ae614f76025d36ef7a258659de3f6` (runs `36992554669`, `36992554670`).
 - [x] Non-publishing preparation dispatched as run `36993835698` from main for that exact source SHA, acceptance disabled. Local version/context/approval preflight PASS; approval JSON remains null.
-- [ ] Repeat preparation with corrected compiler-engine version verification: run `36993835698` Windows packaging FAIL (`0.0.0` PE metadata), macOS PASS, combined staging and Windows installer/upgrade NOT RUN. Inspect separate four-download/two-file source staging plus full validation assets; dispatch is not acceptance.
+- [x] #115 compiler-engine correction merged at `6cc8cda30e9e66d3ab97699bcb9d2014a78b8b14`; all final-head checks and post-merge Windows/macOS PASS. Fresh unaccepted preparation `36998278475` authorization, both platforms and assembly PASS. Full local packaging suite: 76 PASS, one capability SKIP.
+- [x] HU/EN guides explicitly document pending legacy-project risk; [1.0.1 release-note draft](RELEASE_NOTES_1.0.1_DRAFT_HU_EN.md) prepared without final acceptance/hash claims.
+- [x] Repeat preparation with corrected compiler-engine verification: run `36998278475` PASS for both platforms, Windows installer/upgrade and combined four-download/two-file source staging. Prior `36993835698` FAIL remains historical. Green preparation is not publication acceptance.
 - [ ] Inspect Windows EXE/manual ZIP and macOS PKG/manual ZIP, architecture/version/identity, payload/licenses, toolchain provenance, source self-verification and all hashes.
-- [ ] Record actual 1.0.0 -> 1.0.1 Windows upgrade/uninstall results on disposable hosted runner; verify user-file preservation. No local installed plugin is replaced by preparation.
+- [x] Actual 1.0.0 -> 1.0.1 Windows upgrade/uninstall and synthetic user-file preservation PASS on hosted runner in `36998278475`. No local installed plugin replaced. [Evidence](../validation/VALIDATION_20261002_PACKAGE_PREPARATION.md).
 - [ ] Review strict invalid-combined-ROM rejection and pending legacy-project risk. A constructed valid test copy is not a certified replacement or matching-ROM migration; original ROM remains unchanged.
 - [ ] Published/next-candidate asset provenance and HU/EN docs reconciled.
 - [ ] Exact 1.0.1 source/platform tests, payload and installer upgrade checked.
