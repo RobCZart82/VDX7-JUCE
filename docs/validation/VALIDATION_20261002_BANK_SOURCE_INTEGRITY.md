@@ -74,10 +74,17 @@ not a defense against hostile concurrent filesystem races.
   candidate assets or accepted publication metadata.
 - PASS: 44 registered CTests, registration/label/fixture/timeout/failure-policy
   contract and seven negative controls.
+- PASS: full valid positive-control suite, 43/43 executable CTests (13 ROM-free
+  and 30 private local-ROM), 450.71 seconds. Includes the added processor
+  combined-rejection complete-state comparison. 44 registered; interactive
+  desktop save-dialog case deliberately excluded, not counted as a pass.
+- PASS: repeated final Python suite, 73 discovered / 72 executed, one Windows
+  symbolic-link capability skip, 81.156 seconds.
 - FAIL: full original-fixture CTest run, 15/43 PASS and 28/43 FAIL. All 13
   ROM-free tests passed. The new focused bank test passes within the state
   transition executable, then later combined-ROM loading fails. This is not
-  acceptable full-suite verification and the PR must remain Draft.
+  acceptable full-suite verification for a valid input. It remains historical
+  failure evidence; the separate valid-control pass does not relabel it PASS.
 
 ## Compatibility finding and owner decision
 
@@ -102,7 +109,9 @@ numeric fields to 99 for testing. Firmware and the entire first bank are
 unchanged, and the original image hash is checked unchanged. This constructed
 test copy is not a certified replacement ROM or an accepted release fixture;
 it is never committed/uploaded. Full native execution on this valid control
-is pending. Do not silently clamp product inputs or weaken SysEx/state checks.
+passes 43/43. This establishes behavior on the constructed control, not
+compatibility of the rejected original or certification of a replacement ROM.
+Do not silently clamp product inputs or weaken SysEx/state checks.
 
 ## NOT RUN / acceptance boundaries
 
