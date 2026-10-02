@@ -6,6 +6,11 @@
 Use [the active 1.0.1 plan](EXECUTION_PLAN_1.0.md) for A1–A10 dispositions.
 Do not carry earlier PASS results forward as exact-1.0.1 evidence.
 
+A publikálásig hátralévő sorrendet, REAPER nélküli és hostteszteket,
+elfogadási/halasztási döntéseket és végső feltöltést kizárólag az
+[egységes terv R1–R7 kapui](EXECUTION_PLAN_1.0.md) vezetik. Ez a checklist
+bizonyíték-összesítő, nem második fejlesztési terv vagy publikálási engedély.
+
 - [x] Pending-project A1/A2 local 36/36 regressions and required remote PR checks accepted; #104 merged.
 - [x] A3 test source archive verifies with its documented bundled checker, offline build and 11/11 tests; #105 merged. Final 1.0.1 artifact remains a separate gate.
 - [x] #114 merged at `9d53e9ee578ae614f76025d36ef7a258659de3f6`; exact final-head Windows/macOS/sanitizer checks PASS. Bank validation, mandatory source contents and non-destructive checksums implemented. Local valid-control 43/43 CTests and 72 executed Python tests PASS; original invalid-ROM failures retained, not relabeled as passes.
