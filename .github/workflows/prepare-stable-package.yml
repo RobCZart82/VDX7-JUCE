@@ -233,9 +233,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup installation failed: $LASTEXITCODE" }
           $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found at $iscc" }
-          $innoInfo = (Get-Item -LiteralPath $iscc).VersionInfo
-          $innoVersion = "$($innoInfo.ProductMajorPart).$($innoInfo.ProductMinorPart).$($innoInfo.ProductBuildPart)"
-          if ($innoVersion -ne $env:INNO_SETUP_VERSION) { throw "Inno Setup version mismatch: $innoVersion" }
+          $innoVersion = python release-tools/scripts/verify_inno_version.py --inno "$iscc" --expected "$env:INNO_SETUP_VERSION"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup version verification failed: $LASTEXITCODE" }
           & $iscc "/DPluginBundle=$($vst3.FullName)" "/O$((Get-Location).Path)\release-assets" "installer\windows\VDX7.iss"
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
 

@@ -90,10 +90,15 @@ has been dispatched from main for product source
 `accepted_for_publication=false`. The local authorization preflight passed
 with source/tooling/approval-workflow identities at that SHA and
 `release_accepted=false`; typed local context is not publisher authentication.
-Actual installers, upgrade/uninstall and artifact reconciliation remain
-PENDING until that run completes and its payloads are inspected. The run
-creates artifacts only, not a tag/release. This documentation-only branch does
-not alter the queued product code or supply release approval.
+That run completed with Windows packaging FAIL: the ISCC executable's numeric
+ProductVersion fields yielded `0.0.0`, despite Chocolatey reporting 6.7.1.
+macOS packaging PASS; combined assembly and Windows installer/upgrade checks
+NOT RUN. This is a packaging gate defect, not a reproduced DSP defect.
+The correction uses a no-output stdin probe compile to observe the actual
+compiler engine version, still requiring exactly 6.7.1 and successful exit.
+Local mocked probe and workflow regression tests do not certify native ISCC.
+A fresh non-publishing preparation run using the merged correction is required;
+rerunning the old immutable workflow cannot test the fix. Approval remains null.
 
 The strict combined-bank rejection is a deliberate compatibility boundary:
 previously accepted out-of-range factory images cannot be loaded by 1.0.1.
