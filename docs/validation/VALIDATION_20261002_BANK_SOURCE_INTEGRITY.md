@@ -115,8 +115,15 @@ Do not silently clamp product inputs or weaken SysEx/state checks.
 
 ## NOT RUN / acceptance boundaries
 
-Windows symlink capability test: NOT RUN, not a logic failure. Final-head remote
-Windows/macOS/ASan-UBSan gates: NOT RUN at this checkpoint. Interactive desktop
+Final-head `c370aec016dafcc3f33f3e71077c2d0c35c1ecab` remote gates: PASS,
+Windows `36990444825`, macOS `36990444757`, ASan/UBSan `36990444781`.
+PR #114 merged at `9d53e9ee578ae614f76025d36ef7a258659de3f6` after owner
+authorization, with no unresolved review threads or merge conflicts.
+Post-merge Windows `36992554669` and macOS `36992554670`: RUNNING, not PASS
+at this dated checkpoint. Main checks and final installer acceptance remain
+separate from the successful PR checks.
+
+Windows symlink capability test: NOT RUN, not a logic failure. Interactive desktop
 save-dialog test, REAPER, installed-plugin replacement, native installers,
 upgrade/uninstall and exact 1.0.1 binary acceptance: NOT RUN in this round.
 The approval JSON remains unchanged and no final product/tooling tuple is

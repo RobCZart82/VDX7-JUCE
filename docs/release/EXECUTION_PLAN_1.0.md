@@ -5,18 +5,24 @@
 The current corrective round starts from main
 `928c8b7dbea9816df8e5cc3700354859aaa4d8d1`, after PR #113.
 The owner approved fixing the three reproduced findings below on a separate
-branch, `codex/factory-bank-source-integrity`, in Draft PR #114. Implementation
-is complete for the source/checksum guards. Owner decision (2026-10-02): reject
+branch, `codex/factory-bank-source-integrity`. PR #114 is MERGED at
+`9d53e9ee578ae614f76025d36ef7a258659de3f6`. Final head
+`c370aec016dafcc3f33f3e71077c2d0c35c1ecab` passed Windows `36990444825`,
+macOS `36990444757` and ASan/UBSan `36990444781`; no unresolved review threads
+or merge conflicts remained. Owner decision (2026-10-02): reject
 the entire invalid combined ROM, preserving the previous state. No automatic
 factory-data clamping or firmware-only fallback for a bad combined image.
-Required final-head PR gates are pending.
+Post-merge Windows `36992554669` and macOS `36992554670` are still running at
+this checkpoint; they are not yet PASS. The owner now requests completion of
+the publishable 1.0.1 product and release preparation. This is not approval of
+an exact product/tooling pair or authorization to publish a tag/release.
 Do not treat this as acceptance of a release candidate.
 
 | ID | Reproduced failure | Current correction / acceptance |
 | --- | --- | --- |
-| BH-20261002-01 | P2: invalid optional/combined factory voice data accepted into engine state | IMPLEMENTED in Draft #114 with owner-approved strict rejection. Focused engine/processor state-preservation/export/reopen PASS; full valid positive-control suite 43/43 PASS (13 ROM-free + 30 local-ROM). Original-fixture 28 loading failures remain recorded as rejection of four out-of-range later voices, not compatibility passes. Original ROM unchanged; no runtime normalization. Final-head platform gates/review pending. |
-| BH-20261002-02 | P2: verifier/staging accepts a regenerated inventory missing mandatory LICENSE | Share mandatory source/notice minimum with archive creation; require bundled checker/readme for 1.0.1 while retaining historical 1.0.0 compatibility. Missing-file negative tests PASS. This is a minimum-content check, not publisher authentication or a complete independent Git comparison. |
-| BH-20261002-03 | P3: checksum output aliases an input and destroys the asset | Reject identical/resolved paths, hardlinks and symbolic-link outputs before writing. Same-path/alias/hardlink regressions PASS; Windows symbolic-link capability test NOT RUN. |
+| BH-20261002-01 | P2: invalid optional/combined factory voice data accepted into engine state | MERGED #114 with owner-approved strict rejection. Focused engine/processor state-preservation/export/reopen PASS; full valid positive-control suite 43/43 PASS (13 ROM-free + 30 local-ROM). Original-fixture 28 loading failures remain recorded as rejection of four out-of-range later voices, not compatibility passes. Original ROM unchanged; no runtime normalization. Final-head platform/sanitizer gates PASS; exact release acceptance separate. |
+| BH-20261002-02 | P2: verifier/staging accepts a regenerated inventory missing mandatory LICENSE | MERGED #114: shared mandatory source/notice minimum; bundled checker/readme required for 1.0.1, historical 1.0.0 compatibility retained. Missing-file negatives and full diagnostic archive checks PASS. This is a minimum-content check, not publisher authentication or a complete independent Git comparison. |
+| BH-20261002-03 | P3: checksum output aliases an input and destroys the asset | MERGED #114: rejects identical/resolved paths, hardlinks and symbolic-link outputs before writing. Local path/hardlink regressions PASS; local Windows symbolic-link capability test NOT RUN. Exact-head macOS and sanitizer gates PASS. |
 
 [Round validation](../validation/VALIDATION_20261002_BANK_SOURCE_INTEGRITY.md)
 records actual executed checks and remaining gates. Prior ledger entries below
@@ -70,6 +76,20 @@ payload/licenses, installer upgrade smoke and explicit deferred-risk record.
 Present these before separately requesting 1.0.1 publication authorization.
 
 ### Next release steps — 1.0.1
+
+Current order after #114: close post-merge main gates, reconcile this record,
+then freeze a reviewed main SHA and run `prepare-stable-package.yml` with that
+full `source_commit` and `accepted_for_publication=false`. Never treat a
+running Action, a constructed private fixture, or an earlier source-only
+archive as acceptance of the final installable binaries. Keep the approval
+JSON null until reviewing actual candidate evidence.
+
+The strict combined-bank rejection is a deliberate compatibility boundary:
+previously accepted out-of-range factory images cannot be loaded by 1.0.1.
+An old project bound to such an image may remain pending rather than silently
+installing different ROM content. The valid test copy is not a user migration
+or matching-ROM solution. Document this risk prominently and do not claim old
+1.0.0 REAPER reports certify the new packages or all legacy-ROM projects.
 
 1. DONE: coordinated project/installer/workflow version update merged in #112.
    Development remains visibly `1.0.1-dev`; stable preparation is `1.0.1`,

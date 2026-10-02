@@ -1,6 +1,6 @@
 # 1.0 release-preparation checklist — not a publication authorization
 
-## Current correction checkpoint — 2026-09-30
+## Current correction checkpoint — 2026-10-02
 
 1.0.0 is already published; the old preparation checklist below is historical.
 Use [the active 1.0.1 plan](EXECUTION_PLAN_1.0.md) for A1–A10 dispositions.
@@ -8,6 +8,12 @@ Do not carry earlier PASS results forward as exact-1.0.1 evidence.
 
 - [x] Pending-project A1/A2 local 36/36 regressions and required remote PR checks accepted; #104 merged.
 - [x] A3 test source archive verifies with its documented bundled checker, offline build and 11/11 tests; #105 merged. Final 1.0.1 artifact remains a separate gate.
+- [x] #114 merged at `9d53e9ee578ae614f76025d36ef7a258659de3f6`; exact final-head Windows/macOS/sanitizer checks PASS. Bank validation, mandatory source contents and non-destructive checksums implemented. Local valid-control 43/43 CTests and 72 executed Python tests PASS; original invalid-ROM failures retained, not relabeled as passes.
+- [ ] Post-merge Windows/macOS checks completed at the intended main checkpoint (currently running).
+- [ ] Freeze reviewed source/tooling SHAs; run non-publishing stable preparation with acceptance disabled. Retain separate four-download and two-file source staging plus full validation assets.
+- [ ] Inspect Windows EXE/manual ZIP and macOS PKG/manual ZIP, architecture/version/identity, payload/licenses, toolchain provenance, source self-verification and all hashes.
+- [ ] Record actual 1.0.0 -> 1.0.1 Windows upgrade/uninstall results on disposable hosted runner; verify user-file preservation. No local installed plugin is replaced by preparation.
+- [ ] Review strict invalid-combined-ROM rejection and pending legacy-project risk. A constructed valid test copy is not a certified replacement or matching-ROM migration; original ROM remains unchanged.
 - [ ] Published/next-candidate asset provenance and HU/EN docs reconciled.
 - [ ] Exact 1.0.1 source/platform tests, payload and installer upgrade checked.
 - [ ] Remaining host tests explicitly executed or deferred, never assumed PASS.
