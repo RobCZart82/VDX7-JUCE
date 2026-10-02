@@ -69,6 +69,13 @@ Elfogadott ROM-elrendezések:
 - 16 384 bájtos DX7 Mk I firmware, opcionálisan mellette `dx7_factory_voices_32KB.bin`.
 - 49 152 bájtos kombinált `dx7.bin`: 16 KB firmware és 32 KB gyári hangadat.
 
+Az 1.0.1 fejlesztési változat mind a 256 gyári hangszín adatait ellenőrzi,
+nem csak a fájlméretet. Hibás gyári adatot tartalmazó kombinált ROM esetén
+a teljes betöltést elutasítja; a korábban betöltött hangszer-/projektállapot
+megmarad. A külön, opcionális 32 KB-os fájlt hiba esetén figyelmeztetéssel
+kihagyja, a 16 KB-os firmware betölthető marad. A program nem javítja vagy
+korlátozza automatikusan a sérült hangadatokat; használj érvényes bankot.
+
 Automatikus keresési mappák:
 
 | Rendszer | Helyek |

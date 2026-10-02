@@ -13,6 +13,11 @@ CORE_SHA = "d5473776a0449d60a997b91bdc888598a33265ac"
 MANIFEST = "SOURCE_MANIFEST.json"
 VERIFIER = ".vdx7-source-tools/package_source.py"
 PACKAGE_README = "SOURCE_PACKAGE_README.txt"
+REQUIRED_SOURCE_FILES = frozenset((
+    "CMakeLists.txt", "LICENSE.txt", "NOTICE.md", "THIRD_PARTY.md",
+    "third_party/JUCE/LICENSE.md", "third_party/retromulator-notices/LICENSE.txt",
+    "third_party/dx7Lib/dx7.cpp",
+))
 APPROVAL_PATH = "docs/release/RELEASE_APPROVAL.json"
 APPROVED_GIT_REF = "refs/heads/main"
 SUPPORTED_LABEL = r"1\.0\.[01](?:-dev|-rc[1-9][0-9]*)?"
@@ -274,8 +279,7 @@ def package(repo, juce, core, sha, output, package_label="1.0.1-dev",
         target = ("third_party/dx7Lib/" + name.removeprefix("source/dx7Lib/")
                   if name.startswith("source/dx7Lib/") else "third_party/retromulator-notices/" + name)
         files[target] = item
-    for required in ("LICENSE.txt", "NOTICE.md", "THIRD_PARTY.md", "third_party/JUCE/LICENSE.md",
-                     "third_party/retromulator-notices/LICENSE.txt", "third_party/dx7Lib/dx7.cpp"):
+    for required in sorted(REQUIRED_SOURCE_FILES):
         if required not in files:
             raise ValueError(f"Required source/notice missing: {required}")
     kind = ("development-corresponding-source" if package_label.endswith("-dev")
@@ -355,6 +359,14 @@ def verify(archive_path):
         expected = [entry["path"] for entry in entries]
         if len(expected) != len(set(expected)) or set(names) != set(expected) | {MANIFEST}:
             raise ValueError("ZIP inventory differs from manifest")
+        required = set(REQUIRED_SOURCE_FILES)
+        # Historical 1.0.0 packages may predate the separate bundled checker.
+        # Current packages require both generated files, never only one half.
+        if label.startswith("1.0.1") or VERIFIER in expected or PACKAGE_README in expected:
+            required.update((VERIFIER, PACKAGE_README))
+        missing = required - set(expected)
+        if missing:
+            raise ValueError("Required source/notice/tooling missing: " + ", ".join(sorted(missing)))
         for entry in entries:
             data = archive.read(entry["path"])
             inspect_payload(entry["path"], data, upstream=entry["path"].startswith("third_party/"))

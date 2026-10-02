@@ -63,6 +63,13 @@ Accepted ROM layouts:
 - 16,384-byte DX7 Mk I firmware, optionally beside `dx7_factory_voices_32KB.bin`.
 - 49,152-byte combined `dx7.bin`: 16 KB firmware plus 32 KB factory data.
 
+The 1.0.1 development version validates all 256 factory voices, not only the
+file size. A combined ROM containing invalid factory data is rejected in full;
+the previously loaded instrument/project state is preserved. An invalid
+separate optional 32 KB file is ignored with a warning, while the 16 KB firmware
+can still load. The program does not automatically repair or clamp invalid
+voice data; supply a valid bank.
+
 Automatic search folders:
 
 | System | Locations |

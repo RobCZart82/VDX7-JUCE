@@ -1465,7 +1465,8 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
             ignoredCompanion = !companion.existsAsFile()
                 || companion.getSize() != VDX7Engine::kFactoryVoicesSize
                 || !readFile(companion, VDX7Engine::kFactoryVoicesSize, voices)
-                || voices.size() != VDX7Engine::kFactoryVoicesSize;
+                || voices.size() != VDX7Engine::kFactoryVoicesSize
+                || !VDX7VoiceData::hasValidPackedVoices(voices.data(), voices.size());
             if (ignoredCompanion) voices.clear();
         }
     }
@@ -1482,7 +1483,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         if (!ok)
         {
             std::scoped_lock metadataLock(metadataMutex_);
-            statusText_ = "Invalid ROM: expected 16 KB firmware or 48 KB combined image";
+            statusText_ = "Invalid ROM: expected 16 KB firmware or 48 KB combined image with valid packed factory voices";
             if (error != nullptr) *error = statusText_;
             return false;
         }

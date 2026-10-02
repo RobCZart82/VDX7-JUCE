@@ -29,6 +29,21 @@ void updateVmemChecksum(std::vector<uint8_t>& message)
 
 int main()
 {
+    std::vector<uint8_t> factory(256 * VDX7VoiceData::kPackedVoiceSize, 0);
+    require(VDX7VoiceData::hasValidPackedVoices(factory.data(), factory.size()), "valid eight-bank image");
+    require(!VDX7VoiceData::hasValidPackedVoices(nullptr, factory.size()), "null bank rejected");
+    require(!VDX7VoiceData::hasValidPackedVoices(factory.data(), 0), "empty bank rejected");
+    require(!VDX7VoiceData::hasValidPackedVoices(factory.data(), factory.size() - 1), "partial voice rejected");
+    for (const int slot : {0, 31, 32, 255})
+    {
+        factory[slot * 128 + 12] = 15 << 3;
+        require(!VDX7VoiceData::hasValidPackedVoices(factory.data(), factory.size()), "every bank detune validated");
+        factory[slot * 128 + 12] = 0;
+    }
+    factory.back() = 128;
+    require(!VDX7VoiceData::hasValidPackedVoices(factory.data(), factory.size()), "seven-bit names required");
+    factory.back() = 127;
+    require(VDX7VoiceData::hasValidPackedVoices(factory.data(), factory.size()), "seven-bit boundary accepted");
     std::array<uint8_t, VDX7VoiceData::kPackedVoiceSize> voice {};
 
     for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)

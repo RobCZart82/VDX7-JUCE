@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+import source_package_fixture as fixture
 
 SCRIPTS = Path(__file__).parents[1] / "scripts"
 spec = importlib.util.spec_from_file_location("source_downloads", SCRIPTS / "stage_source_downloads.py")
@@ -28,13 +29,13 @@ class SourceDownloadTests(unittest.TestCase):
         self.source, self.tool, self.approval = "a" * 40, "b" * 40, "c" * 40
         self.name = f"VDX7-1.0.1-{self.source}-corresponding-source.zip"
         self.data = b"// synthetic source fixture\n"
+        self.payload = {**fixture.files(), "Source/example.cpp": (self.data, 0o644)}
         self.manifest = {
             "schema": 1, "kind": "stable-release-preparation-corresponding-source",
             "package_label": "1.0.1", "source_commit": self.source,
             "packager_commit": self.tool, "release_accepted": False,
             "dependencies": {"JUCE": p.JUCE_SHA, "Retromulator": p.CORE_SHA},
-            "files": [{"path": "Source/example.cpp", "mode": 0o644,
-                       "size": len(self.data), "sha256": hashlib.sha256(self.data).hexdigest()}],
+            "files": fixture.entries(self.payload),
         }
         self.write_archive()
         (self.assets / "VDX7-1.0.1-Windows-x64-Setup.exe").write_bytes(b"retained binary")
@@ -43,7 +44,7 @@ class SourceDownloadTests(unittest.TestCase):
         archive = self.assets / self.name
         if archive.exists():
             archive.unlink()
-        p.write_zip(archive, {"Source/example.cpp": (self.data, 0o644)}, self.manifest)
+        p.write_zip(archive, self.payload, self.manifest)
         source_downloads.write_manifest([archive], self.assets / "SHA256SUMS.txt")
 
     def stage(self, **changes):
@@ -64,6 +65,14 @@ class SourceDownloadTests(unittest.TestCase):
     def test_hash_failure_creates_no_output(self):
         with (self.assets / self.name).open("ab") as stream:
             stream.write(b"tampered")
+        with self.assertRaises(ValueError):
+            self.stage()
+        self.assertFalse(self.output.exists())
+
+    def test_required_license_removed_and_rehashed_creates_no_output(self):
+        del self.payload["LICENSE.txt"]
+        self.manifest["files"] = fixture.entries(self.payload)
+        self.write_archive()
         with self.assertRaises(ValueError):
             self.stage()
         self.assertFalse(self.output.exists())
