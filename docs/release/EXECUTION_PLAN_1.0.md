@@ -6,14 +6,15 @@ The current corrective round starts from main
 `928c8b7dbea9816df8e5cc3700354859aaa4d8d1`, after PR #113.
 The owner approved fixing the three reproduced findings below on a separate
 branch, `codex/factory-bank-source-integrity`, in Draft PR #114. Implementation
-is complete for the source/checksum guards; factory-bank acceptance policy
-requires an owner decision after the compatibility failure described below.
+is complete for the source/checksum guards. Owner decision (2026-10-02): reject
+the entire invalid combined ROM, preserving the previous state. No automatic
+factory-data clamping or firmware-only fallback for a bad combined image.
 Required final-head PR gates are pending.
 Do not treat this as acceptance of a release candidate.
 
 | ID | Reproduced failure | Current correction / acceptance |
 | --- | --- | --- |
-| BH-20261002-01 | P2: invalid optional/combined factory voice data accepted into engine state | Draft implementation validates all 256 seven-bit packed voices before engine mutation; ignores a bad optional companion with a warning and rejects bad combined images. Focused native boundary/preservation/export/reopen PASS. Full original-fixture suite FAIL: four later factory voices have out-of-range fields, so strict rejection prevents 28 tests loading that previously used image. Resolve owner-visible combined-image policy/fixture compatibility before merge; do not weaken checks silently. |
+| BH-20261002-01 | P2: invalid optional/combined factory voice data accepted into engine state | Owner-approved policy: validate all 256 seven-bit packed voices before engine mutation; ignore a bad optional companion with a warning, but reject the entire bad combined image and preserve previous state. Focused native boundary/preservation/export/reopen PASS. Original-fixture suite FAIL due to four out-of-range later voices; valid positive-control full-suite execution pending. Original ROM unchanged; no runtime normalization. |
 | BH-20261002-02 | P2: verifier/staging accepts a regenerated inventory missing mandatory LICENSE | Share mandatory source/notice minimum with archive creation; require bundled checker/readme for 1.0.1 while retaining historical 1.0.0 compatibility. Missing-file negative tests PASS. This is a minimum-content check, not publisher authentication or a complete independent Git comparison. |
 | BH-20261002-03 | P3: checksum output aliases an input and destroys the asset | Reject identical/resolved paths, hardlinks and symbolic-link outputs before writing. Same-path/alias/hardlink regressions PASS; Windows symbolic-link capability test NOT RUN. |
 

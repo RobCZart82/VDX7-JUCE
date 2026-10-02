@@ -79,7 +79,7 @@ not a defense against hostile concurrent filesystem races.
   transition executable, then later combined-ROM loading fails. This is not
   acceptable full-suite verification and the PR must remain Draft.
 
-## Compatibility finding and required decision
+## Compatibility finding and owner decision
 
 The previously used local 48 KB combined fixture has no high-bit bytes or
 invalid detune codes, but four factory voices in later banks contain fields
@@ -91,12 +91,18 @@ every factory voice. The original fixture was not modified or normalized.
 
 This does not establish whether those bytes are accidental corruption or
 intentional legacy factory data. Do not claim that the original fixture is now
-compatible, or that all firmware tests pass. The owner must resolve the public
-combined-image behavior (strict rejection versus firmware-only fallback with
-a visible warning), and acceptance must include a valid full-bank fixture.
-Do not silently clamp factory patch values or weaken the shared SysEx/state
-validator. Source/checksum fixes are independently verified; bank compatibility
-and the complete native suite remain open before merge.
+compatible. The owner explicitly chose (2026-10-02) full combined-image
+rejection, preserving the previous state. There is no firmware-only fallback
+or runtime normalization for a bad combined bank. An additional processor
+regression compares the complete saved state before/after rejection, checks
+that the previous factory bank is retained/exportable and observes an error.
+
+A separate private positive-control copy changes only the four out-of-range
+numeric fields to 99 for testing. Firmware and the entire first bank are
+unchanged, and the original image hash is checked unchanged. This constructed
+test copy is not a certified replacement ROM or an accepted release fixture;
+it is never committed/uploaded. Full native execution on this valid control
+is pending. Do not silently clamp product inputs or weaken SysEx/state checks.
 
 ## NOT RUN / acceptance boundaries
 

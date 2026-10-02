@@ -392,6 +392,20 @@ void testFactoryVoiceValidation(const juce::File& rom)
             "valid companion accepted as positive control");
     require(processor.exportSyx(folder.getChildFile("valid-export.syx"), true, error),
             "valid companion remains exportable");
+    const auto preservedState = save(processor);
+    std::vector<uint8_t> invalidCombined(firmware, firmware + VDX7Engine::kFirmwareSize);
+    auto invalidVoices = voices;
+    invalidVoices[255 * 128 + 12] = 15 << 3;
+    invalidCombined.insert(invalidCombined.end(), invalidVoices.begin(), invalidVoices.end());
+    const auto combinedFile = folder.getChildFile("invalid-combined.bin");
+    require(combinedFile.replaceWithData(invalidCombined.data(), invalidCombined.size()),
+            "write invalid synthetic combined image");
+    require(!processor.loadRomFromFile(combinedFile, &error) && error.contains("Invalid ROM"),
+            "processor rejects entire invalid combined image with visible error");
+    require(processor.hasFactoryVoices() && preservedState == save(processor),
+            "combined rejection preserves complete saved processor state and factory bank");
+    require(processor.exportSyx(folder.getChildFile("preserved-export.syx"), true, error),
+            "previous bank remains exportable after combined rejection");
     std::cout << "PASS: factory validation, preservation, warning, export and reopen\n";
 }
 } // namespace
