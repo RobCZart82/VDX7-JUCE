@@ -1,5 +1,75 @@
 # Consolidated execution plan — 1.0.1 corrective development
 
+## Az 1.0.1 publikálás kötelező lezárási terve
+
+Tulajdonosi pontosítás: 2026-10-02. A cél az 1.0.1 publikálása, nem új
+funkciók vagy GUI-átalakítás. Ez a fejezet irányadó az alábbi részletes R1–R7
+feladatsorhoz; eltérés esetén ez a szigorúbb feltétel érvényes.
+
+Három kapu nem halasztható: automatizált Windows/macOS és hibakereső
+ellenőrzések; telepítő-, csomagtartalom-, checksum- és megfelelő forrásvizsgálat;
+ismert kiadásblokkoló hibák javítása. Bármelyik FAIL megállítja a publikálást.
+Ezeknél nincs kockázatvállalással helyettesített PASS.
+
+### A végrehajtás sorrendje
+
+1. **Forrás és bizonyítékok rögzítése.** Frissen ellenőrizni a main állapotát,
+   a nyitott PR-eket, review-kat és Actions futásokat. A jelenlegi vizsgált jelölt
+   `b7fce0503059c8c2e3c61d6ccf5af33612739e32`; még nem végső jóváhagyás.
+   A #119 dokumentációs PR beolvadt a `3442a5e…` mainbe; ez nem új runtime
+   javítás, és a friss main Actions állapota külön ellenőrizendő. Külön rögzíteni a
+   termékforrást A, a csomagolót B és később a jóváhagyási commitot C.
+2. **Kötelező automatizált regresszió.** A végső PR-head szükséges Windows,
+   macOS és ASan/UBSan ellenőrzései legyenek PASS; Python és CTest eredmények
+   pontos forráshoz és konfigurációhoz kötve. Csak zöld kapuk és rendezett
+   review után merge. A következő merge vagy csomagolási indítás előtt a
+   beolvasztott main platformellenőrzései is fejeződjenek be sikeresen.
+3. **Ismert blokkolók lezárása.** Minden bizonyított adatvesztési,
+   állapotmegőrzési, biztonsági vagy csomagintegritási hibához reprodukció,
+   minimális javítás és regressziós bizonyíték kell. Új hiba esetén vissza ide,
+   új jelölttel és az érintett kapuk ismétlésével. A teszthiány nem automatikusan
+   termékhiba, de nem nevezhető PASS-nak sem.
+4. **A pontos csomagok független vizsgálata.** Windows EXE és Manual ZIP,
+   macOS Universal PKG és Manual ZIP: külső artifact-digest és belső hash,
+   architektúra, verzió, azonosítók, telepítési helyek, licencek, payloadazonosság
+   és tiltott tartalom ellenőrzése. Windows natív telepítés/frissítés/eltávolítás
+   és felhasználói fájlmegőrzés ellenőrzése kötelező. A megfelelő teljes
+   forráscsomag checkerje, dependency-pinjei és friss offline build/tesztje
+   szintén kötelező, nem halasztható. A négy/kétfájlos staging legyen pontos.
+5. **Kézi tesztek tételes lezárása.** A végső REAPER/ROM/audio próbák,
+   mintavételi frekvencia–buffer mátrix, automatizáció/többpéldányos/HiDPI,
+   mentési párbeszédek és fizikai Intel Mac vizsgálat állapota jelenleg
+   NOT RUN vagy korábbi, eltérő buildhez kötött bizonyíték. Halasztásukhoz
+   külön tulajdonosi döntés kell; a mostani három kötelező kapu kijelölése
+   nem fogadja el automatikusan e halasztásokat. A szigorú ROM-elutasítás és
+   régi projekt helyreállításának kockázatát külön kell vállalni vagy tesztelni.
+6. **Elfogadott build és kiadási dokumentáció.** A/B jóváhagyása után külön C
+   rekord, majd elfogadott workflow-futás. Az új végső fájlokat ismét ellenőrizni;
+   prep hash nem másolható át feltételezésből. HU/EN leírásban pontos négy hash,
+   forráslink, platformkorlátok, unsigned/ad-hoc és notarizációs korlátok,
+   ROM-kockázat és elfogadott halasztások. A végleges fájlok publikálásához
+   külön tulajdonosi jóváhagyás szükséges.
+7. **Publikálás és nyilvános ellenőrzés.** Külön tartós `v1.0.1-source`
+   forráskiadás (nem latest), rá mutató `v1.0.1` termékkiadás (latest), pontosan
+   négy termékletöltéssel. Friss nyilvános letöltésből hash- és forrásellenőrzés,
+   linkek és latest státusz ellenőrzése. A `v1.0.0` tag és assetek változatlanok.
+
+### Az eddigi bizonyítékok határa
+
+A b7fce05 pontos forráscsomagjának 13/13 CTest, 77/77 Python, offline build
+és VST3 fordítás eredménye PASS. A `37051589142` előkészítő futás négy jobja
+PASS; a letöltött három artifact külső és hét belső hash-ellenőrzése PASS.
+A hosted forrás ZIP byte-ra azonos a helyben offline tesztelt ZIP-pel.
+Ez nem végső publikálási vagy REAPER-elfogadás: a legújabb csomagok további
+független payloadvizsgálata és az elfogadott build ismételt ellenőrzése hátravan.
+Az eredeti hibás kombinált ROM tesztjének FAIL eredménye nem törölhető és
+nem változtatható PASS-ra egy módosított pozitív kontroll alapján.
+
+Csak a részletesebb ROM-hibajelzés halasztása már elfogadott: DEFERRED a
+következő javítókiadásra. A szigorú ellenőrzés és állapotvédelem marad;
+nincs automatikus ROM-javítás vagy néma fallback. Az új terv elkészítése
+önmagában nem indít telepítést, merge-et, tag létrehozását vagy publikálást.
+
 ## Release publikálási terv — 1.0.1
 
 Állapotellenőrzés: 2026-10-02. Ez a **következő munkák egyetlen irányadó
@@ -18,7 +88,7 @@ bizonyítékok, nem újra végrehajtandó párhuzamos tervek.
   VST3 fordítás PASS; célzott privát-firmware bankteszt PASS. A nagyobb
   ROM-optimalizálás nem indul, a részletes hibajelzés tulajdonosi döntéssel
   a következő javítókiadásra halasztva. [Forrásbuild](../validation/VALIDATION_20261002_SOURCE_BUILD_101.md).
-  Új, nem elfogadott natív csomagolás: `37051589142`, még folyamatban.
+  Új, nem elfogadott natív csomagolás: `37051589142`, mind a négy job PASS.
 - A [36998278475 csomagolási próba](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36998278475)
   PASS: Windows EXE és kézi ZIP, macOS Universal PKG és kézi ZIP, platformonként
   13/13 ROM nélküli teszt, Windows telepítés/frissítés/eltávolítás, forrásellenőrzés
@@ -70,8 +140,8 @@ a régi forrás ZIP a friss main dokumentációját is tartalmazza.
    titok, cache vagy helyi személyes útvonal nem kerülhet a csomagokba.
 4. A megfelelő corresponding-source ZIP-et a mellékelt önálló checkerrel
    ellenőrizni; forrás/dependency pinek, minimumtartalom és licencek megfeleljenek
-   A/B-nek. Rögzíteni egy hálózat nélküli build/tesztet a végleges forráscsomagból,
-   vagy ennek külön, indokolt tulajdonosi halasztását; régi ZIP tesztje nem elég.
+   A/B-nek. Rögzíteni egy hálózat nélküli build/tesztet a végleges forráscsomagból;
+   ez kötelező, nem halasztható, és régi ZIP tesztje nem elég.
 5. A `Four-Downloads` pontosan négy fájlos, a `Source-Downloads` forrás ZIP +
    checksum kétfájlos készlet legyen. Letöltési akadály esetén kérni a konkrét
    artifact ZIP átadását; nem kell hozzá REAPER vagy a telepített plug-in cseréje.

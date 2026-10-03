@@ -1,4 +1,9 @@
 {
   "schema": 1,
-  "approved_release": null
+  "approved_release": {
+    "package_label": "1.0.1",
+    "source_commit": "b7fce0503059c8c2e3c61d6ccf5af33612739e32",
+    "packager_commit": "b7fce0503059c8c2e3c61d6ccf5af33612739e32",
+    "workflow_ref": "RobCZart82/VDX7-JUCE/.github/workflows/prepare-stable-package.yml@refs/heads/main"
+  }
 }
