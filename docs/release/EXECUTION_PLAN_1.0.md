@@ -53,9 +53,16 @@ korábbi elfogadási rekordja kizárólag a régi párosra érvényes.
 engedélyezte a végső tesztbuild előkészítésének folytatását, nem a publikálást.
 A dokumentációs #125 beolvadt `23b8163fef1bf65b0f9a1a869648cefdaabac367`-nél;
 a main Windows `37226950763` és macOS `37226950797` ellenőrzése PASS.
-Következő függő kapu: külön felülvizsgált C rekord és zöld merge/main; majd az új
-elfogadott módú csomagok tényleges ellenőrzése és tulajdonosi REAPER-teszt.
-Az előkészítő hash-ek nem számítanak automatikusan végső hash-nek.
+A #126 minden PR-teszt és mindkét felülvizsgálat után beolvadt:
+C=`3766035aa42de22e581c1b2014edeeecbbff01f9`; main Windows
+`37232572296` és macOS `37232572281` PASS. A végső elfogadott módú
+`37233357714` futás négy feladata PASS; a tényleges letöltött négy termékfájl
+és külön forrás független vizsgálata, friss offline forrásbuildje PASS.
+[Új végső hash-ek és átadás](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md).
+Következő kapu: a tulajdonos telepíti és teszteli ezeket a pontos fájlokat
+Windows/macOS REAPER-ben; utána a nem futtatott vizsgálatok tételes lezárása,
+végleges HU/EN publikálási szöveg és külön publikálási engedély.
+Az előkészítő és b7fce05 hash-ek nem az új végső hash-ek.
 
 2026-10-04 új tulajdonosi funkciókérés: az ellenőrzött hangszín-visszaállításra
 tartalomalapú, részleges ROM1A–ROM4B bankmappa épül. Ez célzott kivétel a
