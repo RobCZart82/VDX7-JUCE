@@ -139,6 +139,17 @@ melletti 1–32-es listából választható, a korábbi automatizálható param�
 
 A LOAD SYX egy teljes DX7-hangszínt (163 bájtos VCED) vagy bankot (4104 bájtos VMEM) fogad. Egy hangszín a kijelölt helyet, egy bank a szerkeszthető bankot cseréli le. Összefűzött dumpok és más hangszertípusok formátumai nem támogatottak. Importkor szerkezet- és checksum-ellenőrzés történik. Az export device/channel nibble értéke 0; az import 0–15 értéket fogad.
 
+Egyes archivált bankokban 127-es operátor-burkológörbe sebesség/szint és
+100-as finomhangolás szerepel, a szerkesztő normál 0–99-es tartományán túl.
+Ezeket a konkrét legacy értékeket az import, a USER-tárolás, a projekt RAM-ja
+és a SysEx-export megőrzi; a letöltött fájlokat nem kell átírnod. A szerkesztő
+továbbra is 0–99-et használ: puszta megtekintés nem írja át a tárolt bájtot,
+az adott paraméter kifejezett szerkesztése viszont a választott normál értékre
+cseréli. A többi paraméterhatár, a 7 bites adatok, a méret, a fejléc és az
+ellenőrzőösszeg ellenőrzése megmarad. A teljes VMEM-bank exportja a fenntartott
+biteket is megőrzi; az egyhangszínes VCED-ben ezeknek nincs külön mezőjük,
+de a támogatott legacy paraméterértékek ott is megmaradnak.
+
 ## 7. Mentés és automatizálás
 
 148 host-paraméter érhető el: 145 hangparaméter és Master Volume, Pitch, Mod. A korábbi paraméterazonosítók és sorrendjük megmaradtak.

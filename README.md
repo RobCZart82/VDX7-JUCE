@@ -101,6 +101,11 @@ protections; read the installation guide before proceeding.
 Avoid duplicate plug-in installations. Never disable system-wide security protections.
 See [first sound and firmware setup](docs/guides/GUIDE_EN.md#2-installation-and-first-sound).
 
+Archived DX7 banks can contain operator envelope values of 127 or fine-frequency
+values of 100. VDX7 accepts these specific legacy values without rewriting the
+bank data. Other parameter limits, seven-bit data, file structure and checksum
+checks remain enforced; this is not unrestricted import of malformed banks.
+
 ## Documentation
 
 - [Documentation index and archive](docs/README.md)

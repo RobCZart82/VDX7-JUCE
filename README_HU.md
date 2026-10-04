@@ -102,6 +102,11 @@ védelmet; olvasd el a telepítési útmutatót.
 Kerüld a kettős plugintelepítést. Ne kapcsold ki a rendszer egészének biztonsági védelmét.
 Részletek: [telepítés és első megszólaltatás](docs/guides/GUIDE_HU.md#2-telepítés-és-első-megszólaltatás).
 
+Archivált DX7-bankokban előfordulhat 127-es operátor-burkológörbeérték és
+100-as finomhangolás. A VDX7 ezeket a konkrét legacy értékeket a bankadatok
+átírása nélkül elfogadja. A többi paraméterhatár, a 7 bites adatok, a fájlszerkezet
+és az ellenőrzőösszeg vizsgálata megmarad; ez nem sérült bankok korlátlan betöltése.
+
 ## Dokumentáció
 
 - [Dokumentációs tartalomjegyzék és archívum](docs/README.md)

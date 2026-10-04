@@ -39,6 +39,8 @@ preserved as historical evidence, not fresh acceptance claims.
 
 ## History and evidence
 
+- [Archived DX7 bank acceptance and data preservation](validation/VALIDATION_20261004_LEGACY_BANK_COMPATIBILITY.md)
+
 Old test reports are not deleted or automatically marked obsolete: they may
 explain a regression and its fix, but do not establish PASS on a new candidate.
 Historical plans do not override the current execution plan or reopen the
