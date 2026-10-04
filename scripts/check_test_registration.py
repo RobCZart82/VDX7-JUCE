@@ -7,6 +7,7 @@ import math
 ROM_FREE = set("""user_bank deferred_midi latest_display status_priority bounded_file
 voice_data algorithms resampling gui_header mono_correction version_identity""".split())
 ROM_FREE.add("pre_rom_state")
+ROM_FREE.add("factory_banks")
 ROM_FREE.add("cc120_timeline_unit")
 LOCAL_ROM = set("""stability midi_range timing processor stress v18_profile host_reset
 reactivation reset_history_pair firmware_ownership history_retirement overlap_retirement

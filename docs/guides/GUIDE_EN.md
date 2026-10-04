@@ -97,6 +97,49 @@ Automatic search folders:
 
 Factory data enables ROM1A–ROM4B: eight banks of 32 programs. Without it, supply compatible voice/bank SysEx data. LOAD ROM also allows manual file selection.
 
+### Factory bank folder
+
+The new development build can use separate, user-supplied factory SysEx banks
+with firmware alone; a combined firmware/bank ROM is not required. Open
+**SETTINGS → Bank folder**, then copy your `.syx` files directly into that folder.
+Choose **Refresh banks** in SETTINGS to update an existing instance. New
+instances scan the folder when firmware loads. The main GUI layout is unchanged.
+
+- macOS: `~/Library/Application Support/VDX7-JUCE/Factory Banks/`
+- Windows: `%APPDATA%\VDX7-JUCE\Factory Banks\`
+
+One to eight banks can be present. Only available ROM1A–ROM4B slots are enabled.
+Recognition uses the SHA-256 fingerprint of the complete validated 4096-byte
+bank payload, not filenames or patch names. Renaming an identical file does not
+change its slot. Reference fingerprints identify known dumps; they do not certify
+Yamaha authorship or grant redistribution permission. No bank bytes are bundled.
+
+Files must be complete 4104-byte DX7 VMEM bank messages with valid structure,
+checksum, seven-bit values and supported parameter values. Unknown or edited
+banks do not receive a factory slot: use **LOAD SYX** to load them as CUSTOM.
+Single voices, concatenated messages and nested folders are not scanned.
+Scanning is limited to 128 SysEx files; remove duplicates/extraneous files if
+the limit warning appears. An incomplete scan does not replace the existing
+catalog. Identical duplicates do not create additional slots.
+Source files are never rewritten.
+
+Refreshing replaces the available catalog using the current folder and any
+valid legacy combined-ROM/companion banks, but does not replace the working
+sound or erase its unexported-edit indicator. Removing a bank disables its slot
+unless the legacy ROM still supplies it. If the current bank's catalog entry
+disappears/changes, the current sound stays in RAM and is labelled CUSTOM.
+Refreshing is blocked while a project awaits its matching firmware. SETTINGS
+bank-folder buttons do not apply other unfinished settings in that dialog.
+
+DAW projects capture the current working bank, latest edited voice/name,
+selected program and a private copy of the available catalog. Reopening a
+project uses that saved sound/catalog even if the local bank folder has changed
+or vanished. Folder refresh never silently substitutes a different sound during
+project restore. Firmware is not embedded and the matching original ROM is still
+required. Old projects without a catalog property retain their legacy behavior.
+Each instance takes its own snapshot; refresh other open instances explicitly.
+Project storage is recall, not a licence to redistribute Yamaha data.
+
 ## 4. Voice editing
 
 - Six operator tabs: output level, coarse/fine tuning, detune, rate scaling, velocity sensitivity and amplitude-modulation sensitivity.

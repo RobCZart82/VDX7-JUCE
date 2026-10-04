@@ -40,6 +40,13 @@ frequency 100 found in archived banks, without rewriting downloaded files.
 USER/project storage and SysEx export retain those values. Other semantic,
 seven-bit, structure and checksum checks remain enforced. Editor ranges stay 0–99.
 
+The owner also requested a factory bank folder: SETTINGS opens the folder and
+refreshes content-identified ROM1A–ROM4B slots from user-supplied SysEx files.
+Partial libraries are supported; projects retain their own catalog and latest
+edited sound even if local bank files change/disappear. No Yamaha bank bytes
+are distributed. This feature also requires a new candidate and final owner
+host acceptance; the old hashes below do not identify it.
+
 Upgrade warning: invalid factory data in a combined 48 KB ROM is now rejected
 in full without replacing the previous instrument state. An old project tied
 to that ROM may remain pending. A manually edited or different ROM is not a
@@ -70,6 +77,13 @@ operátor EG sebesség/szint és 100-as finomhangolási értékét, a letöltöt
 átírása nélkül. A USER-/projekttárolás és a SysEx-export ezeket megőrzi.
 A többi paraméterhatár, a 7 bites adatok, a szerkezet és a checksum ellenőrzése
 megmarad. A szerkesztő tartománya továbbra is 0–99.
+
+Tulajdonosi kérésre gyári bankmappa is készül: a SETTINGS megnyitja a mappát
+és saját SysEx fájlok tartalma alapján frissíti a ROM1A–ROM4B helyeket.
+Részleges készlet is használható; a projekt saját bankmásolata és legutóbbi
+szerkesztett hangja megmarad a helyi fájlok változásától/eltűnésétől függetlenül.
+Yamaha bankadatot nem terjesztünk. Ehhez is új jelölt és végső tulajdonosi
+hostelfogadás szükséges; az alábbi régi hash-ek nem ezt azonosítják.
 
 Hibás gyári adatot tartalmazó kombinált 48 KB-os ROM teljes betöltése elutasítva,
 a korábbi hangszerállapot megőrzésével. Az ehhez kötött régi projekt függőben

@@ -74,6 +74,7 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     // loadVoices(nullptr, 0) does NOT clear the core's previous pointer.
     dx7_.loadVoices(emptyFactoryBank_.data(), emptyFactoryBank_.size());
     factoryVoices_ = std::move(newFactoryVoices);
+    factoryBankMask_ = factoryVoices_.empty() ? 0 : 255;
     if (!factoryVoices_.empty())
         dx7_.loadVoices(factoryVoices_.data(), factoryVoices_.size());
     hostResetInProgress_ = false;
@@ -127,10 +128,12 @@ bool VDX7Engine::configureMonoCorrectionForStateRestore(bool enabled)
     // Retain owned copies because loadRomImage replaces the image/bank storage.
     const std::vector<uint8_t> firmware(dx7_.memory + 0xc000, dx7_.memory + 0x10000);
     const auto voices = factoryVoices_;
+    const auto mask = factoryBankMask_;
     const bool previous = monoCorrectionRequested_;
     monoCorrectionRequested_ = enabled;
     if (loadRomImage(firmware.data(), firmware.size(),
-                     voices.empty() ? nullptr : voices.data(), voices.size())) return true;
+                     voices.empty() ? nullptr : voices.data(), voices.size()))
+        return installFactoryBanks(voices, mask);
     monoCorrectionRequested_ = previous;
     return false;
 }
@@ -646,7 +649,7 @@ void VDX7Engine::processQueuedMessage(dx7Emu::Message msg)
             break;
 
         case CtrlID::cartridge_num:
-            dx7_.setBank(msg.byte2, true);
+            if (hasFactoryBank(msg.byte2)) dx7_.setBank(msg.byte2, true);
             break;
 
         case CtrlID::protect:
@@ -707,7 +710,7 @@ void VDX7Engine::parseMidiBytes(const uint8_t* data, int size)
     if (VDX7MidiValidation::isIgnoredAdapterEvent(data, static_cast<std::size_t>(size))) return;
     // Unsupported bank requests must not trigger serial-overflow recovery.
     if ((data[0] & 0xf0) == 0xb0 && size == 3 && data[1] == 32
-        && (data[2] >= 8 || !hasFactoryVoices())) return;
+        && !hasFactoryBank(data[2])) return;
     // Channel-mode resets do not enter the serial queue. Handle them before
     // reserving capacity so a full queue cannot turn CC120 into soft overflow
     // recovery or silently discard CC121.
@@ -915,9 +918,23 @@ bool VDX7Engine::loadSyxBank(const uint8_t* data, std::size_t size)
     return true;
 }
 
+bool VDX7Engine::installFactoryBanks(const std::vector<uint8_t>& image, uint8_t mask)
+{
+    if (!loaded_ || (mask == 0 ? !image.empty()
+        : image.size() != kFactoryVoicesSize
+            || !VDX7VoiceData::hasValidPackedVoices(image.data(), image.size()))) return false;
+    auto owned = image;
+    // The core retains a non-owning pointer: detach BEFORE replacing storage.
+    dx7_.loadVoices(emptyFactoryBank_.data(), emptyFactoryBank_.size());
+    factoryVoices_ = std::move(owned);
+    factoryBankMask_ = mask;
+    if (mask != 0) dx7_.loadVoices(factoryVoices_.data(), factoryVoices_.size());
+    return true;
+}
+
 bool VDX7Engine::selectFactoryBank(int bankIndex)
 {
-    if (!loaded_ || !hasFactoryVoices() || bankIndex < 0 || bankIndex > 7)
+    if (!loaded_ || !hasFactoryBank(bankIndex))
         return false;
 
     dx7_.setBank(bankIndex, false);
@@ -1168,8 +1185,10 @@ bool VDX7Engine::restoreProjectRam(const std::vector<uint8_t>& in)
     const int tuning = std::clamp((value(0x2311) << 8) + value(0x2312) - 256, -256, 255);
     const std::vector<uint8_t> firmware(dx7_.memory + 0xc000, dx7_.memory + 0x10000);
     const auto voices = factoryVoices_;
+    const auto mask = factoryBankMask_;
     if (!loadRomImage(firmware.data(), firmware.size(),
                       voices.empty() ? nullptr : voices.data(), voices.size())) return false;
+    if (!installFactoryBanks(voices, mask)) return false;
     std::vector<uint8_t> clean;
     if (!saveRam(clean)) return false;
     // Only the packed 32-voice bank is copied wholesale. Runtime RAM, queues,

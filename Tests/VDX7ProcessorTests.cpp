@@ -575,6 +575,148 @@ static void testLegacyProcessorImport(const juce::File& romFile)
     std::cout << "PASS: legacy import, passive sync, single/bank export, project restore and negative import\n";
 }
 
+static void testPendingFactoryCatalog()
+{
+    auto processor = std::make_unique<VDX7AudioProcessor>(false);
+    auto empty = save(*processor);
+    auto xml = juce::AudioProcessor::getXmlFromBinary(empty.getData(), int(empty.getSize()));
+    auto tree = juce::ValueTree::fromXml(*xml);
+    require(!tree.hasProperty("factoryBankMask"), "first no-ROM save does not freeze an unknown catalog");
+    VDX7FactoryBanks::Snapshot banks;
+    banks.image.resize(32768, 0);
+    banks.mask = 4;
+    banks.image[2*4096+14] = 75;
+    VDX7FactoryBanks::writeState(tree, banks);
+    juce::MemoryBlock state;
+    juce::AudioProcessor::copyXmlToBinary(*tree.createXml(), state);
+    processor->setStateInformation(state.getData(), int(state.getSize()));
+    const auto preserved = save(*processor);
+    auto savedXml = juce::AudioProcessor::getXmlFromBinary(preserved.getData(), int(preserved.getSize()));
+    VDX7FactoryBanks::Snapshot restored;
+    bool present = false;
+    require(VDX7FactoryBanks::readState(juce::ValueTree::fromXml(*savedXml), restored, present)
+        && present && restored.image == banks.image && restored.mask == banks.mask,
+        "missing firmware retains complete project catalog");
+    for (int mutation = 0; mutation < 3; ++mutation)
+    {
+        auto bad = tree.createCopy();
+        if (mutation == 0) bad.removeProperty("factoryBankMask", nullptr);
+        if (mutation == 1) bad.setProperty("factoryBankMask", 256, nullptr);
+        if (mutation == 2) bad.setProperty("factoryBanks", "broken", nullptr);
+        juce::AudioProcessor::copyXmlToBinary(*bad.createXml(), state);
+        processor->setStateInformation(state.getData(), int(state.getSize()));
+        require(save(*processor) == preserved, "invalid catalog cannot replace pending project");
+    }
+}
+
+static void testFactoryBankFolder(const juce::File& rom, const juce::File& sourceFolder)
+{
+    // Private local data only; nothing from these user files enters the repository.
+    const auto scan = VDX7FactoryBanks::scan(sourceFolder);
+    require(scan.banks.mask == 255, "local eight reference banks recognised");
+    juce::MemoryBlock firmware;
+    require(rom.loadFileAsData(firmware) && firmware.getSize() >= 16384, "private firmware fixture");
+    juce::TemporaryFile firmwareFile(".rom");
+    require(firmwareFile.getFile().replaceWithData(firmware.getData(), 16384), "firmware-only local fixture");
+    const auto folder = juce::File::getSpecialLocation(juce::File::tempDirectory)
+        .getNonexistentChildFile("vdx7-private-library", {}, false);
+    struct Cleanup { juce::File folder; ~Cleanup() { folder.deleteRecursively(); } } cleanup {folder};
+    require(folder.createDirectory().wasOk(), "private isolated bank folder");
+    auto first = VDX7Sysex::encode(std::vector<uint8_t>(scan.banks.image.begin()+2*4096, scan.banks.image.begin()+3*4096));
+    const auto renamed = folder.getChildFile("not-rom2a.SYX");
+    require(renamed.replaceWithData(first.data(), first.size()), "renamed reference fixture");
+    auto processor = std::make_unique<VDX7AudioProcessor>(false);
+    require(processor->loadRomFromFile(firmwareFile.getFile()), "firmware without combined banks");
+    require(!processor->hasFactoryVoices(), "firmware-only starts with disabled slots");
+    juce::String report;
+    const auto initialRam = ram(save(*processor));
+    require(processor->refreshFactoryBanks(folder, report), "scan partial local folder");
+    require(!processor->refreshFactoryBanks(renamed, report) && processor->hasFactoryBank(2), "invalid folder leaves catalog intact");
+    auto automatic = std::make_unique<VDX7AudioProcessor>(false, folder);
+    require(automatic->loadRomFromFile(firmwareFile.getFile()) && automatic->hasFactoryBank(2)
+        && !automatic->hasFactoryBank(0) && automatic->getCurrentBank() == 2,
+        "first firmware-only load automatically scans folder and selects first available slot");
+    require(ram(save(*processor)) == initialRam, "refresh preserves working RAM");
+    for (int i = 0; i < 8; ++i) require(processor->hasFactoryBank(i) == (i == 2), "only recognised slot enabled");
+    require(!processor->selectFactoryBank(0) && processor->selectFactoryBank(2), "missing bank rejected, recognised bank selectable");
+    processor->selectProgramFromUi(7);
+    save(*processor); // commit the bank selection before changing every field
+    for (int op = 0; op < 6; ++op)
+        for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
+        {
+            const auto parameter = static_cast<VDX7VoiceData::Parameter>(p);
+            const int lo = VDX7VoiceData::parameterMinimum(parameter), hi = VDX7VoiceData::parameterMaximum(parameter);
+            set(*processor, VDX7ParameterIDs::operatorParameter(op, parameter), float(lo + (op*17+p*3)%(hi-lo+1)));
+        }
+    for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
+    {
+        const auto parameter = static_cast<VDX7VoiceData::VoiceParameter>(p);
+        const int lo = VDX7VoiceData::voiceParameterMinimum(parameter), hi = VDX7VoiceData::voiceParameterMaximum(parameter);
+        set(*processor, VDX7ParameterIDs::voiceParameter(parameter), float(lo+(p*7)%(hi-lo+1)));
+    }
+    require(processor->renameVoice("LAST EDIT"), "latest patch name");
+    const auto state = save(*processor); // no intervening processBlock
+    const auto editedRam = ram(state);
+    require(renamed.deleteFile(), "remove isolated library file");
+    require(processor->refreshFactoryBanks(folder, report) && !processor->hasFactoryVoices(), "removed library disables slots");
+    require(ram(save(*processor)) == editedRam && processor->hasUnexportedEdits(), "refresh cannot erase latest patch or dirty flag");
+    const auto changedFolderBank = VDX7Sysex::encode(std::vector<uint8_t>(scan.banks.image.begin(), scan.banks.image.begin()+4096));
+    require(folder.getChildFile("rom2a.syx").replaceWithData(changedFolderBank.data(), changedFolderBank.size()), "different local folder generation");
+    std::vector<uint8_t> combined(49152, 0); // Synthetic legacy bank data with the private firmware.
+    std::memcpy(combined.data(), firmware.getData(), 16384);
+    juce::TemporaryFile combinedFile(".rom");
+    require(combinedFile.getFile().replaceWithData(combined.data(), combined.size()), "isolated combined-image fixture");
+    auto combinedProcessor = std::make_unique<VDX7AudioProcessor>(false, folder);
+    require(combinedProcessor->loadRomFromFile(combinedFile.getFile()), "valid legacy combined fixture");
+    require(std::memcmp(ram(save(*combinedProcessor)).getData(), scan.banks.image.data(), 4096) == 0,
+        "fresh combined-image working RAM uses overlaid ROM1A, not superseded legacy bytes");
+    auto restored = std::make_unique<VDX7AudioProcessor>(false, folder);
+    restored->setStateInformation(state.getData(), int(state.getSize()));
+    require(restored->hasFactoryBank(2) && !restored->hasFactoryBank(0), "project catalog independent of absent local files");
+    require(restored->getCurrentPatchName() == "LAST EDIT" && restored->getCurrentProgram() == 7,
+        "last-edited patch name/program restored");
+    require(sameProjectRam(editedRam, ram(save(*restored))), "complete latest patch persistent RAM restored");
+    require(restored->setMonoCorrectionFromUi(true), "partial catalog MONO correction reboot");
+    require(restored->hasFactoryBank(2) && !restored->hasFactoryBank(0)
+        && sameProjectRam(editedRam, ram(save(*restored))), "MONO reboot preserves partial mask and edited sound");
+    require(restored->setMonoCorrectionFromUi(false), "restore native MONO policy");
+    const auto beforeInvalid = save(*restored);
+    auto malformedXml = juce::AudioProcessor::getXmlFromBinary(state.getData(), int(state.getSize()));
+    auto malformed = juce::ValueTree::fromXml(*malformedXml);
+    malformed.setProperty("factoryBankMask", 256, nullptr);
+    juce::MemoryBlock malformedState;
+    juce::AudioProcessor::copyXmlToBinary(*malformed.createXml(), malformedState);
+    restored->setStateInformation(malformedState.getData(), int(malformedState.getSize()));
+    require(save(*restored) == beforeInvalid, "invalid catalog cannot replace loaded project");
+    auto missing = juce::ValueTree::fromXml(*malformedXml);
+    missing.setProperty("romPath", folder.getChildFile("missing.rom").getFullPathName(), nullptr);
+    juce::MemoryBlock missingState;
+    juce::AudioProcessor::copyXmlToBinary(*missing.createXml(), missingState);
+    auto pending = std::make_unique<VDX7AudioProcessor>(false, folder);
+    pending->setStateInformation(missingState.getData(), int(missingState.getSize()));
+    require(!pending->isProjectReady(), "missing firmware leaves project pending");
+    require(!pending->refreshFactoryBanks(folder, report), "refresh blocked during pending restore");
+    const auto resavedMissing = save(*pending);
+    pending = std::make_unique<VDX7AudioProcessor>(false, folder);
+    pending->setStateInformation(resavedMissing.getData(), int(resavedMissing.getSize()));
+    require(pending->loadRomFromFile(firmwareFile.getFile()), "matching firmware resolves pending catalog");
+    require(pending->hasFactoryBank(2) && !pending->hasFactoryBank(0)
+        && sameProjectRam(editedRam, ram(save(*pending))), "missing ROM resave preserves catalog and latest patch");
+    require(restored->selectFactoryBank(2), "project's preserved factory bank remains usable");
+    const auto selected = ram(save(*restored));
+    require(std::memcmp(selected.getData(), scan.banks.image.data()+2*4096, 4096) == 0,
+        "bank selection uses project's unchanged reference payload");
+    require(restored->loadSyxFromFile(sourceFolder.getChildFile("rom1a.syx")), "normal SYX remains custom");
+    require(restored->getCurrentBank() == -1, "normal import does not silently become factory selection");
+    require(restored->renameVoice("CUSTOM NEW"), "new custom voice");
+    const auto custom = save(*restored);
+    auto customRestored = std::make_unique<VDX7AudioProcessor>(false);
+    customRestored->setStateInformation(custom.getData(), int(custom.getSize()));
+    require(customRestored->getCurrentPatchName() == "CUSTOM NEW"
+        && sameProjectRam(ram(custom), ram(save(*customRestored))), "custom sound also recalled independently");
+    std::cout << "PASS: private eight-bank identities, partial folder, last edits, absent-file catalog recall and custom recall\n";
+}
+
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -582,8 +724,15 @@ int main(int argc, char** argv)
     {
         if (argc == 2 && juce::String(argv[1]) == "--pre-rom-state-state-only")
         {
+            testPendingFactoryCatalog();
             testPreRomDeferredStateIsSerialized();
             testLegacyPendingProjectState();
+            return 0;
+        }
+        if (argc == 4 && juce::String(argv[1]) == "--factory-bank-library")
+        {
+            testPendingFactoryCatalog();
+            testFactoryBankFolder(juce::File(argv[2]), juce::File(argv[3]));
             return 0;
         }
         if (argc == 3 && juce::String(argv[1]) == "--legacy-bank-compatibility")

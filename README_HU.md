@@ -61,10 +61,19 @@ a public workflow-k jelenleg VST3-at terjesztenek.
 - PERFORMANCE oldal POLY/MONO móddal, pitch-bend tartománnyal/lépéssel és portamentóval.
 - Modulation-, láb-, légzésvezérlő- és aftertouch-hozzárendelések.
 - DX7 hangszín-/bank-SysEx import/export és tartós, 32 helyes USER-bank.
+- Saját gyári SysEx bankmappa, tartalomalapú ROM1A–ROM4B felismeréssel.
 - 148 automatizálható hostparaméter és DAW-projektállapot visszaállítása.
 - EDIT/PERFORMANCE nézet, képernyő-billentyűzet, pitch/mod kerék,
   kivezérlésmérők és audio-callback terheléskijelző.
 - Arányos GUI-méretek: 50%, 75%, 100%, 125% és 150%.
+
+A fejlesztési változatban a **SETTINGS → Bank folder** megnyitja a bankmappát.
+Másold ide a felismert ROM1A–ROM4B bankfájlokat, majd válaszd a **Refresh banks**
+gombot, vagy indíts új példányt kompatibilis firmware-rel. Csak a meglévő bankok
+aktívak; a teljes banktartalom, nem a fájlnév dönti el a helyüket. A frissítés
+megőrzi a jelenlegi hangszínt. A projekt a szerkesztett hangszínt és banklistájának
+adatait is tárolja, a helyi bankfájloktól függetlenül; a firmware továbbra is külső.
+[Részletes bankmappa-útmutató](docs/guides/GUIDE_HU.md#gyári-bankmappa).
 
 ## Rendszerigény
 

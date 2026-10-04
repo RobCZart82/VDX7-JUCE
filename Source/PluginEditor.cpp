@@ -1400,7 +1400,6 @@ void VDX7AudioProcessorEditor::refresh(bool refreshMetadata)
 
     const bool loaded = processor_.isRomLoaded();
     const bool ready = processor_.isProjectReady();
-    const bool factories = processor_.hasFactoryVoices();
     const auto patchName = loaded ? processor_.getCurrentPatchName()
         + (processor_.isCurrentVoiceModified() ? " *" : "") : juce::String("LOAD DX7 ROM");
     const int bankIndex = processor_.getCurrentBank();
@@ -1412,7 +1411,7 @@ void VDX7AudioProcessorEditor::refresh(bool refreshMetadata)
     bank_.setSelectedId(bankIndex >= 0 ? bankIndex + 1 : 0, juce::dontSendNotification);
     bank_.setTextWhenNothingSelected(loaded ? "CUSTOM" : "");
     program_.setSelectedId(programIndex + 1, juce::dontSendNotification);
-    for (int i = 1; i <= 8; ++i) bank_.setItemEnabled(i, factories);
+    for (int i = 1; i <= 8; ++i) bank_.setItemEnabled(i, processor_.hasFactoryBank(i - 1));
     bank_.setEnabled(ready);
     program_.setEnabled(ready);
     loadSyx_.setEnabled(ready);
@@ -1646,7 +1645,9 @@ void VDX7AudioProcessorEditor::showSettings()
         "Advanced MONO compatibility is normally best left at Native firmware.",
         "Both modes accept MIDI Notes 12-120 only.",
         "Changing MONO correction restarts the engine and stops playing notes.",
-        "MONO correction: " + correctionStatus
+        "MONO correction: " + correctionStatus,
+        "Factory Banks: drop your own .syx banks in the folder, then Refresh banks.",
+        "Recognised by complete content, not filename. Current sound is preserved."
     };
     dialog->addCustomComponent(new SettingsInfoComponent(std::move(settingsInfoRows)));
     juce::StringArray guiScaleChoices;
@@ -1674,13 +1675,34 @@ void VDX7AudioProcessorEditor::showSettings()
     correctionCombo->setSelectedItemIndex(initialCorrection.requested ? 1 : 0);
     dialog->addButton("Apply", 1, juce::KeyPress(juce::KeyPress::returnKey));
     dialog->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+    dialog->addButton("Bank folder", 2);
+    dialog->addButton("Refresh banks", 3);
     juce::Component::SafePointer<VDX7AudioProcessorEditor> safe(this);
     dialog->enterModalState(true, juce::ModalCallbackFunction::create(
             [safe, dialog, initial, initialChannel, initialCorrection](int result)
         {
             if (dialog->getNumCustomComponents() > 0)
                 delete dialog->removeCustomComponent(0);
-            if (safe == nullptr || result != 1) return;
+            if (safe == nullptr) return;
+            if (result == 2)
+            {
+                const auto folder = VDX7AudioProcessor::factoryBankFolder();
+                if (folder.createDirectory().failed())
+                    safe->showError("Bank folder", "Cannot open: " + folder.getFullPathName());
+                else folder.revealToUser();
+                return;
+            }
+            if (result == 3)
+            {
+                juce::String report;
+                const bool ok = safe->processor_.refreshFactoryBanks(VDX7AudioProcessor::factoryBankFolder(), report);
+                juce::AlertWindow::showMessageBoxAsync(ok ? juce::MessageBoxIconType::InfoIcon
+                                                        : juce::MessageBoxIconType::WarningIcon,
+                    "Factory banks", report);
+                safe->refresh(true);
+                return;
+            }
+            if (result != 1) return;
             const auto text = dialog->getTextEditorContents("tuning").trim();
             const auto digits = text.startsWithChar('-') ? text.substring(1) : text;
             if (digits.isEmpty() || !digits.containsOnly("0123456789")

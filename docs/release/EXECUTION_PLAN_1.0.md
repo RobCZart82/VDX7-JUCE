@@ -41,6 +41,17 @@ korábbi PASS állítások kizárólag a megnevezett régi forrásra/csomagokra 
 
 ### A végrehajtás sorrendje
 
+2026-10-04 új tulajdonosi funkciókérés: az ellenőrzött hangszín-visszaállításra
+tartalomalapú, részleges ROM1A–ROM4B bankmappa épül. Ez célzott kivétel a
+fenti funkciófagyasztás alól, nem általános GUI-átalakítás. A főfelület marad;
+SETTINGS-ben mappamegnyitás és frissítés lesz. Csak referencialenyomat kerül
+a forrásba, Yamaha bankadat nem. A projekt mentett RAM-ja és saját bankmásolata
+elsőbbséget élvez a helyi mappával szemben. A korábbi 1.0.1 csomag ezt sem
+tartalmazza: új Windows/macOS/sanitizer PASS, main PASS, végső forrás/csomag
+ellenőrzés és tulajdonosi REAPER-elfogadás szükséges. A meglévő A/B/C
+elfogadási rekordot nem írjuk át automatikusan. A jegyzőkönyv:
+[bankmappa és hangszínmegőrzés](../validation/VALIDATION_20261004_FACTORY_BANK_FOLDER.md).
+
 1. **Forrás és bizonyítékok rögzítése.** Frissen ellenőrizni a main állapotát,
    a nyitott PR-eket, review-kat és Actions futásokat. A jelenlegi vizsgált jelölt
    `b7fce0503059c8c2e3c61d6ccf5af33612739e32`, A=B: tulajdonos által
