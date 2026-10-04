@@ -69,8 +69,9 @@ manually uploaded user-download assets or offline dependency bundles.
 
 Published v1.0.0 is untouched. The coordinated version update targets
 1.0.1-labelled preparation assets; this is not final binary acceptance.
-Do not dispatch this workflow to replace existing 1.0.0 assets. Null approval,
-read-only workflow permissions and separate publication authorization remain.
+Do not dispatch this workflow to replace existing 1.0.0 assets. The exact A/B
+packaging approval is now committed through #120; null approval still fails
+closed. Read-only workflow permissions and separate publication authorization remain.
 Use the [single execution plan](EXECUTION_PLAN_1.0.md) for remaining work.
 
 Magyarul: a release-re négy felhasználói csomag kerül fel. A forráscsomag,

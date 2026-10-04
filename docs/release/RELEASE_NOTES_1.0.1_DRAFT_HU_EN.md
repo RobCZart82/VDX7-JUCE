@@ -1,17 +1,19 @@
 # VDX7 Mk1. 1.0.1 — draft / tervezet
 
-Not published or accepted. This records the corrective candidate; it does not
+Not published or host-accepted. This records the corrective candidate; it does not
 replace the [single execution plan](EXECUTION_PLAN_1.0.md) or grant publication
 approval. Published v1.0.0 and its assets remain unchanged.
 
-Candidate product/tooling source: `6cc8cda30e9e66d3ab97699bcb9d2014a78b8b14`.
-Preparation: [36998278475](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/36998278475),
-acceptance disabled, all jobs PASS. Hosted Windows install/upgrade/uninstall,
-macOS payload/signature guards, source verification and staged checksums PASS.
-Independent download/hash, provenance, source and macOS payload review now
-passes for that preparation artifact; see the
-[2026-10-02 review](../validation/VALIDATION_20261002_RELEASE_REVIEW.md).
-Final archive offline-build and host acceptance remain open.
+Owner-approved product/tooling A=B: `b7fce0503059c8c2e3c61d6ccf5af33612739e32`.
+Approval C: `828320d78e5d2e193356af0485a15c12f0279824`.
+Final packaging: [37195536400](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37195536400),
+accepted metadata enabled for the reviewed pair; this does not publish.
+The owner will manually install/test final Windows/macOS packages in REAPER.
+Exact candidate preparation and source offline build passed; see
+[source build](../validation/VALIDATION_20261002_SOURCE_BUILD_101.md).
+Final artifact inspection and host acceptance remain separate gates.
+Final artifact inspection is now PASS for run 37195536400; host acceptance
+remains pending. [Exact final evidence](../validation/VALIDATION_20261004_FINAL_PACKAGE_101.md).
 Final acceptance and hashes must be reconciled before turning this
 draft into public notes. No 1.0.1 host acceptance is inferred
 from the owner's earlier 1.0.0 REAPER tests.
@@ -59,10 +61,28 @@ előfordulhat; ne kapcsold ki a rendszer védelmét. [Magyar kézikönyv](../gui
 
 ## Publication gate — still open
 
-- Reconcile all four final binary hashes and installer/upgrade evidence.
-- Verify complete matching source and its checksum; provide the approved
+- All four final binary hashes and installer/upgrade evidence are verified;
+  complete matching source and checksum verified. Provide the approved
   separate durable `v1.0.1-source` release link before/no later than binaries.
-- Record exact reviewed source/tooling/approval tuple and explicit deferred
-  host/platform checks. Preparation artifacts alone are not accepted assets.
+- Exact reviewed source/tooling/approval tuple is recorded above. Complete
+  owner final REAPER acceptance and explicit disposition of other unrun checks.
 - Obtain separate authorization for tags, source/product releases and uploads;
   preserve the four-download policy and do not modify v1.0.0.
+
+## Verified final download hashes
+
+These are the intended final test/release files, not old preparation hashes.
+No public upload has occurred; owner host acceptance and publication remain open.
+
+| File | SHA-256 |
+| --- | --- |
+| `VDX7-1.0.1-Windows-x64-Setup.exe` | `2001a7f494580e45db706b50c1a9342991dcc3d90868ad1ad8ec9b179de948a0` |
+| `VDX7-1.0.1-Windows-x64-Manual.zip` | `31471ec4e7fd61e76fef1da5c1c948e37f4f1d25eb2fe70eab9aee8b8626efac` |
+| `VDX7-1.0.1-macOS-universal.pkg` | `97ea4a9ebcba4166d2677f69e668d163e0b3b9f5a12c497c1853bf6613da2791` |
+| `VDX7-1.0.1-macOS-universal-Manual.zip` | `a2f17e467b6e8ff5901b3a311be9faadf4dc394ee0e982b097a8d76ddb4c6e39` |
+
+Separate full corresponding source SHA-256:
+`8d4da112f4565c49ab9128cb84bf5e4527470aa3486492397cfcb11b93ff8784`.
+The planned durable source-release location is
+`https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source`;
+it is not yet created or verified and must not be presented as an available download.

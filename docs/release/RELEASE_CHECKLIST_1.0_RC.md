@@ -1,6 +1,21 @@
 # 1.0 release-preparation checklist — not a publication authorization
 
-## Current correction checkpoint — 2026-10-02
+## Current correction checkpoint — 2026-10-04
+
+- [x] Owner approved exact A=B b7fce05 on 2026-10-03; #120 merged at C=828320d,
+  final-head Windows/macOS/ASan-UBSan and post-merge Windows/macOS PASS.
+- [x] Final accepted-mode packaging run 37195536400 all four jobs PASS.
+- [x] Final four products and separate source independently downloaded and
+  verified: outer/inner hashes, four/two inventories, A/B/C, Windows native
+  upgrade/uninstall, Mac Universal/signature/PKG payload PASS.
+- [x] Hosted accepted source ZIP byte-identical to freshly extracted offline
+  build: VST3, 13/13 CTests, 77/77 Python and focused bank tests PASS.
+- [ ] Owner installation and real final Windows/macOS REAPER results pending.
+- [ ] Final human publication permission and durable source/product publication.
+
+Exact final hashes and evidence:
+[2026-10-04 report](../validation/VALIDATION_20261004_FINAL_PACKAGE_101.md).
+The earlier checklist entries below retain their historical source/run scope.
 
 1.0.0 is already published; the old preparation checklist below is historical.
 Use [the active 1.0.1 plan](EXECUTION_PLAN_1.0.md) for A1–A10 dispositions.
@@ -28,6 +43,72 @@ bizonyíték-összesítő, nem második fejlesztési terv vagy publikálási eng
 - [ ] Exact 1.0.1 source/platform tests, payload and installer upgrade checked.
 - [ ] Remaining host tests explicitly executed or deferred, never assumed PASS.
 - [ ] Separate approval for new tag/release/assets (not granted by merge approval).
+
+## Final 1.0.1 manual test handoff
+
+Owner decision 2026-10-03: the owner installs the fully verified final packages
+and performs real Windows/macOS REAPER acceptance. No agent-side installation
+or REAPER launch; no blanket deferral. The final package identities and hashes
+will be recorded in the [final package report](../validation/VALIDATION_20261004_FINAL_PACKAGE_101.md)
+after download verification. A green build is not host PASS.
+
+### Magyar kézi tesztlista
+
+Készíts biztonsági másolatot az 1.0.0 plug-inről, projektekről, ROM-ról és USER
+bankokról. A régi projektet csak másolatként nyisd meg és mentsd. Az alábbi
+listát Windows és macOS rendszeren külön töltsd ki, a pontos tesztcsomaggal.
+
+- [ ] Csomagnév/hash, OS, REAPER verzió és architektúra rögzítve; telepítés,
+  felismerés és az 1.0.1 verzió ellenőrizve. Ne maradjon két azonos VDX7 másolat
+  eltérő VST3 keresési helyen. A rendszer védelmét ne kapcsold ki.
+- [ ] Saját jogszerű, érvényes ROM betöltése; hang, hangszín/bankváltás,
+  hangindítás/leállítás és sustain; tartott hang mellett Stop/reset, majd új hang.
+- [ ] Pitch/Mod és egy operátorparaméter automatizációjának felvétele/visszajátszása;
+  a GUI és a hang követi az értékeket.
+- [ ] Új projekt mentése, REAPER bezárása és újranyitása; hangszín, saját
+  szerkesztés, bank és vezérlőállapot visszaáll. Régi projekt másolatának visszatöltése.
+- [ ] Legalább öt példány külön szerkesztéssel, mentés és újranyitás; példányok
+  nem keverik egymás állapotát.
+- [ ] USER/SysEx import–export és SAVE AS külön tesztfájlon; Settings/GUI fix
+  méretek és About; skálázásnál nincs eltűnő vagy elérhetetlen vezérlő.
+- [ ] Hiányzó/eltérő ROM és későbbi megfelelő ROM mellett projekt/szerkesztés
+  megőrzése; hibás kombinált ROM elutasítása után a korábbi hangszer megmarad.
+  Másik/módosított ROM nem garantált helyreállítás; ne javítsd át az eredetit.
+- [ ] Offline render, 44.1/48/96 kHz és elérhető bufferbeállítások: hang,
+  hangvégek, reset és ismételt megszólalás. Rögzítsd a ténylegesen próbált
+  kombinációkat; nem támogatott/nem futtatott cellák külön jelölendők.
+
+Eredményenként PASS/FAIL/NOT RUN, rövid megjegyzés és reprodukció hiba esetén.
+Ha valamely vizsgálat nem készül el, külön halasztási döntés szükséges.
+
+### English manual test checklist
+
+Back up the 1.0.0 plugin, projects, ROM and USER banks. Open/save existing
+projects only as test copies. Complete this list separately on Windows and
+macOS using the exact verified final package.
+
+- [ ] Record package name/hash, OS, REAPER version and architecture; verify
+  installation, discovery and version 1.0.1. Avoid duplicate VDX7 bundles in
+  separate VST3 search paths. Do not disable system-wide security protections.
+- [ ] Load your lawful valid ROM; check sound, program/bank selection, note
+  start/release and sustain; Stop/reset with held notes, then play a new note.
+- [ ] Record/play back Pitch/Mod and an operator parameter's automation;
+  confirm that both sound and GUI follow the values.
+- [ ] Save a new project, close REAPER and reopen; verify program, custom
+  edits, bank and controller recall. Check an older project's backup copy.
+- [ ] At least five independently edited instances; save/reopen without
+  state leaking between instances.
+- [ ] USER/SysEx import/export and SAVE AS using disposable test files;
+  Settings/fixed GUI sizes and About; no missing/inaccessible controls at scale.
+- [ ] Missing/different ROM followed by matching ROM preserves project/edits;
+  rejection of invalid combined ROM preserves the previous instrument.
+  A different/edited ROM is not guaranteed recovery; do not alter the original.
+- [ ] Offline render, 44.1/48/96 kHz and available buffers: sound, tails,
+  reset and subsequent notes. Record actual combinations tested and explicitly
+  mark unsupported or unrun cells.
+
+Record PASS/FAIL/NOT RUN per item, a short observation and reproduction for
+failures. Any omitted examination requires a separate deferral decision.
 
 ## Historical 1.0.0 preparation record
 
