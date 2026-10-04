@@ -12,6 +12,12 @@ ellenőrzések; telepítő-, csomagtartalom-, checksum- és megfelelő forrásvi
 ismert kiadásblokkoló hibák javítása. Bármelyik FAIL megállítja a publikálást.
 Ezeknél nincs kockázatvállalással helyettesített PASS.
 
+Tulajdonosi firmware-döntés (2026-10-04): a támogatott ROM az eredeti DX7 Mk I
+v1.8 (IG11469); a Special Edition / SER-7 nem támogatott. Ezt a HU/EN README,
+kézikönyv és kiadási tervezet rögzíti. Ez dokumentációs pontosítás, nem új
+ROM-engedélyezési lista vagy SER-7 kompatibilitási teszt. Az elfogadott A/B/C,
+a végső csomagok, azok checksumjai és a korábbi teszteredmények változatlanok.
+
 ### A végrehajtás sorrendje
 
 1. **Forrás és bizonyítékok rögzítése.** Frissen ellenőrizni a main állapotát,

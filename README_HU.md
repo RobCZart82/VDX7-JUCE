@@ -11,7 +11,7 @@ Eredeti firmware, hardveres ihletésű felület és közvetlen hangszínszerkesz
 > **[A stabil 1.0.0 letölthető](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0).**
 > Ez a main ág az **1.0.1 javítókiadás fejlesztését** tartalmazza, nem kiadott
 > 1.0.1-et; a fejlesztői csomagok megkülönböztető jelölése megmarad.
-> Saját, jogszerűen rendelkezésre álló kompatibilis ROM szükséges.
+> Saját, jogszerűen használható eredeti DX7 Mk I v1.8 ROM szükséges.
 > Yamaha firmware és gyári hangadat nincs mellékelve.
 
 **Az 1.0.0 ismert korlátja:** ha egy visszatöltött projekt hiányzó/eltérő ROM-ot
@@ -74,7 +74,9 @@ használatról számolt be; ezek nem azonosak a végleges RC teljes tesztmátrix
 A fizikai Intel Mac elfogadása és a pontos RC-n végzett tesztek külön ellenőrzendők.
 A helyben fordított Standalone DAW nélkül fut.
 
-**A megszólaláshoz kompatibilis DX7 Mk I ROM szükséges.**
+**Támogatott firmware: eredeti Yamaha DX7 Mk I v1.8 (IG11469).**
+A megszólaláshoz saját, jogszerűen használható ROM szükséges.
+**A Special Edition / SER-7 firmware nem támogatott.**
 A formátumokat és az opcionális külső gyári hangadatot a
 [firmware-útmutató](docs/guides/GUIDE_HU.md#3-firmware-és-bankok) ismerteti.
 A támogatott MIDI-hangtartomány **12–120**, Native és Correct MONO módban egyaránt.
@@ -94,7 +96,7 @@ védelmet; olvasd el a telepítési útmutatót.
    - macOS: `~/Library/Audio/Plug-Ins/VST3/`
    - Windows: `C:\Program Files\Common Files\VST3\`
 3. Kerestesd újra a plugineket, majd töltsd be a VDX7-et hangszerként.
-4. A **LOAD ROM** gombbal add meg saját, jogszerűen használható firmware-edet.
+4. A **LOAD ROM** gombbal add meg saját, jogszerűen használható eredeti DX7 Mk I v1.8 firmware-edet.
 5. Válassz programot vagy tölts be kompatibilis SysExet, engedélyezd a MIDI-monitorozást, és játssz.
 
 Kerüld a kettős plugintelepítést. Ne kapcsold ki a rendszer egészének biztonsági védelmét.

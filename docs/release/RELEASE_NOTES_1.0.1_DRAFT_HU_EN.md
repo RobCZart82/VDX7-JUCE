@@ -20,6 +20,10 @@ from the owner's earlier 1.0.0 REAPER tests.
 
 ## English
 
+Supported firmware is the original Yamaha DX7 Mk I v1.8 (IG11469).
+Special Edition / SER-7 firmware is not supported. Supply your own legally
+obtained ROM; successful loading alone does not establish compatibility.
+
 The corrective source includes pending-project edit/state protection, deferred
 MIDI CC120/CC121 ordering and controller-reset fixes, full factory-bank input
 validation, and source-package/checksum/provenance guard corrections. Exact
@@ -40,6 +44,10 @@ Loading/installation warnings may occur; do not disable system-wide protections.
 See the [English guide](../guides/GUIDE_EN.md).
 
 ## Magyar
+
+A támogatott firmware az eredeti Yamaha DX7 Mk I v1.8 (IG11469).
+A Special Edition / SER-7 firmware nem támogatott. Saját, jogszerűen használható
+ROM szükséges; a sikeres betöltés önmagában nem jelent támogatott kompatibilitást.
 
 A javítóforrás a függőben lévő projektek szerkesztési/állapotvédelmét, a CC120/CC121
 halasztott MIDI-sorrendjét és vezérlő-visszaállítását, a teljes gyári bank

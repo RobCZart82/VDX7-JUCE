@@ -44,7 +44,7 @@ not a claim that every supported OS/host combination has been tested.
    the older copy.
 4. Restart the host. In REAPER, if needed, rescan under Preferences → Plug-ins →
    VST, then insert VDX7 as a virtual instrument.
-5. Supply your own compatible firmware using LOAD ROM or an automatic search location below.
+5. Supply your own legally obtained original DX7 Mk I v1.8 firmware using LOAD ROM or an automatic search location below.
 6. Select a bank/program on the LCD or import a compatible `.syx` file with LOAD
    SYX. Enable MIDI monitoring and play notes.
 
@@ -58,10 +58,23 @@ If there is no sound, check firmware status, MIDI routing, track monitoring and 
 
 **No Yamaha firmware or factory voice data is included.** Supply files you are entitled to use; project saving does not bundle the firmware.
 
-Accepted ROM layouts:
+**Supported firmware: original Yamaha DX7 Mk I v1.8 (IG11469). Special Edition
+/ SER-7 firmware is not supported.** Its runtime behaviour, GUI controls and
+project recall have not been validated for VDX7-JUCE. Successful ROM loading
+does not establish supported compatibility; the loader does not enforce a
+v1.8-only firmware whitelist.
 
-- 16,384-byte DX7 Mk I firmware, optionally beside `dx7_factory_voices_32KB.bin`.
-- 49,152-byte combined `dx7.bin`: 16 KB firmware plus 32 KB factory data.
+To identify the supported original v1.8 firmware, compare the SHA-1 of the
+16,384-byte firmware image with `715dbb8e96a4df2a7f096b368334a7654860bb26`.
+This matches the [MAME DX7 ROM identification](https://github.com/mamedev/mame/blob/master/src/mame/yamaha/ymdx7.cpp#L296-L300).
+The checksum identifies firmware content, not download provenance or usage rights.
+For a combined image, this reference applies only to its first 16,384 bytes,
+not to the complete firmware-plus-bank file. Factory banks are separate data.
+
+Supported layouts using the v1.8 firmware:
+
+- 16,384-byte DX7 Mk I v1.8 firmware, optionally beside `dx7_factory_voices_32KB.bin`.
+- 49,152-byte combined `dx7.bin`: 16 KB v1.8 firmware plus 32 KB factory data.
 
 The 1.0.1 development version validates all 256 factory voices, not only the
 file size. A combined ROM containing invalid factory data is rejected in full;
