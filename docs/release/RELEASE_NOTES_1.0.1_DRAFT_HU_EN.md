@@ -8,8 +8,10 @@ approval. Published v1.0.0 and its assets remain unchanged.
 content-identified folder and bounded project-data decoding. Its preparation
 packages and fresh offline source verification passed; see the
 [new exact preparation report](../validation/VALIDATION_20261004_BANK_FOLDER_PACKAGE_PREP_101.md).
-Final exact-pair approval, accepted-mode packaging and owner host acceptance
-remain separate gates. No new final release hashes are asserted here.
+The owner authorized continuing final test packaging for exact A=B dbad14a
+on 2026-10-04. Protected policy/main checks, accepted-mode packaging and owner
+host acceptance remain separate gates. No publication permission or new final
+release hashes are asserted here.
 
 2026-10-04 update: the legacy-bank acceptance fix changes product code. The
 tuple, packaging run and hashes below belong to the previous b7fce05 candidate,
