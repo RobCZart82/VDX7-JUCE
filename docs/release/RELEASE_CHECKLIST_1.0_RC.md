@@ -9,8 +9,11 @@
   build PASS; [exact preparation evidence](../validation/VALIDATION_20261004_BANK_FOLDER_PACKAGE_PREP_101.md).
 - [x] Owner authorized continuing final test packaging for exact A=B dbad14a
   after that gate was identified; no publication or host acceptance.
-- [ ] Separately reviewed approval policy and green post-merge main checks.
-- [ ] New accepted-mode final files downloaded and independently verified.
+- [x] #126 policy C=3766035: final-head Windows/macOS/sanitizer, both reviews
+  and post-merge main Windows/macOS PASS.
+- [x] Accepted-mode 37233357714 all four jobs PASS; actual final files independently
+  downloaded and verified, source identical to new offline build.
+  [New final hashes and download links](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md).
 - [ ] Owner installation and real final Windows/macOS REAPER results.
 - [ ] Separate publication permission and durable source/product publication.
 
@@ -66,8 +69,9 @@ bizonyíték-összesítő, nem második fejlesztési terv vagy publikálási eng
 Owner decision 2026-10-03: the owner installs the fully verified final packages
 and performs real Windows/macOS REAPER acceptance. No agent-side installation
 or REAPER launch; no blanket deferral. The final package identities and hashes
-will be recorded in the [final package report](../validation/VALIDATION_20261004_FINAL_PACKAGE_101.md)
-after download verification. A green build is not host PASS.
+are recorded in the [new bank-folder final package report](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md)
+after independent download verification of run 37233357714. Use these actual
+files, not the older b7fce05 packages. A green build is not host PASS.
 
 ### Magyar kézi tesztlista
 

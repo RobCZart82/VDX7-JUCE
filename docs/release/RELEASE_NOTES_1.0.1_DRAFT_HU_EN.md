@@ -9,9 +9,11 @@ content-identified folder and bounded project-data decoding. Its preparation
 packages and fresh offline source verification passed; see the
 [new exact preparation report](../validation/VALIDATION_20261004_BANK_FOLDER_PACKAGE_PREP_101.md).
 The owner authorized continuing final test packaging for exact A=B dbad14a
-on 2026-10-04. Protected policy/main checks, accepted-mode packaging and owner
-host acceptance remain separate gates. No publication permission or new final
-release hashes are asserted here.
+on 2026-10-04. Policy #126 merged at C3766035 after green checks/reviews;
+post-merge main and final accepted-mode packaging `37233357714` passed.
+Independent actual-file/source/offline verification passed; see the
+[current final hashes and test handoff](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md).
+Owner host acceptance and separate publication permission remain open.
 
 2026-10-04 update: the legacy-bank acceptance fix changes product code. The
 tuple, packaging run and hashes below belong to the previous b7fce05 candidate,
@@ -108,12 +110,12 @@ előfordulhat; ne kapcsold ki a rendszer védelmét. [Magyar kézikönyv](../gui
 
 ## Publication gate — still open
 
-- Verify the new exact accepted-mode final binary hashes, installer/upgrade
-  evidence and complete matching source/checksum; older b7fce05 evidence below
-  is not acceptance of dbad14a. Provide the approved
+- Actual new exact accepted-mode hashes, installer/upgrade evidence and complete
+  matching source/checksum are verified for run 37233357714, not inferred from
+  the older b7fce05 evidence below. Provide the approved
   separate durable `v1.0.1-source` release link before/no later than binaries.
-- Record the newly approved exact source/tooling/approval tuple. Complete
-  owner final REAPER acceptance and explicit disposition of other unrun checks.
+- A=B dbad14a and C3766035 are recorded with full SHAs in the new final report.
+  Complete owner final REAPER acceptance and explicit disposition of unrun checks.
 - Obtain separate authorization for tags, source/product releases and uploads;
   preserve the four-download policy and do not modify v1.0.0.
 
@@ -121,8 +123,8 @@ előfordulhat; ne kapcsold ki a rendszer védelmét. [Magyar kézikönyv](../gui
 
 These are verified files from run 37195536400 for b7fce05, retained as historical
 evidence. They do not contain the new legacy-bank fix and must not be used as its
-final release hashes. No public upload has occurred; new package verification,
-owner host acceptance and publication remain open.
+final release hashes. No public upload has occurred. New package verification
+is in the current report above; owner host acceptance and publication remain open.
 
 | File | SHA-256 |
 | --- | --- |

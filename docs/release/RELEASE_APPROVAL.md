@@ -19,6 +19,13 @@ approval. The policy PR and post-merge main checks must pass before accepted-mod
 final test packaging. The resulting C is recorded after the protected merge;
 it is not the frozen source/packager A=B.
 
+The policy merged through #126 at C
+`3766035aa42de22e581c1b2014edeeecbbff01f9`; final-head Windows/macOS/sanitizer,
+both reviews and post-merge main Windows/macOS passed. Canonical accepted-mode
+final-test run `37233357714` and independent actual-file/source/offline checks
+passed. See the [new final package report](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md).
+Owner REAPER acceptance and separate publication permission remain open.
+
 The committed `docs/release/RELEASE_APPROVAL.json` currently contains:
 
 ```json

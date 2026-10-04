@@ -61,6 +61,12 @@ bank-folder candidate. The owner authorized continuing the new exact pair's
 final test packaging on 2026-10-04; its separate policy/main gates and later
 actual accepted-file inspection still apply. Use the execution plan for status.
 
+The new bank-folder pair's protected policy/main gates and actual final run
+`37233357714` passed. Its independently downloaded source is byte-identical to
+the newly extracted offline-tested accepted archive; see the
+[final source/package evidence](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md).
+Actions test artifacts are not the planned durable public source release.
+
 Accepted creation supplies `--packager-commit`, `--approval-commit`,
 `--workflow-ref` and `--workflow-git-ref`; use `--approval-repo` when the
 approval checkout is separate from the product checkout. The approval

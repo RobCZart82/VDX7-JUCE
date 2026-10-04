@@ -7,6 +7,11 @@ and independent inspection. They are not the earlier b7fce05 files, accepted-mod
 final artifacts, real REAPER acceptance or a published release. The old approval
 record and published v1.0.0 remain unchanged.
 
+This preparation checkpoint is retained as history. The subsequent exact-pair
+policy, final accepted-mode build and independent final-file verification are
+recorded in the [new final report](VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md);
+its hashes, not the preparation hashes below, identify the owner test handoff.
+
 ## Exact source and automated evidence
 
 Product source and packager: `dbad14a2ef8307e565675893b6b3b837cfab9b02`.
