@@ -186,6 +186,78 @@ int main()
     require(bankMessage.size()==4104 && bankMessage[3]==9,"VMEM header");
     require(VDX7Sysex::decode(bankMessage,decoded) && decoded==bank,"VMEM full bank round trip");
 
+    // Synthetic reproduction of archived VMEM exceptions; no factory data.
+    auto legacyVoice = synthetic;
+    for (int block = 0; block < 6; ++block)
+    {
+        for (int field = 0; field < 8; ++field) legacyVoice[block * 17 + field] = 127;
+        legacyVoice[block * 17 + 16] = 100;
+    }
+    require(VDX7VoiceData::hasValidPackedVoice(legacyVoice.data(), legacyVoice.size()),
+            "bounded legacy EG/fine values accepted");
+    const auto originalLegacy = legacyVoice;
+    for (int op = 0; op < 6; ++op)
+        for (const auto parameter : {VDX7VoiceData::Parameter::rate1,
+                                     VDX7VoiceData::Parameter::level4,
+                                     VDX7VoiceData::Parameter::fine})
+            require(VDX7VoiceData::getOperatorParameter(legacyVoice.data(),128,op,parameter) == 99,
+                    "legacy import does not expand editor ranges");
+    require(legacyVoice == originalLegacy, "passive editor reads preserve raw data");
+    auto legacySingle = VDX7Sysex::encode(legacyVoice);
+    require(legacySingle.size() == 163 && legacySingle[6] == 127 && legacySingle[25] == 100,
+            "VCED export retains raw legacy values instead of UI-clamped values");
+    for (int device = 0; device < 16; ++device)
+    {
+        legacySingle[2] = static_cast<uint8_t>(device);
+        require(VDX7Sysex::decode(legacySingle,decoded) && decoded == legacyVoice,
+                "legacy VCED lossless round trip on every device channel");
+    }
+    auto legacyBank = bank;
+    for (int slot = 0; slot < 32; ++slot)
+        std::copy(legacyVoice.begin(),legacyVoice.end(),legacyBank.begin() + slot * 128);
+    const auto legacyMessage = VDX7Sysex::encode(legacyBank);
+    require(VDX7Sysex::decode(legacyMessage,decoded) && decoded == legacyBank,
+            "legacy values in every bank slot round trip unchanged");
+    require(VDX7VoiceData::hasValidPackedVoices(legacyBank.data(),legacyBank.size()),
+            "legacy complete image validation agrees with SysEx validation");
+    for (int block = 0; block < 6; ++block)
+        for (int field : {0,1,2,3,4,5,6,7,16})
+            for (int raw = 100; raw <= 127; ++raw)
+            {
+                auto probe = synthetic;
+                probe[block * 17 + field] = static_cast<uint8_t>(raw);
+                const bool supported = field == 16 ? raw == 100 : raw == 127;
+                require(VDX7VoiceData::hasValidPackedVoice(probe.data(),probe.size()) == supported,
+                        "exhaustive legacy boundary: no blanket 100..127 acceptance");
+                require(!VDX7Sysex::encode(probe).empty() == supported,
+                        "VCED export uses the same bounded storage policy");
+            }
+    auto editedLegacy = legacyVoice;
+    require(VDX7VoiceData::setOperatorParameter(editedLegacy.data(),128,0,
+                VDX7VoiceData::Parameter::coarse,3), "edit unrelated canonical field");
+    require(editedLegacy[5 * 17] == 127 && editedLegacy[5 * 17 + 16] == 100,
+            "unrelated edit preserves imported raw exceptions");
+    VDX7VoiceData::setOperatorParameter(editedLegacy.data(),128,0,VDX7VoiceData::Parameter::rate1,127);
+    VDX7VoiceData::setOperatorParameter(editedLegacy.data(),128,0,VDX7VoiceData::Parameter::fine,100);
+    require(editedLegacy[5 * 17] == 99 && editedLegacy[5 * 17 + 16] == 99,
+            "explicit editing still clamps to canonical ranges");
+    for (int field : {0,16,118})
+    {
+        auto highBit = legacyVoice;
+        highBit[field] = 128;
+        require(!VDX7VoiceData::hasValidPackedVoice(highBit.data(),highBit.size()),
+                "legacy policy never admits non-seven-bit voice data");
+    }
+    auto corruptLegacy = legacyMessage;
+    corruptLegacy[corruptLegacy.size()-2] ^= 1;
+    require(!VDX7Sysex::decode(corruptLegacy,decoded) && decoded == legacyBank,
+            "legacy bank checksum rejection remains nonmutating");
+    corruptLegacy = legacyMessage;
+    corruptLegacy.pop_back();
+    require(!VDX7Sysex::decode(corruptLegacy,decoded) && decoded == legacyBank,
+            "truncated legacy bank rejected without replacing output");
+    decoded = bank;
+
     // A valid Yamaha checksum only proves transport integrity; it does not
     // make semantically out-of-range VMEM parameter bytes valid.
     std::vector<std::pair<std::size_t, uint8_t>> invalidVmemFields;
@@ -196,8 +268,9 @@ int main()
             * VDX7VoiceData::kPackedOperatorSize);
         for (int field = 0; field < 8; ++field)
             invalidVmemFields.emplace_back(opOffset + static_cast<std::size_t>(field), 100);
-        for (int field : {8, 9, 10, 14, 16})
+        for (int field : {8, 9, 10, 14})
             invalidVmemFields.emplace_back(opOffset + static_cast<std::size_t>(field), 100);
+        invalidVmemFields.emplace_back(opOffset + 16, 101); // Only fine 100 is a legacy exception.
         invalidVmemFields.emplace_back(opOffset + 12, 0x78); // Detune nibble 15.
     }
     for (int field = 102; field <= 109; ++field)

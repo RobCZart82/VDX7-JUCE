@@ -18,6 +18,27 @@ kézikönyv és kiadási tervezet rögzíti. Ez dokumentációs pontosítás, ne
 ROM-engedélyezési lista vagy SER-7 kompatibilitási teszt. Az elfogadott A/B/C,
 a végső csomagok, azok checksumjai és a korábbi teszteredmények változatlanok.
 
+### Aktuális felülírás — legacy bankkompatibilitás, 2026-10-04
+
+Új tulajdonosi kérés alapján a VDX7-ben javítjuk a ROM3A/ROM3B/ROM4A
+elfogadását, a letöltött bankfájlok átírása nélkül. A tárolási szabály csak
+az operátor EG 127-es és fine 100-as értékét engedi meg a normál tartományon
+felül; minden más szemantikai és szerkezeti védelem megmarad.
+A [kompatibilitási jegyzőkönyv](../validation/VALIDATION_20261004_LEGACY_BANK_COMPATIBILITY.md)
+rögzíti a reprodukciót, adatmegőrzést és tesztek határát. Az előző ellenőrző
+elutasítása önmagában nem bizonyítja e legacy bankok bináris sérülését vagy
+nem gyári eredetét; az eredeti FAIL történeti eredmény marad, nem írjuk át.
+
+Ez termékkód-változás: a lent szereplő b7fce05/A/B/C és 37195536400 csomagok
+az előző jelölt bizonyítékai, **nem tartalmazzák ezt a javítást**. R1/R3 és
+az érintett R2/R5 kapuk új jelölttel újranyílnak. Következő sorrend: javító PR
+Windows/macOS/sanitizer PASS és rendezett review; merge utáni main PASS;
+új forrás- és csomagbuild, független hash/payload/offline forrásvizsgálat;
+új végső A/B/C elfogadás és ellenőrzött csomagok átadása a tulajdonosnak
+Windows/macOS REAPER-tesztre; csak ezután külön publikálási jóváhagyás.
+A régi elfogadási rekordot és asseteket nem módosítjuk csendben. A további
+korábbi PASS állítások kizárólag a megnevezett régi forrásra/csomagokra érvényesek.
+
 ### A végrehajtás sorrendje
 
 1. **Forrás és bizonyítékok rögzítése.** Frissen ellenőrizni a main állapotát,

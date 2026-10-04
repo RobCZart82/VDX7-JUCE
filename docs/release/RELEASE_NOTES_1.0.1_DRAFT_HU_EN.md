@@ -4,6 +4,11 @@ Not published or host-accepted. This records the corrective candidate; it does n
 replace the [single execution plan](EXECUTION_PLAN_1.0.md) or grant publication
 approval. Published v1.0.0 and its assets remain unchanged.
 
+2026-10-04 update: the legacy-bank acceptance fix changes product code. The
+tuple, packaging run and hashes below belong to the previous b7fce05 candidate,
+not to the fixed build. Rebuild, reverify and obtain exact final-candidate host
+acceptance before using these notes for publication; retain old evidence as history.
+
 Owner-approved product/tooling A=B: `b7fce0503059c8c2e3c61d6ccf5af33612739e32`.
 Approval C: `828320d78e5d2e193356af0485a15c12f0279824`.
 Final packaging: [37195536400](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37195536400),
@@ -30,6 +35,11 @@ validation, and source-package/checksum/provenance guard corrections. Exact
 findings and evidence are linked from the execution plan, not treated as a new
 feature or stability guarantee here.
 
+The new bank-compatibility fix accepts operator EG rate/level 127 and fine
+frequency 100 found in archived banks, without rewriting downloaded files.
+USER/project storage and SysEx export retain those values. Other semantic,
+seven-bit, structure and checksum checks remain enforced. Editor ranges stay 0–99.
+
 Upgrade warning: invalid factory data in a combined 48 KB ROM is now rejected
 in full without replacing the previous instrument state. An old project tied
 to that ROM may remain pending. A manually edited or different ROM is not a
@@ -55,6 +65,12 @@ ellenőrzését, valamint a forráscsomag, ellenőrzőösszeg és eredetigazolá
 javításait tartalmazza. A bizonyítékokat a fejlesztési terv vezeti; ez nem
 általános hibamentességi garancia.
 
+Az új bankkompatibilitási javítás elfogadja az archivált bankok 127-es
+operátor EG sebesség/szint és 100-as finomhangolási értékét, a letöltött fájlok
+átírása nélkül. A USER-/projekttárolás és a SysEx-export ezeket megőrzi.
+A többi paraméterhatár, a 7 bites adatok, a szerkezet és a checksum ellenőrzése
+megmarad. A szerkesztő tartománya továbbra is 0–99.
+
 Hibás gyári adatot tartalmazó kombinált 48 KB-os ROM teljes betöltése elutasítva,
 a korábbi hangszerállapot megőrzésével. Az ehhez kötött régi projekt függőben
 maradhat; módosított vagy másik ROM nem garantált helyreállítás. Készíts mentést
@@ -77,10 +93,12 @@ előfordulhat; ne kapcsold ki a rendszer védelmét. [Magyar kézikönyv](../gui
 - Obtain separate authorization for tags, source/product releases and uploads;
   preserve the four-download policy and do not modify v1.0.0.
 
-## Verified final download hashes
+## Previous candidate download hashes — not the new compatibility build
 
-These are the intended final test/release files, not old preparation hashes.
-No public upload has occurred; owner host acceptance and publication remain open.
+These are verified files from run 37195536400 for b7fce05, retained as historical
+evidence. They do not contain the new legacy-bank fix and must not be used as its
+final release hashes. No public upload has occurred; new package verification,
+owner host acceptance and publication remain open.
 
 | File | SHA-256 |
 | --- | --- |

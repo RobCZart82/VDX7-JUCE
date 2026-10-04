@@ -65,7 +65,11 @@ constexpr int kVoiceParameterCount = static_cast<int>(VoiceParameter::count);
 
 int parameterMinimum(Parameter) noexcept;
 int parameterMaximum(Parameter) noexcept;
-// Validates semantic VMEM fields while leaving firmware-reserved bits intact.
+// Storage/import permits only two verified legacy exceptions to editor ranges:
+// operator EG rate/level 127 and fine frequency 100. Editing stays canonical.
+bool isSupportedStoredOperatorValue(Parameter, int value) noexcept;
+// Validates seven-bit VMEM fields and the bounded legacy exceptions above,
+// while leaving firmware-reserved bits intact.
 bool hasValidPackedVoice(const uint8_t* packedVoice, std::size_t size) noexcept;
 // A bank/image contains whole seven-bit packed voices, including every name.
 bool hasValidPackedVoices(const uint8_t* data, std::size_t size) noexcept;

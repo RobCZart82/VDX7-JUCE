@@ -130,6 +130,16 @@ preset display has been removed. Program navigation wraps within the current ban
 
 LOAD SYX accepts one complete DX7 single voice (163-byte VCED) or bank (4104-byte VMEM). A single voice replaces the current slot; a bank replaces the editable bank. Concatenated dumps and other instrument formats are unsupported. Imports validate message structure and checksum. Export uses device/channel nibble 0; import accepts 0–15.
 
+Some archived banks contain operator envelope rate/level 127 or fine-frequency
+100, beyond the editor's normal 0–99 range. These specific legacy values are
+accepted and retained in imported voices, USER storage, project RAM and SysEx
+export; you do not need to modify the downloaded files. The editor still uses
+0–99: merely viewing a value does not rewrite the stored byte, while explicitly
+editing that parameter replaces it with the chosen normal value. Other semantic
+limits and seven-bit, size, header and checksum checks remain enforced. Complete
+VMEM bank export preserves reserved bits; single-voice VCED has no fields for
+those VMEM reserved bits, but retains the supported legacy parameter values.
+
 ## 7. Saving and automation
 
 There are 148 host parameters: 145 voice values plus Master Volume, Pitch and Mod. Previous parameter IDs/order are preserved.

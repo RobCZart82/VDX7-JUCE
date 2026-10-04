@@ -491,6 +491,90 @@ static void checkControllers(const juce::File& romFile)
     require(allControllersAudible, "controller range changes rendered firmware audio");
 }
 
+static std::vector<uint8_t> syntheticLegacyBank()
+{
+    std::vector<uint8_t> bank(4096,0);
+    for (int slot = 0; slot < 32; ++slot)
+        std::fill_n(bank.begin() + slot * 128 + 118,10,uint8_t('L'));
+    bank[74] = 127;                  // OP2 EG L3 in the first voice.
+    bank[128] = 127;                 // OP6 EG R1 in the second voice.
+    bank[128 + 101] = 100;           // OP1 fine in the second voice.
+    bank[31 * 128 + 24] = 127;       // OP5 EG L4 in the last voice.
+    return bank;
+}
+
+static void testLegacyPendingProjectState()
+{
+    const auto bank = syntheticLegacyBank();
+    auto source = std::make_unique<VDX7AudioProcessor>(false);
+    const auto initial = save(*source);
+    auto xml = juce::AudioProcessor::getXmlFromBinary(initial.getData(),int(initial.getSize()));
+    require(xml != nullptr,"legacy pending state XML");
+    auto tree = juce::ValueTree::fromXml(*xml);
+    juce::MemoryBlock memory(VDX7Engine::kRamStateSize,true);
+    std::memcpy(memory.getData(),bank.data(),bank.size());
+    tree.setProperty("ram",memory.toBase64Encoding(),nullptr);
+    tree.setProperty("romPath",juce::String(),nullptr);
+    tree.setProperty("romIdentity",juce::String(),nullptr);
+    juce::MemoryBlock state;
+    juce::AudioProcessor::copyXmlToBinary(*tree.createXml(),state);
+    auto reopened = std::make_unique<VDX7AudioProcessor>(false);
+    reopened->setStateInformation(state.getData(),int(state.getSize()));
+    require(ram(save(*reopened)) == memory,"legacy raw values survive pending project restore without ROM");
+    std::cout << "PASS: legacy pending project state retains raw EG/fine bytes (no ROM)\n";
+}
+
+static void testLegacyProcessorImport(const juce::File& romFile)
+{
+    const auto bank = syntheticLegacyBank();
+    const auto message = VDX7Sysex::encode(bank);
+    require(message.size() == 4104,"legacy synthetic VMEM encoder");
+    juce::TemporaryFile file(".syx");
+    require(file.getFile().replaceWithData(message.data(),message.size()),"legacy import fixture");
+    auto source = std::make_unique<VDX7AudioProcessor>(false);
+    require(source->loadRomFromFile(romFile),"legacy processor test ROM");
+    juce::String error;
+    require(source->loadSyxFromFile(file.getFile(),&error),"legacy complete bank import");
+    auto checkPacked = [&](const juce::MemoryBlock& state) {
+        const auto memory = ram(state);
+        require(memory.getSize() == VDX7Engine::kRamStateSize
+                && std::memcmp(memory.getData(),bank.data(),bank.size()) == 0,
+                "processor import/publication/project save preserve raw bank bytes");
+    };
+    for (int slot : {0,1,31})
+    {
+        source->selectProgramFromUi(slot);
+        source->synchroniseOperatorParametersFromEngine();
+        checkPacked(save(*source));
+        VDX7AudioProcessor::SyxExportSnapshot single;
+        require(source->captureSyxExportSnapshot(false,single,error),"legacy single export capture");
+        std::vector<uint8_t> decoded;
+        require(VDX7Sysex::decode(single.message(),decoded)
+                && std::equal(decoded.begin(),decoded.end(),bank.begin() + slot * 128),
+                "processor single export retains raw legacy values");
+    }
+    VDX7AudioProcessor::SyxExportSnapshot full;
+    require(source->captureSyxExportSnapshot(true,full,error) && full.message() == message,
+            "processor bank export preserves the complete input message");
+    const auto state = save(*source);
+    auto restored = std::make_unique<VDX7AudioProcessor>(false);
+    restored->setStateInformation(state.getData(),int(state.getSize()));
+    require(restored->isRomLoaded(),"legacy restored processor has firmware");
+    checkPacked(save(*restored));
+
+    // A checksum-valid invalid value remains a transactional rejection.
+    auto bad = message;
+    bad[6 + 14] = 100; // Output level: no legacy exception.
+    unsigned checksum = 0;
+    for (std::size_t i = 6; i < bad.size()-2; ++i) checksum += bad[i];
+    bad[bad.size()-2] = static_cast<uint8_t>((128-(checksum&127))&127);
+    require(file.getFile().replaceWithData(bad.data(),bad.size()),"legacy negative fixture");
+    const auto before = ram(save(*restored));
+    require(!restored->loadSyxFromFile(file.getFile(),&error),"reject invalid checksum-valid bank after legacy import");
+    require(ram(save(*restored)) == before,"failed import preserves legacy RAM transactionally");
+    std::cout << "PASS: legacy import, passive sync, single/bank export, project restore and negative import\n";
+}
+
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -499,6 +583,13 @@ int main(int argc, char** argv)
         if (argc == 2 && juce::String(argv[1]) == "--pre-rom-state-state-only")
         {
             testPreRomDeferredStateIsSerialized();
+            testLegacyPendingProjectState();
+            return 0;
+        }
+        if (argc == 3 && juce::String(argv[1]) == "--legacy-bank-compatibility")
+        {
+            testLegacyPendingProjectState();
+            testLegacyProcessorImport(juce::File(argv[2]));
             return 0;
         }
         if (argc == 3 && juce::String(argv[1]) == "--pre-rom-state")
@@ -552,6 +643,7 @@ int main(int argc, char** argv)
         }
 
         original.prepareToPlay(48000, 256);
+        testLegacyProcessorImport(testRomFile);
         checkControllers(juce::File(original.getRomPath()));
         checkUserLibrary(juce::File(original.getRomPath()), argc > 1 ? juce::File(argv[1]) : juce::File());
         // Check patch/host coherence without creating an editor.

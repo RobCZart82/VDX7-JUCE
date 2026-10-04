@@ -88,7 +88,7 @@ int main(int argc, char** argv)
         for (const auto& invalidField : std::array<std::pair<int, uint8_t>, 6> {{
                  {0, 100},       // operator rate
                  {14, 100},      // operator output level
-                 {16, 100},      // operator fine frequency
+                 {16, 101},      // fine 100 is a supported legacy exception, 101 is not
                  {12, 0x78},     // detune nibble 15 (+8)
                  {116, 0x0c},    // LFO waveform 6
                  {117, 49}       // transpose beyond +24
@@ -158,6 +158,23 @@ int main(int argc, char** argv)
             require(file.loadFileAsData(preserved) && preserved == broken, "damaged original kept for recovery");
         }
         require(file.replaceWithData(goodBytes.getData(), goodBytes.getSize()), "restore test fixture");
+
+        // USER persistence must retain imported legacy values byte-for-byte.
+        const auto legacyFile = directory.getChildFile("LEGACY.vdxbank");
+        auto legacyPatch = empty.voices[0];
+        legacyPatch[0] = 127;
+        legacyPatch[6] = 127;
+        legacyPatch[16] = 100;
+        require(VDX7UserBank::savePatch(legacyFile,empty,0,legacyPatch,"LEGACY",false).wasOk(),
+                "save legacy USER patch without normalising EG/fine values");
+        VDX7UserBank::Snapshot legacyReload;
+        require(VDX7UserBank::load(legacyFile,legacyReload).wasOk(), "reload legacy USER patch");
+        require(std::equal(legacyPatch.begin(),legacyPatch.begin()+118,legacyReload.voices[0].begin()),
+                "USER save/reload preserves every raw parameter byte");
+        std::vector<uint8_t> legacyPacked(legacyReload.voices[0].begin(),legacyReload.voices[0].end());
+        std::vector<uint8_t> legacyDecoded;
+        require(VDX7Sysex::decode(VDX7Sysex::encode(legacyPacked),legacyDecoded)
+                && legacyDecoded == legacyPacked, "USER-to-single-SysEx lossless legacy round trip");
 
         // Held lock in another host/process must prevent any mutation.
         const auto ready = directory.getChildFile("ready");

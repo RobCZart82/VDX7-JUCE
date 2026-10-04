@@ -32,8 +32,8 @@ bool decode(const std::vector<uint8_t>& m, std::vector<uint8_t>& packed)
     {
         std::copy(m.begin()+6, m.end()-2, result.begin());
 
-        // A checksum-valid VMEM bank can still contain an invalid packed
-        // detune nibble (15 encodes +8, outside the DX7 range -7..+7).
+        // Validate semantics without normalising verified legacy EG/fine
+        // values or firmware-reserved bits. Transport checks alone are not enough.
         for (int voice = 0; voice < 32; ++voice)
         {
             const auto* packedVoice = result.data() + voice * VDX7VoiceData::kPackedVoiceSize;
@@ -49,9 +49,12 @@ bool decode(const std::vector<uint8_t>& m, std::vector<uint8_t>& packed)
             {
                 auto p = fields[f];
                 int v = m[6 + block*21 + f] - (p == P::detune ? 7 : 0);
-                if (v < VDX7VoiceData::parameterMinimum(p)
-                    || v > VDX7VoiceData::parameterMaximum(p)) return false;
+                if (!VDX7VoiceData::isSupportedStoredOperatorValue(p, v)) return false;
                 VDX7VoiceData::setOperatorParameter(result.data(),128,5-block,p,v);
+                // The editor setter intentionally clamps to canonical ranges.
+                // Import must retain the original raw legacy values instead.
+                if (f < 8 || p == P::fine)
+                    result[block * 17 + (p == P::fine ? 16 : f)] = static_cast<uint8_t>(v);
             }
         for (int f = 0; f < 19; ++f)
         {
@@ -85,8 +88,14 @@ std::vector<uint8_t> encode(const std::vector<uint8_t>& packed)
     {
         for (int block=0;block<6;++block)
             for (int f=0;f<21;++f)
-                m[6+block*21+f]=static_cast<uint8_t>(VDX7VoiceData::getOperatorParameter(
-                    packed.data(),128,5-block,fields[f]) + (fields[f]==P::detune ? 7 : 0));
+            {
+                // UI getters expose canonical editor ranges, not the raw
+                // stored legacy values. VCED export must not silently clamp.
+                const int value = f < 8 || fields[f] == P::fine
+                    ? packed[block * 17 + (fields[f] == P::fine ? 16 : f)]
+                    : VDX7VoiceData::getOperatorParameter(packed.data(),128,5-block,fields[f]);
+                m[6+block*21+f]=static_cast<uint8_t>(value + (fields[f]==P::detune ? 7 : 0));
+            }
         for (int f=0;f<19;++f)
         {
             auto p=static_cast<V>(f);

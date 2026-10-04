@@ -35,19 +35,39 @@ int parameterMaximum(Parameter parameter) noexcept
     }
 }
 
+bool isSupportedStoredOperatorValue(Parameter parameter, int value) noexcept
+{
+    if (parameter == Parameter::count)
+        return false;
+    const int index = static_cast<int>(parameter);
+    if (index < 0 || index >= kParameterCount)
+        return false;
+    if (value >= parameterMinimum(parameter) && value <= parameterMaximum(parameter))
+        return true;
+    // Archived factory VMEM uses these exact values. The original v1.8
+    // firmware handles them, and replacing them with 99 can change the sound.
+    // Do not generalise this into accepting arbitrary out-of-range parameters.
+    return (index <= static_cast<int>(Parameter::level4) && value == 127)
+        || (parameter == Parameter::fine && value == 100);
+}
+
 bool hasValidPackedVoice(const uint8_t* packedVoice, std::size_t size) noexcept
 {
     if (packedVoice == nullptr || size < kPackedVoiceSize)
+        return false;
+    if (std::any_of(packedVoice, packedVoice + kPackedVoiceSize,
+                    [](uint8_t value) { return value > 127; }))
         return false;
 
     for (int operatorIndex = 0; operatorIndex < kOperatorCount; ++operatorIndex)
     {
         const auto* op = packedVoice + operatorOffset(operatorIndex);
         for (int field = 0; field < 8; ++field)
-            if (op[field] > 99) return false;
+            if (!isSupportedStoredOperatorValue(static_cast<Parameter>(field), op[field]))
+                return false;
         if (op[8] > 99 || op[9] > 99 || op[10] > 99
             || ((op[12] >> 3) & 0x0f) > 14
-            || op[14] > 99 || op[16] > 99)
+            || op[14] > 99 || !isSupportedStoredOperatorValue(Parameter::fine, op[16]))
             return false;
     }
 
