@@ -8,7 +8,15 @@ publication. On 2026-10-03 the owner explicitly approved product A and packager
 B at `b7fce0503059c8c2e3c61d6ccf5af33612739e32` for final test packaging.
 This is not final binary/host acceptance or permission to publish assets.
 
-## Current approved packaging state
+## Existing committed approval and its scope
+
+The legacy-bank and bank-folder changes are now merged at dbad14a. Its
+preparation-only packages and source passed independent verification; see the
+[new preparation report](../validation/VALIDATION_20261004_BANK_FOLDER_PACKAGE_PREP_101.md).
+The existing record below approves the earlier b7fce05 pair only. A new exact
+pair requires owner approval and a separate reviewed policy commit before
+accepted-mode final test packaging. The earlier approval is not silently
+extended to the changed product.
 
 The committed `docs/release/RELEASE_APPROVAL.json` currently contains:
 

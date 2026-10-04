@@ -41,6 +41,19 @@ korábbi PASS állítások kizárólag a megnevezett régi forrásra/csomagokra 
 
 ### A végrehajtás sorrendje
 
+Aktuális bankmappás jelölt: `dbad14a2ef8307e565675893b6b3b837cfab9b02`.
+A #124 végső Windows/macOS/sanitizer és a beolvasztott main Windows/macOS
+ellenőrzése PASS. Az új, nem elfogadott előkészítő csomagolás `37225128633`
+négy feladata, a tényleges csomagok független hash/payload/forrásvizsgálata,
+valamint a pontos hosted ZIP-pel azonos forrás friss offline buildje PASS.
+Ez a forrás tartalmazza a legacy bankjavítást és a bankmappát; a b7fce05
+jelenlegi elfogadási rekordja kizárólag a régi párosra érvényes.
+[Új előkészítési bizonyíték](../validation/VALIDATION_20261004_BANK_FOLDER_PACKAGE_PREP_101.md).
+Következő függő kapu: dbad14a pontos A/B páros tulajdonosi végső tesztbuild-
+jóváhagyása, külön felülvizsgált C rekord és zöld merge/main; majd az új
+elfogadott módú csomagok tényleges ellenőrzése és tulajdonosi REAPER-teszt.
+Az előkészítő hash-ek nem számítanak automatikusan végső hash-nek.
+
 2026-10-04 új tulajdonosi funkciókérés: az ellenőrzött hangszín-visszaállításra
 tartalomalapú, részleges ROM1A–ROM4B bankmappa épül. Ez célzott kivétel a
 fenti funkciófagyasztás alól, nem általános GUI-átalakítás. A főfelület marad;
@@ -53,7 +66,7 @@ elfogadási rekordot nem írjuk át automatikusan. A jegyzőkönyv:
 [bankmappa és hangszínmegőrzés](../validation/VALIDATION_20261004_FACTORY_BANK_FOLDER.md).
 
 1. **Forrás és bizonyítékok rögzítése.** Frissen ellenőrizni a main állapotát,
-   a nyitott PR-eket, review-kat és Actions futásokat. A jelenlegi vizsgált jelölt
+   a nyitott PR-eket, review-kat és Actions futásokat. A korábbi vizsgált jelölt
    `b7fce0503059c8c2e3c61d6ccf5af33612739e32`, A=B: tulajdonos által
    jóváhagyott végső tesztforrás/csomagoló, nem publikálási engedély.
    A #120 beolvadt, C=`828320d78e5d2e193356af0485a15c12f0279824`;

@@ -1,6 +1,21 @@
 # 1.0 release-preparation checklist — not a publication authorization
 
-## Current correction checkpoint — 2026-10-04
+## Current bank folder checkpoint
+
+- [x] dbad14a source: final PR Windows/macOS/sanitizer and post-merge main Windows/macOS PASS.
+- [x] Preparation 37225128633: both native packages, automated regressions,
+  installer upgrade/uninstall, checksum/staging and corresponding source PASS.
+- [x] Independent downloaded-file inspection and fresh extracted offline source
+  build PASS; [exact preparation evidence](../validation/VALIDATION_20261004_BANK_FOLDER_PACKAGE_PREP_101.md).
+- [ ] Owner approval of the new exact source/packager pair and separately reviewed policy.
+- [ ] New accepted-mode final files downloaded and independently verified.
+- [ ] Owner installation and real final Windows/macOS REAPER results.
+- [ ] Separate publication permission and durable source/product publication.
+
+Earlier checked entries below apply only to their named older source/packages.
+They do not accept the changed bank-folder candidate.
+
+## Historical correction checkpoint 2026-10-04
 
 - [x] Owner approved exact A=B b7fce05 on 2026-10-03; #120 merged at C=828320d,
   final-head Windows/macOS/ASan-UBSan and post-merge Windows/macOS PASS.
@@ -56,13 +71,22 @@ after download verification. A green build is not host PASS.
 
 Készíts biztonsági másolatot az 1.0.0 plug-inről, projektekről, ROM-ról és USER
 bankokról. A régi projektet csak másolatként nyisd meg és mentsd. Az alábbi
-listát Windows és macOS rendszeren külön töltsd ki, a pontos tesztcsomaggal.
+  listát Windows és macOS rendszeren külön töltsd ki, a pontos tesztcsomaggal.
 
 - [ ] Csomagnév/hash, OS, REAPER verzió és architektúra rögzítve; telepítés,
   felismerés és az 1.0.1 verzió ellenőrizve. Ne maradjon két azonos VDX7 másolat
   eltérő VST3 keresési helyen. A rendszer védelmét ne kapcsold ki.
 - [ ] Saját jogszerű, érvényes ROM betöltése; hang, hangszín/bankváltás,
   hangindítás/leállítás és sustain; tartott hang mellett Stop/reset, majd új hang.
+- [ ] SETTINGS / Bank folder: saját ROM1A–ROM4B SysEx másolatok bemásolása,
+  Refresh banks, helyes bankhelyek. Egy átnevezett fájlt is a tartalma alapján
+  ismer fel; részleges készletnél csak a meglévő bankhelyek aktívak. Sérült/
+  ismeretlen fájl nem kap gyári bankhelyet; normál LOAD SYX továbbra is CUSTOM.
+- [ ] Gyári hangszínből kitekert és teljesen CUSTOM hang külön mentése,
+  bezárás–újranyitás. A projekt bankmásolata és legutóbbi hangszíne a tesztmappa
+  fájljának eltávolítása/cseréje után is visszaáll. Az eredeti bankokat ne írd át.
+- [ ] Refresh banks közben az aktuális kitekert hang nem változik. Új példány
+  beolvassa a helyi mappát; már nyitott másik példányt külön frissíts.
 - [ ] Pitch/Mod és egy operátorparaméter automatizációjának felvétele/visszajátszása;
   a GUI és a hang követi az értékeket.
 - [ ] Új projekt mentése, REAPER bezárása és újranyitása; hangszín, saját
@@ -92,6 +116,15 @@ macOS using the exact verified final package.
   separate VST3 search paths. Do not disable system-wide security protections.
 - [ ] Load your lawful valid ROM; check sound, program/bank selection, note
   start/release and sustain; Stop/reset with held notes, then play a new note.
+- [ ] SETTINGS / Bank folder: copy your own ROM1A–ROM4B SysEx files and use
+  Refresh banks. A renamed file still occupies its content-defined slot;
+  partial sets enable only present slots. Damaged/unknown files do not get a
+  factory slot; ordinary LOAD SYX still uses CUSTOM.
+- [ ] Separately save/reopen an edited factory sound and a fully CUSTOM sound.
+  The project's catalog and latest sound survive removing/replacing a test-folder
+  bank file. Do not rewrite the original banks.
+- [ ] Refresh banks leaves the currently edited sound unchanged. A new instance
+  reads the local folder; refresh other already-open instances explicitly.
 - [ ] Record/play back Pitch/Mod and an operator parameter's automation;
   confirm that both sound and GUI follow the values.
 - [ ] Save a new project, close REAPER and reopen; verify program, custom
