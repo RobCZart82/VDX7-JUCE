@@ -47,10 +47,13 @@ ellenőrzése PASS. Az új, nem elfogadott előkészítő csomagolás `372251286
 négy feladata, a tényleges csomagok független hash/payload/forrásvizsgálata,
 valamint a pontos hosted ZIP-pel azonos forrás friss offline buildje PASS.
 Ez a forrás tartalmazza a legacy bankjavítást és a bankmappát; a b7fce05
-jelenlegi elfogadási rekordja kizárólag a régi párosra érvényes.
+korábbi elfogadási rekordja kizárólag a régi párosra érvényes.
 [Új előkészítési bizonyíték](../validation/VALIDATION_20261004_BANK_FOLDER_PACKAGE_PREP_101.md).
-Következő függő kapu: dbad14a pontos A/B páros tulajdonosi végső tesztbuild-
-jóváhagyása, külön felülvizsgált C rekord és zöld merge/main; majd az új
+2026-10-04: a pontos dbad14a A/B kapu megnevezése után a tulajdonos
+engedélyezte a végső tesztbuild előkészítésének folytatását, nem a publikálást.
+A dokumentációs #125 beolvadt `23b8163fef1bf65b0f9a1a869648cefdaabac367`-nél;
+a main Windows `37226950763` és macOS `37226950797` ellenőrzése PASS.
+Következő függő kapu: külön felülvizsgált C rekord és zöld merge/main; majd az új
 elfogadott módú csomagok tényleges ellenőrzése és tulajdonosi REAPER-teszt.
 Az előkészítő hash-ek nem számítanak automatikusan végső hash-nek.
 

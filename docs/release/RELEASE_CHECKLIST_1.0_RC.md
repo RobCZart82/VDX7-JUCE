@@ -7,7 +7,9 @@
   installer upgrade/uninstall, checksum/staging and corresponding source PASS.
 - [x] Independent downloaded-file inspection and fresh extracted offline source
   build PASS; [exact preparation evidence](../validation/VALIDATION_20261004_BANK_FOLDER_PACKAGE_PREP_101.md).
-- [ ] Owner approval of the new exact source/packager pair and separately reviewed policy.
+- [x] Owner authorized continuing final test packaging for exact A=B dbad14a
+  after that gate was identified; no publication or host acceptance.
+- [ ] Separately reviewed approval policy and green post-merge main checks.
 - [ ] New accepted-mode final files downloaded and independently verified.
 - [ ] Owner installation and real final Windows/macOS REAPER results.
 - [ ] Separate publication permission and durable source/product publication.

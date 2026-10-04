@@ -57,7 +57,9 @@ accepted. The packager requires an exact source/packager approval from
 with the canonical main workflow context. A committed policy approves only its
 exact recorded pair, never a later changed source. Preparation mode does not
 require that record. The older b7fce05 approval does not approve the new dbad14a
-bank-folder candidate; use the execution plan for the current gate status.
+bank-folder candidate. The owner authorized continuing the new exact pair's
+final test packaging on 2026-10-04; its separate policy/main gates and later
+actual accepted-file inspection still apply. Use the execution plan for status.
 
 Accepted creation supplies `--packager-commit`, `--approval-commit`,
 `--workflow-ref` and `--workflow-git-ref`; use `--approval-repo` when the
