@@ -55,6 +55,13 @@ Catalogs from valid legacy combined images need not match the new folder's
 reference fingerprints. This preserves legacy compatibility without using
 arbitrary files as new factory identities.
 
+Final self-review identified that JUCE's MemoryBlock decoder allocates from an
+untrusted decimal prefix before checking decoded size. Both catalog and existing
+project RAM decoding now require the exact fixed-size prefix and encoded length
+before allocation, and canonical encoding before accepting bytes. Negative/huge
+prefixes, truncated text and noncanonical payloads are rejected transactionally.
+The existing writer's project format is unchanged.
+
 ## Test evidence and limits
 
 Before implementing the folder, the existing processor regression passed with
@@ -87,12 +94,18 @@ owner's plug-in directories. Isolated temporary fixtures were removed.
 
 Local required ROM-free ASan/UBSan components: 9/9 PASS. Leak detection is
 disabled on this macOS configuration. Python suite: 77/77 PASS. Final normal
-CTest regression: 45/45 PASS in 430.21 seconds (14 ROM-free and 31 private-ROM
+CTest regression before the final allocation hardening: 45/45 PASS in 430.21 seconds (14 ROM-free and 31 private-ROM
 tests, including the ROM fixture). Complete registration/labels/timeouts/fixture
-checker passed. The tests were rebuilt from the final product source before this
+checker passed. The tests were rebuilt from the then-current product source before this
 run; earlier intermediate test passes are not substituted. Development compile
 checks caught and corrected JUCE API mismatches. A stale intermediate run was
 interrupted after a failed rebuild and is not counted as final evidence.
+
+After allocation hardening, factory-bank and pre-ROM state tests passed again;
+the private bank-folder processor probe passed in normal and ASan/UBSan builds,
+and the required ASan/UBSan component set passed 9/9. A complete rebuilt normal
+regression is rerun; its final result/head is a required gate recorded in PR 124,
+not inferred from the earlier full-suite result.
 
 GitHub Windows/macOS/sanitizer PR results and post-merge main results remain
 separate gates at source-commit time; record their exact run/head identities in

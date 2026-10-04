@@ -2,6 +2,7 @@
 #include "VDX7BoundedFile.h"
 #include "VDX7Sysex.h"
 #include "VDX7VoiceData.h"
+#include "VDX7StateBytes.h"
 #include <juce_cryptography/juce_cryptography.h>
 
 namespace VDX7FactoryBanks
@@ -117,10 +118,8 @@ bool readState(const juce::ValueTree& state, Snapshot& banks, bool& present)
     if (mask.isEmpty() || mask.length() > 3 || !mask.containsOnly("0123456789") || mask.getIntValue() > 255)
         return false;
     const auto text = state["factoryBanks"].toString();
-    // JUCE MemoryBlock's length-prefixed base64 is slightly larger than RFC base64.
-    if (text.length() > 44000) return false;
     juce::MemoryBlock block;
-    if (!block.fromBase64Encoding(text)) return false;
+    if (!VDX7StateBytes::decode(text, mask.getIntValue() == 0 ? 0 : imageSize, block)) return false;
     Snapshot candidate;
     candidate.mask = static_cast<uint8_t>(mask.getIntValue());
     if (block.getSize() != 0)

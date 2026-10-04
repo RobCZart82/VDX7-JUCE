@@ -1,6 +1,7 @@
 #include "VDX7FactoryBanks.h"
 #include "VDX7Sysex.h"
 #include "VDX7MidiValidation.h"
+#include "VDX7StateBytes.h"
 #include <juce_cryptography/juce_cryptography.h>
 #include <iostream>
 #include <stdexcept>
@@ -69,6 +70,22 @@ int main()
         require(VDX7FactoryBanks::readState(tree, restored, present) && present
             && restored.mask == partial.banks.mask && restored.image == partial.banks.image, "project XML round trip");
         const auto good = restored;
+        for (const auto& invalidText : {juce::String("-1."), juce::String("2147483647."),
+             juce::String("32768."), tree["factoryBanks"].toString() + ".",
+             tree["factoryBanks"].toString().replaceSection(7, 1, "!")})
+        {
+            auto bad = tree.createCopy();
+            bad.setProperty("factoryBanks", invalidText, nullptr);
+            require(!VDX7FactoryBanks::readState(bad, restored, present)
+                && restored.image == good.image, "unsafe size prefix/noncanonical catalog rejected before allocation");
+        }
+        juce::MemoryBlock ramBytes(6144, true), decoded;
+        require(VDX7StateBytes::decode(ramBytes.toBase64Encoding(), 6144, decoded)
+            && decoded == ramBytes, "fixed RAM state encoding round trip");
+        for (const auto& text : {juce::String("-1."), juce::String("2147483647."),
+             juce::String("6144."), ramBytes.toBase64Encoding().replaceSection(0, 4, "9999")})
+            require(!VDX7StateBytes::decode(text, 6144, decoded) && decoded == ramBytes,
+                "unsafe RAM length rejected transactionally before allocation");
         for (int probe = 0; probe < 7; ++probe)
         {
             auto bad = tree.createCopy();

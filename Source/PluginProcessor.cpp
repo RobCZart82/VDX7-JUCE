@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "VDX7BoundedFile.h"
+#include "VDX7StateBytes.h"
 #include "VDX7Sysex.h"
 #include "VDX7MidiValidation.h"
 #include "PluginEditor.h"
@@ -1282,7 +1283,7 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     if (ramText.isNotEmpty())
     {
         juce::MemoryBlock ram;
-        if (!ram.fromBase64Encoding(ramText) || ram.getSize() != VDX7Engine::kRamStateSize)
+        if (!VDX7StateBytes::decode(ramText, VDX7Engine::kRamStateSize, ram))
             return; // Malformed state must not replace a usable/pending project.
         const auto* packed = static_cast<const uint8_t*>(ram.getData());
         for (int slot = 0; slot < 32; ++slot)
@@ -1402,7 +1403,7 @@ void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
         if (ramText.isNotEmpty())
         {
             juce::MemoryBlock block;
-            if (block.fromBase64Encoding(ramText) && block.getSize() == VDX7Engine::kRamStateSize)
+            if (VDX7StateBytes::decode(ramText, VDX7Engine::kRamStateSize, block))
             {
                 std::vector<uint8_t> ram(block.getSize());
                 std::memcpy(ram.data(), block.getData(), block.getSize());

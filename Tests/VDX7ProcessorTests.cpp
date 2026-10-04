@@ -597,12 +597,14 @@ static void testPendingFactoryCatalog()
     require(VDX7FactoryBanks::readState(juce::ValueTree::fromXml(*savedXml), restored, present)
         && present && restored.image == banks.image && restored.mask == banks.mask,
         "missing firmware retains complete project catalog");
-    for (int mutation = 0; mutation < 3; ++mutation)
+    for (int mutation = 0; mutation < 5; ++mutation)
     {
         auto bad = tree.createCopy();
         if (mutation == 0) bad.removeProperty("factoryBankMask", nullptr);
         if (mutation == 1) bad.setProperty("factoryBankMask", 256, nullptr);
         if (mutation == 2) bad.setProperty("factoryBanks", "broken", nullptr);
+        if (mutation == 3) bad.setProperty("factoryBanks", "-1.", nullptr);
+        if (mutation == 4) bad.setProperty("ram", "2147483647.", nullptr);
         juce::AudioProcessor::copyXmlToBinary(*bad.createXml(), state);
         processor->setStateInformation(state.getData(), int(state.getSize()));
         require(save(*processor) == preserved, "invalid catalog cannot replace pending project");
