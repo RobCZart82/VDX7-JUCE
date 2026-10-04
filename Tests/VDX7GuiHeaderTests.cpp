@@ -46,6 +46,35 @@ int main(int argc, char** argv)
     juce::ScopedJuceInitialiser_GUI gui;
     try
     {
+        // Optional local visual QA, not part of headless/hosted CI.
+        if (argc == 3 && juce::String(argv[1]) == "--settings-preview")
+        {
+            auto processor = std::make_unique<VDX7AudioProcessor>(false);
+            std::unique_ptr<juce::AudioProcessorEditor> editor(processor->createEditor());
+            bool opened = false;
+            for (auto* child : editor->getChildren())
+                if (auto* button = dynamic_cast<juce::TextButton*>(child))
+                    if (button->getButtonText() == "SETTINGS") { button->onClick(); opened = true; break; }
+            require(opened, "settings button opens dialog");
+            auto* dialog = dynamic_cast<juce::AlertWindow*>(juce::ModalComponentManager::getInstance()->getModalComponent(0));
+            require(dialog != nullptr, "settings modal exists");
+            int bankButtons = 0;
+            for (auto* child : dialog->getChildren())
+            {
+                require(dialog->getLocalBounds().contains(child->getBounds()), "settings child fits dialog");
+                if (auto* button = dynamic_cast<juce::TextButton*>(child))
+                    if (button->getButtonText() == "Bank folder" || button->getButtonText() == "Refresh banks") ++bankButtons;
+            }
+            require(bankButtons == 2, "both factory library tools are visible in settings");
+            juce::FileOutputStream stream {juce::File(argv[2])};
+            require(stream.openedOk() && juce::PNGImageFormat().writeImageToStream(
+                dialog->createComponentSnapshot(dialog->getLocalBounds()), stream), "settings preview written");
+            dialog->exitModalState(0); // No settings/files/installed plug-ins changed.
+            juce::Timer::callAfterDelay(50, [] { juce::MessageManager::getInstance()->stopDispatchLoop(); });
+            juce::MessageManager::getInstance()->runDispatchLoop();
+            std::cout << "PASS: Settings bank tools fit the dialog\n";
+            return 0;
+        }
         // Optional local measurement only, never part of the timed CI test.
         // Keep instances alive briefly so the caller can sample process RSS.
         if (argc == 3 && juce::String(argv[1]) == "--benchmark-editors")

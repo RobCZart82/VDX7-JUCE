@@ -105,6 +105,53 @@ Automatikus keresési mappák:
 
 Gyári hangadat esetén ROM1A–ROM4B érhető el: nyolc bank, bankonként 32 program. Enélkül kompatibilis hangszín-/bank-SysEx adat szükséges. A LOAD ROM kézi fájlválasztást is biztosít.
 
+### Gyári bankmappa
+
+Az új fejlesztési változat külön, a felhasználótól származó gyári SysEx bankokat
+is kezel önálló firmware mellett; nem kell kombinált firmware/bank ROM.
+Nyisd meg a **SETTINGS → Bank folder** mappát, és közvetlenül ide másold a `.syx`
+fájlokat. Meglévő példányban a SETTINGS **Refresh banks** gombja frissíti a
+listát. Új példány a firmware betöltésekor olvassa be a mappát. A fő GUI
+elrendezése változatlan.
+
+- macOS: `~/Library/Application Support/VDX7-JUCE/Factory Banks/`
+- Windows: `%APPDATA%\VDX7-JUCE\Factory Banks\`
+
+Egy–nyolc bank is használható. Csak a rendelkezésre álló ROM1A–ROM4B helyek
+aktívak. A felismerés a teljes, ellenőrzött 4096 bájtos bankadat SHA-256
+lenyomatával történik, nem fájlnév vagy hangszínnevek alapján. Azonos fájl
+átnevezése nem változtatja meg a helyét. A referencialenyomat ismert dumpot
+azonosít; nem igazolja a Yamaha szerzőségét, és nem ad továbbterjesztési jogot.
+Hangadat nincs a szoftverhez mellékelve.
+
+Teljes, 4104 bájtos DX7 VMEM banküzenet szükséges helyes szerkezettel,
+ellenőrzőösszeggel, 7 bites és támogatott paraméterértékekkel. Ismeretlen vagy
+módosított bank nem kap gyári helyet: a **LOAD SYX** CUSTOM bankként töltheti be.
+Egyhangszínes fájl, összefűzött üzenet és almappa nem kerül beolvasásra.
+Legfeljebb 128 SysEx fájlt vizsgál; limitjelzésnél távolítsd el a duplikátumokat
+és felesleges fájlokat. Befejezetlen beolvasás nem cseréli le a meglévő
+banklistát. Azonos duplikátum nem ad új bankhelyet. A forrásfájlokat
+nem írja át.
+
+A frissítés a mappa és az érvényes régi kombinált ROM/kísérőadat alapján
+cseréli a banklistát, de nem cseréli le a megszólaló hangot és nem törli a
+nem exportált módosítás jelzését. Bank eltávolításakor a hely inaktívvá válik,
+kivéve ha a régi ROM még biztosítja. Ha az aktuális bank listabeli adata eltűnik
+vagy megváltozik, a hang RAM-ban marad, CUSTOM jelöléssel. Függőben lévő,
+megfelelő firmware-re váró projekt alatt a frissítés tiltott. A SETTINGS
+bankmappagombjai nem alkalmazzák a párbeszédablak más, még be nem fejezett
+beállításait.
+
+A DAW-projekt az aktuális szerkeszthető bankot, a legutóbbi szerkesztett
+hangszínt/nevet, a választott programot és a rendelkezésre álló banklista
+saját adatmásolatát is elmenti. Újranyitáskor ez a mentett hang és banklista
+áll vissza akkor is, ha a helyi mappa megváltozott vagy eltűnt. Visszatöltéskor
+a mappa nem helyettesíti csendben másik hanggal a projektet. Firmware-t nem
+ágyaz be; továbbra is kell az eredetivel egyező ROM. Banklistát nem tároló régi
+projektnél a korábbi viselkedés marad. Minden példány saját pillanatképet tart;
+a többi nyitott példányt külön frissítsd. A projekttárolás nem ad jogot Yamaha
+adatok továbbterjesztésére.
+
 ## 4. Hangszínszerkesztés
 
 - Hat operátortab: kimeneti szint, durva/finom hangolás, detune, rate scaling, velocity- és amplitúdómoduláció-érzékenység.

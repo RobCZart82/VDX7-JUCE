@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "VDX7BoundedFile.h"
+#include "VDX7StateBytes.h"
 #include "VDX7Sysex.h"
 #include "VDX7MidiValidation.h"
 #include "PluginEditor.h"
@@ -170,7 +171,7 @@ juce::String VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter para
         kVoiceParameterSuffixes[static_cast<std::size_t>(safeParameter)]);
 }
 
-VDX7AudioProcessor::VDX7AudioProcessor(bool detectRom)
+VDX7AudioProcessor::VDX7AudioProcessor(bool detectRom, const juce::File& bankFolder)
     : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       parameters_(*this, nullptr, kParameterStateType, createParameterLayout())
 {
@@ -216,6 +217,8 @@ VDX7AudioProcessor::VDX7AudioProcessor(bool detectRom)
     for (auto& value : pendingPlaySettings_) value.store(0, std::memory_order_relaxed);
     for (auto& value : pendingPitchBendSettings_) value.store(0, std::memory_order_relaxed);
     detectRom_ = detectRom;
+    factoryBankFolder_ = bankFolder != juce::File() ? bankFolder
+        : (detectRom_ ? factoryBankFolder() : juce::File());
     keyboardState_.addListener(this);
     if (detectRom_) autoDetectRom();
     startTimerHz(30); // Processor-owned: publication does not require an editor.
@@ -405,7 +408,7 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     // The state thread never touches these audio-owned queues.
     (void) observeStateInstall();
     const int inputChannel = midiInputChannel_.load();
-    const bool hasFactoryVoices = factoryVoicesAvailable_.load(std::memory_order_acquire);
+    const auto factoryBankMask = factoryBankMaskSnapshot_.load(std::memory_order_acquire);
     if (inputChannel != audioMidiInputChannel_)
     {
         audioMidiInputChannel_ = inputChannel;
@@ -460,14 +463,14 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     if (engineLoaded_.load(std::memory_order_acquire) && useDeferred)
     {
         for (std::size_t i = 0; i < keyboardCount; ++i)
-            if (VDX7MidiValidation::acceptsHostEvent(keyboardEvents[i].data(), 3, 0,
-                    hasFactoryVoices))
+            if (VDX7MidiValidation::acceptsHostEventWithBankMask(keyboardEvents[i].data(), 3, 0,
+                    factoryBankMask))
                 deferredMidi_.push(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
         {
-            if (event.numBytes <= 0 || !VDX7MidiValidation::acceptsHostEvent(
+            if (event.numBytes <= 0 || !VDX7MidiValidation::acceptsHostEventWithBankMask(
                     event.data, static_cast<std::size_t>(event.numBytes), inputChannel,
-                    hasFactoryVoices))
+                    factoryBankMask))
                 continue;
             deferredMidi_.push(event.data, static_cast<std::size_t>(event.numBytes),
                                juce::jlimit(0, total, event.samplePosition));
@@ -563,13 +566,13 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
             if (deferFollowing) pausedPosition = eventPos;
         };
         for (std::size_t i = 0; i < keyboardCount; ++i)
-            if (VDX7MidiValidation::acceptsHostEvent(keyboardEvents[i].data(), 3, 0,
-                    hasFactoryVoices))
+            if (VDX7MidiValidation::acceptsHostEventWithBankMask(keyboardEvents[i].data(), 3, 0,
+                    factoryBankMask))
                 deliverOrDefer(keyboardEvents[i].data(), 3, 0);
         for (const auto event : midi)
-            if (event.numBytes > 0 && VDX7MidiValidation::acceptsHostEvent(
+            if (event.numBytes > 0 && VDX7MidiValidation::acceptsHostEventWithBankMask(
                     event.data, static_cast<std::size_t>(event.numBytes), inputChannel,
-                    hasFactoryVoices))
+                    factoryBankMask))
                 deliverOrDefer(event.data, static_cast<std::size_t>(event.numBytes),
                                juce::jlimit(0, total, event.samplePosition));
         if (deferFollowing)
@@ -662,12 +665,14 @@ void VDX7AudioProcessor::applyPendingCommands()
         switch (command.kind)
         {
             case VDX7EditQueue::Kind::bank:
-                selectionChanged = true;
                 // Factory banks replace the single internal RAM bank, just as
                 // before. Earlier edits must never migrate into this new bank.
-                engine_.selectFactoryBank(command.value);
-                modifiedVoices_.store(0);
-                edited = false;
+                if (engine_.selectFactoryBank(command.value))
+                {
+                    selectionChanged = true;
+                    modifiedVoices_.store(0);
+                    edited = false;
+                }
                 break;
             case VDX7EditQueue::Kind::program:
                 selectionChanged = true;
@@ -776,6 +781,7 @@ void VDX7AudioProcessor::updateEngineSnapshot() noexcept
     engineLoaded_.store(engine_.isLoaded(), std::memory_order_release);
     midiOverloadSnapshot_.store(engine_.midiOverloadCount(), std::memory_order_relaxed);
     factoryVoicesAvailable_.store(engine_.hasFactoryVoices(), std::memory_order_release);
+    factoryBankMaskSnapshot_.store(engine_.factoryBankMask(), std::memory_order_release);
     currentBankSnapshot_.store(engine_.currentBank(), std::memory_order_release);
     currentProgramSnapshot_.store(engine_.currentProgram(), std::memory_order_release);
 
@@ -1127,6 +1133,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     juce::ValueTree pendingCopy;
     juce::ValueTree deferredEdits;
     std::vector<uint8_t> ram;
+    VDX7FactoryBanks::Snapshot factoryBanks;
     int bank = -1, program = 0, inputChannel = 0;
     uint32_t modified = 0;
     juce::String loadedRomPath;
@@ -1162,6 +1169,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
             program = engine_.currentProgram();
             modified = modifiedVoices_.load();
             if (!engine_.saveRam(ram)) ram.clear();
+            factoryBanks = { engine_.factoryVoices(), engine_.factoryBankMask() };
             if (loaded)
             {
                 for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
@@ -1221,6 +1229,9 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     state.setProperty("midiInputChannel", inputChannel, nullptr);
     state.setProperty("program", program, nullptr);
     state.setProperty("modifiedVoices", static_cast<juce::int64>(modified), nullptr);
+    // Before first firmware load there is no catalog snapshot to freeze.
+    // A pending project with a real catalog took the preserved-copy path above.
+    if (loaded) VDX7FactoryBanks::writeState(state, factoryBanks);
     if (!ram.empty())
     {
         juce::MemoryBlock block(ram.data(), ram.size());
@@ -1264,11 +1275,15 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     if (!state.isValid() || state.getType().toString() != kStateType)
         return;
 
+    VDX7FactoryBanks::Snapshot factoryBanks;
+    bool hasBankSnapshot = false;
+    if (!VDX7FactoryBanks::readState(state, factoryBanks, hasBankSnapshot)) return;
+
     const auto ramText = state.getProperty("ram").toString();
     if (ramText.isNotEmpty())
     {
         juce::MemoryBlock ram;
-        if (!ram.fromBase64Encoding(ramText) || ram.getSize() != VDX7Engine::kRamStateSize)
+        if (!VDX7StateBytes::decode(ramText, VDX7Engine::kRamStateSize, ram))
             return; // Malformed state must not replace a usable/pending project.
         const auto* packed = static_cast<const uint8_t*>(ram.getData());
         for (int slot = 0; slot < 32; ++slot)
@@ -1377,6 +1392,10 @@ void VDX7AudioProcessor::capturePendingRestoreEditsLocked()
 
 void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
 {
+        VDX7FactoryBanks::Snapshot factoryBanks;
+        bool present = false;
+        if (!VDX7FactoryBanks::readState(state, factoryBanks, present)) return;
+        if (present && !engine_.installFactoryBanks(factoryBanks.image, factoryBanks.mask)) return;
         const int bank = static_cast<int>(state.getProperty("bank", -1));
         const int program = static_cast<int>(state.getProperty("program", 0));
 
@@ -1384,7 +1403,7 @@ void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
         if (ramText.isNotEmpty())
         {
             juce::MemoryBlock block;
-            if (block.fromBase64Encoding(ramText) && block.getSize() == VDX7Engine::kRamStateSize)
+            if (VDX7StateBytes::decode(ramText, VDX7Engine::kRamStateSize, block))
             {
                 std::vector<uint8_t> ram(block.getSize());
                 std::memcpy(ram.data(), block.getData(), block.getSize());
@@ -1455,6 +1474,10 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
     std::vector<uint8_t> voices;
     bool ignoredCompanion = false;
     bool pendingIdentityMismatch = false;
+    // Never access disk/hash files from processBlock. Tests with auto-detection
+    // disabled do not depend on the owner's global library.
+    const auto library = factoryBankFolder_ != juce::File() ? VDX7FactoryBanks::scan(factoryBankFolder_)
+                                                         : VDX7FactoryBanks::ScanResult {};
 
     if (rom.size() == VDX7Engine::kFirmwareSize)
     {
@@ -1489,6 +1512,27 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         }
         loadedRomPath_ = file.getFullPathName();
         loadedRomIdentity_ = makeRomContentIdentity(rom, voices);
+        baseFactoryBanks_ = { engine_.factoryVoices(), engine_.factoryBankMask() };
+        if (library.complete && library.banks.mask != 0)
+        {
+            auto combined = baseFactoryBanks_;
+            if (combined.image.empty()) combined.image.resize(VDX7FactoryBanks::imageSize, 0);
+            for (int slot = 0; slot < 8; ++slot)
+                if ((library.banks.mask & (1u << slot)) != 0)
+                    std::copy_n(library.banks.image.begin() + slot * VDX7FactoryBanks::bankSize,
+                        VDX7FactoryBanks::bankSize, combined.image.begin() + slot * VDX7FactoryBanks::bankSize);
+            combined.mask |= library.banks.mask;
+            engine_.installFactoryBanks(combined.image, combined.mask);
+            if (!pendingRestore_.isValid())
+            {
+                // Fresh RAM must agree with the overlaid catalog too, including
+                // a folder bank replacing a valid legacy combined-image slot.
+                const int current = engine_.currentBank();
+                if (engine_.hasFactoryBank(current)) engine_.selectFactoryBank(current);
+                else for (int slot = 0; slot < 8; ++slot)
+                    if (engine_.hasFactoryBank(slot)) { engine_.selectFactoryBank(slot); break; }
+            }
+        }
 #if defined(VDX7_TEST_STATE_TRANSITIONS)
         vdx7TestRomTransitionBoundary(1); // Firmware warmed up, before pending installation.
 #endif
@@ -1536,10 +1580,11 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         statusText_ = pendingIdentityMismatch
             ? "Project preserved: loaded ROM differs from the saved ROM"
             : (factoryVoicesAvailable_.load(std::memory_order_acquire)
-                ? "DX7 firmware loaded + 8 factory banks"
+                ? "DX7 firmware loaded + factory banks"
                 : "DX7 firmware loaded (factory voice image not found)");
         if (ignoredCompanion)
             statusText_ += "; invalid or unreadable optional factory voice image ignored";
+        if (!library.warnings.isEmpty()) statusText_ += "; check Factory Banks in SETTINGS";
     }
     synchroniseOperatorParametersFromEngine();
     return true;
@@ -2105,8 +2150,7 @@ bool VDX7AudioProcessor::setControllerSettingFromUi(int controller, int field, i
 bool VDX7AudioProcessor::selectFactoryBank(int bank)
 {
     if (!isProjectReady()
-        || !factoryVoicesAvailable_.load(std::memory_order_acquire)
-        || bank < 0 || bank > 7)
+        || !hasFactoryBank(bank))
         return false;
 
     if (!editQueue_.push({VDX7EditQueue::Kind::bank, 0, bank})) return false;
@@ -2131,6 +2175,56 @@ bool VDX7AudioProcessor::isRomLoaded() const
 bool VDX7AudioProcessor::hasFactoryVoices() const
 {
     return factoryVoicesAvailable_.load(std::memory_order_acquire);
+}
+
+bool VDX7AudioProcessor::hasFactoryBank(int index) const
+{
+    return index >= 0 && index < 8
+        && (factoryBankMaskSnapshot_.load(std::memory_order_acquire) & (1u << index)) != 0;
+}
+
+bool VDX7AudioProcessor::refreshFactoryBanks(const juce::File& folder, juce::String& report)
+{
+    const auto library = VDX7FactoryBanks::scan(folder);
+    if (!library.complete)
+    { report = "Factory bank scan incomplete; previous catalog preserved.\n"
+        + library.warnings[library.warnings.size() - 1]; return false; }
+    {
+        std::scoped_lock lock(engineMutex_);
+        if (!engine_.isLoaded() || pendingRestore_.isValid())
+        { report = "Load the project's matching firmware before refreshing factory banks."; return false; }
+        flushVoiceEditsLocked(); // Commit earlier selection/edits against the OLD catalog.
+        const int previousBank = engine_.currentBank();
+        const auto previousImage = engine_.factoryVoices();
+        auto combined = baseFactoryBanks_;
+        if (library.banks.mask != 0 && combined.image.empty())
+            combined.image.resize(VDX7FactoryBanks::imageSize, 0);
+        for (int slot = 0; slot < 8; ++slot)
+            if ((library.banks.mask & (1u << slot)) != 0)
+                std::copy_n(library.banks.image.begin() + slot * VDX7FactoryBanks::bankSize,
+                    VDX7FactoryBanks::bankSize, combined.image.begin() + slot * VDX7FactoryBanks::bankSize);
+        combined.mask |= library.banks.mask;
+        if (!engine_.installFactoryBanks(combined.image, combined.mask))
+        { report = "Factory bank snapshot is invalid; current library preserved."; return false; }
+        if (!engine_.hasFactoryBank(previousBank)
+            || (previousBank >= 0 && (previousImage.size() != VDX7FactoryBanks::imageSize
+                || !std::equal(previousImage.begin() + previousBank * 4096,
+                previousImage.begin() + (previousBank + 1) * 4096,
+                combined.image.begin() + previousBank * 4096)))) engine_.setCurrentBankMarker(-1);
+        updateEngineSnapshot();
+        report = "Factory bank list refreshed. Current sound and edits preserved.";
+        for (int slot = 0; slot < 8; ++slot)
+            if (engine_.hasFactoryBank(slot)) report += "\n" + bankName(slot);
+    }
+    if (!library.warnings.isEmpty())
+    {
+        report += "\n\n";
+        for (int i = 0; i < juce::jmin(8, library.warnings.size()); ++i) report += library.warnings[i] + "\n";
+        if (library.warnings.size() > 8)
+            report += juce::String(library.warnings.size() - 8) + " additional files ignored.";
+    }
+    updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    return true;
 }
 
 int VDX7AudioProcessor::getCurrentBank() const

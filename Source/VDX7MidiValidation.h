@@ -93,4 +93,15 @@ inline bool acceptsHostEvent(const uint8_t* data, std::size_t size, int channel,
         return false;
     return (kind != 0x80 && kind != 0x90) || isSupportedNoteNumber(data[1]);
 }
+
+// Partial libraries must reject missing-bank traffic BEFORE deferred storage,
+// not merely when the engine finally consumes it. Keep the legacy bool helper
+// for callers whose libraries are all-or-none.
+inline bool acceptsHostEventWithBankMask(const uint8_t* data, std::size_t size,
+                                        int channel, uint8_t mask) noexcept
+{
+    if (!acceptsHostEvent(data, size, channel, mask != 0)) return false;
+    return size != 3 || (data[0] & 0xf0) != 0xb0 || data[1] != 32
+        || (mask & (1u << data[2])) != 0; // base validator already bounds index < 8
+}
 }

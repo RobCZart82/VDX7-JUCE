@@ -40,7 +40,13 @@ public:
     // Non-RT, engine-owner only, at destructive project restore boundary.
     // Changing policy reboots the current image; caller must restore project RAM.
     bool configureMonoCorrectionForStateRestore(bool enabled);
-    bool hasFactoryVoices() const noexcept { return factoryVoices_.size() >= kFactoryVoicesSize; }
+    bool hasFactoryVoices() const noexcept { return factoryBankMask_ != 0; }
+    bool hasFactoryBank(int index) const noexcept
+    { return index >= 0 && index < 8 && (factoryBankMask_ & (1u << index)) != 0; }
+    uint8_t factoryBankMask() const noexcept { return factoryBankMask_; }
+    const std::vector<uint8_t>& factoryVoices() const noexcept { return factoryVoices_; }
+    // Non-RT, engine-owner only. Rebind cartridge storage without replacing RAM.
+    bool installFactoryBanks(const std::vector<uint8_t>& image, uint8_t mask);
 
     void prepare(double hostSampleRate);
     int latencySamples() const noexcept { return resampler_.latency(); }
@@ -134,6 +140,7 @@ private:
     dx7Emu::DX7 dx7_;
 
     std::vector<uint8_t> factoryVoices_;
+    uint8_t factoryBankMask_ = 0;
     // Stable, blank fallback for the core's non-owning cartridge pointer.
     std::array<uint8_t, 4096> emptyFactoryBank_ {};
 

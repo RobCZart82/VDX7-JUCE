@@ -106,6 +106,14 @@ values of 100. VDX7 accepts these specific legacy values without rewriting the
 bank data. Other parameter limits, seven-bit data, file structure and checksum
 checks remain enforced; this is not unrestricted import of malformed banks.
 
+The new development build also supports your own factory SysEx files in
+**SETTINGS → Bank folder**. Copy recognised ROM1A–ROM4B bank files there, then
+choose **Refresh banks**, or start a new instance with compatible firmware.
+Only available banks are enabled; complete bank content, not filenames, determines
+their slots. Refresh keeps the current sound. Projects save the edited sound and
+their bank catalog independently of these files. Firmware remains external.
+See the [bank-folder instructions](docs/guides/GUIDE_EN.md#factory-bank-folder).
+
 ## Documentation
 
 - [Documentation index and archive](docs/README.md)

@@ -13,6 +13,7 @@
 #include "VDX7EditQueue.h"
 #include "VDX7KeyboardQueue.h"
 #include "VDX7UserBank.h"
+#include "VDX7FactoryBanks.h"
 
 namespace VDX7ParameterIDs
 {
@@ -29,7 +30,7 @@ class VDX7AudioProcessor final : public juce::AudioProcessor,
                                   private juce::Timer
 {
 public:
-    explicit VDX7AudioProcessor(bool detectRom = true);
+    explicit VDX7AudioProcessor(bool detectRom = true, const juce::File& bankFolder = {});
     ~VDX7AudioProcessor() override;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -118,6 +119,10 @@ public:
     { return engineLoaded_.load(std::memory_order_acquire)
           && !pendingProjectEdits_.load(std::memory_order_acquire); }
     bool hasFactoryVoices() const;
+    bool hasFactoryBank(int index) const;
+    static juce::File factoryBankFolder() { return VDX7FactoryBanks::defaultFolder(); }
+    // Explicit non-RT refresh. Does not replace the current working voice RAM.
+    bool refreshFactoryBanks(const juce::File& folder, juce::String& report);
     int getCurrentBank() const;
     juce::String getCurrentPatchName() const;
     juce::String getRomPath() const;
@@ -248,6 +253,7 @@ private:
     std::atomic<bool> engineLoaded_ { false };
     std::atomic<uint64_t> midiOverloadSnapshot_ {0};
     std::atomic<bool> factoryVoicesAvailable_ { false };
+    std::atomic<uint8_t> factoryBankMaskSnapshot_ { 0 };
     std::atomic<int> currentBankSnapshot_ { -1 };
     std::atomic<int> currentProgramSnapshot_ { 0 };
     std::atomic<uint32_t> patchNameRevision_ { 0 };
@@ -264,6 +270,8 @@ private:
     // RAM/state is captured by getStateInformation(). romFile_ remains UI metadata.
     juce::String loadedRomPath_;
     juce::String loadedRomIdentity_;
+    VDX7FactoryBanks::Snapshot baseFactoryBanks_; // Original ROM/companion, not folder overlay.
+    juce::File factoryBankFolder_; // Empty for isolated tests unless explicitly supplied.
     juce::File romFile_;
     juce::String statusText_ { "ROM not loaded" };
 
