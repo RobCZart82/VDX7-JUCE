@@ -11,7 +11,7 @@ Original firmware, a hardware-inspired interface and hands-on voice editing.
 > **[Stable 1.0.0 downloads](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0)**
 > are available. This main branch contains **1.0.1 corrective development**, not
 > a published 1.0.1 release; development builds remain visibly marked.
-> A legally obtained compatible user-supplied ROM is required. No Yamaha firmware
+> A legally obtained original DX7 Mk I v1.8 user-supplied ROM is required. No Yamaha firmware
 > or factory voice data is included.
 
 **1.0.0 known limitation:** when a restored project reports a mismatched/missing
@@ -74,7 +74,9 @@ Windows 10 x64 REAPER use; this is not the complete final-RC test matrix. Physic
 Intel Mac acceptance and exact-candidate checks remain separate. Standalone runs
 without a DAW when built locally.
 
-**A compatible DX7 Mk I ROM is required for sound.** Supported layouts and
+**Supported firmware: original Yamaha DX7 Mk I v1.8 (IG11469).** A legally
+obtained user-supplied ROM is required for sound. **Special Edition / SER-7
+firmware is not supported.** Supported layouts and
 optional external factory-bank data are described in the
 [firmware guide](docs/guides/GUIDE_EN.md#3-firmware-and-banks).
 Supported MIDI notes are **12–120** in both Native and Correct MONO modes.
@@ -93,7 +95,7 @@ protections; read the installation guide before proceeding.
    - macOS: `~/Library/Audio/Plug-Ins/VST3/`
    - Windows: `C:\Program Files\Common Files\VST3\`
 3. Rescan plug-ins in your host and load VDX7 as an instrument.
-4. Use **LOAD ROM** to select your legally obtained compatible firmware.
+4. Use **LOAD ROM** to select your legally obtained original DX7 Mk I v1.8 firmware.
 5. Select a program or load a compatible SysEx file, enable MIDI monitoring and play.
 
 Avoid duplicate plug-in installations. Never disable system-wide security protections.

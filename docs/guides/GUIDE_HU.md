@@ -48,7 +48,7 @@ buildcél, nem minden rendszer/host kombináció tesztelésének ígérete.
 4. Indítsd újra a hostot. REAPERben szükség esetén indíts újrakeresést a
    Preferences → Plug-ins → VST alatt, majd illeszd be a VDX7-et virtuális
    hangszerként.
-5. Add meg saját, kompatibilis firmware-edet a LOAD ROM gombbal vagy az alábbi automatikus keresési helyek egyikén.
+5. Add meg saját, jogszerűen használható eredeti DX7 Mk I v1.8 firmware-edet a LOAD ROM gombbal vagy az alábbi automatikus keresési helyek egyikén.
 6. Válassz bankot/programot az LCD-n, vagy importálj megfelelő `.syx` fájlt a
    LOAD SYX gombbal. Engedélyezd a MIDI-monitorozást, majd játssz hangokat.
 
@@ -64,10 +64,24 @@ Ha nincs hang, ellenőrizd a firmware állapotát, a MIDI útvonalát, a sáv mo
 
 **Yamaha firmware és gyári hangadat nincs mellékelve.** Csak olyan fájlokat használj, amelyek használatára jogosult vagy; a projektmentés nem csomagolja be a firmware-t.
 
-Elfogadott ROM-elrendezések:
+**Támogatott firmware: eredeti Yamaha DX7 Mk I v1.8 (IG11469).
+A Special Edition / SER-7 firmware nem támogatott.** Ennek futás közbeni
+működése, GUI-vezérlése és projekt-visszaállítása nincs igazolva a VDX7-JUCE-ban.
+A sikeres ROM-betöltés önmagában nem jelent támogatott kompatibilitást;
+a betöltő nem alkalmaz kizárólag a v1.8-at engedélyező firmware-listát.
 
-- 16 384 bájtos DX7 Mk I firmware, opcionálisan mellette `dx7_factory_voices_32KB.bin`.
-- 49 152 bájtos kombinált `dx7.bin`: 16 KB firmware és 32 KB gyári hangadat.
+A támogatott eredeti v1.8 firmware azonosításához a 16 384 bájtos firmware-kép
+SHA-1 ellenőrzőösszegét hasonlítsd ehhez: `715dbb8e96a4df2a7f096b368334a7654860bb26`.
+Ez egyezik a [MAME DX7 ROM-azonosításával](https://github.com/mamedev/mame/blob/master/src/mame/yamaha/ymdx7.cpp#L296-L300).
+Az ellenőrzőösszeg a firmware tartalmát azonosítja, nem a letöltés eredetét
+vagy a használati jogosultságot. Kombinált képnél ez az azonosító csak az első
+16 384 bájtra vonatkozik, nem a teljes firmware- és bankfájlra.
+A gyári hangszínbankok külön adatok.
+
+Támogatott elrendezések a v1.8 firmware használatával:
+
+- 16 384 bájtos DX7 Mk I v1.8 firmware, opcionálisan mellette `dx7_factory_voices_32KB.bin`.
+- 49 152 bájtos kombinált `dx7.bin`: 16 KB v1.8 firmware és 32 KB gyári hangadat.
 
 Az 1.0.1 fejlesztési változat mind a 256 gyári hangszín adatait ellenőrzi,
 nem csak a fájlméretet. Hibás gyári adatot tartalmazó kombinált ROM esetén
