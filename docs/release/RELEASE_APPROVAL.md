@@ -4,22 +4,37 @@ This is the procedure for AUDIT-20260930-A4, not a second development plan.
 The [execution plan](EXECUTION_PLAN_1.0.md) remains the active ledger.
 The guard creates validation artifacts only; it cannot publish a tag, Release
 or assets. Published 1.0.0 is unchanged. The owner requests work toward 1.0.1
-publication; no exact 1.0.1 product/tooling pair or assets are approved yet.
+publication. On 2026-10-03 the owner explicitly approved product A and packager
+B at `b7fce0503059c8c2e3c61d6ccf5af33612739e32` for final test packaging.
+This is not final binary/host acceptance or permission to publish assets.
 
-## Default state
+## Current approved packaging state
 
 The committed `docs/release/RELEASE_APPROVAL.json` currently contains:
 
 ```json
 {
   "schema": 1,
-  "approved_release": null
+  "approved_release": {
+    "package_label": "1.0.1",
+    "source_commit": "b7fce0503059c8c2e3c61d6ccf5af33612739e32",
+    "packager_commit": "b7fce0503059c8c2e3c61d6ccf5af33612739e32",
+    "workflow_ref": "RobCZart82/VDX7-JUCE/.github/workflows/prepare-stable-package.yml@refs/heads/main"
+  }
 }
 ```
 
-With this record, accepted packaging fails before platform work or archive
-output. Non-accepted preparation remains available. An input flag, a dirty
-local edit or an untracked policy file cannot supply approval.
+The record was committed in `fa28fcc05107ca059c8119f364b97ed13d0c2f24`
+and merged through #120 at `828320d78e5d2e193356af0485a15c12f0279824` (C).
+Final-head Windows/macOS/ASan-UBSan and post-merge main Windows/macOS PASS.
+Accepted-mode workflow `37195536400` was dispatched from that C on 2026-10-04;
+authorization, both platform jobs and assembly PASS. Independent final hash,
+source and payload verification PASS; see the
+[final package report](../validation/VALIDATION_20261004_FINAL_PACKAGE_101.md).
+The owner will install
+and test the exact final packages in REAPER; no installed plugin is changed here.
+An input flag, a dirty local edit or an untracked policy file cannot supply approval.
+Null approval remains fail-closed; it is the former default, not the current record.
 
 ## Separate source, tooling and approval commits
 
@@ -98,7 +113,8 @@ reconciliation (A7) and exact-candidate acceptance remain separate work.
 This approval guard does not make compiled installers bit-reproducible.
 
 Magyarul: az elfogadott csomaghoz egy külön commitban jóváhagyott, pontos
-forrás–csomagoló páros és a main hivatalos munkafolyamata szükséges. A jelenlegi
-üres jóváhagyási rekord nem enged új elfogadott csomagot. Az ellenőrzőösszeg
+forrás–csomagoló páros és a main hivatalos munkafolyamata szükséges. A párost
+a tulajdonos 2026-10-03-án jóváhagyta végső tesztcsomagolásra; a kézi REAPER-próba
+és a publikálási engedély még külön lezárandó. Az ellenőrzőösszeg
 épséget igazol, nem kiadói hitelesítést; publikálni továbbra is csak külön
 engedéllyel lehet.

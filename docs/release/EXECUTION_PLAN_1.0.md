@@ -2,7 +2,8 @@
 
 ## Az 1.0.1 publikálás kötelező lezárási terve
 
-Tulajdonosi pontosítás: 2026-10-02. A cél az 1.0.1 publikálása, nem új
+Tulajdonosi pontosítás: 2026-10-02; végső tesztbuild jóváhagyása: 2026-10-03.
+A cél az 1.0.1 publikálása, nem új
 funkciók vagy GUI-átalakítás. Ez a fejezet irányadó az alábbi részletes R1–R7
 feladatsorhoz; eltérés esetén ez a szigorúbb feltétel érvényes.
 
@@ -15,10 +16,10 @@ Ezeknél nincs kockázatvállalással helyettesített PASS.
 
 1. **Forrás és bizonyítékok rögzítése.** Frissen ellenőrizni a main állapotát,
    a nyitott PR-eket, review-kat és Actions futásokat. A jelenlegi vizsgált jelölt
-   `b7fce0503059c8c2e3c61d6ccf5af33612739e32`; még nem végső jóváhagyás.
-   A #119 dokumentációs PR beolvadt a `3442a5e…` mainbe; ez nem új runtime
-   javítás, és a friss main Actions állapota külön ellenőrizendő. Külön rögzíteni a
-   termékforrást A, a csomagolót B és később a jóváhagyási commitot C.
+   `b7fce0503059c8c2e3c61d6ccf5af33612739e32`, A=B: tulajdonos által
+   jóváhagyott végső tesztforrás/csomagoló, nem publikálási engedély.
+   A #120 beolvadt, C=`828320d78e5d2e193356af0485a15c12f0279824`;
+   végső PR-head Windows/macOS/ASan-UBSan és post-merge main Windows/macOS PASS.
 2. **Kötelező automatizált regresszió.** A végső PR-head szükséges Windows,
    macOS és ASan/UBSan ellenőrzései legyenek PASS; Python és CTest eredmények
    pontos forráshoz és konfigurációhoz kötve. Csak zöld kapuk és rendezett
@@ -36,7 +37,10 @@ Ezeknél nincs kockázatvállalással helyettesített PASS.
    és felhasználói fájlmegőrzés ellenőrzése kötelező. A megfelelő teljes
    forráscsomag checkerje, dependency-pinjei és friss offline build/tesztje
    szintén kötelező, nem halasztható. A négy/kétfájlos staging legyen pontos.
-5. **Kézi tesztek tételes lezárása.** A végső REAPER/ROM/audio próbák,
+5. **Kézi tesztek tételes lezárása.** A tulajdonos telepíti és végzi a végső
+   Windows/macOS REAPER-próbát, csak az ellenőrzött végleges csomag átadása után.
+   Az agent nem telepít és nem indít REAPER-t. Ez nem halasztás vagy PASS.
+   A végső REAPER/ROM/audio próbák,
    mintavételi frekvencia–buffer mátrix, automatizáció/többpéldányos/HiDPI,
    mentési párbeszédek és fizikai Intel Mac vizsgálat állapota jelenleg
    NOT RUN vagy korábbi, eltérő buildhez kötött bizonyíték. Halasztásukhoz
@@ -60,8 +64,17 @@ A b7fce05 pontos forráscsomagjának 13/13 CTest, 77/77 Python, offline build
 és VST3 fordítás eredménye PASS. A `37051589142` előkészítő futás négy jobja
 PASS; a letöltött három artifact külső és hét belső hash-ellenőrzése PASS.
 A hosted forrás ZIP byte-ra azonos a helyben offline tesztelt ZIP-pel.
-Ez nem végső publikálási vagy REAPER-elfogadás: a legújabb csomagok további
-független payloadvizsgálata és az elfogadott build ismételt ellenőrzése hátravan.
+Az elfogadott módú végső csomagolás `37195536400`: mind a négy job PASS.
+A letöltött végső fájlok külső/belső hash-, készlet-, forrás- és payloadvizsgálata
+PASS; az új hosted forrás ZIP byte-ra azonos a frissen offline tesztelt ZIP-pel.
+A pontos négy hash és A/B/C a
+[végső csomagjelentésben](../validation/VALIDATION_20261004_FINAL_PACKAGE_101.md).
+Ezek a csomagok átadhatók a tulajdonosnak végső kézi tesztre; hostelfogadás és
+publikálás még nincs. Új product/tooling változás esetén a megfelelő kapuk újranyílnak.
+Ez nem végső publikálási vagy REAPER-elfogadás. A jelenlegi végső csomagok
+független payloadvizsgálata és az elfogadott build ellenőrzése lezárt PASS;
+a tulajdonosi kézi hostteszt, a nem futtatott vizsgálatok tételes diszpozíciója
+és a külön publikálási engedély maradt nyitva.
 Az eredeti hibás kombinált ROM tesztjének FAIL eredménye nem törölhető és
 nem változtatható PASS-ra egy módosított pozitív kontroll alapján.
 
@@ -76,7 +89,12 @@ nincs automatikus ROM-javítás vagy néma fallback. Az új terv elkészítése
 terve**; az alatta szereplő auditok és korábbi kiadási feladatsorok történeti
 bizonyítékok, nem újra végrehajtandó párhuzamos tervek.
 
-### Hol tartunk most?
+### Korábbi előkészítő bizonyítékok 2026 október 2
+
+A következő lista a korábbi próba checkpointja. A jelenlegi állapotot a fenti
+lezárási fejezet és a 2026-10-04-i végső csomagjelentés adja: R1 és a végső
+automatizált/csomagkapuk PASS, R4 kézi hostelfogadás a tulajdonosra vár,
+R6 végleges szöveg/jóváhagyás és R7 publikálás még nincs lezárva.
 
 - Újra ellenőrzött main: `5298373020374293302c3db806fbf44958046a02`, #116
   már beolvadt. Windows `37002235337` és macOS `37002235328` PASS ezen a mainen;
@@ -105,29 +123,29 @@ bizonyítékok, nem újra végrehajtandó párhuzamos tervek.
   EXE-kibontás/telepítés és végső hostelfogadás továbbra sem történt meg.
   [Friss felülvizsgálat és határok](../validation/VALIDATION_20261002_RELEASE_REVIEW.md).
   Végső 1.0.1 hostelfogadás és publikálási jóváhagyás nincs rögzítve.
-  `RELEASE_APPROVAL.json` üres; a publikált `v1.0.0` változatlan.
+  `RELEASE_APPROVAL.json` a #120 óta a jóváhagyott b7fce05 A/B párost tartalmazza;
+  a publikált `v1.0.0` változatlan. A végső hosttesztet a tulajdonos végzi.
 
 ### Végrehajtási sorrend és lezárási feltételek
 
 | Kapu | Hátralévő munka | Mikor kész? | REAPER kell? |
 | --- | --- | --- | --- |
-| R1 — dokumentáció és befagyasztás | #116 és main zöld, lezárt. A friss felülvizsgálati terv mentése után kiválasztani a végleges termékforrást A és csomagolót B, teljes SHA-val; nem szükséges új funkciókör. | A/B és a hozzájuk tartozó bizonyítékok rögzítve; nincs véletlenül kimaradt main-változás. | Nem |
-| R2 — független csomagvizsgálat | A 6cc8cda próba letöltése, hash-, készlet-, eredet- és Mac payloadvizsgálata PASS; b7fce05 pontos forráscsomagjának offline buildje PASS. A végleges A/B bináris csomagján ismételni az ellenőrzést, a nyitott helyi/platform határokat lezárni vagy indokoltan halasztani; új A esetén érintett forrásellenőrzés is kell. | Az alábbi R2-lista megfelelő részei PASS; a négy végső binárishash ismert, a fennmaradó határok kifejezettek. | Nem |
+| R1 — dokumentáció és befagyasztás | PASS: A=B b7fce05 teljes SHA-val jóváhagyva; C=828320d, #120 és main kapui zöldek. | Új product/tooling változás hiányában lezárt; az aktuális dokumentáció külön marad a befagyasztott A-tól. | Nem |
+| R2 — független csomagvizsgálat | PASS: a 37195536400 végső A/B csomagjának külső/belső hash-, négy/kétfájlos készlet-, A/B/C eredet-, Windows telepítő- és Mac payloadvizsgálata, valamint pontos forráscsomagjának offline buildje lezárt. | A végső csomagjelentés rögzíti a négy hash-t és a vizsgálati határokat. Ismétlés csak A/B vagy fájlbytes változása esetén; kézi host/platform elfogadás R4-ben. | Nem |
 | R3 — végleges forrás és regressziók | Ha A/B eltér a tesztelt jelölttől, a változás arányában új build/teszt/csomagolás. A végleges A privát-ROM tesztjeinek és forráscsomagjának megfeleltetése. | Pontos A/B-n Windows/macOS/érintett sanitizer és Python tesztek sikeresek; ROM-os eredmények és negatív kontrollok tényleges állapota dokumentált. | Nem |
 | R4 — host- és kompatibilitási döntés | A végső binárisokra célzott hostteszt, vagy a tulajdonos külön, tételes döntése a nem futtatott vizsgálatok halasztásáról és a ROM-kockázatról. | Pontos binárishash, OS/host verzió és eredmények, illetve explicit DEFERRED kockázatlista; régi 1.0.0 eredmény nem 1.0.1 PASS. | A REAPER-specifikus részekhez igen; most nem indítjuk |
-| R5 — elfogadott csomag előállítása | A/B jóváhagyása után külön C commitban jóváhagyási rekord; canonical main workflow elfogadott módban, majd új csomag- és hashvizsgálat. | Érvényes A/B/C kötés, minden workflow-kapu PASS, a ténylegesen publikálandó fájlok újra ellenőrizve. | Csak ha a bináris változott vagy R4 ezt előírja |
+| R5 — elfogadott csomag előállítása | PASS: külön C rekord, canonical main workflow 37195536400 négy zöld job, végső hash/payload/forrásellenőrzés lezárt. | A/B/C és tényleges négy végső fájl rögzítve; ez nem hostelfogadás vagy publikálási engedély. | A végső R4 tesztet a tulajdonos végzi |
 | R6 — végső kiadási dokumentáció és engedély | HU/EN release notes/README/kézikönyv, négy hash, pontos verzió és forráslink, halasztások/aláírási/ROM-figyelmeztetések; külön publikálási engedély kérése. | Tulajdonos a pontos verziót, SHA-kat, fájlokat és kockázatokat jóváhagyta; nem pusztán a fejlesztési tervet. | Nem |
 | R7 — publikálás és utóellenőrzés | Csak engedély után külön tartós `v1.0.1-source` és `v1.0.1` termékkiadás, megfelelő tagek/forrásazonosság; publikus linkek és letöltések újraellenőrzése. | Forrás legkésőbb a binárisokkal elérhető; négy termékletöltés, helyes latest állapot, publikus fájlhash-ek PASS. | Nem |
 
-### R2: mit kell még REAPER nélkül ellenőrizni?
+### R2 lezárt ellenőrzési követelmények
 
-Az alábbi lista a végső A/B csomagra vonatkozik. A `6cc8cda…` próba hash-,
-inventory-, forrás- és Mac payloadellenőrzése már dokumentált PASS; nem kell
-úgy kezelni, mintha a letöltés továbbra is akadály lenne. A main azóta csak
-dokumentációban változott: `Source/`, `Resources/`, `Tests/`, `scripts/`, CMake,
-installer és workflow fájlok byte-ra változatlanok a próba forrásához képest.
-Ez a regressziós bizonyíték újrafelhasználását indokolja, nem jelenti azt, hogy
-a régi forrás ZIP a friss main dokumentációját is tartalmazza.
+Az alábbi követelmények a `37195536400` végső A/B csomagra már teljesültek,
+a [végső csomagjelentés](../validation/VALIDATION_20261004_FINAL_PACKAGE_101.md)
+bizonyítékai szerint. Ez ellenőrzési szerződés, nem új hátralévő feladatsor.
+Új A/B vagy megváltozott csomagbytes esetén az érintett ellenőrzéseket ismételni
+kell. A korábbi `6cc8cda…` próba csak történeti bizonyíték, nem helyettesíti
+a már elvégzett végső vizsgálatot. Kézi REAPER/Intel/HiDPI elfogadás R4, nem R2.
 
 1. Az outer Actions ZIP-digestet a GitHub artifact digesttel összevetni. Ez nem
    helyettesíti az inner EXE/PKG/Manual ZIP hash-eket; mind a hét belső ellenőrzési
@@ -222,7 +240,7 @@ a diagnosztikai finomítás 1.0.1 előtti diszpozíciója fent rögzítve: DEFER
 ### R5–R7: publikálás előtti és publikálási lépések
 
 Az [A/B/C jóváhagyási eljárás](RELEASE_APPROVAL.md) kötelező. A mostani
-`6cc8cda…` csak jelölt, nem előre jóváhagyott végső A/B. Ha az új dokumentáció
+`b7fce05…` a jóváhagyott végső A/B; a korábbi `6cc8cda…` történeti próba. Ha az új dokumentáció
 is a végleges forráscsomag része lesz, új A-t kell kiválasztani és annak pontos
 csomagját ellenőrizni. C külön jóváhagyási commit, B nem lehet C.
 Elfogadott módban új build készültével a régi prep bináris hash-jeit nem szabad
