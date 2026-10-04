@@ -54,8 +54,10 @@ Manifest integrity is not a digital signature or independent proof of authorship
 `--release-accepted` is no longer sufficient to mark a newly created archive
 accepted. The packager requires an exact source/packager approval from
 `docs/release/RELEASE_APPROVAL.json` at a separately committed approval SHA,
-with the canonical main workflow context. The current record is null: no new
-release is approved. Preparation mode does not require that record.
+with the canonical main workflow context. A committed policy approves only its
+exact recorded pair, never a later changed source. Preparation mode does not
+require that record. The older b7fce05 approval does not approve the new dbad14a
+bank-folder candidate; use the execution plan for the current gate status.
 
 Accepted creation supplies `--packager-commit`, `--approval-commit`,
 `--workflow-ref` and `--workflow-git-ref`; use `--approval-repo` when the

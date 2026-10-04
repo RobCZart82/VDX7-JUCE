@@ -4,6 +4,13 @@ Not published or host-accepted. This records the corrective candidate; it does n
 replace the [single execution plan](EXECUTION_PLAN_1.0.md) or grant publication
 approval. Published v1.0.0 and its assets remain unchanged.
 
+2026-10-04 bank-folder candidate: dbad14a now includes the legacy-bank correction,
+content-identified folder and bounded project-data decoding. Its preparation
+packages and fresh offline source verification passed; see the
+[new exact preparation report](../validation/VALIDATION_20261004_BANK_FOLDER_PACKAGE_PREP_101.md).
+Final exact-pair approval, accepted-mode packaging and owner host acceptance
+remain separate gates. No new final release hashes are asserted here.
+
 2026-10-04 update: the legacy-bank acceptance fix changes product code. The
 tuple, packaging run and hashes below belong to the previous b7fce05 candidate,
 not to the fixed build. Rebuild, reverify and obtain exact final-candidate host
@@ -99,10 +106,11 @@ előfordulhat; ne kapcsold ki a rendszer védelmét. [Magyar kézikönyv](../gui
 
 ## Publication gate — still open
 
-- All four final binary hashes and installer/upgrade evidence are verified;
-  complete matching source and checksum verified. Provide the approved
+- Verify the new exact accepted-mode final binary hashes, installer/upgrade
+  evidence and complete matching source/checksum; older b7fce05 evidence below
+  is not acceptance of dbad14a. Provide the approved
   separate durable `v1.0.1-source` release link before/no later than binaries.
-- Exact reviewed source/tooling/approval tuple is recorded above. Complete
+- Record the newly approved exact source/tooling/approval tuple. Complete
   owner final REAPER acceptance and explicit disposition of other unrun checks.
 - Obtain separate authorization for tags, source/product releases and uploads;
   preserve the four-download policy and do not modify v1.0.0.
