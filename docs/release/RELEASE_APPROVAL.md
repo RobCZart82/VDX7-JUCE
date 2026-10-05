@@ -157,7 +157,7 @@ This approval guard does not make compiled installers bit-reproducible.
 Magyarul: az elfogadott csomaghoz egy külön commitban jóváhagyott, pontos
 forrás–csomagoló páros és a main hivatalos munkafolyamata szükséges. A párost
 a tulajdonos az új 96267f7 párosra 2026-10-05-én engedélyezte a végső
-tesztcsomagolás folytatását; a védett rekord/main ellenőrzése, a kézi REAPER-próba
-és a publikálási engedély még külön lezárandó. Az ellenőrzőösszeg
+tesztcsomagolás folytatását. A védett rekord/main és a végső csomagellenőrzés
+PASS; a kézi REAPER-próba és a publikálási engedély még külön lezárandó. Az ellenőrzőösszeg
 épséget igazol, nem kiadói hitelesítést; publikálni továbbra is csak külön
 engedéllyel lehet.

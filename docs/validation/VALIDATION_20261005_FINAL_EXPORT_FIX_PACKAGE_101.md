@@ -154,7 +154,8 @@ multiple instances, HiDPI, native save dialogs, offline versus real-time render,
 and physical Intel Mac testing. The owner performs these on the exact final
 downloads, or explicitly disposes of each unrun check where the plan permits.
 Earlier 1.0.0 or different-candidate host tests are not final 1.0.1 acceptance.
-The previous private 47/47 source tests are bounded by the exact PR 128 source
+The previous 47/47 local source tests, including private firmware coverage,
+are bounded by the exact PR 128 source
 and [regression report](VALIDATION_20261005_SYSEX_EXPORT_ACKNOWLEDGEMENT.md);
 they were not rerun merely for a policy/documentation change.
 
@@ -173,5 +174,6 @@ or factory-bank data is committed, uploaded or included in any package.
 
 Magyarul: a pontos 96267f7 forrás–csomagoló páros jóváhagyva, a védett policy
 és main ellenőrzések PASS. A végső csomagolás, tényleges fájlvizsgálat,
-friss offline forrásbuild és Windows VST3-validátor PASS. A tulajdonosi végső REAPER-teszt és külön publikálási engedély
+friss offline forrásbuild és Windows VST3-validátor PASS. A tulajdonosi végső
+REAPER-teszt és külön publikálási engedély
 továbbra is nyitott; telepítés vagy publikálás nem történt.
