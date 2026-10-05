@@ -4,6 +4,14 @@ Not published or host-accepted. This records the corrective candidate; it does n
 replace the [single execution plan](EXECUTION_PLAN_1.0.md) or grant publication
 approval. Published v1.0.0 and its assets remain unchanged.
 
+2026-10-05 current candidate: main `96267f7304e657821ce35c54536689981f41ef27`
+contains the single-voice export acknowledgement correction merged in #128.
+All older package hashes and approvals below are historical, not this candidate.
+New preparation, exact-pair approval, final packaging and owner acceptance are
+required before publication. The committed approval record is unchanged.
+The actual new preparation files and inspection limits are recorded in the
+[current preparation report](../validation/VALIDATION_20261005_EXPORT_FIX_PACKAGE_PREP_101.md).
+
 2026-10-04 bank-folder candidate: dbad14a now includes the legacy-bank correction,
 content-identified folder and bounded project-data decoding. Its preparation
 packages and fresh offline source verification passed; see the
@@ -12,7 +20,7 @@ The owner authorized continuing final test packaging for exact A=B dbad14a
 on 2026-10-04. Policy #126 merged at C3766035 after green checks/reviews;
 post-merge main and final accepted-mode packaging `37233357714` passed.
 Independent actual-file/source/offline verification passed; see the
-[current final hashes and test handoff](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md).
+[previous bank-folder final hashes and test handoff](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md).
 Owner host acceptance and separate publication permission remain open.
 
 2026-10-04 update: the legacy-bank acceptance fix changes product code. The
@@ -45,6 +53,11 @@ MIDI CC120/CC121 ordering and controller-reset fixes, full factory-bank input
 validation, and source-package/checksum/provenance guard corrections. Exact
 findings and evidence are linked from the execution plan, not treated as a new
 feature or stability guarantee here.
+
+Single-voice SysEx export now clears the unexported-edit warning correctly for
+unchanged snapshots with reserved VMEM bits. It preserves working RAM, later
+edits and failed-write warnings. Private bank-folder integration is now an
+optional CTest with filename-independent fixtures; no proprietary data is shipped.
 
 The new bank-compatibility fix accepts operator EG rate/level 127 and fine
 frequency 100 found in archived banks, without rewriting downloaded files.
@@ -83,6 +96,12 @@ ellenőrzését, valamint a forráscsomag, ellenőrzőösszeg és eredetigazolá
 javításait tartalmazza. A bizonyítékokat a fejlesztési terv vezeti; ez nem
 általános hibamentességi garancia.
 
+Az egyhangszínes SysEx-export a fenntartott VMEM biteket tartalmazó, az export
+óta változatlan hangszínnél is helyesen törli a nem exportált módosítás jelzőjét.
+A munkahangszínt nem írja át; a későbbi szerkesztés és sikertelen írás jelzője
+megmarad. A privát bankmappás integráció külön, fájlnévfüggetlen CTestként is
+futtatható; jogvédett adatot nem mellékelünk.
+
 Az új bankkompatibilitási javítás elfogadja az archivált bankok 127-es
 operátor EG sebesség/szint és 100-as finomhangolási értékét, a letöltött fájlok
 átírása nélkül. A USER-/projekttárolás és a SysEx-export ezeket megőrzi.
@@ -109,6 +128,10 @@ Developer ID és notarizáció nincs. Biztonsági figyelmeztetés/betöltési ak
 előfordulhat; ne kapcsold ki a rendszer védelmét. [Magyar kézikönyv](../guides/GUIDE_HU.md).
 
 ## Publication gate — still open
+
+The dbad14a accepted-mode results below describe the previous candidate.
+For the export-fixed 96267f7 candidate, exact-pair approval and final packaging
+are reopened. Preparation metadata or a green source test cannot replace them.
 
 - Actual new exact accepted-mode hashes, installer/upgrade evidence and complete
   matching source/checksum are verified for run 37233357714, not inferred from

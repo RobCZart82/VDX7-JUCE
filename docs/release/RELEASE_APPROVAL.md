@@ -11,6 +11,13 @@ This is not final binary/host acceptance or permission to publish assets.
 
 ## Current exact pair and policy review
 
+2026-10-05: #128 introduces a new product candidate at
+`96267f7304e657821ce35c54536689981f41ef27`. The committed record below still
+approves dbad14a only. It has not been changed by the instruction to continue
+development. The new candidate must pass preparation inspection and receive
+explicit exact-pair owner approval before a separate policy PR and final test
+packaging. The dbad14a accepted-mode evidence is historical, not new approval.
+
 The legacy-bank and bank-folder changes are now merged at dbad14a. Its
 preparation-only packages and source passed independent verification; see the
 [new preparation report](../validation/VALIDATION_20261004_BANK_FOLDER_PACKAGE_PREP_101.md).
