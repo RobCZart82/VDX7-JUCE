@@ -58,16 +58,34 @@ uploaded or packaged. In this local round the existing combined ROM's eight
 payload hashes matched the reference identities; unchanged payloads were wrapped
 as temporary private SysEx fixtures outside the repository.
 
+PR review identified a filename dependency in the existing private probe:
+after accepting all eight content hashes, its CUSTOM import step required a
+literal `rom1a.syx`. Renaming every private input to `renamed-N.SYX` reproduced
+that test failure. The CUSTOM import fixture now comes from the scanned ROM1A
+payload, with an isolated temporary filename. Source names and their case are
+irrelevant throughout the probe; no bank contents were modified.
+
 ## Validation status
 
 - PASS: baseline reproduction and canonical/full-bank controls establish the defect.
 - PASS: local optional-bank CTest inventory, labels, fixtures, timeouts and checker controls.
-- PENDING: current corrected Windows build and complete local CTest regression.
+- PASS: Windows x64 Release build with MSVC 19.44.35229 and the pinned dependencies.
+- PASS: complete 47-test local suite at product/test commit
+  `f0d40050e346f2f614d0f38db09b4e80502da6d8`, 392.80 seconds,
+  14 ROM-free and 33 private-ROM tests, including the newly registered bank probe.
+- PASS: after the review-only bank-test change, the rebuilt focused suite
+  (ROM profile, complete processor, export acknowledgement and renamed bank
+  library) passed again. The intermediate renamed-bank failure is the negative
+  control, not a discarded product failure.
 - PASS: Python suite, 76 tests passed and one Windows symlink-capability SKIPPED.
-- PENDING: final PR Windows/macOS/ASan-UBSan checks.
+- Final Windows/macOS/ASan-UBSan results and exact final head are recorded in
+  [PR 128](https://github.com/RobCZart82/VDX7-JUCE/pull/128). Every final-head gate
+  must pass and review threads must be resolved before merge; earlier-head
+  green results are not substituted for later-head results.
 - NOT RUN: REAPER, installed-package acceptance, local macOS/sanitizer and new final packaging.
 
-Recorded results will be updated before merging; pending work is not PASS.
+The final-head full local rerun and post-merge main checks are also recorded
+in the PR. Unrun host/package checks are not promoted to PASS by these results.
 Earlier final packages at `dbad14a` do not contain this product fix. Their hashes
 and acceptance evidence remain historical; rebuilding/reapproving exact final
 packages and matching source is a separate release gate.

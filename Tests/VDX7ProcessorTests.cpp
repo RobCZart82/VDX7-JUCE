@@ -708,7 +708,12 @@ static void testFactoryBankFolder(const juce::File& rom, const juce::File& sourc
     const auto selected = ram(save(*restored));
     require(std::memcmp(selected.getData(), scan.banks.image.data()+2*4096, 4096) == 0,
         "bank selection uses project's unchanged reference payload");
-    require(restored->loadSyxFromFile(sourceFolder.getChildFile("rom1a.syx")), "normal SYX remains custom");
+    // Reference identification is content-based; the private source folder
+    // need not contain any particular filename (or filename case).
+    juce::TemporaryFile customImport(".syx");
+    require(customImport.getFile().replaceWithData(changedFolderBank.data(), changedFolderBank.size()),
+            "content-derived ROM1A custom import fixture");
+    require(restored->loadSyxFromFile(customImport.getFile()), "normal SYX remains custom");
     require(restored->getCurrentBank() == -1, "normal import does not silently become factory selection");
     require(restored->renameVoice("CUSTOM NEW"), "new custom voice");
     const auto custom = save(*restored);
