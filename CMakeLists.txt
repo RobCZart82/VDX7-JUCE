@@ -276,6 +276,11 @@ target_compile_definitions(vdx7_stress_tests PRIVATE $<TARGET_PROPERTY:VDX7,COMP
 
 set(VDX7_TEST_ROM_FILE "" CACHE FILEPATH
     "Local 48 KB combined v1.8 image for the complete opt-in suite; never packaged")
+set(VDX7_TEST_FACTORY_BANK_FOLDER "" CACHE PATH
+    "Optional private folder containing all eight reference SysEx banks; never packaged")
+if(VDX7_TEST_FACTORY_BANK_FOLDER AND NOT VDX7_ENABLE_ROM_TESTS)
+    message(FATAL_ERROR "VDX7_TEST_FACTORY_BANK_FOLDER requires VDX7_ENABLE_ROM_TESTS=ON")
+endif()
 
 if(VDX7_ENABLE_ROM_TESTS)
     if(NOT EXISTS "${VDX7_TEST_ROM_FILE}")
@@ -294,6 +299,19 @@ if(VDX7_ENABLE_ROM_TESTS)
     add_test(NAME vdx7_processor COMMAND vdx7_processor_tests)
     add_test(NAME vdx7_pre_rom_state_integration
         COMMAND vdx7_processor_tests --pre-rom-state "${VDX7_TEST_ROM_FILE}")
+    add_test(NAME vdx7_export_acknowledgement
+        COMMAND vdx7_processor_tests --export-acknowledgement "${VDX7_TEST_ROM_FILE}")
+    set_tests_properties(vdx7_export_acknowledgement PROPERTIES TIMEOUT 90
+        LABELS "local-rom;firmware-v1_8;sysex-export" FIXTURES_REQUIRED vdx7_v18_rom)
+    if(VDX7_TEST_FACTORY_BANK_FOLDER)
+        if(NOT IS_DIRECTORY "${VDX7_TEST_FACTORY_BANK_FOLDER}")
+            message(FATAL_ERROR "VDX7_TEST_FACTORY_BANK_FOLDER must be an existing local folder")
+        endif()
+        add_test(NAME vdx7_factory_bank_library COMMAND vdx7_processor_tests
+            --factory-bank-library "${VDX7_TEST_ROM_FILE}" "${VDX7_TEST_FACTORY_BANK_FOLDER}")
+        set_tests_properties(vdx7_factory_bank_library PROPERTIES TIMEOUT 180
+            LABELS "local-rom;firmware-v1_8;factory-library" FIXTURES_REQUIRED vdx7_v18_rom)
+    endif()
     add_test(NAME vdx7_midi_reset
         COMMAND vdx7_stability_tests "${VDX7_TEST_ROM_FILE}" --midi-reset-only)
     add_test(NAME vdx7_stress COMMAND vdx7_stress_tests "${VDX7_TEST_ROM_FILE}")

@@ -17,11 +17,16 @@ mono_candidate_experiment supported_note_range_acceptance direct_rom_reload_boun
 state_rom_identity pending_rom_content_identity mono_corrected_processor mono_soak""".split())
 LOCAL_ROM.update({"pre_rom_state_integration", "midi_reset"})
 LOCAL_ROM.update({"state_transitions", "cc120_timeline", "controller_reset"})
+LOCAL_ROM.add("export_acknowledgement")
 
 
-def validate(document, rom_enabled=True):
+def validate(document, rom_enabled=True, factory_bank_enabled=False):
+    if factory_bank_enabled and not rom_enabled:
+        raise ValueError("Factory bank integration requires local ROM tests")
     tests = document.get("tests", [])
     expected = {"vdx7_" + n for n in ROM_FREE | (LOCAL_ROM if rom_enabled else set())}
+    if factory_bank_enabled:
+        expected.add("vdx7_factory_bank_library")
     actual = [test["name"] for test in tests]
     if len(actual) != len(set(actual)) or set(actual) != expected:
         raise ValueError(f"Test inventory mismatch: missing={expected-set(actual)}, extra={set(actual)-expected}")
@@ -36,7 +41,7 @@ def validate(document, rom_enabled=True):
         if properties.get("DISABLED", False):
             raise ValueError(f"{name}: disabled test")
         labels = set(properties.get("LABELS", []))
-        local = name.removeprefix("vdx7_") in LOCAL_ROM
+        local = name.removeprefix("vdx7_") in LOCAL_ROM or name == "vdx7_factory_bank_library"
         if ("local-rom" in labels) != local or ("rom-free" in labels) == local:
             raise ValueError(f"{name}: incorrect ROM classification")
         required = properties.get("FIXTURES_REQUIRED", [])
@@ -58,8 +63,25 @@ def self_test():
         tests.append({"name": "vdx7_" + name, "properties": [{"name": k, "value": v} for k,v in props.items()]})
     good = {"tests": tests}
     validate(good)
+    factory = copy.deepcopy(good)
+    bank_test = copy.deepcopy(next(t for t in factory["tests"] if t["name"] == "vdx7_export_acknowledgement"))
+    bank_test["name"] = "vdx7_factory_bank_library"
+    factory["tests"].append(bank_test)
+    validate(factory, factory_bank_enabled=True)
     validate({"tests": [t for t in tests if t["name"].removeprefix("vdx7_") in ROM_FREE]}, False)
     mutations = []
+    try:
+        validate(factory)
+    except ValueError:
+        pass
+    else:
+        raise RuntimeError("Undeclared private bank test incorrectly passed")
+    try:
+        validate(good, factory_bank_enabled=True)
+    except ValueError:
+        pass
+    else:
+        raise RuntimeError("Missing requested private bank test incorrectly passed")
     missing = copy.deepcopy(good); missing["tests"].pop(); mutations.append(missing)
     duplicate = copy.deepcopy(good); duplicate["tests"].append(duplicate["tests"][0]); mutations.append(duplicate)
     for key, value in [("TIMEOUT", 0), ("LABELS", []), ("DISABLED", True),
@@ -75,20 +97,22 @@ def self_test():
         except ValueError:
             continue
         raise RuntimeError("Negative control incorrectly passed")
-    print("PASS: registration checker positive and seven negative controls")
+    print("PASS: registration checker default/private-bank positive and nine negative controls")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("listing", nargs="?")
     parser.add_argument("--rom-free-only", action="store_true")
+    parser.add_argument("--factory-bank-library", action="store_true",
+                        help="Require the opt-in private eight-bank integration test")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
     if args.self_test:
         self_test()
     if args.listing:
         with open(args.listing, encoding="utf-8-sig") as stream:
-            validate(json.load(stream), not args.rom_free_only)
+            validate(json.load(stream), not args.rom_free_only, args.factory_bank_library)
         print("PASS: complete CTest registration, labels, fixtures, timeouts and failure policy")
     elif not args.self_test:
         parser.error("provide a CTest JSON listing or --self-test")

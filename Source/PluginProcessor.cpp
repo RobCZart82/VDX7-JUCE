@@ -1824,6 +1824,7 @@ bool VDX7AudioProcessor::captureSyxExportSnapshot(bool entireBank, SyxExportSnap
     auto data = VDX7Sysex::encode(packed);
     if (data.empty()) { error = "Voice data cannot be encoded as 7-bit SysEx."; return false; }
     snapshot.message_ = std::move(data);
+    snapshot.packed_ = std::move(packed);
     snapshot.program_ = program;
     snapshot.entireBank_ = entireBank;
     return true;
@@ -1835,7 +1836,9 @@ bool VDX7AudioProcessor::exportSyxSnapshot(const juce::File& file, const SyxExpo
     const auto expectedSize = snapshot.entireBank_ ? VDX7Sysex::kBankMessageSize : VDX7Sysex::kVoiceMessageSize;
     std::vector<uint8_t> packed;
     if (snapshot.program_ < 0 || snapshot.program_ >= 32 || snapshot.message_.size() != expectedSize
-        || !VDX7Sysex::decode(snapshot.message_, packed))
+        || !VDX7Sysex::decode(snapshot.message_, packed)
+        || snapshot.packed_.size() != packed.size()
+        || VDX7Sysex::encode(snapshot.packed_) != snapshot.message_)
     {
         error = "The captured SysEx snapshot is invalid. Capture it again and retry.";
         return false;
@@ -1852,8 +1855,8 @@ bool VDX7AudioProcessor::exportSyxSnapshot(const juce::File& file, const SyxExpo
         if (engine_.saveRam(current))
         {
             const int offset = snapshot.entireBank_ ? 0 : snapshot.program_ * 128;
-            if (offset >= 0 && static_cast<std::size_t>(offset) + packed.size() <= current.size()
-                && std::equal(packed.begin(), packed.end(), current.begin() + offset))
+            if (offset >= 0 && static_cast<std::size_t>(offset) + snapshot.packed_.size() <= current.size()
+                && std::equal(snapshot.packed_.begin(), snapshot.packed_.end(), current.begin() + offset))
             {
                 if (snapshot.entireBank_) modifiedVoices_.store(0);
                 else modifiedVoices_.fetch_and(~(uint32_t(1) << snapshot.program_));
