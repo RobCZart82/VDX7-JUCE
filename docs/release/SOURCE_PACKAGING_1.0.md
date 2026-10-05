@@ -41,7 +41,8 @@ Historical 1.0.0 labels remain explicitly supported for compatibility, not
 permission to replace published assets. The planned public matching-source
 download is a separate v1.0.1-source GitHub release, with its ZIP and SHA-256
 manifest linked from the four-download main release. See
-[the publication policy](PUBLIC_DOWNLOADS.md); no final assets are approved yet.
+[the publication policy](PUBLIC_DOWNLOADS.md). Exact final test packaging is
+approved; public release/tag/upload permission is still separate and open.
 
 Contents: the wrapper snapshot, full pinned JUCE source with all bundled notices,
 the pinned dx7Lib subset under `third_party/dx7Lib`, and Retromulator LICENSE/README
@@ -56,15 +57,19 @@ accepted. The packager requires an exact source/packager approval from
 `docs/release/RELEASE_APPROVAL.json` at a separately committed approval SHA,
 with the canonical main workflow context. A committed policy approves only its
 exact recorded pair, never a later changed source. Preparation mode does not
-require that record. The older b7fce05 approval does not approve the new dbad14a
-bank-folder candidate. The owner authorized continuing the new exact pair's
-final test packaging on 2026-10-04; its separate policy/main gates and later
-actual accepted-file inspection still apply. Use the execution plan for status.
+require that record. The b7fce05 and dbad14a approvals are historical and do not
+approve the current export-corrected pair. Current product A and packager B are
+`96267f7304e657821ce35c54536689981f41ef27`, separately approved through #130 at
+C `edcb7471bf2ee08d3f8430e317cb9d17274f7576`. Policy/main checks and final
+test packaging `37276345684` passed. Use the execution plan for remaining gates.
 
-The new bank-folder pair's protected policy/main gates and actual final run
-`37233357714` passed. Its independently downloaded source is byte-identical to
-the newly extracted offline-tested accepted archive; see the
-[final source/package evidence](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md).
+The independently downloaded final source is byte-identical to the newly
+extracted offline-tested accepted archive. Its SHA-256 is
+`d916d3d0cba018736a0a8202270b373f5f2d9afbbf32b9b58c9bb190a3bba4ba`.
+See the [current source/package evidence](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md)
+for the 5,131-file manifest, exact approval binding, offline build and limits.
+The [previous bank-folder evidence](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md)
+is preserved as history, not substituted for the current files or hashes.
 Actions test artifacts are not the planned durable public source release.
 
 Accepted creation supplies `--packager-commit`, `--approval-commit`,
@@ -108,10 +113,11 @@ ctest --test-dir <new-build> -C Release --output-on-failure --no-tests=error
 
 Add the platform generator/architecture options from the HU/EN build guide.
 No installed plugin should be replaced by this check. The exact-candidate workflow
-prepares matching test-candidate source and packages. The final stable build still
-needs its exact-SHA binary/source pairing, checksum and archive review. Owner-
-reported focused RC1 host/listening checks are recorded separately; the broader
-host/audio/GUI matrix is explicitly deferred, not passed. See the
+prepares matching test-candidate source and packages. The current 96267f7 final
+test files have passed exact-SHA binary/source pairing, checksum and archive
+review. General owner-reported operation is PASS on Windows and M1 macOS;
+individual host/audio/GUI matrix results or explicitly permitted deferrals
+remain open. Earlier RC1 deferrals do not automatically apply to 1.0.1. See the
 [release checklist](RELEASE_CHECKLIST_1.0_RC.md).
 
 Magyarul: a csomag kizárólag a megadott commitok fájljait tartalmazza, helyi

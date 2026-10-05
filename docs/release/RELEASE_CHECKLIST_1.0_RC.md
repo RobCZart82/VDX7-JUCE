@@ -1,6 +1,36 @@
 # 1.0 release-preparation checklist — not a publication authorization
 
-## Current bank folder checkpoint
+## Current export corrected 1.0.1 checkpoint
+
+Product and packager A=B are `96267f7304e657821ce35c54536689981f41ef27`;
+approval C is `edcb7471bf2ee08d3f8430e317cb9d17274f7576`.
+Use the [current final report](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md)
+for exact file hashes and evidence. Published 1.0.0 is unchanged.
+
+- [x] #128 export correction and bank regression: final-head Windows/macOS/
+  sanitizer and post-merge main Windows/macOS PASS. The recorded local full
+  suite passed 47/47; this is not a new execution on later documentation commits.
+- [x] Owner approved this exact pair for final test packaging; #130 policy
+  and distinct post-merge main checks PASS. This does not authorize publication.
+- [x] Final packaging 37276345684: all four jobs PASS, both platforms 14/14
+  ROM-free CTests and 77/77 Python tests. Actual downloads, installer upgrade/
+  uninstall, payloads, checksums and matching offline source inspection PASS;
+  actual final Windows VST3 validator 47/47 PASS.
+- [x] Owner-reported general operation of the named final bundle on Windows 11
+  with REAPER 7.82 x64, and PKG installation/use on Mac mini M1 with macOS
+  26.7.1 and REAPER 7.82 Universal. This is not independent local binary hash
+  verification or full matrix acceptance.
+- [ ] Detailed owner test results or explicitly permitted per-case deferrals,
+  including local checksum/active Mac host architecture details, remain open.
+- [ ] Final public text, durable matching source delivery and separate publication
+  permission remain open. Actions artifacts are not durable release downloads.
+
+Magyarul: az aktuális jelölt az exportjavított 96267f7. Az automatizált és
+csomagellenőrzések sikeresek, a tulajdonosi általános Windows/M1 működés PASS.
+A tételes próbák lezárása és a publikálási engedély külön kapu; a korábbi
+dbad14a és b7fce05 csomagok nem tartalmazzák az exportjavítást.
+
+## Historical bank folder checkpoint 2026-10-04
 
 - [x] dbad14a source: final PR Windows/macOS/sanitizer and post-merge main Windows/macOS PASS.
 - [x] Preparation 37225128633: both native packages, automated regressions,
@@ -13,12 +43,12 @@
   and post-merge main Windows/macOS PASS.
 - [x] Accepted-mode 37233357714 all four jobs PASS; actual final files independently
   downloaded and verified, source identical to new offline build.
-  [New final hashes and download links](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md).
+  [Historical final hashes and download links](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md).
 - [ ] Owner installation and real final Windows/macOS REAPER results.
 - [ ] Separate publication permission and durable source/product publication.
 
 Earlier checked entries below apply only to their named older source/packages.
-They do not accept the changed bank-folder candidate.
+They do not accept the current export-corrected candidate.
 
 ## Historical correction checkpoint 2026-10-04
 
@@ -69,9 +99,17 @@ bizonyíték-összesítő, nem második fejlesztési terv vagy publikálási eng
 Owner decision 2026-10-03: the owner installs the fully verified final packages
 and performs real Windows/macOS REAPER acceptance. No agent-side installation
 or REAPER launch; no blanket deferral. The final package identities and hashes
-are recorded in the [new bank-folder final package report](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md)
-after independent download verification of run 37233357714. Use these actual
-files, not the older b7fce05 packages. A green build is not host PASS.
+are recorded in the [export-corrected final package report](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md)
+after independent download verification of run 37276345684. Use these actual
+96267f7 files, not the older dbad14a or b7fce05 packages. General owner-reported
+operation is PASS on Windows and M1 macOS; the unchecked detailed items below
+still require individually documented results or permitted deferrals, not
+assumed PASS. A green build is not host PASS.
+
+[Download the four final products](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37276345684/artifacts/11331225153)
+and [matching source](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37276345684/artifacts/11330463965).
+These are expiring GitHub Actions outer ZIPs, potentially requiring sign-in;
+extract the product ZIP to obtain the EXE, PKG and two Manual ZIPs.
 
 ### Magyar kézi tesztlista
 
@@ -167,7 +205,8 @@ The owner reports that both Windows and macOS installers and REAPER plugins work
 
 Independent review of the validation artifact is complete: the downloaded outer digest matched GitHub; all seven inner asset hashes passed; the 5,082-file source archive verified against its manifest and exact source/dependency pins; VST3 payloads and package paths were inspected; no firmware, secrets or local paths were found. See [the detailed acceptance record](../validation/VALIDATION_20260929_STABLE_INSTALLER_ACCEPTANCE.md). The artifact remains preparation-only: BUILD-INFO says it is not approved for publication and the source manifest has `release_accepted: false`. Final release metadata and checksum regeneration, bilingual release notes and deferred-test review remain outstanding. The broader matrix remains NOT RUN / DEFERRED; see
 [the RC1 validation report](../validation/VALIDATION_20260928_EXACT_RC1.md).
-GitHub has no stable 1.0.0 release. No tag or publication was created by this workflow.
+At that historical checkpoint GitHub had no stable 1.0.0 release. The workflow
+did not publish; v1.0.0 was subsequently published. This is not current 1.0.1 status.
 
 ## Correctness and realtime gates
 

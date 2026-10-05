@@ -25,7 +25,7 @@ records exact identities and remaining gates.
 The actual new preparation files and inspection limits are recorded in the
 [current preparation report](../validation/VALIDATION_20261005_EXPORT_FIX_PACKAGE_PREP_101.md).
 
-2026-10-04 bank-folder candidate: dbad14a now includes the legacy-bank correction,
+Historical 2026-10-04 bank-folder candidate: dbad14a includes the legacy-bank correction,
 content-identified folder and bounded project-data decoding. Its preparation
 packages and fresh offline source verification passed; see the
 [new exact preparation report](../validation/VALIDATION_20261004_BANK_FOLDER_PACKAGE_PREP_101.md).
@@ -77,12 +77,13 @@ frequency 100 found in archived banks, without rewriting downloaded files.
 USER/project storage and SysEx export retain those values. Other semantic,
 seven-bit, structure and checksum checks remain enforced. Editor ranges stay 0–99.
 
-The owner also requested a factory bank folder: SETTINGS opens the folder and
+The candidate includes the requested factory bank folder: SETTINGS opens the folder and
 refreshes content-identified ROM1A–ROM4B slots from user-supplied SysEx files.
 Partial libraries are supported; projects retain their own catalog and latest
 edited sound even if local bank files change/disappear. No Yamaha bank bytes
-are distributed. This feature also requires a new candidate and final owner
-host acceptance; the old hashes below do not identify it.
+are distributed. This feature and the export correction are included in the
+current 96267f7 packages; the historical hashes below do not identify them.
+General owner operation is PASS; detailed acceptance/disposition remains open.
 
 Upgrade warning: invalid factory data in a combined 48 KB ROM is now rejected
 in full without replacing the previous instrument state. An old project tied
@@ -121,12 +122,13 @@ operátor EG sebesség/szint és 100-as finomhangolási értékét, a letöltöt
 A többi paraméterhatár, a 7 bites adatok, a szerkezet és a checksum ellenőrzése
 megmarad. A szerkesztő tartománya továbbra is 0–99.
 
-Tulajdonosi kérésre gyári bankmappa is készül: a SETTINGS megnyitja a mappát
+Tulajdonosi kérésre gyári bankmappa is készült: a SETTINGS megnyitja a mappát
 és saját SysEx fájlok tartalma alapján frissíti a ROM1A–ROM4B helyeket.
 Részleges készlet is használható; a projekt saját bankmásolata és legutóbbi
 szerkesztett hangja megmarad a helyi fájlok változásától/eltűnésétől függetlenül.
-Yamaha bankadatot nem terjesztünk. Ehhez is új jelölt és végső tulajdonosi
-hostelfogadás szükséges; az alábbi régi hash-ek nem ezt azonosítják.
+Yamaha bankadatot nem terjesztünk. A funkció és az exportjavítás az aktuális
+96267f7 csomag része; az alábbi történeti hash-ek nem ezt azonosítják.
+A tulajdonosi általános működés PASS, a tételes elfogadás/halasztás még nyitott.
 
 Hibás gyári adatot tartalmazó kombinált 48 KB-os ROM teljes betöltése elutasítva,
 a korábbi hangszerállapot megőrzésével. Az ehhez kötött régi projekt függőben
@@ -142,7 +144,7 @@ előfordulhat; ne kapcsold ki a rendszer védelmét. [Magyar kézikönyv](../gui
 
 ## Publication gate — still open
 
-The dbad14a accepted-mode results below describe the previous candidate.
+The dbad14a accepted-mode results above describe the previous candidate.
 For the export-fixed 96267f7 candidate, exact-pair approval is now recorded
 through #130; final packaging and actual-file inspection PASS in the current
 report. Preparation metadata is not substituted for that evidence. Remaining
@@ -150,11 +152,12 @@ gates are exact-final owner host acceptance/disposition, final public text and
 durable source links, and separate publication authorization.
 
 - Actual new exact accepted-mode hashes, installer/upgrade evidence and complete
-  matching source/checksum are verified for run 37233357714, not inferred from
-  the older b7fce05 evidence below. Provide the approved
+  matching source/checksum are verified for run 37276345684, not inferred from
+  the older dbad14a or b7fce05 evidence. Provide the planned
   separate durable `v1.0.1-source` release link before/no later than binaries.
-- A=B dbad14a and C3766035 are recorded with full SHAs in the new final report.
-  Complete owner final REAPER acceptance and explicit disposition of unrun checks.
+- A=B 96267f7 and C edcb747 are recorded with full SHAs in the current report.
+  General owner Windows/M1 operation is PASS; complete the remaining detailed
+  REAPER acceptance or explicitly permitted disposition of unrun checks.
 - Obtain separate authorization for tags, source/product releases and uploads;
   preserve the four-download policy and do not modify v1.0.0.
 
@@ -163,7 +166,8 @@ durable source links, and separate publication authorization.
 Verified actual files from accepted-mode run 37276345684. A=B is
 `96267f7304e657821ce35c54536689981f41ef27`; C is
 `edcb7471bf2ee08d3f8430e317cb9d17274f7576`. These are test artifacts, not
-published or host-accepted files. See the current report above for checks and
+published files or fully matrix-accepted binaries. General owner Windows/M1
+operation is PASS. See the current report above for checks and
 limitations. The old hashes below must not be copied into the new release.
 
 | File | SHA-256 |
