@@ -8,16 +8,15 @@ Original firmware, a hardware-inspired interface and hands-on voice editing.
 
 [Magyar](README_HU.md)
 
-> **[Stable 1.0.0 downloads](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0)**
-> are available. This main branch contains **1.0.1 corrective development**, not
-> a published 1.0.1 release; development builds remain visibly marked.
+> **[Stable 1.0.1 downloads](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1)**
+> are available. Development builds remain separate and visibly marked.
 > A legally obtained original DX7 Mk I v1.8 user-supplied ROM is required. No Yamaha firmware
 > or factory voice data is included.
 
 **1.0.0 known limitation:** when a restored project reports a mismatched/missing
 ROM, load its matching ROM before import/export or bank/program/performance
 changes. The pending-project protection and source-package verifier corrections
-are merged for the next release, not retroactively installed in 1.0.0.
+are included in 1.0.1, not retroactively installed in 1.0.0.
 See the [active corrective plan](docs/release/EXECUTION_PLAN_1.0.md).
 
 ![VDX7 Mk1. EDIT — operator controls, envelopes and algorithm display](docs/screenshots/vdx7-edit.png)
@@ -30,11 +29,11 @@ The screenshots retain their development labels; they are not a stable-release c
 
 ## Download
 
-Future releases, starting with the planned 1.0.1, will have **four user-download
+The [1.0.1 release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1) has **four user-download
 assets**: Windows x64 EXE installer and Manual Install ZIP, plus macOS Universal
-PKG installer and Manual Install ZIP. This is a future publication policy, not
-an announcement that 1.0.1 is available. Checksums/source links belong in the
-release description; validation evidence stays separate. See the
+PKG installer and Manual Install ZIP. Checksums and signing limitations are in
+the release description. [Complete matching source with pinned dependencies](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source)
+is provided separately. See the
 [four-download policy](docs/release/PUBLIC_DOWNLOADS.md).
 
 Development VST3 builds are available from [GitHub Actions](https://github.com/RobCZart82/VDX7-JUCE/actions).
@@ -46,7 +45,7 @@ Choose a successful run for the desired branch and commit, then download its art
 GitHub sign-in may be required to download artifacts. Use the latest successful
 **main** run for the merged version; a pull-request build can contain changes
 that are not yet on main. Artifacts are temporary development downloads, not
-a published 1.0.0 release.
+a published stable release.
 
 [Published releases](https://github.com/RobCZart82/VDX7-JUCE/releases) are separate
 from these test builds. Standalone and macOS AU are source-build targets;
@@ -106,7 +105,7 @@ values of 100. VDX7 accepts these specific legacy values without rewriting the
 bank data. Other parameter limits, seven-bit data, file structure and checksum
 checks remain enforced; this is not unrestricted import of malformed banks.
 
-The new development build also supports your own factory SysEx files in
+Version 1.0.1 also supports your own factory SysEx files in
 **SETTINGS → Bank folder**. Copy recognised ROM1A–ROM4B bank files there, then
 choose **Refresh banks**, or start a new instance with compatible firmware.
 Only available banks are enabled; complete bank content, not filenames, determines

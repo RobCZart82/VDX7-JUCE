@@ -2,14 +2,14 @@
 
 [Back to overview](../../README.md) · [Magyar útmutató](GUIDE_HU.md)
 
-The [published 1.0.0 release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0)
-provides Windows x64 and macOS Universal VST3 installers/manual ZIPs. Main is
-now preparing 1.0.1; sections marked 1.0.1 development describe unreleased
-corrections. Actions artifacts remain development builds, not new stable releases.
+The [published 1.0.1 release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1)
+provides Windows x64 EXE and macOS Universal PKG installers, with Manual Install ZIP alternatives.
+Matching source is available in the [source companion release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source).
+Actions artifacts remain separate development builds. AU and Standalone are not shipped.
 
 ## 1. Platform and package
 
-### Pending-project protection (1.0.1 development)
+### Pending-project protection (1.0.1)
 
 If a restored project is waiting for its matching ROM, load that ROM before
 import/export, USER capture, renaming, operator copy/paste, bank/program
@@ -36,8 +36,9 @@ not a claim that every supported OS/host combination has been tested.
 
 1. Close the DAW and back up the existing VDX7 plug-in, projects and edited USER
    bank.
-2. Download and extract the VST3 ZIP. If it contains another ZIP, extract that
-   too. Copy the complete `VDX7.vst3` bundle to:
+2. Use the Windows EXE or macOS PKG installer. The PKG installs to
+   `/Library/Audio/Plug-Ins/VST3/`. Alternatively, extract the Manual Install ZIP
+   and copy the complete `VDX7.vst3` bundle to:
    - macOS: `~/Library/Audio/Plug-Ins/VST3/`
    - Windows: `C:\Program Files\Common Files\VST3\` (or `%COMMONPROGRAMFILES%\VST3\`)
 3. Avoid leaving another VDX7 copy in a second plug-in folder; the host may load
@@ -76,7 +77,7 @@ Supported layouts using the v1.8 firmware:
 - 16,384-byte DX7 Mk I v1.8 firmware, optionally beside `dx7_factory_voices_32KB.bin`.
 - 49,152-byte combined `dx7.bin`: 16 KB v1.8 firmware plus 32 KB factory data.
 
-The 1.0.1 development version validates all 256 factory voices, not only the
+Version 1.0.1 validates all 256 factory voices, not only the
 file size. A combined ROM containing invalid factory data is rejected in full;
 the previously loaded instrument/project state is preserved. An invalid
 separate optional 32 KB file is ignored with a warning, while the 16 KB firmware
@@ -99,7 +100,7 @@ Factory data enables ROM1A–ROM4B: eight banks of 32 programs. Without it, supp
 
 ### Factory bank folder
 
-The new development build can use separate, user-supplied factory SysEx banks
+Version 1.0.1 can use separate, user-supplied factory SysEx banks
 with firmware alone; a combined firmware/bank ROM is not required. Open
 **SETTINGS → Bank folder**, then copy your `.syx` files directly into that folder.
 Choose **Refresh banks** in SETTINGS to update an existing instance. New
@@ -335,10 +336,10 @@ same-value/ABA races. See [Q2 validation and limits](../validation/VALIDATION_PE
 
 This project uses [GNU AGPLv3](../../LICENSE.txt). The wrapper and original GUI resources are AGPL-3.0-only; the DX7 core retains GPL-3.0-or-later and its original notices. JUCE is used under AGPLv3. See [NOTICE.md](../../NOTICE.md) for the combined-work and third-party notices.
 
-The v1.0.0 stable release and its matching corresponding-source archive are
-published on the [GitHub Releases page](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0).
-The release includes macOS universal `.pkg` and manual ZIP, Windows x64 `.exe`
-and manual ZIP, checksums, build information and the source archive. It is
+The v1.0.1 stable release is on the [GitHub Releases page](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1).
+It includes macOS Universal `.pkg` and manual ZIP, Windows x64 `.exe`
+and manual ZIP. Checksums are in the notes; complete matching source is in the
+[source companion release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source). It is
 VST3-only; no AU or Standalone package is included. Fixes discovered after
 publication are intended for a later maintenance release and do not alter the
 published v1.0.0 tag or assets. This software comes without warranty. Firmware
@@ -349,7 +350,6 @@ identifies compatibility, not endorsement; no Yamaha logo is included.
 
 Thanks to [VDX7/chiaccona](https://github.com/chiaccona/VDX7), [Retromulator/dx7Lib](https://github.com/reales/retromulator) and [JUCE](https://github.com/juce-framework/JUCE). Only the portable DX7 core is integrated, not the complete Retromulator application.
 
-The published 1.0.0 release has passed the project's release process and owner
-acceptance on Windows and macOS in REAPER. Current post-release maintenance
-work is tracked separately; it does not change the published tag or installer
-assets. See ROADMAP_1.0.md for the release and maintenance record.
+The published 1.0.1 passed the recorded automated/package checks and scoped owner
+acceptance. [Explicitly deferred manual coverage](../validation/VALIDATION_20261005_PUBLICATION_101.md)
+is not PASS. Future maintenance does not change existing release files.

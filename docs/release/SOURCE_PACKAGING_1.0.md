@@ -1,5 +1,8 @@
 # Reproducible development source package
 
+> **2026-10-05 publication checkpoint:** [1.0.1 is published](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1), with [matching source](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source).
+> Az 1.0.1 megjelent. [Current acceptance, owner-authorized deferrals and publication record](../validation/VALIDATION_20261005_PUBLICATION_101.md) supersede earlier open publication gates below. Earlier candidate/test statements are retained as dated preparation history, not current release status.
+
 This prepares local/CI artifacts; it never uploads, tags or publishes a release.
 Python 3.9+ and Git are required. Use a full commit SHA that contains the new
 packager; the dirty working tree and untracked files are intentionally ignored.

@@ -2,14 +2,14 @@
 
 [Vissza az áttekintéshez](../../README_HU.md) · [English guide](GUIDE_EN.md)
 
-A [publikált 1.0.0 kiadás](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0)
-Windows x64 és macOS Universal VST3 telepítőket/kézi ZIP-eket tartalmaz. A main
-már az 1.0.1-et készíti elő; az „1.0.1 fejlesztés” jelölésű részek még kiadatlan
-javításokat írnak le. Az Actions artifactok továbbra is fejlesztői csomagok.
+A [publikált 1.0.1 kiadás](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1)
+Windows x64 EXE és macOS Universal PKG VST3 telepítőket, illetve kézi ZIP-eket tartalmaz.
+A megfelelő forrás a [külön forráskiadásban](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source) érhető el.
+Az Actions artifactok külön fejlesztői csomagok. AU és Standalone nincs mellékelve.
 
 ## 1. Platform és csomag
 
-### Várakozó projekt védelme (1.0.1 fejlesztés)
+### Várakozó projekt védelme (1.0.1)
 
 Ha a visszatöltött projekt a megfelelő ROM-ra vár, előbb azt töltsd be.
 Addig az import/export, USER-mentés, átnevezés, operator másolás/beillesztés,
@@ -38,9 +38,9 @@ buildcél, nem minden rendszer/host kombináció tesztelésének ígérete.
 
 1. Zárd be a DAW-t, és készíts mentést a korábbi VDX7 plug-inről, projektekről
    és módosított USER-bankról.
-2. Töltsd le a kívánt VST3 ZIP-et, majd csomagold ki. Ha a ZIP további ZIP-et
-   tartalmaz, azt is bontsd ki. A teljes `VDX7.vst3` bundle-t másold a megfelelő
-   mappába:
+2. Használd a Windows EXE vagy macOS PKG telepítőt. A PKG a
+   `/Library/Audio/Plug-Ins/VST3/` mappába telepít. Kézi telepítéshez bontsd ki
+   a Manual Install ZIP-et, és a teljes `VDX7.vst3` bundle-t másold ide:
    - macOS: `~/Library/Audio/Plug-Ins/VST3/`
    - Windows: `C:\Program Files\Common Files\VST3\` (vagy `%COMMONPROGRAMFILES%\VST3\`)
 3. Ne hagyj másik VDX7-példányt egy másik plug-inmappában, mert a host a régi
@@ -83,7 +83,7 @@ Támogatott elrendezések a v1.8 firmware használatával:
 - 16 384 bájtos DX7 Mk I v1.8 firmware, opcionálisan mellette `dx7_factory_voices_32KB.bin`.
 - 49 152 bájtos kombinált `dx7.bin`: 16 KB v1.8 firmware és 32 KB gyári hangadat.
 
-Az 1.0.1 fejlesztési változat mind a 256 gyári hangszín adatait ellenőrzi,
+Az 1.0.1 mind a 256 gyári hangszín adatait ellenőrzi,
 nem csak a fájlméretet. Hibás gyári adatot tartalmazó kombinált ROM esetén
 a teljes betöltést elutasítja; a korábban betöltött hangszer-/projektállapot
 megmarad. A külön, opcionális 32 KB-os fájlt hiba esetén figyelmeztetéssel
@@ -107,7 +107,7 @@ Gyári hangadat esetén ROM1A–ROM4B érhető el: nyolc bank, bankonként 32 pr
 
 ### Gyári bankmappa
 
-Az új fejlesztési változat külön, a felhasználótól származó gyári SysEx bankokat
+Az 1.0.1 külön, a felhasználótól származó gyári SysEx bankokat
 is kezel önálló firmware mellett; nem kell kombinált firmware/bank ROM.
 Nyisd meg a **SETTINGS → Bank folder** mappát, és közvetlenül ide másold a `.syx`
 fájlokat. Meglévő példányban a SETTINGS **Refresh banks** gombja frissíti a
@@ -300,11 +300,11 @@ a támogatását a teljes tesztkörben. A privát fixture nem kerül nyilvános 
 
 Ez a projekt [GNU AGPLv3](../../LICENSE.txt) szerint érhető el. A wrapper és az eredeti GUI-erőforrások AGPL-3.0-only licencűek; a DX7-mag megőrzi GPL-3.0-or-later licencét és eredeti közléseit. A JUCE-ot AGPLv3 alatt használjuk. Az egyesített mű és a komponensek közlései: [NOTICE.md](../../NOTICE.md).
 
-A v1.0.0 stabil kiadás és a hozzá tartozó corresponding-source forrásarchívum
-már letölthető a [GitHub Releases oldaláról](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0).
-A kiadás macOS universal `.pkg`-t és kézi telepítésű ZIP-et, Windows x64 `.exe`-
-telepítőt és kézi ZIP-et, ellenőrzőösszegeket, buildadatokat és forrásarchívumot
-tartalmaz. Kizárólag VST3-at ad; AU- és Standalone-csomag nincs benne. A kiadás
+A v1.0.1 stabil kiadás letölthető a [GitHub Releases oldaláról](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1).
+A kiadás macOS Universal `.pkg`-t és kézi ZIP-et, Windows x64 `.exe`-
+telepítőt és kézi ZIP-et tartalmaz. Az ellenőrzőösszegek a leírásban, a teljes
+megfelelő forrás a [külön forráskiadásban](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source) érhető el.
+Kizárólag VST3-at ad; AU- és Standalone-csomag nincs benne. A kiadás
 után talált hibák javítása egy későbbi karbantartó kiadásba kerülhet; ez nem
 módosítja a publikált v1.0.0 taget vagy fájlokat. A szoftver garancia nélkül
 érhető el. A firmware nem része a szoftverlicencnek. A leírásban szereplő
@@ -315,8 +315,6 @@ nincs mellékelve.
 
 Köszönet a [VDX7/chiaccona](https://github.com/chiaccona/VDX7), [Retromulator/dx7Lib](https://github.com/reales/retromulator) és [JUCE](https://github.com/juce-framework/JUCE) fejlesztőinek. Csak a hordozható DX7-mag épül be, nem a teljes Retromulator alkalmazás.
 
-A publikált 1.0.0 kiadás végigment a kiadási ellenőrzéseken, és a tulajdonos
-Windows és macOS rendszeren, REAPER-ben is elfogadta. Az új, kiadás utáni
-karbantartási feladatok külön követendők; ezek nem módosítják a publikált taget
-vagy telepítőcsomagokat. A kiadási és karbantartási állapotot a ROADMAP_1.0.md
-rögzíti.
+A publikált 1.0.1 dokumentált automatizált/csomagellenőrzései és körülhatárolt
+tulajdonosi tesztjei sikeresek. Az [elfogadott kézi teszthalasztások](../validation/VALIDATION_20261005_PUBLICATION_101.md)
+nem PASS eredmények. A jövőbeli karbantartás nem változtatja meg a kiadott fájlokat.

@@ -1,5 +1,8 @@
 # VDX7 roadmap — 1.0.1 corrective work
 
+> **2026-10-05 publication checkpoint:** [1.0.1 is published](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1), with [matching source](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source).
+> Az 1.0.1 megjelent. [Current acceptance, owner-authorized deferrals and publication record](../validation/VALIDATION_20261005_PUBLICATION_101.md) supersede earlier open publication gates below. Earlier candidate/test statements are retained as dated preparation history, not current release status.
+
 Current authority (2026-09-30): 1.0.0 is published. The active A1–A10 ledger,
 priorities and acceptance gates are in [the consolidated plan](EXECUTION_PLAN_1.0.md).
 Pending-project A1/A2 are reproduced defects, not just missing tests.

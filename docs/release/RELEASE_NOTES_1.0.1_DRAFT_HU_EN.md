@@ -1,5 +1,8 @@
 # VDX7 Mk1. 1.0.1 — draft / tervezet
 
+> **2026-10-05 publication checkpoint:** [1.0.1 is published](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1), with [matching source](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source).
+> Az 1.0.1 megjelent. [Current acceptance, owner-authorized deferrals and publication record](../validation/VALIDATION_20261005_PUBLICATION_101.md) supersede earlier open publication gates below. Earlier candidate/test statements are retained as dated preparation history, not current release status.
+
 Not published. General owner-reported Windows and M1 Mac operation is PASS;
 detailed matrix acceptance/deferrals remain open. This records the corrective candidate; it does not
 replace the [single execution plan](EXECUTION_PLAN_1.0.md) or grant publication

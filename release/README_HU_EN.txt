@@ -1,5 +1,5 @@
-HISTORICAL GUIDE: v0.1.0 only. For v0.6.6 use README.md / README_HU.md.
-REGI UTMUTATO: csak v0.1.0. A v0.6.6-hoz: README.md / README_HU.md.
+HISTORICAL GUIDE: v0.1.0 only. For current v1.0.1 use README.md / docs/guides/GUIDE_EN.md.
+REGI UTMUTATO: csak v0.1.0. Az aktualis v1.0.1-hez: README_HU.md / docs/guides/GUIDE_HU.md.
 
 VDX7-JUCE v0.1.0 Pre-Beta 1
 Yamaha DX7 Mk I hardware-emulation VST3
