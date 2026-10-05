@@ -50,13 +50,18 @@ evidence of the test environment, not evidence of individual plugin test cases.
 Computer/domain names and device/product identifiers are intentionally omitted;
 the original screenshot is not committed.
 
-Exact installer filename/SHA256, installed plugin hash, REAPER version and
-individual test cases were not supplied. Therefore exact-final-package identity
-and detailed sample-rate/buffer, automation, multiple-instance, recovery and
+The owner subsequently identified **REAPER 7.82 x64** and downloaded bundle
+`VDX7-1.0.1-Four-Downloads-96267f7304e657821ce35c54536689981f41ef27-accepted`.
+This identifies the final accepted four-download bundle by its owner-reported
+name; it is not an EXE filename or an independently verified local checksum.
+Local installer/plugin SHA256 and individual test cases were not supplied.
+Therefore local binary hash verification and detailed sample-rate/buffer,
+automation, multiple-instance, recovery and
 render checks remain **NOT RUN / not individually documented in this report**;
 this label describes missing scoped evidence, not a claim that the owner did not
-perform them. Associate the report with the final package only after confirming
-its identity. Expected final EXE: `VDX7-1.0.1-Windows-x64-Setup.exe`, SHA256
+perform them. The Windows general-operation feedback is now associated with the
+named final bundle, with this checksum limitation. Expected final EXE:
+`VDX7-1.0.1-Windows-x64-Setup.exe`, SHA256
 `d9472981ee8d651ca1b609e3e94683470e19be2a7d841c21e1b62edc394ac84e`.
 
 macOS owner acceptance remains NOT RUN/not reported. No permission to publish,
@@ -67,7 +72,8 @@ No Yamaha ROM or factory-bank contents are included in this documentation.
 ## Next gates
 
 Use the [execution plan](../release/EXECUTION_PLAN_1.0.md) as the single ledger:
-confirm the Windows tested package identity; document macOS acceptance or explicit
+optionally confirm the installed Windows binary checksum and document remaining
+individual checks; document macOS acceptance or explicit
 permitted deferrals; finalize R6 release text and obtain separate publication
 authorization; only then execute R7 publication and download verification.
 No product fixes are justified solely by the supplied overview.

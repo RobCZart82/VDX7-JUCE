@@ -5,10 +5,13 @@
 ### Tulajdonosi Windows-visszajelzés — 2026-10-05
 
 A tulajdonos a legfrissebb telepítő letöltése után Windows 11 x64 + REAPER
-alatt hibamentes működésről számolt be: **PASS, tulajdonos által jelentett
-általános működés**. A pontos telepítőhash, REAPER-verzió és tételes tesztmátrix
-még nincs megadva, ezért R4 pontos végső binárishoz kötött teljes lezárását
-nem állítjuk. A macOS-elfogadás és külön publikálási engedély továbbra is nyitott.
+7.82 x64 alatt hibamentes működésről számolt be: **PASS, tulajdonos által jelentett
+általános működés**. Megadott csomag:
+`VDX7-1.0.1-Four-Downloads-96267f7304e657821ce35c54536689981f41ef27-accepted`.
+Ez a végső négyletöltéses csomag tulajdonosi azonosítása, nem EXE-fájlnév vagy
+helyi hash-ellenőrzés. A helyi telepítő/plugin hash és a tételes tesztmátrix nincs
+dokumentálva, ezért R4 teljes lezárását nem állítjuk. A macOS-elfogadás és külön
+publikálási engedély továbbra is nyitott.
 Ez az új visszajelzés pontosítja az alábbi korábbi, tulajdonosi tesztre váró
 bejegyzéseket; az automatizált bizonyítékok nem változnak.
 [Pontosított audit és elfogadási hatókör](../validation/AUDIT_REPORT_20261005_CODE_AND_REPOSITORY_REVIEW.md).
