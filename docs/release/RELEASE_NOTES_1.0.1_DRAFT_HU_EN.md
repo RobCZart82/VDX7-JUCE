@@ -1,6 +1,7 @@
 # VDX7 Mk1. 1.0.1 — draft / tervezet
 
-Not published or host-accepted. This records the corrective candidate; it does not
+Not published. General owner-reported Windows and M1 Mac operation is PASS;
+detailed matrix acceptance/deferrals remain open. This records the corrective candidate; it does not
 replace the [single execution plan](EXECUTION_PLAN_1.0.md) or grant publication
 approval. Published v1.0.0 and its assets remain unchanged.
 
@@ -11,8 +12,15 @@ Preparation has passed; the owner explicitly approved exact A=B 96267f7 on
 2026-10-05. Policy #130 and distinct post-merge main checks PASS at C
 `edcb7471bf2ee08d3f8430e317cb9d17274f7576`. Canonical accepted-mode final
 packaging `37276345684` and independent actual-file/source/offline verification
-PASS. The actual final Windows VST3 validator PASS 47/47. Owner acceptance and separate publication permission
-remain open. The [current final test report](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md)
+PASS. The actual final Windows VST3 validator PASS 47/47. The owner reports
+successful use of this named final bundle on Windows 11 Pro 26H2 build
+26300.9457 with REAPER 7.82 x64, and PKG installation/use on Mac mini M1 (2020),
+16 GB RAM, macOS 26.7.1 with REAPER 7.82 Universal. These are human reports,
+not independently verified local hashes or complete matrix coverage. Intel Mac,
+active native/Rosetta mode and remaining detailed cases are not established.
+Remaining acceptance evidence/explicit deferrals and separate publication permission
+remain open. See the [owner feedback record](../validation/AUDIT_REPORT_20261005_CODE_AND_REPOSITORY_REVIEW.md).
+The [current final test report](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md)
 records exact identities and remaining gates.
 The actual new preparation files and inspection limits are recorded in the
 [current preparation report](../validation/VALIDATION_20261005_EXPORT_FIX_PACKAGE_PREP_101.md).
