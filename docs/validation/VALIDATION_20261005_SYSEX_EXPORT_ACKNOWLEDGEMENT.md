@@ -78,10 +78,12 @@ irrelevant throughout the probe; no bank contents were modified.
   library) passed again. The intermediate renamed-bank failure is the negative
   control, not a discarded product failure.
 - PASS: Python suite, 76 tests passed and one Windows symlink-capability SKIPPED.
-- Final Windows/macOS/ASan-UBSan results and exact final head are recorded in
-  [PR 128](https://github.com/RobCZart82/VDX7-JUCE/pull/128). Every final-head gate
-  must pass and review threads must be resolved before merge; earlier-head
-  green results are not substituted for later-head results.
+- PASS: final head `1ec0236e6bc29ce472ad4627a8adad87cff892d2`, full local
+  rerun 47/47 in 395.70 seconds. Windows `37267067625`, macOS `37267067647`
+  and ASan/UBSan `37267067621` passed for that head. Review threads were resolved.
+- PASS: [PR 128](https://github.com/RobCZart82/VDX7-JUCE/pull/128) merged at
+  `96267f7304e657821ce35c54536689981f41ef27`. Its files match the final tested
+  head; post-merge Windows `37267855991` and macOS `37267855982` passed.
 - NOT RUN: REAPER, installed-package acceptance, local macOS/sanitizer and new final packaging.
 
 The final-head full local rerun and post-merge main checks are also recorded
@@ -89,3 +91,7 @@ in the PR. Unrun host/package checks are not promoted to PASS by these results.
 Earlier final packages at `dbad14a` do not contain this product fix. Their hashes
 and acceptance evidence remain historical; rebuilding/reapproving exact final
 packages and matching source is a separate release gate.
+
+The later preparation run and actual new files are recorded separately in the
+[export corrected package preparation](VALIDATION_20261005_EXPORT_FIX_PACKAGE_PREP_101.md).
+Its preparation evidence does not change the final-packaging or owner-host gates.

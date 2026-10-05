@@ -14,6 +14,7 @@
 - [Four public user downloads](release/PUBLIC_DOWNLOADS.md)
 - [Candidate instructions / jelölt útmutató](release/CANDIDATE_README_HU_EN.md)
 - [Draft 1.0.0 release notes and test matrix / kiadási jegyzet és tesztmátrix](release/RELEASE_NOTES_1.0.0_DRAFT_HU_EN.md)
+- [Current draft 1.0.1 release notes](release/RELEASE_NOTES_1.0.1_DRAFT_HU_EN.md)
 - [Current runtime GUI resources](design/GUI_RUNTIME_ASSETS.md)
 
 ## Document groups
@@ -39,6 +40,8 @@ preserved as historical evidence, not fresh acceptance claims.
 
 ## History and evidence
 
+- [Current export corrected 1.0.1 package preparation](validation/VALIDATION_20261005_EXPORT_FIX_PACKAGE_PREP_101.md)
+- [SysEx export acknowledgement and bank library regression](validation/VALIDATION_20261005_SYSEX_EXPORT_ACKNOWLEDGEMENT.md)
 - [Archived DX7 bank acceptance and data preservation](validation/VALIDATION_20261004_LEGACY_BANK_COMPATIBILITY.md)
 
 Old test reports are not deleted or automatically marked obsolete: they may
