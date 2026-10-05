@@ -373,6 +373,39 @@ el, nem teszi minősítetté a módosított tesztmásolatot, és nem garantál r
 projekt-visszaállítást. Nagyobb optimalizálás mérhető előny hiányában halasztható;
 a diagnosztikai finomítás 1.0.1 előtti diszpozíciója fent rögzítve: DEFERRED.
 
+### Init Preset az 1.0.1 utáni kiadásban
+
+Tulajdonosi döntés: 2026-10-05. **DEFERRED az 1.0.1 utáni kiadásra**;
+tervezett funkció, még nincs megvalósítva. Nem az 1.0.1 publikálási feltétele,
+nem változtatja meg a jelenlegi jelöltet, csomagokat vagy jóváhagyást.
+
+- Belépés: **UTILITY → Init Preset**, majd megerősítő ablak. Az üzenet
+  figyelmeztet a munkahangszín nem mentett szerkesztéseinek elvesztésére,
+  és arra, hogy a tárolt bankhangszínek nem változnak. **Mégse** esetén
+  sem a hang, sem az állapot nem módosul.
+- Megerősítéskor csak a szerkeszthető munkahangszín inicializálódik;
+  a kijelző **`Init Preset*`** nevet mutat. A csillag nem mentett szerkesztést
+  jelöl, nem része az exportált hangszínnévnek. A 10 karakteres DX7-névmező
+  és a kijelző feliratának megfeleltetését a megvalósításkor külön kell kezelni.
+- Az eredetileg kiválasztott gyári vagy tartós USER-bankhely nem írható felül.
+  Az Init állapot tovább szerkeszthető, exportálható és explicit módon külön
+  menthető; a DAW-projekt mentése és újranyitása megőrzi az aktuális
+  Init/szerkesztett munkahangszínt és annak állapotát.
+- Ez **hangszín-inicializálás, nem teljes settings reset**: ROM, bankkatalógus,
+  bankmappa, MIDI-/performance- és GUI-beállítások változatlanok maradnak.
+- A tulajdonos által adott `VDX7_Init_Patch.syx` csak helyi összehasonlítási
+  referencia. Az elemzés szabályos, Init jellegű egyhangszínes adatot talált,
+  de nem igazolt Yamaha-eredetet vagy firmware VOICE INIT byte-azonosságot.
+  A fájl nem kerül a repository-ba vagy csomagba; a későbbi implementáció
+  specifikációja külön ellenőrzött paraméterértékekből készüljön.
+
+Elfogadási próbák a későbbi fejlesztéshez: Mégse teljes állapotmegőrzése;
+megerősítés csak a munkahangszínt módosítja; eredeti bankadatok és settings
+byte-/értékazonossága; helyes felirat/módosításjelző; szerkesztés, külön mentés,
+export és projekt-visszaállítás; többpéldányos elkülönítés; hiányzó ROM és
+függő projekt biztonságos kezelése. Windows/macOS automatizált és szükséges
+hostteszt kell az új funkció kiadásához; most egyik sem állítható PASS-nak.
+
 ### R5–R7: publikálás előtti és publikálási lépések
 
 Az [A/B/C jóváhagyási eljárás](RELEASE_APPROVAL.md) kötelező. A mostani
