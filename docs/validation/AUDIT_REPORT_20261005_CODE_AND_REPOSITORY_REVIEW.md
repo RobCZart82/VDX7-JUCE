@@ -37,7 +37,7 @@ Do not change stable parameter IDs/order or add logging/pools merely because the
 overview suggested them. Optimization requires measured need; callback logging
 must not introduce blocking file I/O or allocation.
 
-## Owner Windows acceptance update
+## Owner Windows and macOS acceptance updates
 
 On 2026-10-05 the owner reported downloading the latest installer and that the
 release-intended software works correctly on **Windows 11 x64 with REAPER**.
@@ -64,7 +64,15 @@ named final bundle, with this checksum limitation. Expected final EXE:
 `VDX7-1.0.1-Windows-x64-Setup.exe`, SHA256
 `d9472981ee8d651ca1b609e3e94683470e19be2a7d841c21e1b62edc394ac84e`.
 
-macOS owner acceptance remains NOT RUN/not reported. No permission to publish,
+The owner also reports testing the contents of the **same named bundle** on a
+**Mac mini M1 (2020), 16 GB RAM**, with successful operation.
+Status: **PASS — owner-reported general macOS operation**. Exact macOS version,
+macOS host/version/architecture, PKG versus Manual installation route and local
+installed-binary checksum were not supplied. Do not infer the Windows REAPER
+7.82 x64 version applies to the Mac, or extend M1 evidence to Intel hardware.
+Detailed per-case matrix coverage is not individually documented.
+
+No permission to publish,
 create tags/releases or replace assets was given. Windows EXE remains unsigned;
 macOS PKG is unsigned, plugin ad-hoc signed, without Developer ID/notarization.
 No Yamaha ROM or factory-bank contents are included in this documentation.
@@ -73,7 +81,8 @@ No Yamaha ROM or factory-bank contents are included in this documentation.
 
 Use the [execution plan](../release/EXECUTION_PLAN_1.0.md) as the single ledger:
 optionally confirm the installed Windows binary checksum and document remaining
-individual checks; document macOS acceptance or explicit
-permitted deferrals; finalize R6 release text and obtain separate publication
+individual checks and macOS version/host/install-route details or explicit
+permitted deferrals. General owner operation feedback is PASS on both platforms;
+this is not complete matrix acceptance. Finalize R6 release text and obtain separate publication
 authorization; only then execute R7 publication and download verification.
 No product fixes are justified solely by the supplied overview.

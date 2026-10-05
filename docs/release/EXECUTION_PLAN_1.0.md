@@ -2,7 +2,7 @@
 
 ## Az 1.0.1 publikálás kötelező lezárási terve
 
-### Tulajdonosi Windows-visszajelzés — 2026-10-05
+### Tulajdonosi Windows- és macOS-visszajelzés — 2026-10-05
 
 A tulajdonos a legfrissebb telepítő letöltése után Windows 11 x64 + REAPER
 7.82 x64 alatt hibamentes működésről számolt be: **PASS, tulajdonos által jelentett
@@ -10,8 +10,12 @@ A tulajdonos a legfrissebb telepítő letöltése után Windows 11 x64 + REAPER
 `VDX7-1.0.1-Four-Downloads-96267f7304e657821ce35c54536689981f41ef27-accepted`.
 Ez a végső négyletöltéses csomag tulajdonosi azonosítása, nem EXE-fájlnév vagy
 helyi hash-ellenőrzés. A helyi telepítő/plugin hash és a tételes tesztmátrix nincs
-dokumentálva, ezért R4 teljes lezárását nem állítjuk. A macOS-elfogadás és külön
-publikálási engedély továbbra is nyitott.
+dokumentálva, ezért R4 teljes lezárását nem állítjuk. A tulajdonos ugyanennek a
+csomagnak a tartalmát Mac mini M1 (2020), 16 GB RAM gépen is sikeresen tesztelte:
+**PASS, tulajdonosi általános macOS-működés**. Pontos macOS/host verzió,
+telepítési útvonal és helyi hash még nincs dokumentálva; Intel Macre nem terjesztjük
+ki ezt az eredményt. Mindkét platform általános visszajelzése sikeres, a tételes
+elfogadási bizonyíték/halasztás és külön publikálási engedély még nyitott.
 Ez az új visszajelzés pontosítja az alábbi korábbi, tulajdonosi tesztre váró
 bejegyzéseket; az automatizált bizonyítékok nem változnak.
 [Pontosított audit és elfogadási hatókör](../validation/AUDIT_REPORT_20261005_CODE_AND_REPOSITORY_REVIEW.md).
