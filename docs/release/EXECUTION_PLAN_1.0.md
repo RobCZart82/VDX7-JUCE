@@ -2,6 +2,17 @@
 
 ## Az 1.0.1 publikálás kötelező lezárási terve
 
+### Tulajdonosi Windows-visszajelzés — 2026-10-05
+
+A tulajdonos a legfrissebb telepítő letöltése után Windows 11 x64 + REAPER
+alatt hibamentes működésről számolt be: **PASS, tulajdonos által jelentett
+általános működés**. A pontos telepítőhash, REAPER-verzió és tételes tesztmátrix
+még nincs megadva, ezért R4 pontos végső binárishoz kötött teljes lezárását
+nem állítjuk. A macOS-elfogadás és külön publikálási engedély továbbra is nyitott.
+Ez az új visszajelzés pontosítja az alábbi korábbi, tulajdonosi tesztre váró
+bejegyzéseket; az automatizált bizonyítékok nem változnak.
+[Pontosított audit és elfogadási hatókör](../validation/AUDIT_REPORT_20261005_CODE_AND_REPOSITORY_REVIEW.md).
+
 ### Aktuális javítás és újranyitott kapuk 2026-10-05
 
 A `dccb745` main auditja egy reprodukált P2 hibát talált: fenntartott VMEM

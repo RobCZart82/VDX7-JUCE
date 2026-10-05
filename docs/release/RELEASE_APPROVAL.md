@@ -1,5 +1,14 @@
 # Reviewed release approval and provenance
 
+## Owner feedback update — 2026-10-05
+
+The owner reports successful latest-installer operation on Windows 11 x64 with
+REAPER. This is owner-reported general acceptance, not independently verified
+exact-package/matrix acceptance: installer hash and REAPER version are still
+unspecified. macOS acceptance and separate publication permission remain open.
+See the [corrected review](../validation/AUDIT_REPORT_20261005_CODE_AND_REPOSITORY_REVIEW.md).
+The packaging approval JSON is unchanged; this feedback does not authorize publication.
+
 This is the procedure for AUDIT-20260930-A4, not a second development plan.
 The [execution plan](EXECUTION_PLAN_1.0.md) remains the active ledger.
 The guard creates validation artifacts only; it cannot publish a tag, Release
