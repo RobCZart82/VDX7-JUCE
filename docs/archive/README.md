@@ -2,7 +2,19 @@
 
 These documents are preserved, not active release instructions. Their original
 dates, claims and checkboxes describe earlier project states. Use the
-[current plan](../release/EXECUTION_PLAN_1.0.md) for today's priorities.
+[current plan](../development/DEVELOPMENT_PLAN.md) for today's priorities.
+
+## Closed release preparation archived 2026-10-05
+
+- [Consolidated execution history](EXECUTION_PLAN_1.0.md)
+- [Roadmap history](ROADMAP_1.0.md)
+- [Release checklist history](RELEASE_CHECKLIST_1.0_RC.md)
+- [1.0.0 draft notes](RELEASE_NOTES_1.0.0_DRAFT_HU_EN.md)
+- [1.0.1 draft notes](RELEASE_NOTES_1.0.1_DRAFT_HU_EN.md)
+
+Full bodies and original evidence remain. Live feature concepts, deferred coverage
+and maintenance items are in the active plan. Former paths retain short redirects;
+old checkboxes are not current blockers. No unique evidence was deleted.
 
 - [2026-09-23 audit triage](AUDIT_TRIAGE_2026-09-23.md) — earlier finding disposition.
 - [Earlier bilingual 1.0 development snapshot](DEVELOPMENT_1.0_HU_EN.md) — superseded

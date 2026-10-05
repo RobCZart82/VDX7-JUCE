@@ -3,6 +3,21 @@
 All listed documents were moved, not discarded. Git history retains the old paths.
 Use the current links below to resolve an older root-level reference.
 
+## Post release consolidation 2026-10-05
+
+Active work: [DEVELOPMENT_PLAN.md](development/DEVELOPMENT_PLAN.md).
+Five preparation bodies moved from `docs/release/` to `docs/archive/`;
+their former paths retain redirects:
+
+- [EXECUTION_PLAN_1.0.md](archive/EXECUTION_PLAN_1.0.md)
+- [ROADMAP_1.0.md](archive/ROADMAP_1.0.md)
+- [RELEASE_CHECKLIST_1.0_RC.md](archive/RELEASE_CHECKLIST_1.0_RC.md)
+- [RELEASE_NOTES_1.0.0_DRAFT_HU_EN.md](archive/RELEASE_NOTES_1.0.0_DRAFT_HU_EN.md)
+- [RELEASE_NOTES_1.0.1_DRAFT_HU_EN.md](archive/RELEASE_NOTES_1.0.1_DRAFT_HU_EN.md)
+
+The older migration table below records the September move. Follow redirects
+for the final preserved body location. Validation evidence was not moved/deleted.
+
 | Previous root path | Current document |
 | --- | --- |
 | `AUDIT_TRIAGE_2026-09-23.md` | [AUDIT_TRIAGE_2026-09-23.md](archive/AUDIT_TRIAGE_2026-09-23.md) |
@@ -91,4 +106,3 @@ Use the current links below to resolve an older root-level reference.
 | `VALIDATION_RESET_RUNNING_STATUS.md` | [VALIDATION_RESET_RUNNING_STATUS.md](validation/VALIDATION_RESET_RUNNING_STATUS.md) |
 | `VALIDATION_STATE_INSTALL_BOUNDARY.md` | [VALIDATION_STATE_INSTALL_BOUNDARY.md](validation/VALIDATION_STATE_INSTALL_BOUNDARY.md) |
 | `VALIDATION_WHEEL_DELIVERY.md` | [VALIDATION_WHEEL_DELIVERY.md](validation/VALIDATION_WHEEL_DELIVERY.md) |
-
