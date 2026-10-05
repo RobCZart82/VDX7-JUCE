@@ -17,7 +17,7 @@ Eredeti firmware, hardveres ihletésű felület és közvetlen hangszínszerkesz
 jelez, előbb a megfelelő ROM-ot töltsd be, csak utána importálj/exportálj vagy
 válts bankot/programot/performance-beállítást. A projektvédelmi és forráscsomag-
 ellenőrzési javítás az 1.0.1-ben elérhető, az 1.0.0 telepített
-példányait nem frissíti automatikusan. [Aktív terv](docs/release/EXECUTION_PLAN_1.0.md).
+példányait nem frissíti automatikusan. [Aktív terv](docs/development/DEVELOPMENT_PLAN.md).
 
 ![VDX7 Mk1. EDIT — operátorok, burkológörbék és algoritmusábra](docs/screenshots/vdx7-edit.png)
 

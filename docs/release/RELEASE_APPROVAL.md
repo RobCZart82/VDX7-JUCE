@@ -20,7 +20,7 @@ See the [corrected review](../validation/AUDIT_REPORT_20261005_CODE_AND_REPOSITO
 The packaging approval JSON is unchanged; this feedback does not authorize publication.
 
 This is the procedure for AUDIT-20260930-A4, not a second development plan.
-The [execution plan](EXECUTION_PLAN_1.0.md) remains the active ledger.
+The [execution plan](../development/DEVELOPMENT_PLAN.md) remains the active ledger.
 The guard creates validation artifacts only; it cannot publish a tag, Release
 or assets. Published 1.0.0 is unchanged. The owner requests work toward 1.0.1
 publication. On 2026-10-05, after the exact next gate was identified in the

@@ -10,7 +10,7 @@ The stable/candidate workflow labels and installer versions match 1.0.1.
 Published 1.0.0 assets, bundle/plugin IDs, parameter ordering and state format
 are unchanged. The descriptive prototype wording was corrected in prior work;
 the historical bundle ID remains unchanged. Use the
-[active execution plan](EXECUTION_PLAN_1.0.md) for open candidate gates.
+[active execution plan](../development/DEVELOPMENT_PLAN.md) for open candidate gates.
 
 ## Historical 1.0.0 preparation record
 

@@ -79,7 +79,7 @@ packaging approval for export-fixed A=B
 Null or mismatched approval still fails closed. Read-only workflow permissions
 and separate publication authorization remain. See the
 [current final test report](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md).
-Use the [single execution plan](EXECUTION_PLAN_1.0.md) for remaining work.
+Use the [single execution plan](../development/DEVELOPMENT_PLAN.md) for remaining work.
 
 Magyarul: a release-re négy felhasználói csomag kerül fel. A forráscsomag,
 buildleírások és hashfájl továbbra is elkészülnek, de külön validációs anyagok.

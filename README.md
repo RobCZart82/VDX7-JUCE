@@ -17,7 +17,7 @@ Original firmware, a hardware-inspired interface and hands-on voice editing.
 ROM, load its matching ROM before import/export or bank/program/performance
 changes. The pending-project protection and source-package verifier corrections
 are included in 1.0.1, not retroactively installed in 1.0.0.
-See the [active corrective plan](docs/release/EXECUTION_PLAN_1.0.md).
+See the [active corrective plan](docs/development/DEVELOPMENT_PLAN.md).
 
 ![VDX7 Mk1. EDIT — operator controls, envelopes and algorithm display](docs/screenshots/vdx7-edit.png)
 
