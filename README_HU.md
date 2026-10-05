@@ -8,16 +8,15 @@ Eredeti firmware, hardveres ihletésű felület és közvetlen hangszínszerkesz
 
 [English](README.md)
 
-> **[A stabil 1.0.0 letölthető](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.0).**
-> Ez a main ág az **1.0.1 javítókiadás fejlesztését** tartalmazza, nem kiadott
-> 1.0.1-et; a fejlesztői csomagok megkülönböztető jelölése megmarad.
+> **[A stabil 1.0.1 letölthető](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1).**
+> A fejlesztői csomagok különállók, megkülönböztető jelölésük megmarad.
 > Saját, jogszerűen használható eredeti DX7 Mk I v1.8 ROM szükséges.
 > Yamaha firmware és gyári hangadat nincs mellékelve.
 
 **Az 1.0.0 ismert korlátja:** ha egy visszatöltött projekt hiányzó/eltérő ROM-ot
 jelez, előbb a megfelelő ROM-ot töltsd be, csak utána importálj/exportálj vagy
 válts bankot/programot/performance-beállítást. A projektvédelmi és forráscsomag-
-ellenőrzési javítás a következő kiadáshoz már beolvadt, az 1.0.0 telepített
+ellenőrzési javítás az 1.0.1-ben elérhető, az 1.0.0 telepített
 példányait nem frissíti automatikusan. [Aktív terv](docs/release/EXECUTION_PLAN_1.0.md).
 
 ![VDX7 Mk1. EDIT — operátorok, burkológörbék és algoritmusábra](docs/screenshots/vdx7-edit.png)
@@ -31,11 +30,11 @@ ez nem a stabil kiadás minősítése.*
 
 ## Letöltés
 
-A készülő 1.0.1-től a jövőbeli kiadások **négy felhasználói letöltést**
-tartalmaznak: Windows x64 EXE telepítőt és Manual Install ZIP-et, valamint
-macOS Universal PKG telepítőt és Manual Install ZIP-et. Ez a jövőbeli kiadások
-szabálya, nem az 1.0.1 megjelenésének bejelentése. Az ellenőrzőösszegek és
-forráslinkek a release leírásába kerülnek; a validációs bizonyíték külön marad.
+Az [1.0.1 kiadás](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1) **négy felhasználói letöltést**
+tartalmaz: Windows x64 EXE telepítőt és Manual Install ZIP-et, valamint
+macOS Universal PKG telepítőt és Manual Install ZIP-et. Az ellenőrzőösszegek és
+aláírási korlátok a release leírásában olvashatók. A [teljes megfelelő forrás rögzített függőségekkel](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source)
+külön kiadásban érhető el; a validációs bizonyíték külön marad.
 Lásd a [négy letöltés szabályát](docs/release/PUBLIC_DOWNLOADS.md).
 
 Fejlesztői VST3-változatok a [GitHub Actions](https://github.com/RobCZart82/VDX7-JUCE/actions)
@@ -47,7 +46,7 @@ oldalról tölthetők le. Válaszd ki a kívánt ág és commit sikeres futásá
 Az artifact letöltéséhez GitHub-bejelentkezés szükséges lehet. A beolvasztott
 változathoz a legfrissebb sikeres **main** futást válaszd; a pull request
 buildje még be nem olvasztott módosításokat is tartalmazhat.
-Ezek időszakosan elérhető tesztcsomagok, nem publikált 1.0.0 kiadások.
+Ezek időszakosan elérhető tesztcsomagok, nem publikált stabil kiadások.
 
 A [publikált kiadások](https://github.com/RobCZart82/VDX7-JUCE/releases) külön
 érhetők el. Standalone és macOS AU forrásból fordítható;
@@ -67,7 +66,7 @@ a public workflow-k jelenleg VST3-at terjesztenek.
   kivezérlésmérők és audio-callback terheléskijelző.
 - Arányos GUI-méretek: 50%, 75%, 100%, 125% és 150%.
 
-A fejlesztési változatban a **SETTINGS → Bank folder** megnyitja a bankmappát.
+Az 1.0.1-ben a **SETTINGS → Bank folder** megnyitja a bankmappát.
 Másold ide a felismert ROM1A–ROM4B bankfájlokat, majd válaszd a **Refresh banks**
 gombot, vagy indíts új példányt kompatibilis firmware-rel. Csak a meglévő bankok
 aktívak; a teljes banktartalom, nem a fájlnév dönti el a helyüket. A frissítés
@@ -100,8 +99,11 @@ védelmet; olvasd el a telepítési útmutatót.
 ## Telepítés
 
 1. Zárd be a hostot; mentsd a meglévő plugint, projekteket és módosított bankokat.
-2. Bontsd ki az artifactot és az esetleges belső ZIP-et. A teljes
-   `VDX7.vst3` csomagot másold a VST3-mappába:
+2. Telepítős letöltésnél futtasd a Windows `.exe` vagy macOS `.pkg` fájlt,
+   és kövesd a telepítő lépéseit. A macOS PKG a `/Library/Audio/Plug-Ins/VST3/`,
+   a Windows EXE a `C:\Program Files\Common Files\VST3\` mappába telepít.
+   **Manual Install ZIP** esetén bontsd ki a ZIP-et, és a teljes `VDX7.vst3`
+   csomagot másold a VST3-mappába:
    - macOS: `~/Library/Audio/Plug-Ins/VST3/`
    - Windows: `C:\Program Files\Common Files\VST3\`
 3. Kerestesd újra a plugineket, majd töltsd be a VDX7-et hangszerként.

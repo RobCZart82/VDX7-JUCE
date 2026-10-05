@@ -2,6 +2,9 @@
 
 ## Start here / Kezdőpontok
 
+- [Published 1.0.1 bilingual release notes](release/RELEASE_NOTES_1.0.1_HU_EN.md)
+- [Publication and explicitly deferred coverage](validation/VALIDATION_20261005_PUBLICATION_101.md)
+
 - [Corrected repository review and owner Windows feedback (2026-10-05)](validation/AUDIT_REPORT_20261005_CODE_AND_REPOSITORY_REVIEW.md)
 
 - [English user and build guide](guides/GUIDE_EN.md)
@@ -16,7 +19,7 @@
 - [Four public user downloads](release/PUBLIC_DOWNLOADS.md)
 - [Candidate instructions / jelölt útmutató](release/CANDIDATE_README_HU_EN.md)
 - [Draft 1.0.0 release notes and test matrix / kiadási jegyzet és tesztmátrix](release/RELEASE_NOTES_1.0.0_DRAFT_HU_EN.md)
-- [Current draft 1.0.1 release notes](release/RELEASE_NOTES_1.0.1_DRAFT_HU_EN.md)
+- [Historical 1.0.1 preparation notes](release/RELEASE_NOTES_1.0.1_DRAFT_HU_EN.md)
 - [Current runtime GUI resources](design/GUI_RUNTIME_ASSETS.md)
 
 ## Document groups

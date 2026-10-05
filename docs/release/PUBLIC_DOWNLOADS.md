@@ -1,5 +1,8 @@
 # Four public user downloads / Négy felhasználói letöltés
 
+> **2026-10-05 publication checkpoint:** [1.0.1 is published](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1), with [matching source](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source).
+> Az 1.0.1 megjelent. [Current acceptance, owner-authorized deferrals and publication record](../validation/VALIDATION_20261005_PUBLICATION_101.md) supersede earlier open publication gates below. Earlier candidate/test statements are retained as dated preparation history, not current release status.
+
 Owner decision, 2026-10-01: future releases starting with the planned 1.0.1
 have exactly these four manually uploaded user-download assets (`<version>`
 is the accepted stable version):
