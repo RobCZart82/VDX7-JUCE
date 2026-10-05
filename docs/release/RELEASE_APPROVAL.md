@@ -11,12 +11,21 @@ This is not final binary/host acceptance or permission to publish assets.
 
 ## Current exact pair and policy review
 
-2026-10-05: #128 introduces a new product candidate at
-`96267f7304e657821ce35c54536689981f41ef27`. The committed record below still
-approves dbad14a only. It has not been changed by the instruction to continue
-development. The new candidate must pass preparation inspection and receive
-explicit exact-pair owner approval before a separate policy PR and final test
-packaging. The dbad14a accepted-mode evidence is historical, not new approval.
+2026-10-05: after #128 and preparation run `37269260691` passed, the owner
+explicitly approved final test packaging for the exact product A and frozen
+packager B, both `96267f7304e657821ce35c54536689981f41ef27` ("jóváhagyom").
+The [preparation report](../validation/VALIDATION_20261005_EXPORT_FIX_PACKAGE_PREP_101.md)
+records independent actual-file, source/offline and validator evidence.
+This separate policy PR starts from main
+`3a1e73ef96d63f48232f7643d559890ccdfbe871`; its Windows `37272134073`
+and macOS `37272134026` checks passed. Product code and packaging tools are
+unchanged. The protected policy merge and distinct post-merge main checks
+must pass before canonical accepted-mode final test packaging. The resulting
+C and actual final files will be recorded afterward; they do not exist yet.
+This approval is not host/REAPER acceptance or release publication permission.
+The dbad14a and b7fce05 evidence below is historical, not the new final build.
+
+## Historical dbad14a approval
 
 The legacy-bank and bank-folder changes are now merged at dbad14a. Its
 preparation-only packages and source passed independent verification; see the
@@ -33,15 +42,17 @@ final-test run `37233357714` and independent actual-file/source/offline checks
 passed. See the [new final package report](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md).
 Owner REAPER acceptance and separate publication permission remain open.
 
-The committed `docs/release/RELEASE_APPROVAL.json` currently contains:
+## Current committed approval record
+
+The committed `docs/release/RELEASE_APPROVAL.json` now contains:
 
 ```json
 {
   "schema": 1,
   "approved_release": {
     "package_label": "1.0.1",
-    "source_commit": "dbad14a2ef8307e565675893b6b3b837cfab9b02",
-    "packager_commit": "dbad14a2ef8307e565675893b6b3b837cfab9b02",
+    "source_commit": "96267f7304e657821ce35c54536689981f41ef27",
+    "packager_commit": "96267f7304e657821ce35c54536689981f41ef27",
     "workflow_ref": "RobCZart82/VDX7-JUCE/.github/workflows/prepare-stable-package.yml@refs/heads/main"
   }
 }
@@ -139,7 +150,7 @@ This approval guard does not make compiled installers bit-reproducible.
 
 Magyarul: az elfogadott csomaghoz egy külön commitban jóváhagyott, pontos
 forrás–csomagoló páros és a main hivatalos munkafolyamata szükséges. A párost
-a tulajdonos az új dbad14a párosra 2026-10-04-én engedélyezte a végső
+a tulajdonos az új 96267f7 párosra 2026-10-05-én engedélyezte a végső
 tesztcsomagolás folytatását; a védett rekord/main ellenőrzése, a kézi REAPER-próba
 és a publikálási engedély még külön lezárandó. Az ellenőrzőösszeg
 épséget igazol, nem kiadói hitelesítést; publikálni továbbra is csak külön

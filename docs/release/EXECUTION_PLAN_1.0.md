@@ -32,6 +32,15 @@ forrásbuild és 14/14 ROM nélküli CTest PASS. Ez még nem új A/B/C
 elfogadás. Az aktuális bizonyítékok és hiányzó kézi kapuk:
 [exportjavítás csomagelőkészítése](../validation/VALIDATION_20261005_EXPORT_FIX_PACKAGE_PREP_101.md).
 
+2026-10-05: a tulajdonos kifejezetten jóváhagyta a pontos A=B
+`96267f7304e657821ce35c54536689981f41ef27` végső tesztcsomagolását.
+A külön policy PR a `3a1e73ef96d63f48232f7643d559890ccdfbe871` mainből
+indul; Windows `37272134073` és macOS `37272134026` PASS. A jóváhagyási
+JSON új párost rögzít, a régi bizonyítékok megmaradnak. Következő kapu:
+policy PR és külön merge utáni main PASS; utána accepted-mode workflow és
+az új tényleges fájlok független ellenőrzése. Ez nem publikálási engedély,
+nem REAPER-elfogadás; C és a végső hash-ek még nincsenek rögzítve.
+
 Tulajdonosi pontosítás: 2026-10-02; végső tesztbuild jóváhagyása: 2026-10-03.
 A cél az 1.0.1 publikálása, nem új
 funkciók vagy GUI-átalakítás. Ez a fejezet irányadó az alábbi részletes R1–R7
@@ -225,11 +234,11 @@ dbad14a és b7fce05 csomagok elfogadása történeti bizonyíték, nem az új je
 
 | Kapu | Hátralévő munka | Mikor kész? | REAPER kell? |
 | --- | --- | --- | --- |
-| R1 — dokumentáció és befagyasztás | ÚJRANYITVA: a 96267f7 main új termékjelölt. A régi dbad14a jóváhagyási rekord változatlan. | Új pontos A/B tulajdonosi jóváhagyása; külön C rekord védett PR-rel main-be kerül. | Nem |
+| R1 — dokumentáció és befagyasztás | A pontos 96267f7 A/B tulajdonosi jóváhagyása megvan (2026-10-05). Külön policy PR folyamatban; védett C és main ellenőrzés még nincs. | Policy PR és distinct post-merge main PASS; C rögzítése. | Nem |
 | R2 — független csomagvizsgálat | PASS az új 96267f7 előkészítésre: 37269260691, actual hash/payload/forrás, offline build és Windows VST3-validátor. A végső accepted-mode fájlok még nincsenek meg. | Új végső külső/belső hash-, készlet-, eredet-, telepítő- és forrásvizsgálat; előkészítés nem végső elfogadás. | Nem |
 | R3 — végleges forrás és regressziók | PASS a #128 végső forrására és az azonos main-fájlokra: 47 helyi CTest, PR Windows/macOS/sanitizer és main platformtesztek. Az új előkészítési forrás offline buildje és 14/14 CTestje is PASS. | Jelölt vagy packager változásakor az érintett ellenőrzések ismétlése; privát teszt, nyilvános CI és csomag eredményei külön rögzítve. | Nem |
 | R4 — host- és kompatibilitási döntés | A végső binárisokra célzott hostteszt, vagy a tulajdonos külön, tételes döntése a nem futtatott vizsgálatok halasztásáról és a ROM-kockázatról. | Pontos binárishash, OS/host verzió és eredmények, illetve explicit DEFERRED kockázatlista; régi 1.0.0 eredmény nem 1.0.1 PASS. | A REAPER-specifikus részekhez igen; most nem indítjuk |
-| R5 — elfogadott csomag előállítása | ÚJRANYITVA: új jóváhagyott A/B és külön C után canonical main workflow, majd a tényleges végső fájlok ellenőrzése. A régi futások nem az exportjavítás csomagjai. | Új A/B/C és négy végső fájl rögzítve; ez nem hostelfogadás vagy publikálási engedély. | A végső R4 tesztet a tulajdonos végzi |
+| R5 — elfogadott csomag előállítása | A=B 96267f7 jóváhagyva; a külön C/main kapu után canonical accepted-mode workflow következik. A végső fájlok még nincsenek meg; régi futások nem az exportjavítás csomagjai. | Új A/B/C és négy végső fájl független ellenőrzése; ez nem hostelfogadás vagy publikálási engedély. | A végső R4 tesztet a tulajdonos végzi |
 | R6 — végső kiadási dokumentáció és engedély | HU/EN release notes/README/kézikönyv, négy hash, pontos verzió és forráslink, halasztások/aláírási/ROM-figyelmeztetések; külön publikálási engedély kérése. | Tulajdonos a pontos verziót, SHA-kat, fájlokat és kockázatokat jóváhagyta; nem pusztán a fejlesztési tervet. | Nem |
 | R7 — publikálás és utóellenőrzés | Csak engedély után külön tartós `v1.0.1-source` és `v1.0.1` termékkiadás, megfelelő tagek/forrásazonosság; publikus linkek és letöltések újraellenőrzése. | Forrás legkésőbb a binárisokkal elérhető; négy termékletöltés, helyes latest állapot, publikus fájlhash-ek PASS. | Nem |
 
