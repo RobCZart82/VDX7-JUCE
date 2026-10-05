@@ -36,10 +36,20 @@ elfogadás. Az aktuális bizonyítékok és hiányzó kézi kapuk:
 `96267f7304e657821ce35c54536689981f41ef27` végső tesztcsomagolását.
 A külön policy PR a `3a1e73ef96d63f48232f7643d559890ccdfbe871` mainből
 indul; Windows `37272134073` és macOS `37272134026` PASS. A jóváhagyási
-JSON új párost rögzít, a régi bizonyítékok megmaradnak. Következő kapu:
-policy PR és külön merge utáni main PASS; utána accepted-mode workflow és
-az új tényleges fájlok független ellenőrzése. Ez nem publikálási engedély,
-nem REAPER-elfogadás; C és a végső hash-ek még nincsenek rögzítve.
+JSON új párost rögzít, a régi bizonyítékok megmaradnak. A #130 végső PR-head
+Windows `37274112795`, macOS `37274112791`, ASan/UBSan `37274112810` PASS;
+review és merge-kapu rendezett. C=`edcb7471bf2ee08d3f8430e317cb9d17274f7576`;
+distinct main Windows `37275184151` és macOS `37275184128` PASS.
+Az accepted-mode `37276345684` mind a négy jobja PASS. A tényleges új
+fájlok független hash-, készlet-, eredet- és payloadvizsgálata, a hosted
+forrással byte-azonos archívum friss offline buildje és 14/14 CTestje,
+valamint a végső Windows plugin külön VST3-validátora (47/47) PASS.
+Az új négy hash és a külön forrás rögzítve, nem az előkészítésből átvéve.
+Ez nem publikálási engedély vagy REAPER-elfogadás. Következő kapu R4:
+a tulajdonos az új pontos fájlokon végzi a hosttesztet vagy tételesen lezárja
+a terv szerint halasztható próbákat. Utána R6 külön publikálási engedély,
+majd R7 tartós forrás- és négyfájlos termékkiadás.
+[Végső tesztjelentés és letöltések](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md).
 
 Tulajdonosi pontosítás: 2026-10-02; végső tesztbuild jóváhagyása: 2026-10-03.
 A cél az 1.0.1 publikálása, nem új
@@ -57,7 +67,7 @@ kézikönyv és kiadási tervezet rögzíti. Ez dokumentációs pontosítás, ne
 ROM-engedélyezési lista vagy SER-7 kompatibilitási teszt. Az elfogadott A/B/C,
 a végső csomagok, azok checksumjai és a korábbi teszteredmények változatlanok.
 
-### Aktuális felülírás — legacy bankkompatibilitás, 2026-10-04
+### Történeti checkpoint — legacy bankkompatibilitás, 2026-10-04
 
 Új tulajdonosi kérés alapján a VDX7-ben javítjuk a ROM3A/ROM3B/ROM4A
 elfogadását, a letöltött bankfájlok átírása nélkül. A tárolási szabály csak
@@ -80,7 +90,7 @@ korábbi PASS állítások kizárólag a megnevezett régi forrásra/csomagokra 
 
 ### A végrehajtás sorrendje
 
-Aktuális bankmappás jelölt: `dbad14a2ef8307e565675893b6b3b837cfab9b02`.
+Korábbi bankmappás jelölt: `dbad14a2ef8307e565675893b6b3b837cfab9b02`.
 A #124 végső Windows/macOS/sanitizer és a beolvasztott main Windows/macOS
 ellenőrzése PASS. Az új, nem elfogadott előkészítő csomagolás `37225128633`
 négy feladata, a tényleges csomagok független hash/payload/forrásvizsgálata,
@@ -192,8 +202,9 @@ bizonyítékok, nem újra végrehajtandó párhuzamos tervek.
 ### Korábbi előkészítő bizonyítékok 2026 október 2
 
 A következő lista a korábbi próba checkpointja. A jelenlegi állapotot a fenti
-lezárási fejezet és a 2026-10-04-i végső csomagjelentés adja: R1 és a végső
-automatizált/csomagkapuk PASS, R4 kézi hostelfogadás a tulajdonosra vár,
+lezárási fejezet és a 2026-10-05-i exportjavítás végső tesztjelentése adja.
+A lent szereplő régi csomag-PASS állítások a korábbi jelöltre érvényesek;
+nem az új exportjavítás fájljaira. R4 kézi hostelfogadás a tulajdonosra vár,
 R6 végleges szöveg/jóváhagyás és R7 publikálás még nincs lezárva.
 
 - Újra ellenőrzött main: `5298373020374293302c3db806fbf44958046a02`, #116
@@ -223,8 +234,8 @@ R6 végleges szöveg/jóváhagyás és R7 publikálás még nincs lezárva.
   EXE-kibontás/telepítés és végső hostelfogadás továbbra sem történt meg.
   [Friss felülvizsgálat és határok](../validation/VALIDATION_20261002_RELEASE_REVIEW.md).
   Végső 1.0.1 hostelfogadás és publikálási jóváhagyás nincs rögzítve.
-  A #120 rekordja a korábbi b7fce05 A/B párost tartalmazta; az aktuális rekord
-  a #126 óta dbad14a, nem a 96267f7 exportjavítás jóváhagyása;
+  A #120 rekordja a korábbi b7fce05 A/B párost, a #126 a dbad14a párost
+  tartalmazta. Az aktuális 96267f7 jóváhagyást a külön #130 rögzíti;
   a publikált `v1.0.0` változatlan. A végső hosttesztet a tulajdonos végzi.
 
 ### Végrehajtási sorrend és lezárási feltételek
@@ -234,18 +245,19 @@ dbad14a és b7fce05 csomagok elfogadása történeti bizonyíték, nem az új je
 
 | Kapu | Hátralévő munka | Mikor kész? | REAPER kell? |
 | --- | --- | --- | --- |
-| R1 — dokumentáció és befagyasztás | A pontos 96267f7 A/B tulajdonosi jóváhagyása megvan (2026-10-05). Külön policy PR folyamatban; védett C és main ellenőrzés még nincs. | Policy PR és distinct post-merge main PASS; C rögzítése. | Nem |
-| R2 — független csomagvizsgálat | PASS az új 96267f7 előkészítésre: 37269260691, actual hash/payload/forrás, offline build és Windows VST3-validátor. A végső accepted-mode fájlok még nincsenek meg. | Új végső külső/belső hash-, készlet-, eredet-, telepítő- és forrásvizsgálat; előkészítés nem végső elfogadás. | Nem |
+| R1 — dokumentáció és befagyasztás | PASS: pontos 96267f7 A/B jóváhagyva; #130 PR-ellenőrzések és distinct main PASS, C edcb747 rögzítve. | A/B/C és policy hash a végső jelentésben; dokumentáció követi a változásokat. | Nem |
+| R2 — független csomagvizsgálat | PASS a tényleges végső 37276345684 fájlokra: külső/belső hash, készlet, A/B/C, hosted Windows upgrade/uninstall, Mac PKG/Manual, forrás és offline build, Windows VST3-validátor. | Új hash-ek a végső jelentésben; nem prep vagy régi build eredménye. Kézi hostteszt R4. | Nem |
 | R3 — végleges forrás és regressziók | PASS a #128 végső forrására és az azonos main-fájlokra: 47 helyi CTest, PR Windows/macOS/sanitizer és main platformtesztek. Az új előkészítési forrás offline buildje és 14/14 CTestje is PASS. | Jelölt vagy packager változásakor az érintett ellenőrzések ismétlése; privát teszt, nyilvános CI és csomag eredményei külön rögzítve. | Nem |
 | R4 — host- és kompatibilitási döntés | A végső binárisokra célzott hostteszt, vagy a tulajdonos külön, tételes döntése a nem futtatott vizsgálatok halasztásáról és a ROM-kockázatról. | Pontos binárishash, OS/host verzió és eredmények, illetve explicit DEFERRED kockázatlista; régi 1.0.0 eredmény nem 1.0.1 PASS. | A REAPER-specifikus részekhez igen; most nem indítjuk |
-| R5 — elfogadott csomag előállítása | A=B 96267f7 jóváhagyva; a külön C/main kapu után canonical accepted-mode workflow következik. A végső fájlok még nincsenek meg; régi futások nem az exportjavítás csomagjai. | Új A/B/C és négy végső fájl független ellenőrzése; ez nem hostelfogadás vagy publikálási engedély. | A végső R4 tesztet a tulajdonos végzi |
+| R5 — elfogadott csomag előállítása | PASS: A=B 96267f7, C edcb747, canonical accepted-mode 37276345684, négy végső termék és külön forrás független vizsgálata. | Az ellenőrzött fájlok a tulajdonosnak átadva; nem hostelfogadás vagy publikálási engedély. | A végső R4 tesztet a tulajdonos végzi |
 | R6 — végső kiadási dokumentáció és engedély | HU/EN release notes/README/kézikönyv, négy hash, pontos verzió és forráslink, halasztások/aláírási/ROM-figyelmeztetések; külön publikálási engedély kérése. | Tulajdonos a pontos verziót, SHA-kat, fájlokat és kockázatokat jóváhagyta; nem pusztán a fejlesztési tervet. | Nem |
 | R7 — publikálás és utóellenőrzés | Csak engedély után külön tartós `v1.0.1-source` és `v1.0.1` termékkiadás, megfelelő tagek/forrásazonosság; publikus linkek és letöltések újraellenőrzése. | Forrás legkésőbb a binárisokkal elérhető; négy termékletöltés, helyes latest állapot, publikus fájlhash-ek PASS. | Nem |
 
 ### R2 ismétlendő ellenőrzési követelmények
 
-Az alábbi követelmények a korábbi végső csomagokra már teljesültek, de a
-96267f7 exportjavítás miatt ismételendők. A történeti
+Az alábbi követelmények a 96267f7 exportjavítás végső csomagjaira is ismételve,
+PASS a [2026-10-05-i végső jelentésben](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md).
+Jelölt vagy csomagoló változásakor ismétlendők. A történeti
 [dbad14a csomagjelentés](../validation/VALIDATION_20261004_FINAL_BANK_FOLDER_PACKAGE_101.md)
 nem helyettesíti az új fájlok vizsgálatát. Az új előkészítési és elfogadott
 futások tényleges hash-eit külön kell kezelni. Kézi REAPER/Intel/HiDPI elfogadás

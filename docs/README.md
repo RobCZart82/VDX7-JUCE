@@ -40,7 +40,8 @@ preserved as historical evidence, not fresh acceptance claims.
 
 ## History and evidence
 
-- [Current export corrected 1.0.1 package preparation](validation/VALIDATION_20261005_EXPORT_FIX_PACKAGE_PREP_101.md)
+- [Current export corrected 1.0.1 final test packages](validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md)
+- [Export corrected 1.0.1 package preparation checkpoint](validation/VALIDATION_20261005_EXPORT_FIX_PACKAGE_PREP_101.md)
 - [SysEx export acknowledgement and bank library regression](validation/VALIDATION_20261005_SYSEX_EXPORT_ACKNOWLEDGEMENT.md)
 - [Archived DX7 bank acceptance and data preservation](validation/VALIDATION_20261004_LEGACY_BANK_COMPATIBILITY.md)
 
