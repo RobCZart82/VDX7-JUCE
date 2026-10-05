@@ -2,6 +2,8 @@
 
 ## Start here / Kezdőpontok
 
+- [Corrected repository review and owner Windows feedback (2026-10-05)](validation/AUDIT_REPORT_20261005_CODE_AND_REPOSITORY_REVIEW.md)
+
 - [English user and build guide](guides/GUIDE_EN.md)
 - [Magyar használati és fordítási útmutató](guides/GUIDE_HU.md)
 - [Current 1.0 execution plan](release/EXECUTION_PLAN_1.0.md)

@@ -148,10 +148,29 @@ required a repository source change, and neither initial result is hidden.
 
 ## Owner tests and publication still open
 
-NOT RUN: installation on the owner's computer, exact final Windows/macOS
-REAPER/ROM/audio acceptance, sample-rate and buffer matrix, automation,
+### Subsequent owner feedback — 2026-10-05
+
+The owner identifies the final four-download bundle named
+`VDX7-1.0.1-Four-Downloads-96267f7304e657821ce35c54536689981f41ef27-accepted`
+and reports successful Windows 11 Pro 26H2 build 26300.9457 / REAPER 7.82 x64
+operation, plus successful PKG installation/use on Mac mini M1 (2020), 16 GB
+RAM, macOS 26.7.1 / REAPER 7.82 Universal. General operation is **PASS,
+owner-reported**, on both platforms. Local binary checksums, active Mac host
+architecture and individual matrix coverage were not independently established.
+See the [detailed feedback record](AUDIT_REPORT_20261005_CODE_AND_REPOSITORY_REVIEW.md).
+This supersedes the earlier blanket owner-operation NOT RUN below; the remaining
+individual checks still lack scoped evidence or explicit permitted deferrals.
+Publication remains unauthorized. Historical automated results are unchanged.
+
+### Current remaining detailed coverage
+
+Owner-reported installation/use and general operation of the named final bundle
+are PASS on Windows and M1 macOS as recorded above. Detailed cases remain
+NOT RUN / not individually documented: sample-rate and buffer matrix, automation,
 multiple instances, HiDPI, native save dialogs, offline versus real-time render,
-and physical Intel Mac testing. The owner performs these on the exact final
+and physical Intel Mac testing, exact firmware identity and local binary checksums.
+These labels denote missing scoped evidence, not a claim that the owner did not
+perform a case. The owner documents these on the exact final
 downloads, or explicitly disposes of each unrun check where the plan permits.
 Earlier 1.0.0 or different-candidate host tests are not final 1.0.1 acceptance.
 The previous 47/47 local source tests, including private firmware coverage,
@@ -174,6 +193,7 @@ or factory-bank data is committed, uploaded or included in any package.
 
 Magyarul: a pontos 96267f7 forrás–csomagoló páros jóváhagyva, a védett policy
 és main ellenőrzések PASS. A végső csomagolás, tényleges fájlvizsgálat,
-friss offline forrásbuild és Windows VST3-validátor PASS. A tulajdonosi végső
-REAPER-teszt és külön publikálási engedély
-továbbra is nyitott; telepítés vagy publikálás nem történt.
+friss offline forrásbuild és Windows VST3-validátor PASS. A tulajdonos a végső
+megnevezett csomag Windows- és M1 macOS-telepítését/használatát sikeresnek
+jelentette. A tételes tesztmátrix bizonyítékai vagy megengedett halasztásai,
+illetve a külön publikálási engedély továbbra is nyitottak. Publikálás nem történt.

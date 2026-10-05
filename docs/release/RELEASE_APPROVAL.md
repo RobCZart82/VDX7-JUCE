@@ -1,5 +1,21 @@
 # Reviewed release approval and provenance
 
+## Owner feedback update — 2026-10-05
+
+The owner reports successful latest-installer operation on Windows 11 x64 with
+REAPER 7.82 x64. The owner identifies bundle
+`VDX7-1.0.1-Four-Downloads-96267f7304e657821ce35c54536689981f41ef27-accepted`.
+This is owner-reported general acceptance associated with the named final bundle,
+not independent local installer/plugin hash verification or complete matrix
+acceptance. The owner also reports successful operation of the same bundle's
+contents on Mac mini M1 (2020), 16 GB RAM: PASS, owner-reported general macOS
+operation, using the PKG installer on macOS 26.7.1 with REAPER 7.82 Universal
+(owner description: "7.82 x64 universal"). Active native arm64 versus Rosetta
+execution and local checksum are unspecified. Remaining detailed acceptance evidence and separate publication
+permission remain open; do not infer Intel Mac acceptance from M1 testing.
+See the [corrected review](../validation/AUDIT_REPORT_20261005_CODE_AND_REPOSITORY_REVIEW.md).
+The packaging approval JSON is unchanged; this feedback does not authorize publication.
+
 This is the procedure for AUDIT-20260930-A4, not a second development plan.
 The [execution plan](EXECUTION_PLAN_1.0.md) remains the active ledger.
 The guard creates validation artifacts only; it cannot publish a tag, Release
