@@ -99,8 +99,11 @@ védelmet; olvasd el a telepítési útmutatót.
 ## Telepítés
 
 1. Zárd be a hostot; mentsd a meglévő plugint, projekteket és módosított bankokat.
-2. Bontsd ki az artifactot és az esetleges belső ZIP-et. A teljes
-   `VDX7.vst3` csomagot másold a VST3-mappába:
+2. Telepítős letöltésnél futtasd a Windows `.exe` vagy macOS `.pkg` fájlt,
+   és kövesd a telepítő lépéseit. A macOS PKG a `/Library/Audio/Plug-Ins/VST3/`,
+   a Windows EXE a `C:\Program Files\Common Files\VST3\` mappába telepít.
+   **Manual Install ZIP** esetén bontsd ki a ZIP-et, és a teljes `VDX7.vst3`
+   csomagot másold a VST3-mappába:
    - macOS: `~/Library/Audio/Plug-Ins/VST3/`
    - Windows: `C:\Program Files\Common Files\VST3\`
 3. Kerestesd újra a plugineket, majd töltsd be a VDX7-et hangszerként.

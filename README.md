@@ -89,8 +89,11 @@ protections; read the installation guide before proceeding.
 ## Installation
 
 1. Close your host and back up the existing plug-in, projects and edited banks.
-2. Extract the downloaded artifact and any enclosed ZIP; copy the complete
-   `VDX7.vst3` bundle to your VST3 location:
+2. For the installer download, run the Windows `.exe` or macOS `.pkg` and
+   follow its prompts. The macOS PKG installs to `/Library/Audio/Plug-Ins/VST3/`;
+   the Windows EXE installs to `C:\Program Files\Common Files\VST3\`.
+   For **Manual Install ZIP**, extract it and copy the complete `VDX7.vst3`
+   bundle to your VST3 location:
    - macOS: `~/Library/Audio/Plug-Ins/VST3/`
    - Windows: `C:\Program Files\Common Files\VST3\`
 3. Rescan plug-ins in your host and load VDX7 as an instrument.
