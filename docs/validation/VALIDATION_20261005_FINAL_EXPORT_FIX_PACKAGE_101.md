@@ -162,12 +162,15 @@ This supersedes the earlier blanket owner-operation NOT RUN below; the remaining
 individual checks still lack scoped evidence or explicit permitted deferrals.
 Publication remains unauthorized. Historical automated results are unchanged.
 
-### Earlier handoff and still-unproven detailed coverage
+### Current remaining detailed coverage
 
-NOT RUN: installation on the owner's computer, exact final Windows/macOS
-REAPER/ROM/audio acceptance, sample-rate and buffer matrix, automation,
+Owner-reported installation/use and general operation of the named final bundle
+are PASS on Windows and M1 macOS as recorded above. Detailed cases remain
+NOT RUN / not individually documented: sample-rate and buffer matrix, automation,
 multiple instances, HiDPI, native save dialogs, offline versus real-time render,
-and physical Intel Mac testing. The owner performs these on the exact final
+and physical Intel Mac testing, exact firmware identity and local binary checksums.
+These labels denote missing scoped evidence, not a claim that the owner did not
+perform a case. The owner documents these on the exact final
 downloads, or explicitly disposes of each unrun check where the plan permits.
 Earlier 1.0.0 or different-candidate host tests are not final 1.0.1 acceptance.
 The previous 47/47 local source tests, including private firmware coverage,
@@ -190,6 +193,7 @@ or factory-bank data is committed, uploaded or included in any package.
 
 Magyarul: a pontos 96267f7 forrás–csomagoló páros jóváhagyva, a védett policy
 és main ellenőrzések PASS. A végső csomagolás, tényleges fájlvizsgálat,
-friss offline forrásbuild és Windows VST3-validátor PASS. A tulajdonosi végső
-REAPER-teszt és külön publikálási engedély
-továbbra is nyitott; telepítés vagy publikálás nem történt.
+friss offline forrásbuild és Windows VST3-validátor PASS. A tulajdonos a végső
+megnevezett csomag Windows- és M1 macOS-telepítését/használatát sikeresnek
+jelentette. A tételes tesztmátrix bizonyítékai vagy megengedett halasztásai,
+illetve a külön publikálási engedély továbbra is nyitottak. Publikálás nem történt.
