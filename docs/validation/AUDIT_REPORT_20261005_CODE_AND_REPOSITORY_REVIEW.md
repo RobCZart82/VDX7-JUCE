@@ -66,10 +66,12 @@ named final bundle, with this checksum limitation. Expected final EXE:
 
 The owner also reports testing the contents of the **same named bundle** on a
 **Mac mini M1 (2020), 16 GB RAM**, with successful operation.
-Status: **PASS — owner-reported general macOS operation**. Exact macOS version,
-macOS host/version/architecture, PKG versus Manual installation route and local
-installed-binary checksum were not supplied. Do not infer the Windows REAPER
-7.82 x64 version applies to the Mac, or extend M1 evidence to Intel hardware.
+Status: **PASS — owner-reported general macOS operation**. The owner confirmed
+**PKG installation, macOS 26.7.1 and REAPER 7.82 Universal** (described by the
+owner as "7.82 x64 universal"). This is an owner-supplied environment description,
+not independent verification of OS/version or the host's active architecture.
+Native arm64 versus Rosetta execution and the local installed-binary checksum
+were not supplied. Do not extend M1 evidence to Intel hardware.
 Detailed per-case matrix coverage is not individually documented.
 
 No permission to publish,
@@ -81,7 +83,7 @@ No Yamaha ROM or factory-bank contents are included in this documentation.
 
 Use the [execution plan](../release/EXECUTION_PLAN_1.0.md) as the single ledger:
 optionally confirm the installed Windows binary checksum and document remaining
-individual checks and macOS version/host/install-route details or explicit
+individual checks and local checksum/active host architecture details or explicit
 permitted deferrals. General owner operation feedback is PASS on both platforms;
 this is not complete matrix acceptance. Finalize R6 release text and obtain separate publication
 authorization; only then execute R7 publication and download verification.

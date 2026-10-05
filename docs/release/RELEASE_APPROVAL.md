@@ -9,8 +9,9 @@ This is owner-reported general acceptance associated with the named final bundle
 not independent local installer/plugin hash verification or complete matrix
 acceptance. The owner also reports successful operation of the same bundle's
 contents on Mac mini M1 (2020), 16 GB RAM: PASS, owner-reported general macOS
-operation. Exact macOS/host versions, installation route and local checksum
-are unspecified. Remaining detailed acceptance evidence and separate publication
+operation, using the PKG installer on macOS 26.7.1 with REAPER 7.82 Universal
+(owner description: "7.82 x64 universal"). Active native arm64 versus Rosetta
+execution and local checksum are unspecified. Remaining detailed acceptance evidence and separate publication
 permission remain open; do not infer Intel Mac acceptance from M1 testing.
 See the [corrected review](../validation/AUDIT_REPORT_20261005_CODE_AND_REPOSITORY_REVIEW.md).
 The packaging approval JSON is unchanged; this feedback does not authorize publication.

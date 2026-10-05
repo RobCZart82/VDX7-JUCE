@@ -12,8 +12,10 @@ Ez a végső négyletöltéses csomag tulajdonosi azonosítása, nem EXE-fájln�
 helyi hash-ellenőrzés. A helyi telepítő/plugin hash és a tételes tesztmátrix nincs
 dokumentálva, ezért R4 teljes lezárását nem állítjuk. A tulajdonos ugyanennek a
 csomagnak a tartalmát Mac mini M1 (2020), 16 GB RAM gépen is sikeresen tesztelte:
-**PASS, tulajdonosi általános macOS-működés**. Pontos macOS/host verzió,
-telepítési útvonal és helyi hash még nincs dokumentálva; Intel Macre nem terjesztjük
+**PASS, tulajdonosi általános macOS-működés**. Megerősített környezet: PKG
+telepítő, macOS 26.7.1, REAPER 7.82 Universal (tulajdonosi megnevezés:
+„7.82 x64 universal”). A natív arm64/Rosetta futásmód és helyi hash még nincs
+dokumentálva; Intel Macre nem terjesztjük
 ki ezt az eredményt. Mindkét platform általános visszajelzése sikeres, a tételes
 elfogadási bizonyíték/halasztás és külön publikálási engedély még nyitott.
 Ez az új visszajelzés pontosítja az alábbi korábbi, tulajdonosi tesztre váró
