@@ -406,6 +406,53 @@ export és projekt-visszaállítás; többpéldányos elkülönítés; hiányzó
 függő projekt biztonságos kezelése. Windows/macOS automatizált és szükséges
 hostteszt kell az új funkció kiadásához; most egyik sem állítható PASS-nak.
 
+### Importált DX7 bankkönyvtár az 1.0.1 utáni kiadásban
+
+Tulajdonosi döntés: 2026-10-05. **DEFERRED az 1.0.1 utáni kiadásra**;
+jóváhagyott koncepció, nem megvalósított funkció vagy új 1.0.1 blokkoló.
+A cél több, különböző forrásból származó 32-hangszínes DX7 SysEx-bank
+egyidejű rendelkezésre állása: ne kelljen minden váltáskor egyenként
+újraimportálni őket, és ne kelljen felülírni az egyetlen tartós USER-bankot.
+
+- Külön felhasználói bedobós bankmappa macOS-en és Windowson; a pontos
+  útvonal a megvalósításkor dokumentálandó. Új példány beolvassa, a nyitott
+  példányban explicit **Refresh banks** frissíti. Ez elkülönül a jelenlegi
+  referencialenyomatos Factory Banks mappától és a USER.vub-tól.
+- A bankválasztó tetején megmarad ROM1A–ROM4B, alattuk külön
+  **Imported Banks / Importált bankok** csoport következik. Ismeretlen, de
+  érvényes bank nem kap hamis gyári besorolást. Hosszú lista le-föl
+  görgethető; név szerinti keresés választható későbbi kiegészítés.
+- A szabványos banküzenetben nincs külön banknév. Alapfelirat a fájlnév
+  `.syx` nélkül, legfeljebb **15 látható karakterrel, a rövidítésjelölővel
+  együtt** (hosszú névnél 14 karakter + `…`). Fix listaszélesség és
+  szükség esetén pixelalapú ellipszis védi a GUI-t;
+  Unicode megjelenített karakter nem vágható ketté. Teljes név egér fölé
+  húzásakor megjelenik; a forrásfájlt nem nevezzük át vagy módosítjuk.
+- A bank azonosítója nem a rövid felirat: tartalomalapú azonosítás és külön
+  listabejegyzés-kezelés kell. Azonos névkezdet, azonos teljes név vagy
+  duplikált tartalom esetén a felhasználó is egyértelműen megkülönböztetheti
+  a különböző bankokat; a rövidítés nem okozhat téves kiválasztást.
+- Csak ellenőrzött, szabványos 32-hangszínes DX7-bank fogadható el:
+  méret, fejléc/lezárás, hétbites adatok, checksum és támogatott paraméterek.
+  A meglévő ellenőrzött legacy tartományok megmaradnak; hibás fájl kimarad
+  látható figyelmeztetéssel, néma javítás vagy eredeti adatátírás nélkül.
+  Egyhangszínes SysEx és egyéb formátum nem minősül automatikusan banknak.
+- A frissítés nem változtatja meg a munkahangszínt. A DAW-projekt megőrzi
+  a kiválasztott bank szükséges saját adatait, azonosítóját és a legutóbbi
+  szerkesztett hangszínt; külső fájl eltűnése/cseréje/átnevezése nem írhatja
+  felül a projektből visszaállított állapotot. Példányok egymástól elkülönülnek.
+- Beolvasás és validáció az audio callbacken kívül, előre meghatározott
+  fájl-/bájt-/bankszámkorlátokkal. A határértékek, duplikátumok és megszakított
+  frissítés viselkedése külön specifikálandó; korlátlan scan/memória nem cél.
+
+Későbbi elfogadási próbák: több érvényes bank együttes elérhetősége és váltása;
+hibás/egyhangszínes/idegen fájl elutasítása; gyári/USER adatok megőrzése;
+hosszú és Unicode-nevek, azonos prefixek, duplikátumok, görgetés/tooltip;
+refresh alatti szerkesztésmegőrzés; projekt-recall eltűnt vagy cserélt fájllal;
+limitek, megszakított scan és többpéldányos izoláció Windows/macOS alatt.
+A tulajdonos magazinos bankmappája csak lehetséges privát tesztanyag:
+fájlvaliditás és eredet most nincs igazolva, tartalma nem kerül Gitbe/csomagba.
+
 ### R5–R7: publikálás előtti és publikálási lépések
 
 Az [A/B/C jóváhagyási eljárás](RELEASE_APPROVAL.md) kötelező. A mostani
