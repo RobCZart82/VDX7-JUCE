@@ -708,7 +708,12 @@ static void testFactoryBankFolder(const juce::File& rom, const juce::File& sourc
     const auto selected = ram(save(*restored));
     require(std::memcmp(selected.getData(), scan.banks.image.data()+2*4096, 4096) == 0,
         "bank selection uses project's unchanged reference payload");
-    require(restored->loadSyxFromFile(sourceFolder.getChildFile("rom1a.syx")), "normal SYX remains custom");
+    // Reference identification is content-based; the private source folder
+    // need not contain any particular filename (or filename case).
+    juce::TemporaryFile customImport(".syx");
+    require(customImport.getFile().replaceWithData(changedFolderBank.data(), changedFolderBank.size()),
+            "content-derived ROM1A custom import fixture");
+    require(restored->loadSyxFromFile(customImport.getFile()), "normal SYX remains custom");
     require(restored->getCurrentBank() == -1, "normal import does not silently become factory selection");
     require(restored->renameVoice("CUSTOM NEW"), "new custom voice");
     const auto custom = save(*restored);
@@ -719,11 +724,52 @@ static void testFactoryBankFolder(const juce::File& rom, const juce::File& sourc
     std::cout << "PASS: private eight-bank identities, partial folder, last edits, absent-file catalog recall and custom recall\n";
 }
 
+static void testReservedExportAcknowledgement(const juce::File& rom)
+{
+    auto processor = std::make_unique<VDX7AudioProcessor>(false);
+    require(processor->loadRomFromFile(rom), "export acknowledgement ROM fixture");
+    juce::TemporaryFile input(".syx"), output(".syx");
+    for (const uint8_t reserved : { uint8_t(0), uint8_t(0x40) })
+    {
+        std::vector<uint8_t> bank(4096, 0);
+        bank[13] = reserved; // Valid reserved VMEM bits have no VCED field.
+        const auto message = VDX7Sysex::encode(bank);
+        require(!message.empty() && input.getFile().replaceWithData(message.data(), message.size()),
+                "synthetic export acknowledgement bank");
+        require(processor->loadSyxFromFile(input.getFile()) && processor->renameVoice("EXPORT"),
+                "edit synthetic bank voice");
+        require(processor->hasUnexportedEdits(), "export dirty positive control");
+        const auto before = ram(save(*processor));
+        juce::String error;
+        require(processor->exportSyx(output.getFile(), false, error), "single voice export succeeds");
+        require(!processor->hasUnexportedEdits(), "single export acknowledges reserved and canonical voices");
+        require(ram(save(*processor)) == before, "export preserves original reserved VMEM bytes");
+
+        require(processor->renameVoice("CAPTURE"), "edit before snapshot");
+        VDX7AudioProcessor::SyxExportSnapshot snapshot;
+        require(processor->captureSyxExportSnapshot(false, snapshot, error), "capture single export");
+        require(processor->renameVoice("LATER"), "real later edit");
+        require(processor->exportSyxSnapshot(output.getFile(), snapshot, error)
+                && processor->hasUnexportedEdits(), "later edit remains dirty after old snapshot export");
+        require(processor->exportSyx(output.getFile(), true, error) && !processor->hasUnexportedEdits(),
+                "bank export acknowledges current bytes");
+        require(processor->renameVoice("IO FAIL"), "edit before failed write");
+        require(!processor->exportSyx(output.getFile().getChildFile("missing/out.syx"), false, error)
+                && processor->hasUnexportedEdits(), "failed export never acknowledges edits");
+    }
+    std::cout << "PASS: reserved VMEM single export, canonical control, unchanged RAM, later edits and failed I/O\n";
+}
+
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
     try
     {
+        if (argc == 3 && juce::String(argv[1]) == "--export-acknowledgement")
+        {
+            testReservedExportAcknowledgement(juce::File(argv[2]));
+            return 0;
+        }
         if (argc == 2 && juce::String(argv[1]) == "--pre-rom-state-state-only")
         {
             testPendingFactoryCatalog();
@@ -777,6 +823,7 @@ int main(int argc, char** argv)
             return 77;
         }
         require(original.loadRomFromFile(testRomFile), "explicit local test ROM");
+        testReservedExportAcknowledgement(testRomFile);
         testPreRomParameterEditsSurviveSave(testRomFile);
         require(original.getParameters().size() == 148, "148 host parameters");
         for (int op = 0; op < 6; ++op)

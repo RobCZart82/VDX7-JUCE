@@ -2,6 +2,24 @@
 
 ## Az 1.0.1 publikálás kötelező lezárási terve
 
+### Aktuális javítás és újranyitott kapuk 2026-10-05
+
+A `dccb745` main auditja egy reprodukált P2 hibát talált: fenntartott VMEM
+biteket tartalmazó hangszín sikeres egyhangszínes exportja után a nem exportált
+szerkesztés jelzője tévesen megmarad. A javítóág az eredeti exportpillanatkép
+megőrzésével kezeli ezt, és külön CTest-regisztrációt ad a helyi privát
+bankmappás processor-próbához. A reprodukció, kontrollok és új tesztek:
+[SysEx export és bankregresszió](../validation/VALIDATION_20261005_SYSEX_EXPORT_ACKNOWLEDGEMENT.md).
+
+A következő sorrend: helyi regresszió PASS; pontos PR-head Windows/macOS és
+ASan-UBSan PASS, rendezett review; beolvasztás, majd main platformellenőrzés.
+A tulajdonos engedélyezte a zöld javító PR beolvasztását, nem a publikálást.
+Ez termékkód-változás: a lent dokumentált dbad14a végső csomagok **nem
+tartalmazzák ezt a javítást**. Az érintett új forrás/csomag és A/B/C jóváhagyási
+kapuk újranyílnak. A régi jóváhagyási rekordot, hash-eket és asseteket nem
+módosítjuk automatikusan. Új ellenőrzött végső csomag után a tulajdonosi hostteszt
+és külön publikálási engedély továbbra is szükséges.
+
 Tulajdonosi pontosítás: 2026-10-02; végső tesztbuild jóváhagyása: 2026-10-03.
 A cél az 1.0.1 publikálása, nem új
 funkciók vagy GUI-átalakítás. Ez a fejezet irányadó az alábbi részletes R1–R7

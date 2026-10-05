@@ -71,6 +71,9 @@ public:
     private:
         friend class VDX7AudioProcessor;
         std::vector<uint8_t> message_;
+        // VCED cannot carry reserved VMEM bits. Retain original bytes for
+        // acknowledgement instead of comparing a lossy decoded message.
+        std::vector<uint8_t> packed_;
         int program_ = 0;
         bool entireBank_ = false;
     };

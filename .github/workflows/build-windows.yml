@@ -57,11 +57,12 @@ jobs:
             -A x64 `
             -DCMAKE_BUILD_TYPE=Release `
             -DVDX7_ENABLE_ROM_TESTS=ON `
-            -DVDX7_TEST_ROM_FILE="$PWD/build-rom-registration/fixture.placeholder"
+            -DVDX7_TEST_ROM_FILE="$PWD/build-rom-registration/fixture.placeholder" `
+            -DVDX7_TEST_FACTORY_BANK_FOLDER="$PWD/build-rom-registration"
           if ($LASTEXITCODE -ne 0) { throw "ROM-enabled configuration failed" }
           ctest --test-dir build-rom-registration -C Release -N --show-only=json-v1 | Set-Content -Encoding utf8 rom-test-registration.json
           if ($LASTEXITCODE -ne 0) { throw "CTest inventory failed" }
-          python scripts/check_test_registration.py rom-test-registration.json --self-test
+          python scripts/check_test_registration.py rom-test-registration.json --self-test --factory-bank-library
           if ($LASTEXITCODE -ne 0) { throw "ROM-enabled registration contract failed" }
           ctest --test-dir build -C Release -N --show-only=json-v1 | Set-Content -Encoding utf8 rom-free-registration.json
           if ($LASTEXITCODE -ne 0) { throw "ROM-free CTest inventory failed" }
