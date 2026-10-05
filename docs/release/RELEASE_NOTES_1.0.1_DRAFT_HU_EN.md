@@ -7,8 +7,13 @@ approval. Published v1.0.0 and its assets remain unchanged.
 2026-10-05 current candidate: main `96267f7304e657821ce35c54536689981f41ef27`
 contains the single-voice export acknowledgement correction merged in #128.
 All older package hashes and approvals below are historical, not this candidate.
-New preparation, exact-pair approval, final packaging and owner acceptance are
-required before publication. The committed approval record is unchanged.
+Preparation has passed; the owner explicitly approved exact A=B 96267f7 on
+2026-10-05. Policy #130 and distinct post-merge main checks PASS at C
+`edcb7471bf2ee08d3f8430e317cb9d17274f7576`. Canonical accepted-mode final
+packaging `37276345684` and independent actual-file/source/offline verification
+PASS. The actual final Windows VST3 validator PASS 47/47. Owner acceptance and separate publication permission
+remain open. The [current final test report](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md)
+records exact identities and remaining gates.
 The actual new preparation files and inspection limits are recorded in the
 [current preparation report](../validation/VALIDATION_20261005_EXPORT_FIX_PACKAGE_PREP_101.md).
 
@@ -130,8 +135,11 @@ előfordulhat; ne kapcsold ki a rendszer védelmét. [Magyar kézikönyv](../gui
 ## Publication gate — still open
 
 The dbad14a accepted-mode results below describe the previous candidate.
-For the export-fixed 96267f7 candidate, exact-pair approval and final packaging
-are reopened. Preparation metadata or a green source test cannot replace them.
+For the export-fixed 96267f7 candidate, exact-pair approval is now recorded
+through #130; final packaging and actual-file inspection PASS in the current
+report. Preparation metadata is not substituted for that evidence. Remaining
+gates are exact-final owner host acceptance/disposition, final public text and
+durable source links, and separate publication authorization.
 
 - Actual new exact accepted-mode hashes, installer/upgrade evidence and complete
   matching source/checksum are verified for run 37233357714, not inferred from
@@ -142,7 +150,28 @@ are reopened. Preparation metadata or a green source test cannot replace them.
 - Obtain separate authorization for tags, source/product releases and uploads;
   preserve the four-download policy and do not modify v1.0.0.
 
-## Previous candidate download hashes — not the new compatibility build
+## Current final export corrected download hashes
+
+Verified actual files from accepted-mode run 37276345684. A=B is
+`96267f7304e657821ce35c54536689981f41ef27`; C is
+`edcb7471bf2ee08d3f8430e317cb9d17274f7576`. These are test artifacts, not
+published or host-accepted files. See the current report above for checks and
+limitations. The old hashes below must not be copied into the new release.
+
+| File | SHA-256 |
+| --- | --- |
+| `VDX7-1.0.1-Windows-x64-Setup.exe` | `d9472981ee8d651ca1b609e3e94683470e19be2a7d841c21e1b62edc394ac84e` |
+| `VDX7-1.0.1-Windows-x64-Manual.zip` | `ebe161d3826cb885cfa2c62aa85458cdad28414d80e1f1b59fcfe056a87bda88` |
+| `VDX7-1.0.1-macOS-universal.pkg` | `08be0e9d93db219f0516a42c2848ba5e4b10f72a9e57cfca1d2902f711817b69` |
+| `VDX7-1.0.1-macOS-universal-Manual.zip` | `18e518e1855c53d2f0bf9d6260a287ea05ac5c2624dfe91fb942fca25e506fbc` |
+
+Matching full corresponding source SHA-256:
+`d916d3d0cba018736a0a8202270b373f5f2d9afbbf32b9b58c9bb190a3bba4ba`.
+The planned durable `v1.0.1-source` release is still NOT CREATED, not an available
+public source download. The final public notes must link verified durable source
+no later than binary publication and disclose any owner-approved deferred tests.
+
+## Previous candidate download hashes not for the current build
 
 These are verified files from run 37195536400 for b7fce05, retained as historical
 evidence. They do not contain the new legacy-bank fix and must not be used as its

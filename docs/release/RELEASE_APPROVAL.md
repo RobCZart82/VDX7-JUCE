@@ -4,9 +4,9 @@ This is the procedure for AUDIT-20260930-A4, not a second development plan.
 The [execution plan](EXECUTION_PLAN_1.0.md) remains the active ledger.
 The guard creates validation artifacts only; it cannot publish a tag, Release
 or assets. Published 1.0.0 is unchanged. The owner requests work toward 1.0.1
-publication. On 2026-10-04, after the exact next gate was identified in the
-handoff, the owner authorized continuing final test packaging for product A
-and packager B at `dbad14a2ef8307e565675893b6b3b837cfab9b02`.
+publication. On 2026-10-05, after the exact next gate was identified in the
+handoff, the owner approved final test packaging for product A
+and packager B at `96267f7304e657821ce35c54536689981f41ef27`.
 This is not final binary/host acceptance or permission to publish assets.
 
 ## Current exact pair and policy review
@@ -16,12 +16,18 @@ explicitly approved final test packaging for the exact product A and frozen
 packager B, both `96267f7304e657821ce35c54536689981f41ef27` ("jóváhagyom").
 The [preparation report](../validation/VALIDATION_20261005_EXPORT_FIX_PACKAGE_PREP_101.md)
 records independent actual-file, source/offline and validator evidence.
-This separate policy PR starts from main
+The separate policy PR started from main
 `3a1e73ef96d63f48232f7643d559890ccdfbe871`; its Windows `37272134073`
 and macOS `37272134026` checks passed. Product code and packaging tools are
-unchanged. The protected policy merge and distinct post-merge main checks
-must pass before canonical accepted-mode final test packaging. The resulting
-C and actual final files will be recorded afterward; they do not exist yet.
+unchanged. Protected #130 final-head Windows `37274112795`, macOS
+`37274112791` and ASan/UBSan `37274112810` PASS; no submitted reviews or
+review threads, clean guarded merge. C is
+`edcb7471bf2ee08d3f8430e317cb9d17274f7576`. Distinct post-merge main
+Windows `37275184151` and macOS `37275184128` PASS before dispatch.
+Canonical accepted-mode final test run `37276345684` and independent actual
+file/source/offline inspection PASS; Windows final VST3 validator 47/47 PASS.
+The final hashes and deferred tests are in the
+[current final test report](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md).
 This approval is not host/REAPER acceptance or release publication permission.
 The dbad14a and b7fce05 evidence below is historical, not the new final build.
 
@@ -151,7 +157,7 @@ This approval guard does not make compiled installers bit-reproducible.
 Magyarul: az elfogadott csomaghoz egy külön commitban jóváhagyott, pontos
 forrás–csomagoló páros és a main hivatalos munkafolyamata szükséges. A párost
 a tulajdonos az új 96267f7 párosra 2026-10-05-én engedélyezte a végső
-tesztcsomagolás folytatását; a védett rekord/main ellenőrzése, a kézi REAPER-próba
-és a publikálási engedély még külön lezárandó. Az ellenőrzőösszeg
+tesztcsomagolás folytatását. A védett rekord/main és a végső csomagellenőrzés
+PASS; a kézi REAPER-próba és a publikálási engedély még külön lezárandó. Az ellenőrzőösszeg
 épséget igazol, nem kiadói hitelesítést; publikálni továbbra is csak külön
 engedéllyel lehet.

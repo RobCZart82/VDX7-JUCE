@@ -70,8 +70,12 @@ manually uploaded user-download assets or offline dependency bundles.
 Published v1.0.0 is untouched. The coordinated version update targets
 1.0.1-labelled preparation assets; this is not final binary acceptance.
 Do not dispatch this workflow to replace existing 1.0.0 assets. The exact A/B
-packaging approval is now committed through #120; null approval still fails
-closed. Read-only workflow permissions and separate publication authorization remain.
+packaging approval for export-fixed A=B
+`96267f7304e657821ce35c54536689981f41ef27` is committed through #130 at C
+`edcb7471bf2ee08d3f8430e317cb9d17274f7576`; #120/#126 are historical pairs.
+Null or mismatched approval still fails closed. Read-only workflow permissions
+and separate publication authorization remain. See the
+[current final test report](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md).
 Use the [single execution plan](EXECUTION_PLAN_1.0.md) for remaining work.
 
 Magyarul: a release-re négy felhasználói csomag kerül fel. A forráscsomag,

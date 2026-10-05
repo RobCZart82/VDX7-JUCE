@@ -1,5 +1,11 @@
 # Export corrected 1.0.1 package preparation
 
+Historical preparation checkpoint. After the owner separately approved the
+exact 96267f7 A/B pair, policy #130 recorded it at C edcb747. Follow the
+[final test package report](VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md)
+for current status; the original preparation evidence and hashes below remain
+unchanged and must not be used as final download hashes.
+
 The export correction merged in PR 128 has passed new preparation packaging and
 independent inspection of the actual downloaded files. This checkpoint does not
 approve the new product/tooling pair for final packaging, claim REAPER acceptance
