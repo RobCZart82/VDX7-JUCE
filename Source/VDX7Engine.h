@@ -22,9 +22,16 @@ public:
     VDX7Engine();
     ~VDX7Engine() = default;
 
+    struct RomLoadDiagnostic
+    {
+        enum class Code { none, invalidInput, invalidFactoryData, firmwareRejected, bootFailed };
+        Code code = Code::none;
+        VDX7VoiceData::ValidationResult voice;
+    };
     bool loadRomImage(const uint8_t* data, std::size_t size,
                       const uint8_t* optionalVoices = nullptr,
-                      std::size_t optionalVoicesSize = 0);
+                      std::size_t optionalVoicesSize = 0,
+                      RomLoadDiagnostic* diagnostic = nullptr);
 
     bool isLoaded() const noexcept { return loaded_; }
     // Integration-stage opt-in, engine-owner only, BEFORE loading any ROM.
