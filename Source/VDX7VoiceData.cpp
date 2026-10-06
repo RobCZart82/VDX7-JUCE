@@ -61,6 +61,11 @@ ValidationResult validatePackedVoices(const uint8_t* data, std::size_t size) noe
                 offset % kPackedVoiceSize, "seven-bit byte", data[offset], 0, 127};
     for (std::size_t offset = 0; offset < size; offset += kPackedVoiceSize)
     {
+        static constexpr const char* envelopeFields[] = {
+            "operator EG rate 1 (legacy 127 allowed)", "operator EG rate 2 (legacy 127 allowed)",
+            "operator EG rate 3 (legacy 127 allowed)", "operator EG rate 4 (legacy 127 allowed)",
+            "operator EG level 1 (legacy 127 allowed)", "operator EG level 2 (legacy 127 allowed)",
+            "operator EG level 3 (legacy 127 allowed)", "operator EG level 4 (legacy 127 allowed)"};
         const auto* voice = data + offset;
         ValidationResult failure;
         const auto check = [&](int byte, int value, int maximum, const char* field)
@@ -76,11 +81,13 @@ ValidationResult validatePackedVoices(const uint8_t* data, std::size_t size) noe
             for (int field = 0; field < 8; ++field)
                 if (!isSupportedStoredOperatorValue(static_cast<Parameter>(field), voice[base + field]))
                 {
-                    check(base + field, voice[base + field], 99, "operator envelope (legacy 127 allowed)");
+                    check(base + field, voice[base + field], 99, envelopeFields[field]);
                     return failure;
                 }
             for (int field : {8, 9, 10, 14})
-                if (!check(base + field, voice[base + field], 99, "operator field")) return failure;
+                if (!check(base + field, voice[base + field], 99,
+                    field == 8 ? "keyboard breakpoint" : field == 9 ? "left scaling depth"
+                    : field == 10 ? "right scaling depth" : "operator output level")) return failure;
             if (!check(base + 12, (voice[base + 12] >> 3) & 15, 14, "detune encoding")) return failure;
             if (!isSupportedStoredOperatorValue(Parameter::fine, voice[base + 16]))
             {
@@ -89,7 +96,10 @@ ValidationResult validatePackedVoices(const uint8_t* data, std::size_t size) noe
             }
         }
         for (int byte : {102, 103, 104, 105, 106, 107, 108, 109, 112, 113, 114, 115})
-            if (!check(byte, voice[byte], 99, "voice field")) return failure;
+            if (!check(byte, voice[byte], 99,
+                byte < 106 ? "pitch EG rate" : byte < 110 ? "pitch EG level"
+                : byte == 112 ? "LFO speed" : byte == 113 ? "LFO delay"
+                : byte == 114 ? "pitch modulation depth" : "amplitude modulation depth")) return failure;
         if (!check(116, (voice[116] >> 1) & 7, 5, "LFO waveform")) return failure;
         if (!check(117, voice[117], 48, "transpose")) return failure;
     }

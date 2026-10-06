@@ -16,6 +16,17 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+Harmadik részfeladat 2026-10-06: opcionális, allokációmentes strukturált
+`RomLoadDiagnostic` a közvetlen engine-belépésen; invalidInput,
+invalidFactoryData, firmwareRejected és bootFailed kategóriák, friss hibánál
+régi részletek törlése. Pontosabb operator/LFO/pitch EG mezőnevek; változatlan
+elfogadás. Új `vdx7_rom_diagnostics` ROM-mentes CTest és CI build/inventory
+bekötés. PASS helyi MSVC engine-fordítás és közvetlen motor-regresszió a
+0/31/32/255 hangszínhatárokra, null/partial inputra és hibás companionre;
+a meglévő változatlan core Release könyvtárával linkelve, nem új teljes build.
+Teljes CI és review még szükséges; betöltött/függő projekt integráció, REAPER
+NOT RUN. D1 még nincs készre jelölve. #140 beolvadt, három PR-ellenőrzés PASS.
+
 Második részfeladat 2026-10-06: a combined ROM szemantikai hiba előzetes,
 állapotváltoztatás előtti felhasználói diagnózisa (bank/hangszín/bájt/mező/érték),
 méret/olvasási hiba külön szöveggel, és kihagyott companion adat részletezése.

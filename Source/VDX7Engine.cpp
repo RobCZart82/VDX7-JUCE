@@ -24,12 +24,16 @@ VDX7Engine::VDX7Engine()
 
 bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
                               const uint8_t* optionalVoices,
-                              std::size_t optionalVoicesSize)
+                              std::size_t optionalVoicesSize, RomLoadDiagnostic* diagnostic)
 {
+    if (diagnostic) *diagnostic = {};
     // Reject invalid input without changing the running instrument.
     if (data == nullptr || (size != kFirmwareSize && size != kCombinedRomSize)
         || (optionalVoices != nullptr && optionalVoicesSize != kFactoryVoicesSize))
+    {
+        if (diagnostic) diagnostic->code = RomLoadDiagnostic::Code::invalidInput;
         return false;
+    }
 
     const uint8_t* firmware = nullptr;
     const uint8_t* voices = nullptr;
@@ -59,12 +63,20 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     if (voices != nullptr && voicesSize >= kFactoryVoicesSize)
     {
         // Check all eight banks before replacing firmware or any live state.
-        if (!VDX7VoiceData::hasValidPackedVoices(voices, kFactoryVoicesSize)) return false;
+        const auto detail = VDX7VoiceData::validatePackedVoices(voices, kFactoryVoicesSize);
+        if (!detail.ok())
+        {
+            if (diagnostic) *diagnostic = {RomLoadDiagnostic::Code::invalidFactoryData, detail};
+            return false;
+        }
         newFactoryVoices.assign(voices, voices + kFactoryVoicesSize);
     }
 
     if (!dx7_.loadFirmware(firmware, kFirmwareSize))
+    {
+        if (diagnostic) diagnostic->code = RomLoadDiagnostic::Code::firmwareRejected;
         return false;
+    }
 
     releaseRetirementProfile_ = isReleaseRetirementFirmware(firmware, kFirmwareSize);
     monoCorrectionActive_ = monoCorrectionRequested_ && releaseRetirementProfile_
@@ -109,6 +121,7 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
 
     boot();
     loaded_ = dx7_.isRomLoaded();
+    if (!loaded_ && diagnostic) diagnostic->code = RomLoadDiagnostic::Code::bootFailed;
 
     if (loaded_ && hasFactoryVoices())
     {

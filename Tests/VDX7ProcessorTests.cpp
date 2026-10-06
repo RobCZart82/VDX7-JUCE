@@ -25,6 +25,16 @@ static void testInvalidCombinedRomDiagnostic()
     const juce::TemporaryFile fixture(".bin");
     std::vector<uint8_t> bytes(VDX7Engine::kCombinedRomSize, 0);
     bytes[VDX7Engine::kFirmwareSize + 255 * 128 + 12] = 15 << 3;
+    auto engine = std::make_unique<VDX7Engine>();
+    VDX7Engine::RomLoadDiagnostic detail;
+    require(!engine->loadRomImage(bytes.data(), bytes.size(), nullptr, 0, &detail),
+        "direct engine rejects invalid combined data");
+    require(detail.code == VDX7Engine::RomLoadDiagnostic::Code::invalidFactoryData
+        && detail.voice.voice == 255 && detail.voice.byte == 12 && !engine->isLoaded(),
+        "direct engine reports final-bank field before firmware mutation");
+    require(!engine->loadRomImage(nullptr, 0, nullptr, 0, &detail)
+        && detail.code == VDX7Engine::RomLoadDiagnostic::Code::invalidInput
+        && detail.voice.ok(), "new failure clears stale voice diagnostic");
     require(fixture.getFile().replaceWithData(bytes.data(), bytes.size()), "write synthetic invalid combined image");
     juce::String error;
     require(!processor->loadRomFromFile(fixture.getFile(), &error), "invalid combined ROM rejected before boot");
