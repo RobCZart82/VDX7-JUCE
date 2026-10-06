@@ -142,6 +142,15 @@ static void testPreRomDeferredStateIsSerialized()
     auto reopened = std::make_unique<VDX7AudioProcessor>(false);
     reopened->setStateInformation(saved.getData(), int(saved.getSize()));
     verifyDeferredValues(save(*reopened));
+    const juce::TemporaryFile invalidRom(".bin");
+    std::vector<uint8_t> image(VDX7Engine::kCombinedRomSize, 0);
+    image.back() = 128;
+    require(invalidRom.getFile().replaceWithData(image.data(), image.size()), "write pending rejection fixture");
+    juce::String diagnostic;
+    require(!reopened->loadRomFromFile(invalidRom.getFile(), &diagnostic)
+        && diagnostic.contains("Bank 8, voice 32, byte 127")
+        && !reopened->isRomLoaded(), "pending project rejects malformed combined image before boot");
+    verifyDeferredValues(save(*reopened));
     std::cout << "PASS: no-ROM explicit voice edits survive save and state restore\n";
 }
 
