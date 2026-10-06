@@ -29,6 +29,39 @@ void updateVmemChecksum(std::vector<uint8_t>& message)
 
 int main()
 {
+    // Synthetic diagnostics only: no firmware or factory-bank bytes.
+    std::array<uint8_t, 256> diagnosticVoices {};
+    auto diagnostic = VDX7VoiceData::validatePackedVoices(nullptr, 256);
+    require(diagnostic.code == VDX7VoiceData::ValidationCode::invalidInput, "diagnostic null input");
+    diagnostic = VDX7VoiceData::validatePackedVoices(diagnosticVoices.data(), 255);
+    require(diagnostic.code == VDX7VoiceData::ValidationCode::invalidInput, "diagnostic partial input");
+    diagnosticVoices[128 + 12] = 15 << 3;
+    diagnostic = VDX7VoiceData::validatePackedVoices(diagnosticVoices.data(), 256);
+    require(diagnostic.code == VDX7VoiceData::ValidationCode::outOfRange
+        && diagnostic.voice == 1 && diagnostic.byte == 12 && diagnostic.value == 15
+        && diagnostic.maximum == 14, "diagnostic second voice detune");
+    diagnosticVoices[140] = 0;
+    diagnosticVoices.back() = 128;
+    diagnostic = VDX7VoiceData::validatePackedVoices(diagnosticVoices.data(), 256);
+    require(diagnostic.code == VDX7VoiceData::ValidationCode::nonSevenBit
+        && diagnostic.voice == 1 && diagnostic.byte == 127, "diagnostic high-bit name");
+    diagnosticVoices.back() = 0;
+    diagnosticVoices[0] = 127;
+    diagnosticVoices[16] = 100;
+    require(VDX7VoiceData::validatePackedVoices(diagnosticVoices.data(), 256).ok(),
+        "diagnostics preserve legacy exceptions");
+    // Compare against the existing independent admission oracle for every
+    // single-byte value/position, including reserved bits and legacy values.
+    std::array<uint8_t, 128> oracleVoice {};
+    for (std::size_t byte = 0; byte < oracleVoice.size(); ++byte)
+        for (int value = 0; value < 256; ++value)
+        {
+            oracleVoice[byte] = static_cast<uint8_t>(value);
+            require(VDX7VoiceData::validatePackedVoices(oracleVoice.data(), 128).ok()
+                == VDX7VoiceData::hasValidPackedVoice(oracleVoice.data(), 128),
+                "diagnostic acceptance matches existing validator");
+            oracleVoice[byte] = 0;
+        }
     std::vector<uint8_t> factory(256 * VDX7VoiceData::kPackedVoiceSize, 0);
     require(VDX7VoiceData::hasValidPackedVoices(factory.data(), factory.size()), "valid eight-bank image");
     require(!VDX7VoiceData::hasValidPackedVoices(nullptr, factory.size()), "null bank rejected");
@@ -38,6 +71,10 @@ int main()
     {
         factory[slot * 128 + 12] = 15 << 3;
         require(!VDX7VoiceData::hasValidPackedVoices(factory.data(), factory.size()), "every bank detune validated");
+        const auto detail = VDX7VoiceData::validatePackedVoices(factory.data(), factory.size());
+        require(detail.code == VDX7VoiceData::ValidationCode::outOfRange
+            && detail.voice == static_cast<std::size_t>(slot) && detail.byte == 12,
+            "bank boundary diagnostic location");
         factory[slot * 128 + 12] = 0;
     }
     factory.back() = 128;

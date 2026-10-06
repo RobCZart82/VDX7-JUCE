@@ -68,6 +68,16 @@ int parameterMaximum(Parameter) noexcept;
 // Storage/import permits only two verified legacy exceptions to editor ranges:
 // operator EG rate/level 127 and fine frequency 100. Editing stays canonical.
 bool isSupportedStoredOperatorValue(Parameter, int value) noexcept;
+enum class ValidationCode { valid, invalidInput, nonSevenBit, outOfRange };
+struct ValidationResult
+{
+    ValidationCode code = ValidationCode::valid;
+    std::size_t voice = 0, byte = 0; // zero-based packed-voice and byte positions
+    const char* field = ""; // static label, never user data/path
+    int value = 0, minimum = 0, maximum = 0;
+    bool ok() const noexcept { return code == ValidationCode::valid; }
+};
+ValidationResult validatePackedVoices(const uint8_t*, std::size_t) noexcept;
 // Validates seven-bit VMEM fields and the bounded legacy exceptions above,
 // while leaving firmware-reserved bits intact.
 bool hasValidPackedVoice(const uint8_t* packedVoice, std::size_t size) noexcept;
