@@ -16,9 +16,29 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
-Aktuális állapot: FEJLESZTÉS ALATT. Az első három részfeladat (#139–#141)
-beolvadt; az alábbi korábbi részfeladat-bejegyzések történeti eredmények,
-nem a jelenlegi nyitott feladatlista.
+Aktuális állapot: FEJLESZTÉS ALATT. #139–#143 beolvadt;
+az `08aae7cae05d4a185d972a26d51b2023df6e0ab8` main Windows/macOS
+ellenőrzése 15/15 ROM-mentes CTesttel sikeres.
+
+- Elkészült: packed-voice részletes validáció és paritás, combined/companion
+  meződiagnózis, közvetlen engine kategóriák, méret/olvasási/limit hibák,
+  ROM-mentes függőprojekt-regresszió.
+- Aktuális javítás: a processor átveszi a motor strukturált hibáját;
+  firmwareRejected/bootFailed külön üzenet, nem félrevezető mérethiba.
+  A közvetlen `vdx7_rom_diagnostics` bekerül az ASan/UBSan build- és futtatási listába.
+  Helyi instrumentált motor- és voice-data/SysEx teszt PASS;
+  [pontos kör és korlátok](../validation/VALIDATION_20261006_ROM_DIAGNOSTIC_WIRING.md).
+- Hátravan: a javítás friss PR Windows/macOS/sanitizer ellenőrzése, review és
+  merge utáni main ellenőrzése; szükséges privát ROM-/hostpróbák tételes lezárása.
+  Firmware/boot hibaüzenet-tesztek szintetikus kategóriákat formáznak,
+  nem igazolnak valódi firmware boot-hiba reprodukciót.
+- A nagyobb optimalizálás továbbra is méréshez kötött, nincs ígért gyorsulás.
+  A D1 nincs teljesen késznek vagy új kiadásban szállítottnak jelölve.
+
+#### Korábbi részfeladatok története
+
+Az alábbi checkpointok az adott kör eredményeit őrzik; a „következő kapu”
+és NOT RUN kijelentések nem írják felül a fenti aktuális státuszt.
 
 Ötödik részfeladat, 2026-10-06: a #142 beolvadt, friss Windows/macOS/sanitizer
 CI PASS, review-megjegyzés nincs. A függő projektállapot regressziója így CI-ben
@@ -44,7 +64,7 @@ megőrzését hibás combined fájl után; helyi futtatása NOT RUN, CI-ben a
 Következő kapu: friss Windows/macOS/sanitizer CI és review; ezután D1
 elfogadási feltételeinek végső áttekintése. A privát ROM nem kerül feltöltésre.
 
-#### Korábbi részfeladatok története
+#### Első részfeladatok checkpointjai
 
 Harmadik részfeladat 2026-10-06: opcionális, allokációmentes strukturált
 `RomLoadDiagnostic` a közvetlen engine-belépésen; invalidInput,

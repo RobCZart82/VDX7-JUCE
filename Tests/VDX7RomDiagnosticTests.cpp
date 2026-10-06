@@ -1,4 +1,5 @@
 #include "VDX7Engine.h"
+#include "VDX7RomLoadMessage.h"
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -12,6 +13,17 @@ int main(int argc, char** argv)
     {
         auto engine = std::make_unique<VDX7Engine>();
         VDX7Engine::RomLoadDiagnostic diagnostic;
+        using Code = VDX7Engine::RomLoadDiagnostic::Code;
+        require(vdx7RomLoadMessage(diagnostic).empty(), "success has no failure message");
+        diagnostic.code = Code::invalidInput;
+        require(vdx7RomLoadMessage(diagnostic).find("Invalid ROM input") != std::string::npos,
+            "input category message");
+        diagnostic.code = Code::firmwareRejected;
+        require(vdx7RomLoadMessage(diagnostic) == "ROM firmware was rejected by the engine.",
+            "firmware rejection is not reported as wrong size");
+        diagnostic.code = Code::bootFailed;
+        require(vdx7RomLoadMessage(diagnostic) == "ROM firmware could not be started by the engine.",
+            "boot failure is not reported as malformed factory data");
         std::vector<uint8_t> image(VDX7Engine::kCombinedRomSize, 0);
         for (int slot : {0, 31, 32, 255})
         {
@@ -20,6 +32,9 @@ int main(int argc, char** argv)
             require(diagnostic.code == VDX7Engine::RomLoadDiagnostic::Code::invalidFactoryData
                 && diagnostic.voice.voice == static_cast<std::size_t>(slot)
                 && diagnostic.voice.byte == 12 && !engine->isLoaded(), "bounded field diagnosis before boot");
+            require(vdx7RomLoadMessage(diagnostic).find("Invalid ROM factory data: Bank ") == 0
+                && vdx7RomLoadMessage(diagnostic).find("detune encoding") != std::string::npos,
+                "factory rejection retains shared field details");
             image[VDX7Engine::kFirmwareSize + slot * 128 + 12] = 0;
         }
         require(!engine->loadRomImage(nullptr, image.size(), nullptr, 0, &diagnostic)

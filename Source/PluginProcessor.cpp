@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "VDX7ValidationMessage.h"
+#include "VDX7RomLoadMessage.h"
 #include "VDX7BoundedFile.h"
 #include "VDX7StateBytes.h"
 #include "VDX7Sysex.h"
@@ -1526,12 +1527,15 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         extern void vdx7TestRomTransitionBoundary(int);
         vdx7TestRomTransitionBoundary(0); // Pending capture completed, before firmware warm-up.
 #endif
+        VDX7Engine::RomLoadDiagnostic diagnostic;
         const bool ok = engine_.loadRomImage(rom.data(), rom.size(),
-                                             voices.empty() ? nullptr : voices.data(), voices.size());
+                                             voices.empty() ? nullptr : voices.data(), voices.size(), &diagnostic);
         if (!ok)
         {
             std::scoped_lock metadataLock(metadataMutex_);
-            statusText_ = "Invalid ROM: expected 16 KB firmware or 48 KB combined image with valid packed factory voices";
+            const auto message = vdx7RomLoadMessage(diagnostic);
+            statusText_ = message.empty() ? "ROM load failed without an engine diagnostic."
+                                         : juce::String(message);
             if (error != nullptr) *error = statusText_;
             return false;
         }
