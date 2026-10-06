@@ -20,6 +20,16 @@ Aktuális állapot: FEJLESZTÉS ALATT. Az első három részfeladat (#139–#141
 beolvadt; az alábbi korábbi részfeladat-bejegyzések történeti eredmények,
 nem a jelenlegi nyitott feladatlista.
 
+Ötödik részfeladat, 2026-10-06: a #142 beolvadt, friss Windows/macOS/sanitizer
+CI PASS, review-megjegyzés nincs. A függő projektállapot regressziója így CI-ben
+is ellenőrzött. Következő tesztkör main alapja:
+`feed924a2400494e143c0031f6ba742309b5ff24`.
+Új ROM-mentes processor-ellenőrzések: hiányzó fájl, olvasható hibás méret és
+49152 bájt feletti fájl külön diagnózist ad; korábbi hibaszöveget felülír,
+személyes útvonalat nem közöl és nem tölti be a motort.
+Ezen új tesztek teljes helyi futtatása NOT RUN; a `vdx7_pre_rom_state`
+CI-futtatásának eredménye a beolvasztási kapu. REAPER továbbra is NOT RUN.
+
 Negyedik részfeladat, 2026-10-06: állapotmegőrzési regressziók.
 Kiindulási main: `77878b4c61a6b5655a2ebed95f4b3ac122097241`.
 PASS: helyi MSVC-fordítás, ROM-mentes közvetlen engine-teszt és külön opt-in

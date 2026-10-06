@@ -42,6 +42,28 @@ static void testInvalidCombinedRomDiagnostic()
         && error.contains("allowed 0..14"), "combined ROM exposes detailed final-bank diagnostic");
     require(!processor->isRomLoaded(), "invalid combined ROM does not load firmware");
     require(!error.contains(fixture.getFile().getFullPathName()), "diagnostic omits personal path");
+
+    const juce::TemporaryFile missing(".bin");
+    require(!missing.getFile().exists(), "missing fixture is absent");
+    error = "stale error";
+    require(!processor->loadRomFromFile(missing.getFile(), &error)
+        && error.contains("Could not read ROM file") && !error.contains("Bank"),
+        "missing file replaces stale semantic diagnostic with read error");
+    require(!error.contains(missing.getFile().getFullPathName()), "read error omits personal path");
+
+    bytes.assign(1, 0);
+    require(fixture.getFile().replaceWithData(bytes.data(), bytes.size()), "write wrong-size fixture");
+    require(!processor->loadRomFromFile(fixture.getFile(), &error)
+        && error.contains("Invalid ROM size") && !error.contains("Could not read"),
+        "readable wrong-size ROM reports size rather than read failure");
+
+    bytes.assign(VDX7Engine::kCombinedRomSize + 1, 0);
+    require(fixture.getFile().replaceWithData(bytes.data(), bytes.size()), "write oversized fixture");
+    require(!processor->loadRomFromFile(fixture.getFile(), &error)
+        && error.contains("exceeds the 49152-byte limit") && !error.contains("Bank"),
+        "oversized ROM reports bounded-read limit rather than semantic failure");
+    require(!processor->isRomLoaded() && !error.contains(fixture.getFile().getFullPathName()),
+        "file failures remain unloaded and disclose no personal path");
 }
 
 static void set(VDX7AudioProcessor& p, const juce::String& id, float v)
