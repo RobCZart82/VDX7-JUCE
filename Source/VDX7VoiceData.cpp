@@ -51,6 +51,51 @@ bool isSupportedStoredOperatorValue(Parameter parameter, int value) noexcept
         || (parameter == Parameter::fine && value == 100);
 }
 
+ValidationResult validatePackedVoices(const uint8_t* data, std::size_t size) noexcept
+{
+    if (data == nullptr || size == 0 || size % kPackedVoiceSize != 0)
+        return {ValidationCode::invalidInput};
+    for (std::size_t offset = 0; offset < size; ++offset)
+        if (data[offset] > 127)
+            return {ValidationCode::nonSevenBit, offset / kPackedVoiceSize,
+                offset % kPackedVoiceSize, "seven-bit byte", data[offset], 0, 127};
+    for (std::size_t offset = 0; offset < size; offset += kPackedVoiceSize)
+    {
+        const auto* voice = data + offset;
+        ValidationResult failure;
+        const auto check = [&](int byte, int value, int maximum, const char* field)
+        {
+            if (value <= maximum) return true;
+            failure = {ValidationCode::outOfRange, offset / kPackedVoiceSize,
+                static_cast<std::size_t>(byte), field, value, 0, maximum};
+            return false;
+        };
+        for (int op = 0; op < kOperatorCount; ++op)
+        {
+            const int base = operatorOffset(op);
+            for (int field = 0; field < 8; ++field)
+                if (!isSupportedStoredOperatorValue(static_cast<Parameter>(field), voice[base + field]))
+                {
+                    check(base + field, voice[base + field], 99, "operator envelope (legacy 127 allowed)");
+                    return failure;
+                }
+            for (int field : {8, 9, 10, 14})
+                if (!check(base + field, voice[base + field], 99, "operator field")) return failure;
+            if (!check(base + 12, (voice[base + 12] >> 3) & 15, 14, "detune encoding")) return failure;
+            if (!isSupportedStoredOperatorValue(Parameter::fine, voice[base + 16]))
+            {
+                check(base + 16, voice[base + 16], 100, "fine frequency (legacy 100 allowed)");
+                return failure;
+            }
+        }
+        for (int byte : {102, 103, 104, 105, 106, 107, 108, 109, 112, 113, 114, 115})
+            if (!check(byte, voice[byte], 99, "voice field")) return failure;
+        if (!check(116, (voice[116] >> 1) & 7, 5, "LFO waveform")) return failure;
+        if (!check(117, voice[117], 48, "transpose")) return failure;
+    }
+    return {};
+}
+
 bool hasValidPackedVoice(const uint8_t* packedVoice, std::size_t size) noexcept
 {
     if (packedVoice == nullptr || size < kPackedVoiceSize)
@@ -84,13 +129,7 @@ bool hasValidPackedVoice(const uint8_t* packedVoice, std::size_t size) noexcept
 
 bool hasValidPackedVoices(const uint8_t* data, std::size_t size) noexcept
 {
-    if (data == nullptr || size == 0 || size % kPackedVoiceSize != 0)
-        return false;
-    if (std::any_of(data, data + size, [](uint8_t value) { return value > 127; }))
-        return false;
-    for (std::size_t offset = 0; offset < size; offset += kPackedVoiceSize)
-        if (!hasValidPackedVoice(data + offset, kPackedVoiceSize)) return false;
-    return true;
+    return validatePackedVoices(data, size).ok();
 }
 
 int getOperatorParameter(const uint8_t* packedVoice, std::size_t size,

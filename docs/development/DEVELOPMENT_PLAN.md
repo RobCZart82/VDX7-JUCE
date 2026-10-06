@@ -16,6 +16,16 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+2026-10-06: FEJLESZTÉS ALATT, első részfeladat: allokációmentes packed-voice
+diagnosztikai eredmény (kategória, hangszín/bájt, mező, érték/tartomány), szintetikus
+tesztek és meglévő validátorral egybájtos teljes tartomány-paritás. Ez még nem
+GUI/ROM-fájlhibajelzés, nem teljes D1 és nem hostteszt. A processor üzeneteinek,
+companion/combined kategóriáinak és engine belépési diagnosztikájának bekötése,
+tranzakcionális regressziója következő részfeladat; CI/review előtt nincs kész státusz.
+Helyi első kör: PASS MSVC C++20 voice-data/SysEx teszt és 32 768 egybájtos
+paritáskontroll; PASS diff-formaellenőrzés. NOT RUN új teljes pluginbuild,
+privát ROM-os integráció és REAPER ebben a részfeladatban; a CI külön bizonyíték.
+
 Állapot: HALASZTOTT, jóváhagyva 2026-10-02. Következő lépés a közös validátor részletes eredményének specifikálása: hibakategória, bank/hangszín, mező/bájtpozíció, érték és megengedett tartomány. Különüljön el olvasási/mérethiba, hibás kombinált ROM és kihagyott opcionális bank. Érvénytelen méret/pointer mellett nincs mezőolvasás; teljes ROM és személyes útvonal nem kerül naplóba.
 
 Optimalizálás csak mérés után: érvényes és korai/késői hibás adat, companion/kombinált kép, ismételt validáció és zárolási idő. Közvetlen motorbetöltés sem maradhat ellenőrzés nélkül. Elfogadás: változatlan elfogadási szabályok és tranzakcionális állapotvédelem; bankhatár-, hétbites-, szemantikai-, diagnosztikai és függőprojekt-regressziók. Nincs néma javítás vagy általános 99-re vágás.
