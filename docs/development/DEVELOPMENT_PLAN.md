@@ -16,6 +16,26 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+Aktuális állapot: FEJLESZTÉS ALATT. Az első három részfeladat (#139–#141)
+beolvadt; az alábbi korábbi részfeladat-bejegyzések történeti eredmények,
+nem a jelenlegi nyitott feladatlista.
+
+Negyedik részfeladat, 2026-10-06: állapotmegőrzési regressziók.
+Kiindulási main: `77878b4c61a6b5655a2ebed95f4b3ac122097241`.
+PASS: helyi MSVC-fordítás, ROM-mentes közvetlen engine-teszt és külön opt-in
+futtatás helyi firmware-rel: hibás combined/companion adat elutasítása után
+a RAM változatlan; combined esetén a betöltött állapot, bankkatalógus és
+kiválasztás is változatlan. Az opt-in teszt csak az első 16 KB firmware-t
+olvassa, bankadatot nem másol. A változatlan korábbi core Release könyvtárával
+linkelt ellenőrzés nem új teljes pluginbuild és nem teljes ROM-os CTest-suite.
+Új processor-regresszió ellenőrzi a függő projekt feedback/OP6 szerkesztéseinek
+megőrzését hibás combined fájl után; helyi futtatása NOT RUN, CI-ben a
+`vdx7_pre_rom_state` része. REAPER/GUI manuális ellenőrzés NOT RUN.
+Következő kapu: friss Windows/macOS/sanitizer CI és review; ezután D1
+elfogadási feltételeinek végső áttekintése. A privát ROM nem kerül feltöltésre.
+
+#### Korábbi részfeladatok története
+
 Harmadik részfeladat 2026-10-06: opcionális, allokációmentes strukturált
 `RomLoadDiagnostic` a közvetlen engine-belépésen; invalidInput,
 invalidFactoryData, firmwareRejected és bootFailed kategóriák, friss hibánál
@@ -46,7 +66,7 @@ Helyi első kör: PASS MSVC C++20 voice-data/SysEx teszt és 32 768 egybájtos
 paritáskontroll; PASS diff-formaellenőrzés. NOT RUN új teljes pluginbuild,
 privát ROM-os integráció és REAPER ebben a részfeladatban; a CI külön bizonyíték.
 
-Állapot: HALASZTOTT, jóváhagyva 2026-10-02. Következő lépés a közös validátor részletes eredményének specifikálása: hibakategória, bank/hangszín, mező/bájtpozíció, érték és megengedett tartomány. Különüljön el olvasási/mérethiba, hibás kombinált ROM és kihagyott opcionális bank. Érvénytelen méret/pointer mellett nincs mezőolvasás; teljes ROM és személyes útvonal nem kerül naplóba.
+Eredeti specifikáció, jóváhagyva 2026-10-02: hibakategória, bank/hangszín, mező/bájtpozíció, érték és megengedett tartomány. Különüljön el olvasási/mérethiba, hibás kombinált ROM és kihagyott opcionális bank. Érvénytelen méret/pointer mellett nincs mezőolvasás; teljes ROM és személyes útvonal nem kerül naplóba.
 
 Optimalizálás csak mérés után: érvényes és korai/késői hibás adat, companion/kombinált kép, ismételt validáció és zárolási idő. Közvetlen motorbetöltés sem maradhat ellenőrzés nélkül. Elfogadás: változatlan elfogadási szabályok és tranzakcionális állapotvédelem; bankhatár-, hétbites-, szemantikai-, diagnosztikai és függőprojekt-regressziók. Nincs néma javítás vagy általános 99-re vágás.
 
