@@ -1,5 +1,6 @@
 #include "VDX7VoiceData.h"
 #include "VDX7Sysex.h"
+#include "VDX7ValidationMessage.h"
 
 #include <array>
 #include <cstdlib>
@@ -41,6 +42,10 @@ int main()
         && diagnostic.voice == 1 && diagnostic.byte == 12 && diagnostic.value == 15
         && diagnostic.maximum == 14, "diagnostic second voice detune");
     diagnosticVoices[140] = 0;
+    require(vdx7ValidationMessage(diagnostic).find("Bank 1, voice 2, byte 12") != std::string::npos
+        && vdx7ValidationMessage(diagnostic).find("allowed 0..14") != std::string::npos,
+        "human-readable location and range");
+    require(vdx7ValidationMessage({}).empty(), "valid input has no diagnostic message");
     diagnosticVoices.back() = 128;
     diagnostic = VDX7VoiceData::validatePackedVoices(diagnosticVoices.data(), 256);
     require(diagnostic.code == VDX7VoiceData::ValidationCode::nonSevenBit

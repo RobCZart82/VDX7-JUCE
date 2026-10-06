@@ -19,6 +19,21 @@ static float value(VDX7AudioProcessor& p, const juce::String& id)
     return p.parameters().getRawParameterValue(id)->load();
 }
 
+static void testInvalidCombinedRomDiagnostic()
+{
+    auto processor = std::make_unique<VDX7AudioProcessor>(false);
+    const juce::TemporaryFile fixture(".bin");
+    std::vector<uint8_t> bytes(VDX7Engine::kCombinedRomSize, 0);
+    bytes[VDX7Engine::kFirmwareSize + 255 * 128 + 12] = 15 << 3;
+    require(fixture.getFile().replaceWithData(bytes.data(), bytes.size()), "write synthetic invalid combined image");
+    juce::String error;
+    require(!processor->loadRomFromFile(fixture.getFile(), &error), "invalid combined ROM rejected before boot");
+    require(error.contains("Bank 8, voice 32, byte 12") && error.contains("detune encoding")
+        && error.contains("allowed 0..14"), "combined ROM exposes detailed final-bank diagnostic");
+    require(!processor->isRomLoaded(), "invalid combined ROM does not load firmware");
+    require(!error.contains(fixture.getFile().getFullPathName()), "diagnostic omits personal path");
+}
+
 static void set(VDX7AudioProcessor& p, const juce::String& id, float v)
 {
     auto* parameter = p.parameters().getParameter(id);
@@ -772,6 +787,7 @@ int main(int argc, char** argv)
         }
         if (argc == 2 && juce::String(argv[1]) == "--pre-rom-state-state-only")
         {
+            testInvalidCombinedRomDiagnostic();
             testPendingFactoryCatalog();
             testPreRomDeferredStateIsSerialized();
             testLegacyPendingProjectState();

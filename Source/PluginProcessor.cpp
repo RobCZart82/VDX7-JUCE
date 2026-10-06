@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "VDX7ValidationMessage.h"
 #include "VDX7BoundedFile.h"
 #include "VDX7StateBytes.h"
 #include "VDX7Sysex.h"
@@ -1473,7 +1474,25 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
 {
     std::vector<uint8_t> voices;
     bool ignoredCompanion = false;
+    juce::String companionDiagnostic;
     bool pendingIdentityMismatch = false;
+    // Diagnose before any engine/project mutation; the engine still performs
+    // its independent admission check for direct callers.
+    if (rom.size() != VDX7Engine::kFirmwareSize && rom.size() != VDX7Engine::kCombinedRomSize)
+    {
+        if (error) *error = "Invalid ROM size: expected 16384-byte firmware or 49152-byte combined image.";
+        return false;
+    }
+    if (rom.size() == VDX7Engine::kCombinedRomSize)
+    {
+        const auto detail = VDX7VoiceData::validatePackedVoices(
+            rom.data() + VDX7Engine::kFirmwareSize, VDX7Engine::kFactoryVoicesSize);
+        if (!detail.ok())
+        {
+            if (error) *error = "Invalid combined ROM factory data: " + juce::String(vdx7ValidationMessage(detail));
+            return false;
+        }
+    }
     // Never access disk/hash files from processBlock. Tests with auto-detection
     // disabled do not depend on the owner's global library.
     const auto library = factoryBankFolder_ != juce::File() ? VDX7FactoryBanks::scan(factoryBankFolder_)
@@ -1490,7 +1509,13 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
                 || !readFile(companion, VDX7Engine::kFactoryVoicesSize, voices)
                 || voices.size() != VDX7Engine::kFactoryVoicesSize
                 || !VDX7VoiceData::hasValidPackedVoices(voices.data(), voices.size());
-            if (ignoredCompanion) voices.clear();
+            if (ignoredCompanion)
+            {
+                companionDiagnostic = voices.size() == VDX7Engine::kFactoryVoicesSize
+                    ? juce::String(vdx7ValidationMessage(VDX7VoiceData::validatePackedVoices(voices.data(), voices.size())))
+                    : "expected a readable 32768-byte optional image";
+                voices.clear();
+            }
         }
     }
 
@@ -1583,7 +1608,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
                 ? "DX7 firmware loaded + factory banks"
                 : "DX7 firmware loaded (factory voice image not found)");
         if (ignoredCompanion)
-            statusText_ += "; invalid or unreadable optional factory voice image ignored";
+            statusText_ += "; optional factory image ignored: " + companionDiagnostic;
         if (!library.warnings.isEmpty()) statusText_ += "; check Factory Banks in SETTINGS";
     }
     synchroniseOperatorParametersFromEngine();
@@ -1595,7 +1620,10 @@ bool VDX7AudioProcessor::loadRomFromFile(const juce::File& file, juce::String* e
     std::vector<uint8_t> data;
     if (!readFile(file, VDX7Engine::kCombinedRomSize, data))
     {
-        if (error != nullptr) *error = "Could not read ROM file";
+        if (error != nullptr) *error = file.existsAsFile()
+            && file.getSize() > static_cast<juce::int64>(VDX7Engine::kCombinedRomSize)
+            ? "ROM exceeds the 49152-byte limit; expected 16384-byte firmware or 49152-byte combined image."
+            : "Could not read ROM file (missing, unreadable or changed during reading).";
         return false;
     }
     return loadRomData(file, data, error);

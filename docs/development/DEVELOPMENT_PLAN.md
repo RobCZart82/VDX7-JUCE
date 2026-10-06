@@ -16,6 +16,15 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+Második részfeladat 2026-10-06: a combined ROM szemantikai hiba előzetes,
+állapotváltoztatás előtti felhasználói diagnózisa (bank/hangszín/bájt/mező/érték),
+méret/olvasási hiba külön szöveggel, és kihagyott companion adat részletezése.
+ROM-mentes processor-regresszió a 8. bank 32. hangszínére; személyes útvonal
+nincs a hibaüzenetben. Helyi formatter/voice-data teszt PASS; teljes processor
+és platform/sanitizer CI még ellenőrzendő, REAPER NOT RUN. D1 nem teljes:
+közvetlen engine-hívás strukturált ROM-diagnózisa, pontosabb mezőnevek és
+betöltött/függő állapot melletti integrációs bizonyíték még hátravan.
+
 2026-10-06: FEJLESZTÉS ALATT, első részfeladat: allokációmentes packed-voice
 diagnosztikai eredmény (kategória, hangszín/bájt, mező, érték/tartomány), szintetikus
 tesztek és meglévő validátorral egybájtos teljes tartomány-paritás. Ez még nem
