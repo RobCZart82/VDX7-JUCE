@@ -1,6 +1,6 @@
 # VDX7 egységes fejlesztési terv
 
-Frissítve: 2026-10-05. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
+Frissítve: 2026-10-06. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás verzióját és pontos funkciókörét később rögzítjük.
 Ez a dokumentum nem új kiadás publikálási engedélye.
@@ -45,6 +45,91 @@ Elfogadás: több bank, elutasított fájlok, gyári/USER adatmegőrzés, hossz�
 
 Állapot: korábbi tulajdonosi jövőbeli igény, még nem kiadott támogatás. Az AU fordíthatósága nem Logic-host elfogadás. Következő lépés: pontos AU csomagolási, validációs és Logic-tesztterv, majd külön döntés a szállított formátumokról és letöltési rendről. Az 1.0.1 négy VST3-csomagját nem változtatjuk meg. Elfogadás: AU-validáció, valódi Logic működés/automatizálás/projekt-recall és megfelelő macOS installer/payload/source ellenőrzés. Ütemezése nem ígéret az összes funkció egyetlen kiadásba kerülésére.
 
+### D5 SETTINGS Classic / Clean hangzási mód
+
+Állapot: TERVEZETT, tulajdonos által jóváhagyott irány és dokumentálási kérés
+2026-10-06. A kapcsoló helye a **SETTINGS menü**, nem a főpanel vagy UTILITY.
+Ez a bejegyzés nem implementáció, mérési PASS vagy új kiadási engedély.
+A következő kiadásba sorolás és a végleges műszaki megoldás külön rögzítendő.
+
+#### Felhasználói működés és elnevezés
+
+- SETTINGS → **Sound mode / Hangzási mód**, két egyértelmű választással:
+  **Classic / Clean**. A kiválasztott érték a SETTINGS újranyitásakor látható,
+  billentyűzettel és akadálymentes névvel is kezelhető legyen.
+- **Classic**: a jelenlegi hardverhű kimenet és karakter, alapértelmezett.
+  Meglévő hangszínek/projektek megszokott hangzását nem írjuk felül.
+- **Clean**: opcionális, a hardvermodellezés bizonyos kvantálási és DAC/filter
+  színezéseit megkerülő alternatíva. Nem általános „jobb DX7”, nem garantáltan
+  aliasmentes FM-szintézis, és nem új sztereó motor vagy effekt.
+- Rövid tooltip/HU–EN kézikönyv magyarázza a különbséget. A Famous / Modern
+  alternatíva nem a tervezett felirat: a Classic / Clean pontosabb funkcióleírás.
+
+#### DSP-vizsgálat és megőrzendő viselkedés
+
+A rögzített dx7Lib mag `EGS::clean(bool)` / `OPS::clean(bool)` útja a prototípus
+kiindulópontja; tényleges hatását és reset/betöltés utáni viselkedését ellenőrizni
+kell. Nem elég pusztán új aluláteresztőt tenni a kész kimenetre. A meglévő
+49 096 Hz-es belső időzítés, firmware/MIDI működés és bandlimited resampler
+maradjon változatlan, amíg mérés nem indokol külön változtatást. Az SRC-teszt
+eredménye nem teljes Classic/Clean hangminőségi vagy hardverhűségi bizonyíték.
+
+- Classic azonos bemenet/kezdőállapot mellett azonos kimenetet adjon a kiadott
+  alapmóddal; a Native/Correct mono-politika ettől független maradjon.
+- Módváltás nem módosíthat ROM-ot, bankot, munkahangszínt, performance adatot,
+  MIDI-csatornát, sustain/aktív hangok állapotát vagy a SysEx dirty jelzőt.
+- GUI csak kérést ad át; a DSP-váltás biztonságos audio-tulajdonosi határon
+  történjen. Nincs új callback-allokáció, fájl-I/O, firmware-warmup vagy blokkoló
+  zárolás. Váltáskor nincs beragadt hang, hallható kapcsolási kattanás vagy
+  indokolatlan szintugrás. Ez elfogadási cél, még nem bizonyított képesség.
+- A filter/history állapotok miatt a sima bool-váltás nem tekinthető eleve
+  kattanásmentesnek. Prototípussal válasszunk korlátozott átmeneti stratégiát
+  (például ramp vagy megfelelően összehangolt útváltás), dokumentált hosszúsággal,
+  CPU-, tranziensek- és tail-hatással. Nem indítunk két független firmware-motort
+  pusztán egy crossfade kedvéért. Teljesen eltérő karakterek azonos hangerője
+  nem ígéret; összehasonlításhoz külön loudness-matching kell.
+
+#### Állapotmentés és kompatibilitás
+
+- Példányonkénti, DAW-projektben mentett beállítás; egy példány kapcsolása nem
+  változtat más példányt. Globális GUI-settings nem írhatja felül a visszahívott
+  projekt hangzási módját.
+- Hiányzó állapotmező esetén **Classic**, így régi projektek hangzása megmarad.
+  Érvénytelen érték kezelése és állapotverziózás legyen explicit, tesztelt,
+  ne aktiváljon véletlenül Clean módot és ne rontsa a meglévő állapotvédelmet.
+- Hiányzó/eltérő ROM miatti függő projekt, első ROM-betöltés, újratöltés,
+  prepare/release/reset után a kívánt mód megmaradjon. Projektmentés és
+  visszanyitás közben nem kerülhet az audioállapottól eltérő érték a GUI-ba.
+- Ez nem DX7 SysEx-paraméter; import/export és USER bankok bájtjai változatlanok.
+  A meglévő 148 paraméter ID/sorrend és pluginazonosság megőrzendő. A kapcsoló
+  hostautomatizálhatósága nincs még jóváhagyva; külön döntés kell, ha új paraméter
+  hozzáadása indokolt. Régi paramétert nem nevezünk át és nem használunk új célra.
+
+#### Mérési és regressziós elfogadás
+
+1. ROM-mentes tesztek: alapérték, régi/hibás állapot, mentés/recall, példányizoláció,
+   GUI választás/kijelzés és callback-korlátok, ahol szintetikus jel elegendő.
+2. Privát kompatibilis ROM-mal: Classic alapvonal/null-difference, Clean működés,
+   hiányzó ROM/függő projekt, reset és program/bankváltás, váltás tartott hang,
+   sustain és lecsengés alatt, ismételt gyors kapcsolás és több példány.
+3. Azonos MIDI/kezdőállapot: halk/hangos hangok, magas hangterjedelem, erős feedback,
+   fényes/fémes hangszínek, akkordok, rövid tranziensek és halk lecsengések.
+   Mérendő: spektrum, nem kívánt komponensek/zaj, peak/RMS, véges minták,
+   túlvezérlési tartalék, késleltetés és CPU. A két mód közti különbség nem hiba;
+   „jobb minőség” állítás csak meghatározott mért jellemzőre tehető.
+4. 44.1/48/96 kHz, releváns buffer-mátrix, valós idejű/offline render Windows és
+   macOS REAPER alatt; dokumentált hostarchitektúra. Hangerőben kiegyenlített
+   A/B, lehetőleg vak meghallgatás; külön a műszeres eredmény és ízlésbeli preferencia.
+5. Minden bizonyíték pontos SHA/mód/ROM-azonosító/host/beállítás és PASS/FAIL/NOT RUN
+   státusz mellett; privát ROM, gyári/magazinos bank vagy hangfelvétel nem kerül
+   automatikusan repositoryba/kiadásba. A dokumentációs kör nem futtatja ezeket.
+
+Végrehajtás: upstream út és állapotok feltérképezése → mérési prototípus →
+váltási/mentési specifikáció → minimális engine/processor implementáció és tesztek →
+SETTINGS GUI → platform/sanitizer és valódi hostmérések → HU/EN útmutató és review.
+Az 1.0.1 binárisok/assetek változatlanok; új funkció csak új, külön jóváhagyott
+jelöltben és kiadási folyamatban szállítható.
+
 ## Teszt és karakterizálási backlog
 
 Az alábbiak nem bizonyított hibák. Az 1.0.1-nél elfogadott halasztás nem PASS, és nem automatikus felmentés minden jövőbeli jelöltre.
@@ -66,7 +151,7 @@ T1–T4 lefedettségi halasztásai a publikálási jegyzékben rögzítettek; T5
 
 ## Végrehajtás és kiadási kapuk
 
-Javasolt sorrend: reprodukált blocker, ha lesz → D1 → D2 → D3; D4 külön host/packaging munkacsomag. A következő kiadás pontos körét fejlesztés előtt rögzítjük. A rendezés nem indítja el automatikusan ezeket az implementációkat.
+Javasolt sorrend: reprodukált blocker, ha lesz → D1 → D2 → D3; D4 külön host/packaging munkacsomag, D5 külön hangzási prototípus és SETTINGS munkacsomag. A következő kiadás pontos körét és D5 prioritását fejlesztés előtt rögzítjük. A rendezés nem indítja el automatikusan ezeket az implementációkat.
 
 Minden kör: friss main → minimális változtatás és regresszió → érintett/full automatizált Windows/macOS és sanitizer ellenőrzések → review → zöld PR merge → külön main Actions ellenőrzés. Megőrzendő a pluginazonosság, 148 paraméter ID/sorrend, projektkompatibilitás, Native/Correct viselkedés, 12–120 hangterjedelem, bounded MIDI, állapotvédelem és jóváhagyott GUI. Callbackben nincs új fájl-I/O vagy nem korlátozott munka.
 
