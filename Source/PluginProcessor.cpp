@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "VDX7ValidationMessage.h"
 #include "VDX7RomLoadMessage.h"
+#include "VDX7InitVoice.h"
 #include "VDX7BoundedFile.h"
 #include "VDX7StateBytes.h"
 #include "VDX7Sysex.h"
@@ -626,6 +627,7 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
     if (data[0] == 0xf0)
     {
         if (!engine_.handleSysex(data, static_cast<std::size_t>(size))) return false;
+        initVoices_ = 0;
         modifiedVoices_.store(0xffffffffu); // Incoming bank has not been exported.
         return true;
     }
@@ -637,7 +639,7 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
         return false;
     engine_.handleMidi(data, size);
     const bool bankChange = engine_.factoryBankLoadRevision() != bankRevision;
-    if (bankChange) modifiedVoices_.store(0);
+    if (bankChange) { modifiedVoices_.store(0); initVoices_ = 0; }
     if (engine_.isMidiRecovering())
     {
         clearKeyboardSnapshot();
@@ -673,6 +675,7 @@ void VDX7AudioProcessor::applyPendingCommands()
                 {
                     selectionChanged = true;
                     modifiedVoices_.store(0);
+                    initVoices_ = 0;
                     edited = false;
                 }
                 break;
@@ -792,6 +795,8 @@ void VDX7AudioProcessor::updateEngineSnapshot() noexcept
     patchNameRevision_.fetch_add(1, std::memory_order_acq_rel);
     for (std::size_t i = 0; i < patchNameSnapshot_.size(); ++i)
         patchNameSnapshot_[i].store(name[i], std::memory_order_relaxed);
+    currentInitVoiceSnapshot_.store((initVoices_ & (uint32_t{1} << engine_.currentProgram())) != 0,
+                                    std::memory_order_relaxed);
     patchNameRevision_.fetch_add(1, std::memory_order_release);
     voicePublicationNeeded_.store(true, std::memory_order_release);
     operatorVoiceRevision_.fetch_add(1, std::memory_order_release);
@@ -1137,7 +1142,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     std::vector<uint8_t> ram;
     VDX7FactoryBanks::Snapshot factoryBanks;
     int bank = -1, program = 0, inputChannel = 0;
-    uint32_t modified = 0;
+    uint32_t modified = 0, initVoices = 0;
     juce::String loadedRomPath;
     juce::String loadedRomIdentity;
 
@@ -1170,6 +1175,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
             inputChannel = midiInputChannel_.load();
             program = engine_.currentProgram();
             modified = modifiedVoices_.load();
+            initVoices = initVoices_;
             if (!engine_.saveRam(ram)) ram.clear();
             factoryBanks = { engine_.factoryVoices(), engine_.factoryBankMask() };
             if (loaded)
@@ -1231,6 +1237,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     state.setProperty("midiInputChannel", inputChannel, nullptr);
     state.setProperty("program", program, nullptr);
     state.setProperty("modifiedVoices", static_cast<juce::int64>(modified), nullptr);
+    state.setProperty("initVoices", static_cast<juce::int64>(initVoices), nullptr);
     // Before first firmware load there is no catalog snapshot to freeze.
     // A pending project with a real catalog took the preserved-copy path above.
     if (loaded) VDX7FactoryBanks::writeState(state, factoryBanks);
@@ -1294,6 +1301,16 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     }
 
     auto pendingCopy = state.createCopy();
+    if (state.hasProperty("initVoices"))
+    {
+        const auto bits = state.getProperty("initVoices");
+        // ValueTree's XML round trip represents numeric properties as strings.
+        // Accept only a complete bounded decimal, not JUCE's permissive prefix conversion.
+        const auto text = bits.toString();
+        if ((!bits.isInt() && !bits.isInt64() && !bits.isString()) || text.isEmpty()
+            || text.length() > 10 || !text.containsOnly("0123456789")
+            || text.getLargeIntValue() > 0xffffffffLL) return;
+    }
     // Missing property is deliberately native for legacy projects. Reject
     // malformed policies rather than interpreting arbitrary strings as enabled.
     const auto correction = state.getProperty("monoNoteZeroCorrection", false);
@@ -1421,6 +1438,7 @@ void VDX7AudioProcessor::restoreSavedStateLocked(const juce::ValueTree& state)
         engine_.selectProgram(program);
         modifiedVoices_.store(static_cast<uint32_t>(static_cast<juce::int64>(
             state.getProperty("modifiedVoices", juce::int64(ramText.isNotEmpty() ? -1 : 0)))));
+        initVoices_ = static_cast<uint32_t>(static_cast<juce::int64>(state.getProperty("initVoices", juce::int64(0))));
 #if defined(VDX7_TEST_STATE_TRANSITIONS)
         extern void vdx7TestRomTransitionBoundary(int);
         vdx7TestRomTransitionBoundary(2); // Project RAM installed, before deferred edits.
@@ -1568,6 +1586,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
 
         engine_.prepare(currentSampleRate_);
         modifiedVoices_.store(0);
+        initVoices_ = 0;
         if (!pendingRestore_.isValid() && (applyOperatorParameters() | applyVoiceParameters()))
         {
             // A fresh no-ROM instance has no packed project state to restore.
@@ -1667,13 +1686,23 @@ juce::File VDX7AudioProcessor::userBankFile()
 
 bool VDX7AudioProcessor::captureUserPatch(VDX7UserBank::Voice& voice, juce::String& error)
 {
+    WorkingVoiceSnapshot snapshot;
+    if (!captureWorkingVoiceSnapshot(snapshot, error)) return false;
+    voice = snapshot.voice;
+    return true;
+}
+
+bool VDX7AudioProcessor::captureWorkingVoiceSnapshot(WorkingVoiceSnapshot& snapshot, juce::String& error)
+{
     std::scoped_lock lock(engineMutex_);
     if (pendingRestore_.isValid()) { error = kPendingProjectMessage; return false; }
     if (!engine_.isLoaded()) { error = "Load the firmware first."; return false; }
     flushVoiceEditsLocked();
     std::vector<uint8_t> ram;
     if (!engine_.saveRam(ram)) { error = "Cannot capture voice RAM."; return false; }
-    std::copy_n(ram.begin() + engine_.currentProgram() * 128, 128, voice.begin());
+    snapshot.program = engine_.currentProgram();
+    std::copy_n(ram.begin() + snapshot.program * 128, 128, snapshot.voice.begin());
+    snapshot.revision = getOperatorVoiceRevision();
     return true;
 }
 
@@ -1696,7 +1725,9 @@ bool VDX7AudioProcessor::loadUserBank(const juce::File& file, juce::String& erro
     return true;
 }
 
-bool VDX7AudioProcessor::loadPackedVoices(const std::vector<uint8_t>& packed, juce::String* error, int selectProgram)
+bool VDX7AudioProcessor::loadPackedVoices(const std::vector<uint8_t>& packed, juce::String* error,
+                                        int selectProgram, const VDX7UserBank::Voice* initExpected, int initProgram,
+                                        uint32_t initRevision)
 {
     if (packed.size() != 128 && packed.size() != 4096) return false;
     const auto voiceCount = static_cast<int>(packed.size() / VDX7VoiceData::kPackedVoiceSize);
@@ -1728,12 +1759,24 @@ bool VDX7AudioProcessor::loadPackedVoices(const std::vector<uint8_t>& packed, ju
         if (!engine_.saveRam(ram)) return false;
         const bool single = packed.size() == 128;
         const int offset = single ? engine_.currentProgram() * 128 : 0;
+        if (initExpected != nullptr && (!single || getOperatorVoiceRevision() != initRevision
+            || engine_.currentProgram() != initProgram
+            || !std::equal(initExpected->begin(), initExpected->end(), ram.begin() + offset)))
+        {
+            if (error != nullptr) *error = "The working voice changed. Reopen Init Preset and confirm again.";
+            return false;
+        }
         std::copy(packed.begin(), packed.end(), ram.begin() + offset);
         if (!engine_.restoreRam(ram)) return false;
         engine_.setCurrentBankMarker(-1);
         if (selectProgram >= 0 && selectProgram < 32) engine_.selectProgram(selectProgram);
-        if (single) modifiedVoices_.fetch_and(~(uint32_t(1) << engine_.currentProgram()));
-        else modifiedVoices_.store(0);
+        if (single)
+        {
+            const auto bit = uint32_t(1) << engine_.currentProgram();
+            if (initExpected != nullptr) { modifiedVoices_.fetch_or(bit); initVoices_ |= bit; }
+            else { modifiedVoices_.fetch_and(~bit); initVoices_ &= ~bit; }
+        }
+        else { modifiedVoices_.store(0); initVoices_ = 0; }
 
         // A newly imported bank replaces the prior editable voice and requests.
         operatorParameterDirty_[0].store(0, std::memory_order_release);
@@ -1751,6 +1794,14 @@ bool VDX7AudioProcessor::loadPackedVoices(const std::vector<uint8_t>& packed, ju
 void VDX7AudioProcessor::markVoiceModified() noexcept
 {
     modifiedVoices_.fetch_or(uint32_t(1) << engine_.currentProgram());
+}
+
+bool VDX7AudioProcessor::initialiseVoiceFromUi(const VDX7UserBank::Voice& expectedVoice,
+                                             int expectedProgram, uint32_t expectedRevision, juce::String& error)
+{
+    const auto init = vdx7InitVoice();
+    return loadPackedVoices(std::vector<uint8_t>(init.begin(), init.end()), &error,
+                            -1, &expectedVoice, expectedProgram, expectedRevision);
 }
 
 bool VDX7AudioProcessor::hasUnexportedEdits() const noexcept
@@ -2273,6 +2324,7 @@ juce::String VDX7AudioProcessor::getCurrentPatchName() const
         return "---";
 
     char nameBuffer[11] {};
+    bool init = false;
     for (;;)
     {
         const auto before = patchNameRevision_.load(std::memory_order_acquire);
@@ -2281,6 +2333,7 @@ juce::String VDX7AudioProcessor::getCurrentPatchName() const
 
         for (std::size_t i = 0; i < patchNameSnapshot_.size(); ++i)
             nameBuffer[i] = patchNameSnapshot_[i].load(std::memory_order_relaxed);
+        init = currentInitVoiceSnapshot_.load(std::memory_order_relaxed);
 
         const auto after = patchNameRevision_.load(std::memory_order_acquire);
         if (before == after)
@@ -2288,6 +2341,7 @@ juce::String VDX7AudioProcessor::getCurrentPatchName() const
     }
 
     const auto name = juce::String::fromUTF8(nameBuffer);
+    if (init && name == "Init Prese") return "Init Preset";
     return name.isNotEmpty() ? name : "(unnamed)";
 }
 

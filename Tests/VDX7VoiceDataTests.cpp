@@ -41,6 +41,33 @@ int main()
             == (op == 0 ? 99 : 0), "only OP1 audible in init");
     require(std::string(reinterpret_cast<const char*>(init.data()+118), 10) == "Init Prese", "ten-character stored name without dirty marker");
     const auto untouched = vdx7InitVoice();
+    using P = VDX7VoiceData::Parameter;
+    using V = VDX7VoiceData::VoiceParameter;
+    for (int op = 0; op < 6; ++op)
+        for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
+        {
+            const auto field = static_cast<P>(p);
+            int expected = 0;
+            if (field == P::rate1 || field == P::rate2 || field == P::rate3
+                || field == P::level1 || field == P::level2 || field == P::level3) expected = 99;
+            if (field == P::rate4) expected = 80;
+            if (field == P::coarse) expected = 1;
+            if (field == P::outputLevel && op == 0) expected = 99;
+            require(VDX7VoiceData::getOperatorParameter(init.data(), init.size(), op, field) == expected,
+                    "all init operator parameters follow the approved seed");
+        }
+    for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
+    {
+        const auto field = static_cast<V>(p);
+        const int expected = p <= int(V::pitchRate4) ? 99 : p <= int(V::pitchLevel4) ? 50
+                           : field == V::algorithm ? 32 : 0;
+        require(VDX7VoiceData::getVoiceParameter(init.data(), init.size(), field) == expected,
+                "all init global voice parameters follow the approved seed");
+    }
+    const auto message = VDX7Sysex::encode(std::vector<uint8_t>(init.begin(), init.end()));
+    std::vector<uint8_t> initDecoded;
+    require(VDX7Sysex::decode(message, initDecoded)
+        && std::equal(initDecoded.begin(), initDecoded.end(), init.begin(), init.end()), "init voice SysEx round trip");
     init[0] = 0;
     require(vdx7InitVoice() == untouched, "init values are independent copies");
     // Synthetic diagnostics only: no firmware or factory-bank bytes.

@@ -16,6 +16,30 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+#### Aktuális állapot
+
+FEJLESZTÉS ALATT, 2026-10-07. #139–#146 és #149 beolvadt: a részletes
+hangszín- és motorhibák, a nulla/FF firmware és hibás cold-boot reset-cím
+elutasítása, valamint a ROM-mentes processor-állapot sanitizer-lefedettsége
+megvalósult. A `9ed484f` main Windows/macOS futása 15/15 CTest és 78 Python-teszt
+PASS; a #151 sanitizer 11/11 PASS. Ezek nem privát ROM-os vagy REAPER-elfogadások.
+#151 dokumentációs átadása is beolvadt; az új main `ba55afb` Windows/macOS
+platformfuttatásai is PASS (37630504017 és 37630504016). Az Init fejlesztési ág
+friss CI-kapui ettől különállóak.
+
+Hátravan: nem homogén sérült végrehajtható firmware és valódi boot-egészség
+követelményeinek specifikációja, kompatibilitási kontrollok és az érintett
+privát-ROM/hostpróbák tételes elfogadása. Optimalizálás csak mérés után.
+A már beolvadt PR/CI kapukat nem nyitjuk újra. SER7 külön halasztott munka;
+#147 Draft marad, teljes beolvasztása nem indokolt. A következő kiadásba kerülő
+D1-kör külön döntést igényel; a publikált 1.0.1 csomagok nem változnak.
+
+#### Korábbi részfeladatok és átadás
+
+Az alábbi dátumozott checkpointok történeti bizonyítékok. A bennük szereplő
+„hátravan”, „következő kapu” és NOT RUN az adott körre vonatkozik, nem írja
+felül a fenti aktuális összefoglalót.
+
 PR-kezelési átadás ChatGPT Work/Codex számára:
 [A 147 számú Draft PR és a halasztott SER7 diagnosztika](../validation/HANDOFF_20261007_PR147_DEFERRED_SER7_HU.md).
 Az általános reset-cím védelem már #149-cel beolvadt; a #147 teljes
@@ -69,7 +93,7 @@ firmware-egészséget; e részfeladatot nem jelöljük megoldottnak.
 A sanitizer közvetlen engine-tesztet futtat, a teljes processor/projektállapot
 teszt instrumentált lefedettsége külön nyitott feladat.
 
-Aktuális állapot: FEJLESZTÉS ALATT. #139–#143 beolvadt;
+Történeti állapot, 2026-10-06: FEJLESZTÉS ALATT. #139–#143 beolvadt;
 az `08aae7cae05d4a185d972a26d51b2023df6e0ab8` main Windows/macOS
 ellenőrzése 15/15 ROM-mentes CTesttel sikeres.
 
@@ -155,6 +179,27 @@ Optimalizálás csak mérés után: érvényes és korai/késői hibás adat, co
 
 ### D2 UTILITY Init Preset
 
+#### Aktuális fejlesztés
+
+2026-10-07: #150 adatgenerátora main-ban van. Az új fejlesztési kör beköti
+az UTILITY → Init Preset megerősítést és a munkahangszín cseréjét. A megerősítés
+csak a befogott hangszínre érvényes: közben változó tartalom/kiválasztás/revízió
+új megerősítést igényel. Mégse nem indít cserét. A gyári katalógus és a lemezen
+lévő USER.vub változatlan; a RAM-ban csak az aktuális szerkeszthető másolat cserélődik.
+Más munkahangszínek és PERFORMANCE/SETTINGS megmaradnak. E művelet nem automatikus
+USER-mentés: a régi munkahangszín szerkesztéseit SAVE AS-szel kell megőrizni.
+
+A kijelzett név Init Preset, dirty állapotban Init Preset*; tárolva Init Prese.
+Külön példányonkénti/slotonkénti projektmező őrzi a kijelzés eredetét, nem név
+alapján soroljuk át a betöltött SysEx-eket. Régi projektnél a mező alapértéke nulla.
+A pontos teszteredmények a [fejlesztési validációban](../validation/VALIDATION_20261007_INIT_PRESET.md)
+szerepelnek: helyi 15/15 ROM-mentes CTest ASan/UBSan mellett, 78 Python-teszt,
+privát v1.8 Init processor- és párbeszédablak-teszt PASS. Friss
+platform/sanitizer/review és valódi host-elfogadás
+előtt D2 nincs késznek vagy kiadottnak jelölve.
+
+#### Eredeti specifikáció és adatmodell checkpoint
+
 2026-10-07 első adatmodell-részfeladat, main alap:
 `c4bf603099eb6f6c4097715aca0017975e61c20e` (#149 beolvadt, három CI PASS).
 Saját VDX7 kezdőhangszín: algorithm 32, csak OP1 output 99, többiek 0;
@@ -168,11 +213,11 @@ PASS: helyi MSVC voice-data/SysEx komponensfuttatás. Új teljes pluginbuild és
 REAPER NOT RUN; friss PR CI/review szükséges. E checkpoint után a lentebbi
 „nincs implementáció” mondat a teljes felhasználói műveletre vonatkozik.
 
-Állapot: HALASZTOTT, jóváhagyva 2026-10-05. UTILITY → Init Preset után megerősítő ablak figyelmeztet a munkahangszín nem mentett szerkesztéseinek elvesztésére. Mégse teljes állapotmegőrzés; megerősítés csak a munkahangszínt inicializálja. Kijelző: `Init Preset*`; a csillag nem része az exportált DX7-névnek. A 10 karakteres tárolt név és a kijelzett felirat külön kezelendő.
+Eredetileg halasztott, jóváhagyva 2026-10-05; fejlesztése 2026-10-07 elindult. UTILITY → Init Preset után megerősítő ablak figyelmeztet a munkahangszín nem mentett szerkesztéseinek elvesztésére. Mégse teljes állapotmegőrzés; megerősítés csak a munkahangszínt inicializálja. Kijelző: `Init Preset*`; a csillag nem része az exportált DX7-névnek. A 10 karakteres tárolt név és a kijelzett felirat külön kezelendő.
 
 A gyári/USER bankhely nem írható felül. ROM, bankkatalógus, MIDI/performance és GUI settings változatlan: ez nem teljes settings reset. Init szerkeszthető, exportálható, külön menthető, DAW-projekttel visszaállítható. A kapott magazinos patch csak privát referencia, nem igazolt Yamaha INIT adat; nem kerül csomagba/Gitbe.
 
-Elfogadás: cancel/confirm, bank- és settings-azonosság, dirty jelző, export/külön mentés/projekt-recall, többpéldányos izoláció, hiányzó ROM és függő projekt védelme. Ellenőrzött paraméter-specifikáció szükséges; jelenleg nincs implementáció vagy új PASS.
+Elfogadás: cancel/confirm, bank- és settings-azonosság, dirty jelző, export/külön mentés/projekt-recall, többpéldányos izoláció, hiányzó ROM és függő projekt védelme. A részleges implementáció nem a teljes elfogadás bizonyítéka.
 
 ### D3 Importált DX7 bankkönyvtár
 

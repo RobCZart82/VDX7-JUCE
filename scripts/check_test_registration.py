@@ -18,6 +18,7 @@ state_rom_identity pending_rom_content_identity mono_corrected_processor mono_so
 LOCAL_ROM.update({"pre_rom_state_integration", "midi_reset"})
 LOCAL_ROM.update({"state_transitions", "cc120_timeline", "controller_reset"})
 LOCAL_ROM.add("export_acknowledgement")
+LOCAL_ROM.update({"init_preset", "init_preset_gui"})
 
 
 def validate(document, rom_enabled=True, factory_bank_enabled=False):

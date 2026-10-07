@@ -63,6 +63,7 @@ public:
     void resized() override;
 
 private:
+    friend struct VDX7RegressionAccess;
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
 
     juce::Rectangle<int> referenceRect(float x, float y, float width, float height) const;
@@ -82,6 +83,7 @@ private:
     void chooseRom();
     void chooseSyx();
     void showUtilityMenu();
+    void showInitPresetConfirmation();
     void showSettings();
     void showSaveAsMenu();
     void showPerformance(bool);
