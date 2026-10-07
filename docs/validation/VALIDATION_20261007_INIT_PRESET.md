@@ -79,7 +79,7 @@ real Windows/macOS REAPER acceptance or release packaging/publication.
 ## Extended audio validation
 
 The next test-only round starts from merge-main `269e2305423de4410bbf30022aeb22373e531e59`
-after #152. Its branch Windows/macOS/sanitizer checks all passed and the mixed
+after #152. The #152 branch Windows/macOS/sanitizer checks all passed and the mixed
 confirmation capture review was resolved. Merge-main Windows and macOS checks
 also PASS (37641092380 and 37641092371). No production DSP, plugin/parameter identity, GUI, admission
 policy, release asset or installed plugin changes in this round.
@@ -118,6 +118,31 @@ with ASan/UBSan. The matrix also passes independently with the original 16 KiB R
 
 This is automated local processor validation, not real Windows/macOS REAPER
 acceptance, listening quality, latency/performance benchmarking or a full ROM suite.
+
+## Non Init source regression
+
+The #153 review identified that the initial matrix started with Init synthesis
+bytes and changed only the voice name. That version exercised note lifecycle,
+but could not detect an Init operation that replaced only name/provenance.
+
+The corrected matrix starts each case with the audible OP1 carrier set to coarse
+2, fine 37 and output 80 instead of Init's 1, 0 and 99. Before confirming Init,
+the sounding voice must contain these values and differ from the seed in the
+first 118 bytes, excluding its name. After confirmation, all 128 bytes must
+equal the generated Init seed, including the restored synthesis parameters.
+
+PASS: all 12 corrected cases with the original private 16 KiB v1.8 firmware,
+then 4/4 registered profile/Init tests with the synthetic combined fixture,
+15/15 ROM-free CTests and 78 Python fixtures. ASan/UBSan remained enabled for
+the C++ tests, with leak detection disabled. Actual local-ROM/private-bank
+registration inventories and checker negative controls also pass.
+
+An isolated local mutation retained the source's 118 synthesis bytes while
+replacing its name and setting Init provenance. The corrected matrix rejected
+this mutant in its first case at the exact Init bytes/title assertion (exit 1).
+The mutation was removed, the production source is unchanged, and the rebuilt
+unmodified implementation passed the registered tests above. This negative
+control demonstrates detection of the review's specific missed-reset failure.
 
 ## Remaining acceptance gates
 

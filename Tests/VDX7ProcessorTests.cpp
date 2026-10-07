@@ -342,6 +342,11 @@ static void testInitAudioMatrix(const juce::File& romFile)
         require(p->loadRomFromFile(romFile), "matrix firmware load");
         VDX7RegressionAccess::installSyntheticCatalog(*p);
         require(p->selectFactoryBank(0) && p->renameVoice("MATRIX"), "matrix synthetic source");
+        // OP1 is the audible carrier in algorithm 32. Start with different
+        // synthesis bytes so a name/provenance-only Init cannot pass.
+        set(*p, VDX7ParameterIDs::operatorParameter(0, VDX7VoiceData::Parameter::coarse), 2);
+        set(*p, VDX7ParameterIDs::operatorParameter(0, VDX7VoiceData::Parameter::fine), 37);
+        set(*p, VDX7ParameterIDs::operatorParameter(0, VDX7VoiceData::Parameter::outputLevel), 80);
         require(p->setControllerSettingFromUi(0, 0, 42) && p->setMasterTuneFromUi(7)
             && p->setMidiInputChannelFromUi(3), "matrix PERFORMANCE/SETTINGS control");
         p->prepareToPlay(sampleRate, blockSize);
@@ -389,6 +394,15 @@ static void testInitAudioMatrix(const juce::File& romFile)
         VDX7AudioProcessor::WorkingVoiceSnapshot snapshot;
         juce::String error;
         require(p->captureWorkingVoiceSnapshot(snapshot, error), "matrix init capture while sounding");
+        const auto seed = vdx7InitVoice();
+        require(!std::equal(snapshot.voice.begin(), snapshot.voice.begin() + 118, seed.begin())
+            && VDX7VoiceData::getOperatorParameter(snapshot.voice.data(), snapshot.voice.size(),
+                0, VDX7VoiceData::Parameter::coarse) == 2
+            && VDX7VoiceData::getOperatorParameter(snapshot.voice.data(), snapshot.voice.size(),
+                0, VDX7VoiceData::Parameter::fine) == 37
+            && VDX7VoiceData::getOperatorParameter(snapshot.voice.data(), snapshot.voice.size(),
+                0, VDX7VoiceData::Parameter::outputLevel) == 80,
+                "matrix sounding source synthesis differs from Init, excluding its name");
         render(double(blockSize * 2) / sampleRate);
         require(p->initialiseVoiceFromUi(snapshot.voice, snapshot.program, snapshot.revision, error),
                 "matrix init confirmation after intervening audio callbacks");

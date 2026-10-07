@@ -206,6 +206,9 @@ megszólaló/sustainnel kitartott hangok alatti Init, felengedés, új hangindí
 és módosított Init projekt-visszaállítása. Ezek processor-harness tesztek,
 nem valódi REAPER- vagy hangminőségi elfogadások. Kizárólag az azonosított
 1.8-as firmware-rel értékelendők; az 1.6-os maskrom nem azonos tesztalap.
+Az #153 review alapján a mátrix eltérő OP1 coarse/fine/output értékekből indul,
+nem csupán átnevezett Init-ből. Helyi 12/12 PASS; a csak nevet/eredetjelzést
+cserélő hibás kontrollt elutasítja. Az új commit CI/review ellenőrzése még kapu.
 
 #### Eredeti specifikáció és adatmodell checkpoint
 
