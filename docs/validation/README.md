@@ -14,6 +14,8 @@ tesztkör korlátozza az állításokat. A teljes név szerinti jegyzék alább 
 
 ## Reports by filename
 
+- [A 147 számú PR és a halasztott SER7 diagnosztika átadása](HANDOFF_20261007_PR147_DEFERRED_SER7_HU.md)
+
 - [VALIDATION_20261006_ROM_DIAGNOSTIC_WIRING.md](VALIDATION_20261006_ROM_DIAGNOSTIC_WIRING.md)
 
 - [AUDIT_REPORT_20261005_CODE_AND_REPOSITORY_REVIEW.md](AUDIT_REPORT_20261005_CODE_AND_REPOSITORY_REVIEW.md)
