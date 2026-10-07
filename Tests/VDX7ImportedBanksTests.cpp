@@ -70,7 +70,13 @@ int main()
         juce::MemoryBlock unchanged;
         require(folder.getChildFile("a-long-prefix-bank-alpha.syx").loadFileAsData(unchanged)
             && unchanged == juce::MemoryBlock(message.data(), message.size()), "source not rewritten");
-        const auto unicode = juce::String::fromUTF8("Árvíztűrő🎹abcdefghijkl.syx");
+        // Code points keep this filesystem test independent of MSVC's source
+        // execution encoding while still testing accented letters and emoji.
+        const auto unicode = juce::String::charToString(0x00c1) + "rv"
+            + juce::String::charToString(0x00ed) + "zt"
+            + juce::String::charToString(0x0171) + "r"
+            + juce::String::charToString(0x0151)
+            + juce::String::charToString(0x1f3b9) + "abcdefghijkl.syx";
         const auto label = displayName(unicode);
         require(label.length() == 15 && label.endsWith(juce::String::charToString(0x2026))
             && label.contains(juce::String::charToString(0x1f3b9)), "Unicode truncation retains whole code points");
