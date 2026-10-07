@@ -185,7 +185,9 @@ Optimalizálás csak mérés után: érvényes és korai/késői hibás adat, co
 #152 Windows/macOS/sanitizer ellenőrzése PASS, a vegyes hangszín/kiválasztás
 befogási versenyhelyzete javítva, review rendezve. Merge main: `269e230`.
 A merge utáni main Windows/macOS ellenőrzése PASS (37641092380, 37641092371).
-Az új audio-tesztág ellenőrzése külön kapu.
+#153 is beolvadt `1675c83` main-nal: az új head Windows/macOS/sanitizer és
+kód/biztonsági review sikeres, a merge utáni main Windows/macOS PASS
+(37651481436, 37651481370). E kapuk teljesültek; a valódi host-elfogadás külön marad.
 Az UTILITY → Init Preset megerősítést kér a munkahangszín cseréjéhez. A megerősítés
 csak a befogott hangszínre érvényes: közben változó tartalom/kiválasztás/revízió
 új megerősítést igényel. Mégse nem indít cserét. A gyári katalógus és a lemezen
@@ -208,7 +210,7 @@ nem valódi REAPER- vagy hangminőségi elfogadások. Kizárólag az azonosítot
 1.8-as firmware-rel értékelendők; az 1.6-os maskrom nem azonos tesztalap.
 Az #153 review alapján a mátrix eltérő OP1 coarse/fine/output értékekből indul,
 nem csupán átnevezett Init-ből. Helyi 12/12 PASS; a csak nevet/eredetjelzést
-cserélő hibás kontrollt elutasítja. Az új commit CI/review ellenőrzése még kapu.
+cserélő hibás kontrollt elutasítja. A #153 CI/review kapuja teljesült.
 
 #### Eredeti specifikáció és adatmodell checkpoint
 
@@ -233,7 +235,48 @@ Elfogadás: cancel/confirm, bank- és settings-azonosság, dirty jelző, export/
 
 ### D3 Importált DX7 bankkönyvtár
 
-Állapot: HALASZTOTT, jóváhagyva 2026-10-05. Külön Windows/macOS bedobós mappában több szabványos 32-hangszínes bank legyen egyszerre használható. Új példány beolvassa, nyitott példányban explicit Refresh banks; külön a Factory Banks mappától és USER.vub-tól. Pontos útvonal és fájl/bájt/bankszámkorlát a specifikációban rögzítendő.
+Állapot: ELŐKÉSZÍTÉS ALATT, jóváhagyva 2026-10-05; első adatkezelő részfeladat
+2026-10-07. Külön Windows/macOS bedobós mappában több szabványos 32-hangszínes
+bank legyen egyszerre használható. Új példány beolvassa, nyitott példányban
+explicit Refresh banks; külön a Factory Banks mappától és USER.vub-tól.
+
+#### Első katalógus részfeladat
+
+Kiindulás: `1675c83`, #153 után mindkét main platformellenőrzés zöld.
+Az önálló `VDX7ImportedBanks` modul egyelőre csak tesztcélba van bekötve,
+nem a pluginba: nincs startup scan, új GUI-menü, projektmező vagy audio-változás.
+Az alábbi könyvtárak a modul célútvonalai, még nem működő felhasználói funkció:
+macOS `~/Library/Application Support/VDX7-JUCE/Imported Banks`, Windows
+`%APPDATA%\VDX7-JUCE\Imported Banks`. A modul nem hozza létre őket magától.
+
+Nem rekurzív, legfeljebb 512 könyvtárbejegyzést és 128 SysEx-jelöltet vizsgál.
+Fájlonként legfeljebb 4104 bájt olvasható, bankonként 4096 bájt VMEM marad,
+legfeljebb 128 egyedi bankkal (512 KiB nyers bankadat). A nem-SysEx elemek is
+számítanak a könyvtárkorlátba. Túllépés, megszakítás vagy enumerációs hiba
+üres, nem teljes eredményt ad; élő katalógust ilyenkor tilos lecserélni.
+Szabályos hiányzó mappa üres első indítás; sérült/egyhangszínes/idegen fájl
+látható figyelmeztetéssel kimarad. A megfigyelt szimbolikus link és nem szabályos
+fájl kimarad. Ez nem fájlrendszer-biztonsági sandbox, és nem garantált I/O-időkorlát.
+
+Azonosító a teljes validált VMEM SHA-256-ja; duplikációhoz a bájtok is egyeznek.
+Fájlnév és MIDI-csatorna nem azonosító. Determinisztikus fájlnévsorrendben az első
+másolat marad, későbbi másolat figyelmeztetést kap. Tartalom szerint felismert
+gyári bank a Factory Banks mappába irányító figyelmeztetést kap; nem töltjük be
+importált másolatként. Nincs adatnormalizálás, a korábbi legacy szabályok maradnak.
+15 Unicode-kódpontnyi listanév (14 + `…`) mellett a teljes eredeti fájlnév és a
+tartalmi azonosító is megmarad; az azonos rövid címke nem olvaszt össze bankokat.
+A pixelalapú elrendezés, tooltip és azonos rövid nevek látható megkülönböztetése
+a későbbi GUI-részfeladat része.
+
+Helyi ASan/UBSan: 16/16 ROM-mentes CTest és 78 Python-regresszió PASS;
+az új szintetikus tesztben validálás, legacy bájtmegőrzés, csatorna/névfüggetlen
+azonosítás, átnevezés, Unicode, duplikátum, pontos limitek, megszakítás,
+link/FIFO-kezelés és eredményizoláció szerepel. A privát ROM/bank adatai nem
+kellenek ehhez a teszthez. Friss Windows/macOS/sanitizer CI és review még kapu.
+A teljes D3 nincs kész: következő a korlátozott állapotformátum és biztonságos
+processor-bekötés, majd GUI és projekt-recall/host elfogadás.
+
+#### Megőrzött felhasználói koncepció
 
 - ROM1A–ROM4B alatt Imported Banks csoport; ismeretlen érvényes bank nem kap hamis gyári besorolást. Lista fix szélességű és görgethető; keresés opcionális későbbi ötlet.
 - Banknév a fájlnév `.syx` nélkül: legfeljebb 15 látható karakter (14 + `…`), szükség esetén pixelalapú rövidítés, Unicode karakter sérülése nélkül. Teljes név tooltipben; eredeti fájlnév változatlan.

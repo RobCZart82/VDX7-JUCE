@@ -93,6 +93,15 @@ target_compile_definitions(vdx7_factory_banks_tests PRIVATE JUCE_USE_CURL=0 JUCE
 add_test(NAME vdx7_factory_banks COMMAND vdx7_factory_banks_tests)
 set_tests_properties(vdx7_factory_banks PROPERTIES TIMEOUT 20 LABELS "rom-free")
 
+# Preparatory catalog only: not linked to the plugin until runtime/state admission.
+add_executable(vdx7_imported_banks_tests Tests/VDX7ImportedBanksTests.cpp
+    Source/VDX7ImportedBanks.cpp Source/VDX7FactoryBanks.cpp)
+target_include_directories(vdx7_imported_banks_tests PRIVATE Source)
+target_link_libraries(vdx7_imported_banks_tests PRIVATE juce::juce_data_structures juce::juce_cryptography vdx7_voice_data)
+target_compile_definitions(vdx7_imported_banks_tests PRIVATE JUCE_USE_CURL=0 JUCE_WEB_BROWSER=0)
+add_test(NAME vdx7_imported_banks COMMAND vdx7_imported_banks_tests)
+set_tests_properties(vdx7_imported_banks PROPERTIES TIMEOUT 30 LABELS "rom-free")
+
 add_executable(vdx7_deferred_midi_tests Tests/VDX7DeferredMidiTests.cpp)
 target_include_directories(vdx7_deferred_midi_tests PRIVATE Source)
 target_link_libraries(vdx7_deferred_midi_tests PRIVATE vdx7_voice_data)
@@ -354,7 +363,7 @@ endif()
 # must compile even without a ROM; execution stays opt-in and local only.
 add_custom_target(vdx7_ci_checks DEPENDS
     vdx7_user_bank_tests vdx7_deferred_midi_tests vdx7_latest_display_tests vdx7_status_priority_tests
-    vdx7_bounded_file_tests vdx7_voice_data_tests vdx7_factory_banks_tests
+    vdx7_bounded_file_tests vdx7_voice_data_tests vdx7_factory_banks_tests vdx7_imported_banks_tests
     vdx7_algorithm_tests vdx7_resampling_tests vdx7_rom_diagnostic_tests vdx7_gui_header_tests vdx7_stress_tests
     vdx7_processor_tests vdx7_stability_tests vdx7_midi_range_tests vdx7_timing_tests)
 add_custom_target(vdx7_all_tests DEPENDS vdx7_ci_checks)
