@@ -140,13 +140,17 @@ public:
     static juce::File factoryBankFolder() { return VDX7FactoryBanks::defaultFolder(); }
     // Explicit non-RT refresh. Does not replace the current working voice RAM.
     bool refreshFactoryBanks(const juce::File& folder, juce::String& report);
-    // Non-RT catalog/state integration only. No startup scan or bank selection
-    // yet. Handles contain library data, not live selection. Detached immutable
+    // Non-RT catalog/state integration. No startup scan or new GUI yet.
+    // Handles contain library data, not live selection. Detached immutable
     // handles keep large copies/encoding out of locks.
     using ImportedBankSnapshot = std::shared_ptr<const VDX7ImportedBanks::Snapshot>;
     ImportedBankSnapshot getImportedBankSnapshot() const;
     bool refreshImportedBanks(const juce::File&, juce::String& report,
                               const std::function<bool()>& shouldCancel = {});
+    // Explicit non-RT selection of an editable copy, not a file reopen. The
+    // caller's catalog token must still be current at the RAM transaction.
+    bool selectImportedBank(const ImportedBankSnapshot& expectedCatalog,
+                            const juce::String& contentId, int program, juce::String& error);
     static constexpr int maxProjectStateBytes = 2 * 1024 * 1024;
     int getCurrentBank() const;
     juce::String getCurrentPatchName() const;
@@ -169,7 +173,8 @@ public:
 private:
     bool loadPackedVoices(const std::vector<uint8_t>&, juce::String* error, int selectProgram = -1,
                           const VDX7UserBank::Voice* initExpected = nullptr, int initProgram = -1,
-                          uint32_t initRevision = 0);
+                          uint32_t initRevision = 0,
+                          const ImportedBankSnapshot* importedExpected = nullptr, int importedOrigin = -1);
     friend struct VDX7RegressionAccess;
     void restoreSavedStateLocked(const juce::ValueTree&);
     bool observeStateInstall(); // Audio-thread owned; also rechecked under engine lock.

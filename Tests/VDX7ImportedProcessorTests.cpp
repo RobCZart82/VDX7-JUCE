@@ -6,12 +6,14 @@
 #include <iostream>
 #include <stdexcept>
 
-static std::function<void()> scanBoundary, saveBoundary;
+static std::function<void()> scanBoundary, saveBoundary, selectionBoundary;
 void vdx7TestImportedBankScanBoundary()
 { auto action = std::move(scanBoundary); scanBoundary = {}; if (action) action(); }
 void vdx7TestRomStateBoundary()
 { auto action = std::move(saveBoundary); saveBoundary = {}; if (action) action(); }
 void vdx7TestStateBoundary(std::size_t) {}
+void vdx7TestImportedBankSelectionBoundary()
+{ auto action = std::move(selectionBoundary); selectionBoundary = {}; if (action) action(); }
 static void require(bool ok, const char* message)
 { if (!ok) throw std::runtime_error(message); }
 
@@ -95,6 +97,10 @@ static void testNoRom()
     require(p->refreshImportedBanks(folder, report), "explicit pre-ROM catalog refresh");
     const auto before = p->getImportedBankSnapshot();
     require(before && before->banks.size() == 2 && before->selectedId.isEmpty(), "immutable catalog has no fabricated live origin");
+    const auto unloadedState = save(*p);
+    require(!p->selectImportedBank(before, first.contentId, 0, report)
+        && report.contains("firmware first") && save(*p) == unloadedState,
+        "selection without firmware leaves state and catalog unchanged");
     setFeedback(*p, 6);
     const auto saved = save(*p);
     require(tree(saved).getChildWithName("DeferredVoiceEdits")["voice9"].toString() == "6", "catalog save preserves queued voice edits");
@@ -127,6 +133,10 @@ static void testNoRom()
         "deleted source cannot change pending bank data or later edits");
     require(!q->refreshImportedBanks(folder, report), "pending project blocks refresh before matching ROM");
     const auto kept = q->getImportedBankSnapshot();
+    const auto pendingState = save(*q);
+    require(!q->selectImportedBank(kept, first.contentId, 0, report)
+        && report.contains("Project preserved") && save(*q) == pendingState,
+        "pending project blocks imported selection without consuming edits");
     auto bad = tree(saved);
     bad.getChildWithName("ImportedBanks").setProperty("version", 2, nullptr);
     restore(*q, binary(bad));
@@ -180,6 +190,12 @@ static void testBoundaries()
     juce::String report;
     auto p = std::make_unique<VDX7AudioProcessor>(false);
     require(p->refreshImportedBanks(a, report), "initial boundary catalog");
+    const auto beforeSelection = p->getImportedBankSnapshot();
+    selectionBoundary = [&] { require(p->refreshImportedBanks(b, report), "new catalog during selection lookup"); };
+    require(!p->selectImportedBank(beforeSelection, syntheticBank(200).contentId, 0, report)
+        && report.contains("library changed") && catalog(*p).banks[0].contentId == syntheticBank(201).contentId,
+        "ROM-free second token check detects lookup-to-transaction replacement before firmware admission");
+    require(p->refreshImportedBanks(a, report), "reset isolated boundary catalog");
     scanBoundary = [&] { require(p->refreshImportedBanks(b, report), "newer nested scan publication"); };
     require(!p->refreshImportedBanks(a, report) && catalog(*p).banks[0].contentId == syntheticBank(201).contentId,
         "older scan cannot overwrite a newer library generation");
@@ -198,6 +214,12 @@ static void testBoundaries()
     scanBoundary = [&] { restore(*p, otherState); };
     require(!p->refreshImportedBanks(a, report) && catalog(*p).banks[0].contentId == syntheticBank(201).contentId,
         "project restore during scan invalidates stale publication");
+    const auto pendingSelectionToken = p->getImportedBankSnapshot();
+    selectionBoundary = [&] { restore(*p, stateA); };
+    require(!p->selectImportedBank(pendingSelectionToken, syntheticBank(201).contentId, 0, report)
+        && report.contains("library changed") && catalog(*p).banks[0].contentId == syntheticBank(200).contentId,
+        "project restored after lookup cannot be overwritten by old imported choice");
+    restore(*p, otherState);
     saveBoundary = [&] { restore(*p, stateA); };
     const auto pendingDetached = save(*p);
     VDX7ImportedBanks::Snapshot pendingOld;
@@ -218,20 +240,58 @@ static void testWithRom(const juce::File& rom)
     auto p = std::make_unique<VDX7AudioProcessor>(false);
     p->prepareToPlay(48000, 128);
     require(p->loadRomFromFile(rom), "private verified firmware");
+    require(p->setControllerSettingFromUi(0, 0, 42) && p->setPlaySettingFromUi(3, 63)
+        && p->setPitchBendSettingFromUi(0, 7) && p->setMasterTuneFromUi(7)
+        && p->setMidiInputChannelFromUi(3), "non-default settings before imported selection");
     juce::String report;
     require(p->refreshImportedBanks(folder, report), "loaded explicit catalog refresh");
     setFeedback(*p, 6);
-    auto edited = tree(save(*p)); // Apply the queued edit before the preservation oracle.
-    const auto before = VDX7RegressionAccess::ram(*p);
-    require(p->refreshImportedBanks(folder, report) && VDX7RegressionAccess::ram(*p) == before
+    save(*p); // Apply the queued edit before the preservation oracle.
+    const auto oldRam = VDX7RegressionAccess::ram(*p);
+    require(p->refreshImportedBanks(folder, report) && VDX7RegressionAccess::ram(*p) == oldRam
         && p->isCurrentVoiceModified(), "loaded refresh preserves all engine RAM and dirty working voice");
-    VDX7ImportedBanks::Snapshot snapshot;
-    bool present = false;
-    require(VDX7ImportedBanks::readState(edited, snapshot, present), "read processor catalog");
-    // Synthetic project-origin fixture only: no new imported bank selector here.
-    snapshot.selectedId = selected.contentId;
-    require(VDX7ImportedBanks::writeState(edited, snapshot), "attach validated project origin");
-    edited.setProperty("bank", -1, nullptr);
+    const auto selectionToken = p->getImportedBankSnapshot();
+    const auto unselectedState = save(*p);
+    const auto controllers = p->getControllerSettings();
+    const auto play = p->getPlaySettings();
+    const auto bend = p->getPitchBendSettings();
+    VDX7FactoryBanks::Snapshot factoryBefore;
+    bool factoryPresent = false;
+    require(VDX7FactoryBanks::readState(tree(unselectedState), factoryBefore, factoryPresent) && factoryPresent,
+        "capture independent factory catalog before imported selection");
+    const auto impostor = std::make_shared<const VDX7ImportedBanks::Snapshot>(*selectionToken);
+    for (int program : {-1, 32})
+        require(!p->selectImportedBank(selectionToken, selected.contentId, program, report), "out-of-range program rejected");
+    require(!p->selectImportedBank({}, selected.contentId, 0, report)
+        && !p->selectImportedBank(impostor, selected.contentId, 0, report)
+        && !p->selectImportedBank(selectionToken, "not-a-bank", 0, report)
+        && save(*p) == unselectedState, "invalid token/id/program preserves complete prior state");
+    selectionBoundary = [&] { require(p->refreshImportedBanks(folder, report), "refresh during selection lookup"); };
+    require(!p->selectImportedBank(selectionToken, selected.contentId, 7, report)
+        && report.contains("library changed") && save(*p) == unselectedState,
+        "stale token checked again inside RAM transaction, before flushing or importing");
+    const auto currentToken = p->getImportedBankSnapshot();
+    require(!p->selectImportedBank(selectionToken, selected.contentId, 7, report), "stale displayed catalog rejected");
+    require(p->selectFactoryBank(0), "older queued factory switch before imported transaction");
+    p->selectProgramFromUi(2);
+    setFeedback(*p, 5);
+    require(p->selectImportedBank(currentToken, selected.contentId, 7, report)
+        && p->getCurrentBank() == -1 && p->getCurrentProgram() == 7 && !p->isCurrentVoiceModified()
+        && catalog(*p).selectedId == selected.contentId
+        && std::equal(selected.packed.begin(), selected.packed.end(), VDX7RegressionAccess::ram(*p).begin()),
+        "actual selection installs exact bank bytes and requested program, without migrating older queued edits");
+    VDX7FactoryBanks::Snapshot factoryAfter;
+    require(p->getControllerSettings() == controllers && p->getPlaySettings() == play
+        && p->getPitchBendSettings() == bend && p->getMasterTune() == 7 && p->getMidiInputChannel() == 3
+        && VDX7FactoryBanks::readState(tree(save(*p)), factoryAfter, factoryPresent)
+        && factoryAfter.image == factoryBefore.image && factoryAfter.mask == factoryBefore.mask,
+        "imported selection preserves performance/settings and original factory catalog");
+    setFeedback(*p, 6);
+    auto edited = tree(save(*p));
+    const auto before = VDX7RegressionAccess::ram(*p);
+    require(p->isCurrentVoiceModified() && catalog(*p).selectedId == selected.contentId
+        && currentToken->banks[0].packed == selected.packed,
+        "working edit retains imported origin without modifying immutable source bank");
     const auto project = binary(edited);
     restore(*p, project);
     require(p->isProjectReady() && p->isCurrentVoiceModified()
@@ -254,6 +314,8 @@ static void testWithRom(const juce::File& rom)
     restore(*reopened, project); // Saved ROM path is permitted; bank folder is gone.
     require(reopened->isProjectReady() && reopened->isCurrentVoiceModified()
         && catalog(*reopened).selectedId == selected.contentId
+        && reopened->getCurrentProgram() == 7 && reopened->getMasterTune() == 7
+        && reopened->getMidiInputChannel() == 3
         && std::equal(before.begin(), before.begin() + 4096, VDX7RegressionAccess::ram(*reopened).begin()),
         "actual processor binary recall is independent of deleted source bank folder");
     juce::AudioBuffer<float> audio(2, 128); juce::MidiBuffer midi;
@@ -263,6 +325,9 @@ static void testWithRom(const juce::File& rom)
     restore(*waiting, binary(unavailable));
     require(!waiting->isProjectReady() && catalog(*waiting).selectedId == selected.contentId,
         "missing firmware preserves imported origin and working RAM as pending project");
+    const auto waitingState = save(*waiting);
+    require(!waiting->selectImportedBank(waiting->getImportedBankSnapshot(), selected.contentId, 0, report)
+        && save(*waiting) == waitingState, "imported selection cannot discard a pending edited project");
     setFeedback(*waiting, 5);
     require(waiting->loadRomFromFile(rom) && waiting->isProjectReady()
         && catalog(*waiting).selectedId == selected.contentId
@@ -291,6 +356,24 @@ static void testWithRom(const juce::File& rom)
     midi.addEvent(juce::MidiMessage(message.data(), int(message.size())), 0);
     p->processBlock(audio, midi);
     require(catalog(*p).selectedId.isEmpty() && oldHandle->banks.size() == 2, "live MIDI bank replacement clears origin and keeps immutable library");
+    restore(*p, project);
+    scanBoundary = [&] {
+        require(p->selectImportedBank(p->getImportedBankSnapshot(), syntheticBank(201).contentId, 3, report),
+            "new imported selection during detached scan");
+    };
+    require(!p->refreshImportedBanks(folder, report) && report.contains("changed during scan")
+        && catalog(*p).selectedId == syntheticBank(201).contentId && p->getCurrentProgram() == 3,
+        "imported selection invalidates prior-origin scan and does not reopen missing source file");
+    p->selectProgramFromUi(17);
+    midi.clear();
+    p->processBlock(audio, midi);
+    require(p->getCurrentProgram() == 17 && catalog(*p).selectedId == syntheticBank(201).contentId,
+        "ordinary program selection retains imported bank origin");
+    VDX7AudioProcessor::WorkingVoiceSnapshot initExpected;
+    require(p->captureWorkingVoiceSnapshot(initExpected, report)
+        && p->initialiseVoiceFromUi(initExpected.voice, initExpected.program, initExpected.revision, report)
+        && catalog(*p).selectedId.isEmpty() && p->getImportedBankSnapshot()->banks.size() == 2,
+        "confirmed Init creates new CUSTOM working patch without deleting imported bank library");
 }
 
 int main(int argc, char** argv)
@@ -306,7 +389,7 @@ int main(int argc, char** argv)
     }
     catch (const std::exception& error)
     {
-        scanBoundary = {}; saveBoundary = {};
+        scanBoundary = {}; saveBoundary = {}; selectionBoundary = {};
         std::cerr << "FAIL: " << error.what() << '\n';
         return 1;
     }
