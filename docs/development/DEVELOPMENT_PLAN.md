@@ -16,6 +16,20 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+2026-10-07 privát kompatibilitási kontroll: a felhasználó további helyi
+firmware-eket biztosított fejlesztési tesztekhez. PASS: 16 KB `DX7-V1-8.OBJ`
+(SHA256 `6e7aa7b3605131c124914abbc74078acf7bd78354379d6b3ad78373ab7bfd383`)
+és 16 KB `yamaha_dx7_ya2138.bin`
+(SHA256 `3457e3457d54dad767dc57df18119dcbfbec245ee32528f56d1946cd16b4cb8b`)
+a #147 helperrel betöltődik, és hibás új kép után a RAM megmarad.
+Ez a már helyben fordított közvetlen engine-teszt futtatása, nem új teljes
+pluginbuild, hallható hangzáspróba vagy firmware boot-egészség igazolás.
+A cartridge archívum bankadat, nem további firmware; nincs SER7 bizonyíték.
+Új ROM-mentes processor-regresszió teszteli a nulla/FF és nem homogén BFFF
+reset-című kép felhasználói hibaszövegét és az unloaded állapotot.
+Helyi processor-futtatás NOT RUN; új head CI szükséges. REAPER NOT RUN.
+Csak a tesztkód és ez a kontrolljegyzék kerül GitHubra, ROM/bankadat nem.
+
 2026-10-07 #147 következő kontrollköre: az első head Windows/macOS/sanitizer
 PASS, de a Draft kompatibilitási kapu megmarad. A reset-vektor admission
 külön null/size-védett, mellékhatásmentes helperbe került; az összes 65536
