@@ -98,6 +98,10 @@ B) 16 KB firmware:
 Méret:
     32 768 byte
 
+Ajánlott firmware: eredeti DX7 Mk I v1.8 (IG11469).
+Special Edition / SER-7: nem támogatott, a VDX7-hez nem ajánlott.
+A sikeres fájlbetöltés nem jelent teljes működési kompatibilitást.
+
 DX7 Mk I v1.8 / IG11469 referencia:
     Size:   16 384 bytes
     CRC32:  6cbb0865
@@ -225,6 +229,10 @@ With 16 KB firmware the plugin automatically looks for:
 
 Size:
     32,768 bytes
+
+Recommended firmware: original DX7 Mk I v1.8 (IG11469).
+Special Edition / SER-7: unsupported and not recommended for VDX7.
+Successful file loading does not establish full functional compatibility.
 
 DX7 Mk I v1.8 / IG11469 reference:
     Size:   16,384 bytes

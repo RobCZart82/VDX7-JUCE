@@ -64,6 +64,9 @@ Ha nincs hang, ellenőrizd a firmware állapotát, a MIDI útvonalát, a sáv mo
 
 **Yamaha firmware és gyári hangadat nincs mellékelve.** Csak olyan fájlokat használj, amelyek használatára jogosult vagy; a projektmentés nem csomagolja be a firmware-t.
 
+**Ajánlott firmware: eredeti Yamaha DX7 Mk I v1.8 (IG11469).**
+A SER-7 a VDX7-hez nem ajánlott; sikeres betöltése nem működési kompatibilitás.
+
 **Támogatott firmware: eredeti Yamaha DX7 Mk I v1.8 (IG11469).
 A Special Edition / SER-7 firmware nem támogatott.** Ennek futás közbeni
 működése, GUI-vezérlése és projekt-visszaállítása nincs igazolva a VDX7-JUCE-ban.

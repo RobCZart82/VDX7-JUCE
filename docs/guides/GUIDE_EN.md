@@ -59,6 +59,9 @@ If there is no sound, check firmware status, MIDI routing, track monitoring and 
 
 **No Yamaha firmware or factory voice data is included.** Supply files you are entitled to use; project saving does not bundle the firmware.
 
+**Recommended firmware: original Yamaha DX7 Mk I v1.8 (IG11469).**
+SER-7 is not recommended for VDX7; successful loading is not functional compatibility.
+
 **Supported firmware: original Yamaha DX7 Mk I v1.8 (IG11469). Special Edition
 / SER-7 firmware is not supported.** Its runtime behaviour, GUI controls and
 project recall have not been validated for VDX7-JUCE. Successful ROM loading
