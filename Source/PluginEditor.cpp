@@ -487,7 +487,7 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     performanceTab_.setTooltip("Global controller range and assignments; saved with the DAW project.");
     utilityTab_.setClickingTogglesState(false);
     utilityTab_.setRadioGroupId(0);
-    utilityTab_.setTooltip("Rename voice and copy/paste the selected operator.");
+    utilityTab_.setTooltip("Initialise or rename the working voice, and copy/paste the selected operator.");
     utilityTab_.onClick = [this] { showUtilityMenu(); };
 
     static constexpr const char* bankNames[] =
@@ -1603,6 +1603,7 @@ void VDX7AudioProcessorEditor::showUtilityMenu()
 {
     juce::PopupMenu menu;
     menu.addItem(1, "Rename voice...");
+    menu.addItem(2, "Init Preset...");
     menu.addSeparator();
     menu.addItem(4, "Copy OP" + juce::String(selectedOperator_+1));
     menu.addItem(5, "Paste into OP" + juce::String(selectedOperator_+1), processor_.hasCopiedOperator());
@@ -1615,12 +1616,37 @@ void VDX7AudioProcessorEditor::showUtilityMenu()
             switch (result)
             {
                 case 1: safe->renameVoice(); break;
+                case 2: safe->showInitPresetConfirmation(); break;
                 case 4: safe->processor_.copyOperator(op); break;
                 case 5: safe->processor_.pasteOperator(op); break;
                 default: break;
             }
             safe->refresh(true);
         });
+}
+
+void VDX7AudioProcessorEditor::showInitPresetConfirmation()
+{
+    VDX7UserBank::Voice voice;
+    juce::String error;
+    if (!processor_.captureUserPatch(voice, error)) { showError("Init Preset unavailable", error); return; }
+    const int program = processor_.getCurrentProgram();
+    const auto revision = processor_.getOperatorVoiceRevision();
+    juce::Component::SafePointer<VDX7AudioProcessorEditor> safe(this);
+    juce::AlertWindow::showOkCancelBox(juce::MessageBoxIconType::WarningIcon,
+        "Init Preset?",
+        "Replace the current working sound with Init Preset? Unsaved edits to this sound will be lost.\n"
+        "Use SAVE AS first if you want to keep them. Other working sounds, the factory bank catalog "
+        "and saved USER files are unchanged. PERFORMANCE and SETTINGS are not reset.",
+        "Initialise", "Cancel", nullptr,
+        juce::ModalCallbackFunction::create([safe, voice, program, revision](int result)
+        {
+            if (safe == nullptr || result == 0) return;
+            juce::String error;
+            if (!safe->processor_.initialiseVoiceFromUi(voice, program, revision, error))
+                safe->showError("Init Preset not applied", error);
+            safe->refresh(true);
+        }));
 }
 
 void VDX7AudioProcessorEditor::showSettings()

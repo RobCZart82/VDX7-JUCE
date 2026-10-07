@@ -164,7 +164,19 @@ The footer CPU percentage is a smoothed audio-callback load estimate, not total 
 
 ## 6. Utility and SysEx
 
-UTILITY provides voice renaming (1–10 printable ASCII characters), single-voice export, bank export and operator copy/paste. Copy/paste includes all 21 operator fields. Its clipboard is local to the plug-in instance and is not stored in projects.
+### Development builds after 1.0.1 only
+
+UTILITY → Init Preset asks for confirmation before replacing only the current
+editable working voice. Cancel leaves it unchanged; if the sound or selection
+changes while the dialog is open, confirm again. Save existing edits with SAVE AS
+first. The factory catalog, saved USER files, other working slots and
+PERFORMANCE/SETTINGS are not reset. The new sound displays as `Init Preset *`
+until exported; its stored DX7 name is `Init Prese` (10 characters, no star).
+Its sound, edits, dirty marker and display provenance are saved with the DAW
+project. This is a VDX7-created editing seed, not a Yamaha INIT dump, and is
+not included in the already published 1.0.1 packages.
+
+UTILITY provides voice renaming (1–10 printable ASCII characters) and operator copy/paste. SysEx export is in SAVE AS. Copy/paste includes all 21 operator fields. Its clipboard is local to the plug-in instance and is not stored in projects.
 
 SAVE AS... defaults to saving a captured patch into one of 32 persistent USER bank
 slots, with overwrite confirmation and conflict protection. Select USER (load copy)

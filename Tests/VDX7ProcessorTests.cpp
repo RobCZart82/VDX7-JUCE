@@ -1,6 +1,7 @@
 #include "PluginEditor.h"
 #include "VDX7AboutPanel.h"
 #include "VDX7Sysex.h"
+#include "VDX7InitVoice.h"
 #include "VDX7MechanicalDrawing.h"
 #include <iostream>
 #include <memory>
@@ -104,6 +105,260 @@ static juce::MemoryBlock ram(const juce::MemoryBlock& state)
     require(result.fromBase64Encoding(juce::ValueTree::fromXml(*xml)["ram"].toString()),
             "state RAM decoding");
     return result;
+}
+
+struct VDX7RegressionAccess
+{
+    static void showInit(VDX7AudioProcessorEditor& editor) { editor.showInitPresetConfirmation(); }
+    static void installSyntheticCatalog(VDX7AudioProcessor& p)
+    {
+        std::scoped_lock lock(p.engineMutex_);
+        const auto seed = vdx7InitVoice();
+        VDX7FactoryBanks::Snapshot banks;
+        banks.mask = 255;
+        for (int i = 0; i < 256; ++i) banks.image.insert(banks.image.end(), seed.begin(), seed.end());
+        require(p.engine_.installFactoryBanks(banks.image, banks.mask), "synthetic factory catalog fixture");
+        p.updateEngineSnapshot();
+    }
+};
+
+static VDX7FactoryBanks::Snapshot catalog(const juce::MemoryBlock& state)
+{
+    auto xml = juce::AudioProcessor::getXmlFromBinary(state.getData(), int(state.getSize()));
+    VDX7FactoryBanks::Snapshot banks;
+    bool present = false;
+    require(VDX7FactoryBanks::readState(juce::ValueTree::fromXml(*xml), banks, present) && present,
+            "catalog snapshot exists");
+    return banks;
+}
+
+static void testInitUnavailable()
+{
+    auto p = std::make_unique<VDX7AudioProcessor>(false);
+    const auto before = save(*p);
+    juce::String error;
+    require(!p->initialiseVoiceFromUi(vdx7InitVoice(), 0, p->getOperatorVoiceRevision(), error) && error.isNotEmpty(),
+            "init requires a ready firmware/project");
+    require(save(*p) == before, "unavailable init preserves no-ROM state");
+    auto xml = juce::AudioProcessor::getXmlFromBinary(before.getData(), int(before.getSize()));
+    const auto tree = juce::ValueTree::fromXml(*xml);
+    for (const auto bad : {"-1", "4294967296", "1junk", "", "true"})
+    {
+        auto invalid = tree.createCopy();
+        invalid.setProperty("initVoices", bad, nullptr);
+        juce::MemoryBlock data;
+        juce::AudioProcessor::copyXmlToBinary(*invalid.createXml(), data);
+        p->setStateInformation(data.getData(), int(data.getSize()));
+        require(save(*p) == before, "invalid init provenance cannot replace state");
+    }
+}
+
+static void testInitPreset(const juce::File& romFile)
+{
+    auto p = std::make_unique<VDX7AudioProcessor>(false);
+    auto other = std::make_unique<VDX7AudioProcessor>(false);
+    require(p->loadRomFromFile(romFile) && other->loadRomFromFile(romFile), "init local firmware");
+    VDX7RegressionAccess::installSyntheticCatalog(*p);
+    const auto otherBefore = save(*other);
+    // Use a synthetic bank and an isolated USER file, never the real user's library.
+    const auto seed = vdx7InitVoice();
+    VDX7UserBank::Snapshot user;
+    const juce::TemporaryFile userFile(".vub");
+    require(VDX7UserBank::savePatch(userFile.getFile(), user, 0, seed, "SOURCE", false).wasOk(),
+            "init isolated USER source");
+    juce::String error;
+    require(p->loadUserBank(userFile.getFile(), error), "init loads USER working copy");
+    p->selectProgramFromUi(1);
+    require(p->renameVoice("OTHER EDIT"), "other slot dirty positive control");
+    p->selectProgramFromUi(0);
+    juce::MemoryBlock diskBefore, diskAfter;
+    require(userFile.getFile().loadFileAsData(diskBefore), "capture isolated USER bytes");
+    require(p->setControllerSettingFromUi(0, 0, 42) && p->setMasterTuneFromUi(7)
+        && p->setMidiInputChannelFromUi(3), "init globals positive control");
+    const auto before = save(*p);
+    const auto beforeRam = ram(before);
+    const auto controllers = p->getControllerSettings();
+    const auto play = p->getPlaySettings();
+    const auto bend = p->getPitchBendSettings();
+    VDX7UserBank::Voice captured;
+    require(p->captureUserPatch(captured, error), "capture init confirmation");
+    const int program = p->getCurrentProgram();
+    const auto revision = p->getOperatorVoiceRevision();
+    require(save(*p) == before, "capture without confirmation changes nothing");
+    require(p->renameVoice("NEW EDIT"), "edit while init dialog open");
+    const auto edited = save(*p);
+    require(!p->initialiseVoiceFromUi(captured, program, revision, error) && save(*p) == edited,
+            "stale init confirmation cannot discard later edits");
+    require(p->captureUserPatch(captured, error)
+        && p->initialiseVoiceFromUi(captured, program, p->getOperatorVoiceRevision(), error),
+            "confirmed init installs working seed");
+    VDX7UserBank::Voice actual;
+    require(p->captureUserPatch(actual, error) && actual == seed, "init parameters and stored name exact");
+    const auto initState = save(*p);
+    const auto initXml = juce::AudioProcessor::getXmlFromBinary(initState.getData(), int(initState.getSize()));
+    require((juce::ValueTree::fromXml(*initXml)["modifiedVoices"].toString().getLargeIntValue() & 2) != 0,
+            "init retains the other slot's dirty marker");
+    require(p->getCurrentPatchName() == "Init Preset" && p->isCurrentVoiceModified()
+        && p->hasUnexportedEdits() && p->getCurrentBank() == -1, "init display provenance and dirty CUSTOM state");
+    const auto after = save(*p);
+    const auto afterRam = ram(after);
+    require(catalog(before).image == catalog(after).image && catalog(before).mask == catalog(after).mask,
+            "init preserves all eight factory catalog banks");
+    require(std::memcmp(static_cast<const uint8_t*>(beforeRam.getData()) + 128,
+                        static_cast<const uint8_t*>(afterRam.getData()) + 128, 4096 - 128) == 0,
+            "init keeps all other working slots");
+    require(p->getControllerSettings() == controllers && p->getPlaySettings() == play
+        && p->getPitchBendSettings() == bend && p->getMasterTune() == 7 && p->getMidiInputChannel() == 3,
+            "init does not reset PERFORMANCE or SETTINGS");
+    p->prepareToPlay(48000, 512);
+    juce::AudioBuffer<float> audio(2, 512);
+    juce::MidiBuffer midi;
+    for (int i = 0; i < 96; ++i) p->processBlock(audio, midi); // settle firmware/control queues
+    midi.addEvent(juce::MidiMessage::noteOn(3, 60, juce::uint8(100)), 0);
+    float peak = 0;
+    for (int i = 0; i < 96; ++i)
+    {
+        p->processBlock(audio, midi);
+        for (int ch = 0; ch < 2; ++ch)
+            for (int sample = 0; sample < audio.getNumSamples(); ++sample)
+            {
+                const auto value = audio.getSample(ch, sample);
+                require(std::isfinite(value), "init produces finite stereo samples");
+                peak = std::max(peak, std::abs(value));
+            }
+    }
+    require(peak > 0.0001f, "init note-on produces measurable audio");
+    midi.addEvent(juce::MidiMessage::noteOff(3, 60), 0);
+    for (int i = 0; i < 192; ++i) p->processBlock(audio, midi);
+    require(audio.getMagnitude(0, 0, audio.getNumSamples()) < 0.0001f
+        && audio.getMagnitude(1, 0, audio.getNumSamples()) < 0.0001f, "init note-off retires sound");
+    require(userFile.getFile().loadFileAsData(diskAfter) && diskAfter == diskBefore,
+            "init does not write saved USER bank");
+    require(save(*other) == otherBefore, "init is instance isolated");
+    auto reopened = std::make_unique<VDX7AudioProcessor>(false);
+    reopened->setStateInformation(after.getData(), int(after.getSize()));
+    require(reopened->captureUserPatch(actual, error) && actual == seed
+        && reopened->getCurrentPatchName() == "Init Preset" && reopened->isCurrentVoiceModified(),
+            "init and dirty provenance survive project recall");
+    set(*reopened, VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback), 6);
+    const auto editedInit = save(*reopened);
+    reopened->setStateInformation(editedInit.getData(), int(editedInit.getSize()));
+    require(reopened->captureUserPatch(actual, error)
+        && VDX7VoiceData::getVoiceParameter(actual.data(), actual.size(), VDX7VoiceData::VoiceParameter::feedback) == 6
+        && reopened->getCurrentPatchName() == "Init Preset" && reopened->isCurrentVoiceModified(),
+            "edited init values and friendly dirty title survive recall");
+    // Missing firmware: init is rejected; resave preserves sound and display provenance.
+    auto xml = juce::AudioProcessor::getXmlFromBinary(after.getData(), int(after.getSize()));
+    auto pendingTree = juce::ValueTree::fromXml(*xml);
+    pendingTree.setProperty("romPath", "/missing-vdx7-init-fixture.rom", nullptr);
+    juce::MemoryBlock pendingData;
+    juce::AudioProcessor::copyXmlToBinary(*pendingTree.createXml(), pendingData);
+    auto pending = std::make_unique<VDX7AudioProcessor>(false);
+    pending->setStateInformation(pendingData.getData(), int(pendingData.getSize()));
+    const auto pendingBefore = save(*pending);
+    require(!pending->initialiseVoiceFromUi(seed, program, pending->getOperatorVoiceRevision(), error)
+        && save(*pending) == pendingBefore,
+            "pending project cannot be initialised");
+    require(pending->loadRomFromFile(romFile) && pending->getCurrentPatchName() == "Init Preset"
+        && pending->isCurrentVoiceModified(), "matching ROM recalls pending init provenance");
+    auto blocked = std::make_unique<VDX7AudioProcessor>(false);
+    require(blocked->loadRomFromFile(romFile), "loaded pending init positive control");
+    auto mismatched = pendingTree.createCopy();
+    mismatched.setProperty("romIdentity", "different-firmware-identity", nullptr);
+    juce::AudioProcessor::copyXmlToBinary(*mismatched.createXml(), pendingData);
+    blocked->setStateInformation(pendingData.getData(), int(pendingData.getSize()));
+    const auto blockedBefore = save(*blocked);
+    require(blocked->isRomLoaded() && !blocked->isProjectReady()
+        && !blocked->initialiseVoiceFromUi(seed, program, blocked->getOperatorVoiceRevision(), error)
+        && save(*blocked) == blockedBefore, "even a loaded incompatible engine cannot initialise pending project");
+    const juce::TemporaryFile exported(".syx");
+    require(p->exportSyx(exported.getFile(), false, error) && !p->isCurrentVoiceModified(),
+            "successful init export clears dirty flag");
+    require(p->getCurrentPatchName() == "Init Preset", "export keeps friendly title without a stored star");
+    VDX7UserBank::Snapshot emptyUser;
+    const juce::TemporaryFile savedInit(".vub");
+    require(VDX7UserBank::savePatch(savedInit.getFile(), emptyUser, 2, seed, "Init Prese", false).wasOk(),
+            "init is separately saveable to an isolated USER file");
+    VDX7UserBank::Snapshot savedUser;
+    require(VDX7UserBank::load(savedInit.getFile(), savedUser).wasOk() && savedUser.voices[2] == seed,
+            "separately saved init has exact packed data");
+    require(p->loadSyxFromFile(exported.getFile(), &error) && p->getCurrentPatchName() == "Init Prese",
+            "ordinary import is not silently reclassified as Init Preset");
+    auto legacyXml = juce::AudioProcessor::getXmlFromBinary(after.getData(), int(after.getSize()));
+    auto legacyTree = juce::ValueTree::fromXml(*legacyXml);
+    legacyTree.removeProperty("initVoices", nullptr);
+    juce::MemoryBlock legacyData;
+    juce::AudioProcessor::copyXmlToBinary(*legacyTree.createXml(), legacyData);
+    reopened->setStateInformation(legacyData.getData(), int(legacyData.getSize()));
+    require(reopened->getCurrentPatchName() == "Init Prese", "legacy state defaults to ordinary stored name");
+    require(p->loadUserBank(userFile.getFile(), error) && p->getCurrentPatchName() == "SOURCE",
+            "original USER source remains reloadable after init");
+    require(p->selectFactoryBank(0), "original catalog remains selectable after init");
+    require(p->captureUserPatch(actual, error) && actual == seed && p->getCurrentPatchName() == "Init Prese",
+            "factory reload restores source bytes without init display provenance");
+    other->selectProgramFromUi(31);
+    require(other->captureUserPatch(captured, error) && other->initialiseVoiceFromUi(captured, 31,
+            other->getOperatorVoiceRevision(), error), "final-slot init high provenance bit");
+    const auto highBitState = save(*other);
+    other->setStateInformation(highBitState.getData(), int(highBitState.getSize()));
+    require(other->getCurrentProgram() == 31 && other->getCurrentPatchName() == "Init Preset"
+        && other->isCurrentVoiceModified(), "unsigned final-slot provenance survives XML round trip");
+    std::cout << "PASS: confirmed/stale init, USER isolation, globals, finite note/release audio, export and project/pending recall\n";
+}
+
+static void testInitDialog(const juce::File& romFile)
+{
+    auto p = std::make_unique<VDX7AudioProcessor>(false);
+    require(p->loadRomFromFile(romFile) && p->renameVoice("GUI SOURCE"), "init dialog source");
+    auto editor = std::unique_ptr<VDX7AudioProcessorEditor>(
+        static_cast<VDX7AudioProcessorEditor*>(p->createEditor()));
+    const auto before = save(*p);
+    juce::String failure;
+    juce::MemoryBlock lateBefore;
+    int phase = 0;
+    std::function<void()> tick;
+    tick = [&]
+    {
+        auto check = [&](bool ok, const char* message) { if (!ok && failure.isEmpty()) failure = message; };
+        auto* modal = dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());
+        if (phase == 0)
+        {
+            check(modal != nullptr && modal->getName() == "Init Preset?", "init confirmation dialog missing");
+            if (modal) modal->exitModalState(0);
+        }
+        if (phase == 1)
+        {
+            check(save(*p) == before, "Cancel changed the working/project state");
+            VDX7RegressionAccess::showInit(*editor);
+        }
+        if (phase == 2)
+        {
+            check(modal != nullptr, "second init confirmation missing");
+            if (modal) modal->exitModalState(1);
+        }
+        if (phase == 3)
+        {
+            check(p->getCurrentPatchName() == "Init Preset" && p->isCurrentVoiceModified(),
+                  "confirm callback did not initialise dirty voice");
+            bool lcd = false;
+            for (auto* child : editor->getChildren())
+                if (auto* label = dynamic_cast<juce::Label*>(child))
+                    lcd |= label->getText().contains("Init Preset *");
+            check(lcd, "LCD lacks friendly init name and dirty marker");
+            lateBefore = save(*p);
+            VDX7RegressionAccess::showInit(*editor);
+            editor.reset(); // Late confirmation must not dereference a destroyed editor.
+        }
+        if (phase == 4 && modal) modal->exitModalState(1);
+        if (phase == 5) check(save(*p) == lateBefore, "late confirmation mutated state after editor close");
+        if (++phase < 6) juce::Timer::callAfterDelay(80, tick);
+        else juce::MessageManager::getInstance()->stopDispatchLoop();
+    };
+    VDX7RegressionAccess::showInit(*editor);
+    juce::Timer::callAfterDelay(80, tick);
+    juce::MessageManager::getInstance()->runDispatchLoop();
+    if (failure.isNotEmpty()) throw std::runtime_error(failure.toStdString());
+    std::cout << "PASS: real Init dialog cancel/confirm, LCD dirty title and editor-lifetime safety\n";
 }
 
 static std::pair<int, int> restoredPreRomVoiceValues(VDX7AudioProcessor& processor)
@@ -844,10 +1099,22 @@ int main(int argc, char** argv)
         }
         if (argc == 2 && juce::String(argv[1]) == "--pre-rom-state-state-only")
         {
+            testInitUnavailable();
             testInvalidCombinedRomDiagnostic();
             testPendingFactoryCatalog();
             testPreRomDeferredStateIsSerialized();
             testLegacyPendingProjectState();
+            return 0;
+        }
+        if (argc == 3 && juce::String(argv[1]) == "--init-preset")
+        {
+            testInitUnavailable();
+            testInitPreset(juce::File(argv[2]));
+            return 0;
+        }
+        if (argc == 3 && juce::String(argv[1]) == "--init-preset-gui")
+        {
+            testInitDialog(juce::File(argv[2]));
             return 0;
         }
         if (argc == 4 && juce::String(argv[1]) == "--factory-bank-library")
@@ -896,6 +1163,7 @@ int main(int argc, char** argv)
             return 77;
         }
         require(original.loadRomFromFile(testRomFile), "explicit local test ROM");
+        testInitPreset(testRomFile);
         testReservedExportAcknowledgement(testRomFile);
         testPreRomParameterEditsSurviveSave(testRomFile);
         require(original.getParameters().size() == 148, "148 host parameters");

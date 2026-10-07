@@ -85,6 +85,10 @@ public:
     bool loadUserBank(const juce::File&, juce::String& error);
     static juce::File userBankFile();
     bool renameVoice(const juce::String& name);
+    // Non-RT confirmed action. Reject a stale dialog instead of replacing a
+    // different working voice. Factory catalog and USER files remain untouched.
+    bool initialiseVoiceFromUi(const VDX7UserBank::Voice& expectedVoice,
+                              int expectedProgram, uint32_t expectedRevision, juce::String& error);
     bool copyOperator(int op);
     bool pasteOperator(int op);
     bool hasCopiedOperator() const noexcept { return hasOperatorClipboard_.load(); }
@@ -145,7 +149,9 @@ public:
     bool synchroniseOperatorParametersFromEngine();
 
 private:
-    bool loadPackedVoices(const std::vector<uint8_t>&, juce::String* error, int selectProgram = -1);
+    bool loadPackedVoices(const std::vector<uint8_t>&, juce::String* error, int selectProgram = -1,
+                          const VDX7UserBank::Voice* initExpected = nullptr, int initProgram = -1,
+                          uint32_t initRevision = 0);
     friend struct VDX7RegressionAccess;
     void restoreSavedStateLocked(const juce::ValueTree&);
     bool observeStateInstall(); // Audio-thread owned; also rechecked under engine lock.
@@ -250,6 +256,9 @@ private:
     std::atomic<uint32_t> operatorVoiceRevision_ { 0 };
     // Tracks voices changed since import/export, not the DAW's project-save state.
     std::atomic<uint32_t> modifiedVoices_ { 0 };
+    // Display provenance only; packed voice bytes remain authoritative.
+    // Saved per slot so an ordinary bank/voice named Init Prese is not relabelled.
+    uint32_t initVoices_ = 0; // engineMutex_ owned
     std::array<uint8_t, 17> operatorClipboard_ {};
     std::atomic<bool> hasOperatorClipboard_ { false };
 
@@ -261,6 +270,7 @@ private:
     std::atomic<int> currentProgramSnapshot_ { 0 };
     std::atomic<uint32_t> patchNameRevision_ { 0 };
     std::array<std::atomic<char>, 11> patchNameSnapshot_ {};
+    std::atomic<bool> currentInitVoiceSnapshot_ { false }; // same name publication epoch
     std::atomic<float> outputPeakLeft_ { 0.0f };
     std::atomic<float> outputPeakRight_ { 0.0f };
 

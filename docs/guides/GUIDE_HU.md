@@ -175,7 +175,19 @@ A footer CPU-százaléka simított audio-callback terhelésbecslés, nem a telje
 
 ## 6. Utility és SysEx
 
-A UTILITY menüben hangszínátnevezés (1–10 nyomtatható ASCII karakter), egyhangszínes export, bankexport és operátormásolás/-beillesztés található. A másolás mind a 21 operátormezőt tartalmazza. Vágólapja a pluginpéldányhoz tartozik, a projekt nem tárolja.
+### Csak az 1.0.1 utáni fejlesztési buildekben
+
+Az UTILITY → Init Preset megerősítést kér, és csak az aktuális szerkeszthető
+munkahangszínt cseréli le. A Mégse nem változtatja meg; ha a párbeszédablak
+közben változik a hangszín vagy a kiválasztás, új megerősítés kell. A meglévő
+szerkesztéseket előbb SAVE AS-szel őrizd meg. A gyári katalógus, a mentett
+USER-fájlok, más munkahangszínek és a PERFORMANCE/SETTINGS nem törlődnek.
+Az új hangszín exportálásig `Init Preset *` néven látszik; tárolt DX7-neve
+`Init Prese` (10 karakter, csillag nélkül). Hangja, szerkesztései, dirty jelzője
+és a kijelzés eredete a DAW-projekttel mentődik. Saját VDX7 kezdőhangszín,
+nem Yamaha INIT dump, és nincs benne a már publikált 1.0.1 csomagokban.
+
+A UTILITY menüben hangszínátnevezés (1–10 nyomtatható ASCII karakter) és operátormásolás/-beillesztés található. A SysEx-export a SAVE AS menüben van. A másolás mind a 21 operátormezőt tartalmazza. Vágólapja a pluginpéldányhoz tartozik, a projekt nem tárolja.
 
 A SAVE AS... alapművelete egy rögzített hangszínmásolat mentése a tartós USER-bank
 32 helyének egyikére, felülírási jóváhagyással és ütközésvédelemmel. Az LCD
