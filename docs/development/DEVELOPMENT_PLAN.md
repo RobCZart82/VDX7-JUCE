@@ -16,6 +16,17 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+2026-10-07 új checkpoint: #145 beolvadt, Windows/macOS/sanitizer PASS,
+review-megjegyzés nincs. Következő részfeladat alapja:
+`6868007efe3f565bffd66fa1a5df53771858213a`.
+A sanitizer workflow most megépíti a teljes `vdx7_processor_tests` célt,
+de kizárólag annak ROM-mentes `vdx7_pre_rom_state` módját futtatja az eddigi
+komponenstesztek mellett. Nincs privát ROM-fájl és nincs új DAW-teszt.
+Statikus workflow-regresszió védi a build/CTest bekötést és a privát ROM-os
+módok kizárását. Helyi instrumentált processor-futtatás NOT RUN;
+az instrumentált CI eredménye még szükséges, a lefedettségi rést addig
+nem tekintjük igazoltan lezártnak. Az általános boot-egészség továbbra is nyitott.
+
 2026-10-07 aktuális checkpoint: #144 beolvadt; a `d8b83a52243fd0102392bc240c40b20317ddd0f0`
 main platformellenőrzései és a #144 Windows/macOS/sanitizer ellenőrzése PASS.
 A korábbi „friss PR/merge utáni ellenőrzés” kapu már teljesült.
