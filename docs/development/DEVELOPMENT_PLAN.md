@@ -150,6 +150,19 @@ Optimalizálás csak mérés után: érvényes és korai/késői hibás adat, co
 
 ### D2 UTILITY Init Preset
 
+2026-10-07 első adatmodell-részfeladat, main alap:
+`c4bf603099eb6f6c4097715aca0017975e61c20e` (#149 beolvadt, három CI PASS).
+Saját VDX7 kezdőhangszín: algorithm 32, csak OP1 output 99, többiek 0;
+ratio coarse 1/fine 0/detune 0, operator R1–R3 99/R4 80, L1–L3 99/L4 0;
+pitch EG rate 99/level 50, transpose 0, feedback/modulation/scaling 0.
+Tárolt 10 karakteres név `Init Prese`, tervezett GUI-felirat `Init Preset*`.
+Nem Yamaha INIT dump. Pure adatgenerátor, nincs bank/RAM/SETTINGS-módosítás.
+GUI, cancel/confirm és projekt-recall még nincs implementálva; nem kész D2.
+Regresszió: packed validáció, algorithm/operator sorrend, név és példányizoláció.
+PASS: helyi MSVC voice-data/SysEx komponensfuttatás. Új teljes pluginbuild és
+REAPER NOT RUN; friss PR CI/review szükséges. E checkpoint után a lentebbi
+„nincs implementáció” mondat a teljes felhasználói műveletre vonatkozik.
+
 Állapot: HALASZTOTT, jóváhagyva 2026-10-05. UTILITY → Init Preset után megerősítő ablak figyelmeztet a munkahangszín nem mentett szerkesztéseinek elvesztésére. Mégse teljes állapotmegőrzés; megerősítés csak a munkahangszínt inicializálja. Kijelző: `Init Preset*`; a csillag nem része az exportált DX7-névnek. A 10 karakteres tárolt név és a kijelzett felirat külön kezelendő.
 
 A gyári/USER bankhely nem írható felül. ROM, bankkatalógus, MIDI/performance és GUI settings változatlan: ez nem teljes settings reset. Init szerkeszthető, exportálható, külön menthető, DAW-projekttel visszaállítható. A kapott magazinos patch csak privát referencia, nem igazolt Yamaha INIT adat; nem kerül csomagba/Gitbe.
