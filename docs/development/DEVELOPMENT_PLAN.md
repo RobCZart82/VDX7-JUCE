@@ -235,16 +235,18 @@ Elfogadás: cancel/confirm, bank- és settings-azonosság, dirty jelző, export/
 
 ### D3 Importált DX7 bankkönyvtár
 
-Állapot: ELŐKÉSZÍTÉS ALATT, jóváhagyva 2026-10-05; első adatkezelő részfeladat
-2026-10-07. Külön Windows/macOS bedobós mappában több szabványos 32-hangszínes
+Állapot: FEJLESZTÉS ALATT, jóváhagyva 2026-10-05; katalógus- és projektadat
+előkészítés beolvadt, processor-bekötés külön fejlesztési ágon, 2026-10-07.
+Külön Windows/macOS bedobós mappában több szabványos 32-hangszínes
 bank legyen egyszerre használható. Új példány beolvassa, nyitott példányban
 explicit Refresh banks; külön a Factory Banks mappától és USER.vub-tól.
 
 #### Első katalógus részfeladat
 
 Kiindulás: `1675c83`, #153 után mindkét main platformellenőrzés zöld.
-Az önálló `VDX7ImportedBanks` modul egyelőre csak tesztcélba van bekötve,
-nem a pluginba: nincs startup scan, új GUI-menü, projektmező vagy audio-változás.
+Az első részfeladatban az önálló `VDX7ImportedBanks` modul csak tesztcélba
+volt bekötve. A harmadik részfeladat már a processorhoz kapcsolja; startup
+scan és új GUI-menü továbbra sincs.
 Az alábbi könyvtárak a modul célútvonalai, még nem működő felhasználói funkció:
 macOS `~/Library/Application Support/VDX7-JUCE/Imported Banks`, Windows
 `%APPDATA%\VDX7-JUCE\Imported Banks`. A modul nem hozza létre őket magától.
@@ -274,14 +276,16 @@ azonosítás, átnevezés, Unicode, duplikátum, pontos limitek, megszakítás,
 link/FIFO-kezelés és eredményizoláció szerepel. A privát ROM/bank adatai nem
 kellenek ehhez a teszthez. #154 head `52fe766` Windows/macOS/sanitizer PASS
 (37654489753, 37654489749, 37654489750), kód- és biztonsági review nem talált hibát.
-Beolvadt `54347ce` main-nal; a merge utáni main ellenőrzése külön kapu.
+Beolvadt `54347ce` main-nal; a merge utáni Windows/macOS ellenőrzés is PASS
+(37656436530, 37656436532).
 
 #### Importált bankok projektállapot formátuma
 
-Második előkészítő részfeladat: `VDX7ImportedBankState`, továbbra is csak a
-ROM-mentes komponens tesztcéljába bekötve. Nem bővíti a plugin jelenlegi
-projektformátumát, nem olvas felhasználói mappát és nem állít hangszínt.
-A következő processor-bekötéshez készít validált, önálló pillanatképet.
+Második előkészítő részfeladat: `VDX7ImportedBankState`, önálló, validált
+pillanatkép a processor-bekötéshez. #155 beolvadt `f0030d5` main-nal;
+aktuális head Windows/macOS/sanitizer PASS (37658010320, 37658010359,
+37658010318), lezárt kód- és biztonsági review, megoldatlan észrevétel nélkül.
+Merge utáni Windows/macOS PASS (37660901822, 37660901878).
 
 Az `ImportedBanks` gyermek 1-es verziója legfeljebb 128 teljes 4096 bájtos
 bankot és egy opcionális kiválasztott tartalmi azonosítót tárol. Az azonosító
@@ -303,8 +307,8 @@ gyermek megkülönböztethető ettől. Hibás/hiányos mező, ismeretlen verzió
 dupla gyermek, túl sok bank, nem kanonikus hosszprefix vagy érvénytelen UTF-8
 elutasítása nem módosítja a célpillanatképet és a jelenlétjelzőt.
 Hibás mentési bemenet a többi projektmezőt sem változtatja meg.
-A korlát az adatdekódolásra vonatkozik; a külső XML/binary bemenet méretkapuja
-a processor-bekötés előtt még külön szükséges.
+A codec korlátja az adatdekódolásra vonatkozik; a külső XML/binary bemenet
+méretkapuja a harmadik részfeladat része.
 
 Helyi ASan/UBSan alatt a bővített komponens: XML/direct round trip,
 legacy 127/100 értékek, 128-bankos 512 KiB tartalom, 129-bankos elutasítás,
@@ -313,8 +317,60 @@ hibás adat és állapotmegőrzés. A hash-ellenőrzést ideiglenesen kihagyó h
 kontrollt a teszt elutasította; a kontroll nem kerül commitba.
 Ez nem valódi plugin/REAPER projekt-recall vagy kiadási elfogadás.
 
-A teljes D3 nincs kész: következő a biztonságos processor-bekötés és külső
-állapotbemeneti korlát, majd GUI és projekt-recall/host elfogadás.
+#### Processor katalógus és projektmentés
+
+Harmadik részfeladat, külön ágon: explicit, audio callbacken kívüli frissítés
+és példányonkénti változtathatatlan katalógus, a valódi processor projektmentési
+és visszatöltési útvonalához kapcsolva. Nincs új hangszínkiválasztó, GUI,
+induláskori beolvasás vagy automatikus mappalétrehozás ebben a körben.
+
+A katalógus teljes bankadata és a munkahangszín/RAM együtt mentődik. A
+visszatöltött importált eredet csak validált CUSTOM RAM-hoz tartozhat;
+gyári bankjelölő vagy hiányzó RAM mellett elutasítandó. A könyvtár kezelése
+nem tölti vissza az eredeti bank bájtjait a szerkesztett munkahangszín helyére.
+Firmware nélkül a mentett projekt és a későbbi szerkesztések függőben maradnak;
+a katalógusfrissítés nem írhatja felül ezt az állapotot.
+
+Frissítéskor a kiválasztott, de a mappából eltűnt bank mentett másolata megmarad.
+Ha ehhez nincs hely a 128-bankos korlátban, a teljes frissítés elutasítandó.
+Hibás útvonal, limit vagy megszakítás szintén megőrzi az előző katalógust.
+Generációellenőrzés akadályozza meg, hogy egy régebben indult scan felülírjon
+újabb projektet, katalógust vagy bankeredet-váltást. Mentéskor a bankkönyvtár,
+eredet és RAM egy zárolt pontban válik le; nagy másolás és kódolás ezen kívül
+történik. Az audio-oldali eredettörlés számindexet módosít, nem nagy bankadatot.
+
+Az állapotbemenet legfeljebb 2 MiB lehet, még az XML-feldolgozás előtt.
+A maximális 128-bankos katalógus, 1024 UTF-8 bájtos fájlnevek és processor-adatok
+beleférnek. Ez bájtméret-korlát, nem általános XML-mélység- vagy feldolgozási
+időgarancia. Projekt-visszaállításkor a fájlnév továbbra is csak címkeadat,
+nem fájlmegnyitási útvonal.
+
+Helyi ASan/UBSan ellenőrzés: 17/17 ROM-mentes CTest, 10/10 célzott privát
+CTest (a firmware-profillal együtt) és 78 Python-regresszió PASS.
+A privát v1.8 firmware-rel, saját szintetikus bankokkal az importált katalógus
+valódi processor-binary mentése/visszatöltése, eltűnt fájl, munkahangszín,
+dirty-jelölés, későbbi szerkesztés és késleltetett ROM-betöltés is PASS.
+Determinista határpontteszt ellenőrzi a mentés közbeni katalógusváltást,
+függő projekt váltását és elavult scan elutasítását; ez nem teljes szálterhelési
+stresszteszt. A generációellenőrzést ideiglenesen kihagyó hibás kontrollt
+az új teszt elutasította; a kontroll nem marad a forrásban. A tényleges CTest
+ROM-mentes, ROM-os és opt-in gyári bankos regisztrációja is megfelel a
+leltárnak; utóbbi leltárellenőrzés nem futtat privát gyári bankokat.
+
+Az állapotátmeneti privát teszt korábbi, általános ROM-hibaüzenet elvárása
+elavult volt. Most pontosan a kombinált bank 8, hangszín 32, byte 12 hibás
+detune értékét és határát ellenőrzi, az elutasítás és állapotmegőrzés mellett.
+Az előzetes teljes reset-tesztsor ASan/UBSan alatt elérte a 180 másodperces
+CTest-időkorlátot; ez a futás nem PASS, az időkaput nem növeltük meg.
+Ugyanaz az előzetes reset-bináris közvetlen futtatással végigment, exit 0;
+ez nem változtatja zöldre a CTest időkapuját. A végső forrás későbbi,
+függő katalógusmásolást elkülönítő módosítását a fenti célzott tesztek fedik.
+A harmadik részfeladat GitHub Windows/macOS/sanitizer és review-kapuja
+még külön szükséges a beolvasztáshoz. Nincs kiadási elfogadás vagy publikálás.
+
+A teljes D3 nincs kész: következő az importált bank kiválasztásának biztonságos
+bekötése, majd GUI, induláskori scan/frissítés és Windows/macOS host-elfogadás.
+A privát firmware-es processor-teszt nem helyettesíti a valódi REAPER-próbát.
 
 #### Megőrzött felhasználói koncepció
 

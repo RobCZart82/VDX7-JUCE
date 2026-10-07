@@ -5,6 +5,7 @@
 #include <atomic>
 #include <cstdint>
 #include <mutex>
+#include <memory>
 #include "VDX7LatestDisplay.h"
 #include <vector>
 
@@ -14,6 +15,7 @@
 #include "VDX7KeyboardQueue.h"
 #include "VDX7UserBank.h"
 #include "VDX7FactoryBanks.h"
+#include "VDX7ImportedBankState.h"
 
 namespace VDX7ParameterIDs
 {
@@ -138,6 +140,14 @@ public:
     static juce::File factoryBankFolder() { return VDX7FactoryBanks::defaultFolder(); }
     // Explicit non-RT refresh. Does not replace the current working voice RAM.
     bool refreshFactoryBanks(const juce::File& folder, juce::String& report);
+    // Non-RT catalog/state integration only. No startup scan or bank selection
+    // yet. Handles contain library data, not live selection. Detached immutable
+    // handles keep large copies/encoding out of locks.
+    using ImportedBankSnapshot = std::shared_ptr<const VDX7ImportedBanks::Snapshot>;
+    ImportedBankSnapshot getImportedBankSnapshot() const;
+    bool refreshImportedBanks(const juce::File&, juce::String& report,
+                              const std::function<bool()>& shouldCancel = {});
+    static constexpr int maxProjectStateBytes = 2 * 1024 * 1024;
     int getCurrentBank() const;
     juce::String getCurrentPatchName() const;
     juce::String getRomPath() const;
@@ -229,6 +239,10 @@ private:
     void parameterChanged(const juce::String& parameterID, float newValue) override;
     void markVoiceModified() noexcept;
     void flushVoiceEditsLocked();
+    void clearImportedBankOriginLocked() noexcept
+    {
+        if (importedBankOrigin_ >= 0) { importedBankOrigin_ = -1; ++importedBankRevision_; }
+    }
 
     mutable std::mutex engineMutex_;
     // Instance-lifetime diagnostics; never persisted or reset by the GUI.
@@ -292,6 +306,9 @@ private:
     juce::String loadedRomPath_;
     juce::String loadedRomIdentity_;
     VDX7FactoryBanks::Snapshot baseFactoryBanks_; // Original ROM/companion, not folder overlay.
+    ImportedBankSnapshot importedBanks_; // Null = legacy/unscanned, immutable; engineMutex_ owned.
+    int importedBankOrigin_ = -1; // Index in immutable catalog; audio clears numerically, no allocation.
+    uint64_t importedBankRevision_ = 0; // Publication/origin/restore generation under engineMutex_.
     juce::File factoryBankFolder_; // Empty for isolated tests unless explicitly supplied.
     juce::File romFile_;
     juce::String statusText_ { "ROM not loaded" };

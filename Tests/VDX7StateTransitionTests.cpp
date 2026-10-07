@@ -400,7 +400,9 @@ void testFactoryVoiceValidation(const juce::File& rom)
     const auto combinedFile = folder.getChildFile("invalid-combined.bin");
     require(combinedFile.replaceWithData(invalidCombined.data(), invalidCombined.size()),
             "write invalid synthetic combined image");
-    require(!processor.loadRomFromFile(combinedFile, &error) && error.contains("Invalid ROM"),
+    require(!processor.loadRomFromFile(combinedFile, &error)
+            && error.startsWith("Invalid combined ROM factory data: Bank 8, voice 32, byte 12")
+            && error.contains("detune encoding: value 15; allowed 0..14."),
             "processor rejects entire invalid combined image with visible error");
     require(processor.hasFactoryVoices() && preservedState == save(processor),
             "combined rejection preserves complete saved processor state and factory bank");
