@@ -1,10 +1,12 @@
 #include "VDX7VoiceData.h"
 #include "VDX7Sysex.h"
 #include "VDX7ValidationMessage.h"
+#include "VDX7InitVoice.h"
 
 #include <array>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -30,6 +32,17 @@ void updateVmemChecksum(std::vector<uint8_t>& message)
 
 int main()
 {
+    auto init = vdx7InitVoice();
+    require(VDX7VoiceData::hasValidPackedVoice(init.data(), init.size()), "init voice valid packed data");
+    require(VDX7VoiceData::getVoiceParameter(init.data(), init.size(), VDX7VoiceData::VoiceParameter::algorithm) == 32,
+        "init uses six parallel carriers");
+    for (int op = 0; op < 6; ++op)
+        require(VDX7VoiceData::getOperatorParameter(init.data(), init.size(), op, VDX7VoiceData::Parameter::outputLevel)
+            == (op == 0 ? 99 : 0), "only OP1 audible in init");
+    require(std::string(reinterpret_cast<const char*>(init.data()+118), 10) == "Init Prese", "ten-character stored name without dirty marker");
+    const auto untouched = vdx7InitVoice();
+    init[0] = 0;
+    require(vdx7InitVoice() == untouched, "init values are independent copies");
     // Synthetic diagnostics only: no firmware or factory-bank bytes.
     std::array<uint8_t, 256> diagnosticVoices {};
     auto diagnostic = VDX7VoiceData::validatePackedVoices(nullptr, 256);
