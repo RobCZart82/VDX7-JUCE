@@ -1,6 +1,6 @@
 # VDX7 egységes fejlesztési terv
 
-Frissítve: 2026-10-06. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
+Frissítve: 2026-10-07. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás verzióját és pontos funkciókörét később rögzítjük.
 Ez a dokumentum nem új kiadás publikálási engedélye.
@@ -15,6 +15,15 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 ## Jóváhagyott későbbi fejlesztések
 
 ### D1 Részletes ROM hibajelzés
+
+Aktuális rendezés: a #148 main dokumentációja és a #147 diagnosztikai
+checkpointjai együtt megőrzöttek. Az általános reset-vektor védelem külön
+értékelendő a SER7 támogatásától. A SER7 vizsgálatai történeti bizonyítékok,
+nem aktív kiadási kapuk; folytatásuk halasztott. A #147 Draft marad, friss
+merge utáni CI szükséges. Init Preset előkészítése a stabil original/v1.8
+irány következő funkcionális munkacsomagja, külön ágon és külön tesztekkel.
+
+#### Privát firmware-kontrollok és reset-vektor részfeladat
 
 2026-10-07 SER7 csatornakontroll: a kézi firmware-hangteszt opcionális
 0..15 nyers MIDI csatornát fogad. Ez diagnosztikai bypass a core FIFO-ba,
@@ -74,6 +83,15 @@ könyvtárral linkelt komponensellenőrzés, nem új teljes pluginbuild.
 NOT RUN: REAPER, más firmware-változatok (például SER7) kézi kompatibilitása;
 CI/review még szükséges. E szűk admission-védelem nem boot-egészség igazolás:
 ROM-ba mutató vektor mellett hibás kód továbbra is elfogadható.
+
+2026-10-07 felhasználói prioritás: az original/v1.8 stabil működése elsődleges.
+Ajánlott/támogatott firmware: eredeti DX7 Mk I v1.8 (IG11469).
+SER-7 jelenleg nem támogatott és nem ajánlott; a sikeres betöltés nem
+funkcionális kompatibilitás. SER7 fejlesztés külön, halasztott kompatibilitási
+feladat, nem a következő kiadás kapuja. A privát kontrollok és a SER7 hanghiány
+diagnózisa megőrzendő; nincs általános firmware-inkompatibilitási állítás.
+A #147 Draft reset-vektor munkája külön értékelendő, ez a dokumentációs
+változás nem olvasztja be és nem publikál új binárist/release-t.
 
 2026-10-07 új checkpoint: #145 beolvadt, Windows/macOS/sanitizer PASS,
 review-megjegyzés nincs. Következő részfeladat alapja:
