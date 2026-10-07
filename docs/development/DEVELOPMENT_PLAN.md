@@ -184,7 +184,8 @@ Optimalizálás csak mérés után: érvényes és korai/késői hibás adat, co
 2026-10-07: #150 adatgenerátora és #152 megerősített Init művelete main-ban van.
 #152 Windows/macOS/sanitizer ellenőrzése PASS, a vegyes hangszín/kiválasztás
 befogási versenyhelyzete javítva, review rendezve. Merge main: `269e230`.
-A merge utáni platformellenőrzés és az új tesztág ellenőrzése külön kapu.
+A merge utáni main Windows/macOS ellenőrzése PASS (37641092380, 37641092371).
+Az új audio-tesztág ellenőrzése külön kapu.
 Az UTILITY → Init Preset megerősítést kér a munkahangszín cseréjéhez. A megerősítés
 csak a befogott hangszínre érvényes: közben változó tartalom/kiválasztás/revízió
 új megerősítést igényel. Mégse nem indít cserét. A gyári katalógus és a lemezen

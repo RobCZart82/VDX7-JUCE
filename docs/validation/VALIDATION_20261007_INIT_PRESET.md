@@ -80,8 +80,8 @@ real Windows/macOS REAPER acceptance or release packaging/publication.
 
 The next test-only round starts from merge-main `269e2305423de4410bbf30022aeb22373e531e59`
 after #152. Its branch Windows/macOS/sanitizer checks all passed and the mixed
-confirmation capture review was resolved. Merge-main platform results are a
-separate gate. No production DSP, plugin/parameter identity, GUI, admission
+confirmation capture review was resolved. Merge-main Windows and macOS checks
+also PASS (37641092380 and 37641092371). No production DSP, plugin/parameter identity, GUI, admission
 policy, release asset or installed plugin changes in this round.
 
 The local instrumented processor matrix covers all 12 combinations of
@@ -121,8 +121,8 @@ acceptance, listening quality, latency/performance benchmarking or a full ROM su
 
 ## Remaining acceptance gates
 
-Merge-main Windows/macOS results for #152 and fresh checks/review for the
-test-only audio-matrix branch must be verified before another merge.
+The #152 merge-main Windows/macOS gate is complete. Fresh checks/review for the
+test-only audio-matrix branch must be verified before its merge.
 Real Windows/macOS REAPER acceptance and release packaging/publication remain
 separate. D2 is not declared fully accepted or released by these component results.
 
