@@ -16,6 +16,15 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+2026-10-07 felhasználói prioritás: az original/v1.8 stabil működése elsődleges.
+Ajánlott/támogatott firmware: eredeti DX7 Mk I v1.8 (IG11469).
+SER-7 jelenleg nem támogatott és nem ajánlott; a sikeres betöltés nem
+funkcionális kompatibilitás. SER7 fejlesztés külön, halasztott kompatibilitási
+feladat, nem a következő kiadás kapuja. A privát kontrollok és a SER7 hanghiány
+diagnózisa megőrzendő; nincs általános firmware-inkompatibilitási állítás.
+A #147 Draft reset-vektor munkája külön értékelendő, ez a dokumentációs
+változás nem olvasztja be és nem publikál új binárist/release-t.
+
 2026-10-07 új checkpoint: #145 beolvadt, Windows/macOS/sanitizer PASS,
 review-megjegyzés nincs. Következő részfeladat alapja:
 `6868007efe3f565bffd66fa1a5df53771858213a`.
