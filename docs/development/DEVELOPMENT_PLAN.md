@@ -235,8 +235,8 @@ Elfogadás: cancel/confirm, bank- és settings-azonosság, dirty jelző, export/
 
 ### D3 Importált DX7 bankkönyvtár
 
-Állapot: FEJLESZTÉS ALATT, jóváhagyva 2026-10-05; katalógus- és projektadat
-előkészítés beolvadt, processor-bekötés külön fejlesztési ágon, 2026-10-07.
+Állapot: FEJLESZTÉS ALATT, jóváhagyva 2026-10-05; katalógus, projektadat és
+processor-bekötés beolvadt, importált bankkiválasztás külön ágon, 2026-10-07.
 Külön Windows/macOS bedobós mappában több szabványos 32-hangszínes
 bank legyen egyszerre használható. Új példány beolvassa, nyitott példányban
 explicit Refresh banks; külön a Factory Banks mappától és USER.vub-tól.
@@ -319,7 +319,7 @@ Ez nem valódi plugin/REAPER projekt-recall vagy kiadási elfogadás.
 
 #### Processor katalógus és projektmentés
 
-Harmadik részfeladat, külön ágon: explicit, audio callbacken kívüli frissítés
+Harmadik részfeladat, beolvadt #156: explicit, audio callbacken kívüli frissítés
 és példányonkénti változtathatatlan katalógus, a valódi processor projektmentési
 és visszatöltési útvonalához kapcsolva. Nincs új hangszínkiválasztó, GUI,
 induláskori beolvasás vagy automatikus mappalétrehozás ebben a körben.
@@ -365,11 +365,61 @@ CTest-időkorlátot; ez a futás nem PASS, az időkaput nem növeltük meg.
 Ugyanaz az előzetes reset-bináris közvetlen futtatással végigment, exit 0;
 ez nem változtatja zöldre a CTest időkapuját. A végső forrás későbbi,
 függő katalógusmásolást elkülönítő módosítását a fenti célzott tesztek fedik.
-A harmadik részfeladat GitHub Windows/macOS/sanitizer és review-kapuja
-még külön szükséges a beolvasztáshoz. Nincs kiadási elfogadás vagy publikálás.
+A harmadik részfeladat `5c948fd` head Windows/macOS/sanitizer PASS
+(37665723645, 37665723720, 37665723881), lezárt kód- és biztonsági review,
+megoldatlan észrevétel nélkül. Beolvadt `5e14c39` main-nal; merge utáni
+Windows/macOS PASS (37669883259, 37669883349). Nincs kiadási elfogadás
+vagy publikálás.
 
-A teljes D3 nincs kész: következő az importált bank kiválasztásának biztonságos
-bekötése, majd GUI, induláskori scan/frissítés és Windows/macOS host-elfogadás.
+#### Importált bank kiválasztása
+
+Negyedik részfeladat, külön ágon: explicit, audio callbacken kívüli
+`selectImportedBank` művelet. A választás a teljes VMEM tartalmi azonosítójára
+és az aktuális, változtathatatlan katalógus tokenjére épül; nem listapozícióra,
+rövid névre vagy forrásfájl újbóli megnyitására. Az érvénytelen/hiányzó bank,
+elavult token és 0..31-en kívüli programszám elutasítandó.
+
+A token még a RAM-tranzakció zárolása alatt is ellenőrződik: a keresés közben
+frissült vagy projekt-visszatöltéssel lecserélt katalógus választása nem
+fogyaszthatja el a korábbi parancsokat és nem írhatja felül a munkahangszínt.
+Függő projekt és hiányzó firmware mellett nincs importált kiválasztás.
+
+Az elfogadott választás pontos bankbájtokat másol a szerkeszthető CUSTOM
+RAM-ba és a kért programra lép; a gyári és importált forráskatalógus nem
+módosul. Beállítások/performance megmaradnak. Kezdetben tiszta másolat,
+a további szerkesztés dirty-jelölt munkahangszínként mentődik a projekttel,
+az eredeti bank és kiválasztási azonosító mellett. A szokásos programváltás
+megőrzi az importált eredetet; gyári váltás, külön SysEx-import vagy Init
+új CUSTOM munkahangszíne törli az eredetet, nem a bankkönyvtárat.
+
+A sikeres importált bankváltás generációt léptet, hogy a korábbi eredetet
+rögzítő scan ne publikálhasson elavult kiválasztást. Nincs új audio-oldali
+bankmásolás, menü, induláskori scan vagy mappalétrehozás ebben a körben.
+A negyedik részfeladathoz külön helyi teszt, aktuális GitHub platformteszt,
+hibakereső ellenőrzés és review szükséges.
+
+Helyi végső ASan/UBSan ellenőrzés: 17/17 ROM-free és 10/10 célzott privát
+firmware-es CTest PASS (a profil-előfeltétellel együtt); Python 78/78 PASS.
+A tényleges CTest-regisztráció és az ellenőrző önellenőrzése is PASS.
+A teszt a valódi kiválasztási API-t használja, nem kézzel létrehozott
+kiválasztási eredetet. Lefedi a hibás/elavult/másolt token, ismeretlen bank,
+hibás program, ROM nélküli és függő projekt elutasítását; a keresés és
+RAM-tranzakció közötti katalógus-/projektcserét; a korábbi sorban álló edit
+elkülönítését; pontos bankbájtokat és programot; változatlan forrásbankot,
+gyári adatokat, performance/tune/channel megőrzést; szerkesztett patch
+visszatöltését forrásmappa nélkül és késleltetett ROM-betöltés mellett;
+programváltás eredetmegőrzését, gyári/SysEx/Init eredettörlését és scan
+érvénytelenítését a könyvtár törlése nélkül.
+
+Negatív kontroll: a második, zárolt tokenellenőrzés ideiglenes kihagyásával
+a teszt elvárt módon hibára futott. Visszaállított forrással újrafordítva
+a fenti végső tesztek PASS; a negatív módosítás nem része a fejlesztésnek.
+A determinisztikus ütemezési teszt nem teljes körű többszálú stresszteszt.
+A fent rögzített korábbi privát host-reset CTest-időtúllépés továbbra is
+külön korlát; nincs teljes privát tesztcsomag-PASS vagy kiadási elfogadás.
+
+A teljes D3 nincs kész: következő a GUI, induláskori scan/frissítés és
+Windows/macOS host-elfogadás.
 A privát firmware-es processor-teszt nem helyettesíti a valódi REAPER-próbát.
 
 #### Megőrzött felhasználói koncepció

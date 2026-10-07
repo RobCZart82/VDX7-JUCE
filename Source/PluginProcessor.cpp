@@ -1775,7 +1775,8 @@ bool VDX7AudioProcessor::loadUserBank(const juce::File& file, juce::String& erro
 
 bool VDX7AudioProcessor::loadPackedVoices(const std::vector<uint8_t>& packed, juce::String* error,
                                         int selectProgram, const VDX7UserBank::Voice* initExpected, int initProgram,
-                                        uint32_t initRevision)
+                                        uint32_t initRevision, const ImportedBankSnapshot* importedExpected,
+                                        int importedOrigin)
 {
     if (packed.size() != 128 && packed.size() != 4096) return false;
     const auto voiceCount = static_cast<int>(packed.size() / VDX7VoiceData::kPackedVoiceSize);
@@ -1791,6 +1792,12 @@ bool VDX7AudioProcessor::loadPackedVoices(const std::vector<uint8_t>& packed, ju
     }
     {
         std::scoped_lock lock(engineMutex_);
+        if (importedExpected != nullptr && (!*importedExpected || *importedExpected != importedBanks_
+            || importedOrigin < 0 || importedOrigin >= int(importedBanks_->banks.size()) || packed.size() != 4096))
+        {
+            if (error != nullptr) *error = "Imported library changed. Refresh the bank list and choose again.";
+            return false; // Before flushing commands, editing RAM or replacing origin.
+        }
         if (pendingRestore_.isValid())
         {
             if (error != nullptr) *error = kPendingProjectMessage;
@@ -1816,7 +1823,12 @@ bool VDX7AudioProcessor::loadPackedVoices(const std::vector<uint8_t>& packed, ju
         }
         std::copy(packed.begin(), packed.end(), ram.begin() + offset);
         if (!engine_.restoreRam(ram)) return false;
-        clearImportedBankOriginLocked();
+        if (importedExpected != nullptr)
+        {
+            importedBankOrigin_ = importedOrigin;
+            ++importedBankRevision_; // Invalidate scans of the prior working-bank origin.
+        }
+        else clearImportedBankOriginLocked();
         engine_.setCurrentBankMarker(-1);
         if (selectProgram >= 0 && selectProgram < 32) engine_.selectProgram(selectProgram);
         if (single)
@@ -2366,6 +2378,29 @@ VDX7AudioProcessor::ImportedBankSnapshot VDX7AudioProcessor::getImportedBankSnap
 {
     std::scoped_lock lock(engineMutex_);
     return importedBanks_;
+}
+
+bool VDX7AudioProcessor::selectImportedBank(const ImportedBankSnapshot& expectedCatalog,
+                                          const juce::String& contentId, int program, juce::String& error)
+{
+    error.clear();
+    if (program < 0 || program >= 32)
+    { error = "Imported bank program must be 0..31."; return false; }
+    if (!expectedCatalog || expectedCatalog != getImportedBankSnapshot())
+    { error = "Imported library changed. Refresh the bank list and choose again."; return false; }
+    const auto found = std::find_if(expectedCatalog->banks.begin(), expectedCatalog->banks.end(),
+        [&](const auto& bank) { return bank.contentId == contentId; });
+    if (found == expectedCatalog->banks.end())
+    { error = "Imported bank is not in the current library."; return false; }
+    const int index = static_cast<int>(std::distance(expectedCatalog->banks.begin(), found));
+#if defined(VDX7_TEST_IMPORTED_BANK_BOUNDARY)
+    extern void vdx7TestImportedBankSelectionBoundary();
+    vdx7TestImportedBankSelectionBoundary(); // Lookup complete, before locked RAM transaction.
+#endif
+    // loadPackedVoices rechecks the same token under the RAM lock. It retains
+    // settings, flushes prior commands, publishes parameters after unlocking,
+    // and never modifies the immutable source bank or reopens its filename.
+    return loadPackedVoices(found->packed, &error, program, nullptr, -1, 0, &expectedCatalog, index);
 }
 
 bool VDX7AudioProcessor::refreshImportedBanks(const juce::File& folder, juce::String& report,
