@@ -1,6 +1,7 @@
 #include "VDX7Engine.h"
 #include "VDX7MidiValidation.h"
 #include "VDX7MonoCorrection.h"
+#include "VDX7FirmwareValidation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -77,6 +78,15 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
     // non-uniform unknown/custom firmware retains the existing admission policy.
     if (std::all_of(firmware, firmware + kFirmwareSize, [](uint8_t byte) { return byte == 0; })
         || std::all_of(firmware, firmware + kFirmwareSize, [](uint8_t byte) { return byte == 255; }))
+    {
+        if (diagnostic) diagnostic->code = RomLoadDiagnostic::Code::firmwareRejected;
+        return false;
+    }
+
+    // HD6303R::reset reads the big-endian vector at FFFE. On cold boot
+    // executable firmware is mapped only at C000..FFFF; lower memory is
+    // RAM/peripherals, not another installed boot ROM. Do not whitelist bytes.
+    if (!VDX7FirmwareValidation::resetVectorInRom(firmware, kFirmwareSize))
     {
         if (diagnostic) diagnostic->code = RomLoadDiagnostic::Code::firmwareRejected;
         return false;

@@ -1,5 +1,6 @@
 #include "VDX7Engine.h"
 #include "VDX7RomLoadMessage.h"
+#include "VDX7FirmwareValidation.h"
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -52,12 +53,33 @@ int main(int argc, char** argv)
             && diagnostic.code == VDX7Engine::RomLoadDiagnostic::Code::invalidInput,
             "partial companion rejected before access");
         std::vector<uint8_t> emptyFirmware(VDX7Engine::kFirmwareSize, 0);
+        require(!VDX7FirmwareValidation::resetVectorInRom(nullptr, emptyFirmware.size())
+            && !VDX7FirmwareValidation::resetVectorInRom(emptyFirmware.data(), emptyFirmware.size() - 1),
+            "vector validation rejects null/partial input before access");
+        for (unsigned address = 0; address <= 0xffff; ++address)
+        {
+            emptyFirmware[emptyFirmware.size() - 2] = uint8_t(address >> 8);
+            emptyFirmware[emptyFirmware.size() - 1] = uint8_t(address);
+            require(VDX7FirmwareValidation::resetVectorInRom(emptyFirmware.data(), emptyFirmware.size())
+                == (address >= 0xc000), "all 65536 reset-vector boundary controls");
+        }
         for (uint8_t fill : {uint8_t(0), uint8_t(255)})
         {
             std::fill(emptyFirmware.begin(), emptyFirmware.end(), fill);
             require(!engine->loadRomImage(emptyFirmware.data(), emptyFirmware.size(), nullptr, 0, &diagnostic)
                 && diagnostic.code == Code::firmwareRejected && !engine->isLoaded(),
                 "blank or erased firmware rejected before boot");
+        }
+        // Non-uniform images bypass the blank-image guard, but cannot cold-boot
+        // from RAM/peripherals. Check zero and the ROM lower-bound predecessor.
+        emptyFirmware[0] = 1;
+        for (unsigned address : {0u, 0xbfffu})
+        {
+            emptyFirmware[VDX7Engine::kFirmwareSize - 2] = uint8_t(address >> 8);
+            emptyFirmware[VDX7Engine::kFirmwareSize - 1] = uint8_t(address);
+            require(!engine->loadRomImage(emptyFirmware.data(), emptyFirmware.size(), nullptr, 0, &diagnostic)
+                && diagnostic.code == Code::firmwareRejected && !engine->isLoaded(),
+                "non-uniform firmware with reset vector below ROM rejected");
         }
         if (argc == 2)
         {
@@ -73,6 +95,14 @@ int main(int argc, char** argv)
             require(engine->saveRam(before), "capture loaded RAM");
             const int program = engine->currentProgram(), bank = engine->currentBank();
             const auto voices = engine->factoryVoices();
+            auto invalidVector = firmware;
+            invalidVector[VDX7Engine::kFirmwareSize - 2] = 0xbf;
+            invalidVector[VDX7Engine::kFirmwareSize - 1] = 0xff;
+            require(!engine->loadRomImage(invalidVector.data(), invalidVector.size(), nullptr, 0, &diagnostic)
+                && diagnostic.code == Code::firmwareRejected && engine->isLoaded()
+                && engine->saveRam(after) && before == after,
+                "invalid cold-boot vector preserves loaded RAM");
+            std::fill(emptyFirmware.begin(), emptyFirmware.end(), uint8_t(255));
             require(!engine->loadRomImage(emptyFirmware.data(), emptyFirmware.size(), nullptr, 0, &diagnostic)
                 && diagnostic.code == Code::firmwareRejected && engine->isLoaded()
                 && engine->saveRam(after) && before == after

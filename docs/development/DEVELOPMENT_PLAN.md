@@ -16,6 +16,18 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+2026-10-07 különválasztás: új `fix/cold-boot-vector-guard` ág alapja
+`4508caff3e799ee4c5729a6b1176e12e0019f17b`. Csak az általános reset-vektor
+admission-védelem, a null/mérethatár és 65536 cím kontrollja, a közvetlen motor
+állapotmegőrzése és a ROM-mentes processor hibaszöveg-regresszió került át.
+A #147 privát hangdiagnosztikai programja és SER7 nyers MIDI kontrollja
+nem része ennek az ágnak; azok külön Draft/halasztott munkák maradnak.
+Nincs SER7 támogatási ígéret vagy teljes boot-egészség igazolás.
+PASS: friss helyi MSVC wrapper/motor teszt, ROM-mentes kontroll és privát
+original/v1.8 RAM-megőrzés, változatlan korábbi core könyvtárral linkelve.
+Az új PR Windows/macOS/sanitizer kapuja szükséges; processor helyben NOT RUN;
+REAPER és új teljes helyi pluginbuild NOT RUN. A firmware-ek privátak maradnak.
+
 2026-10-07 felhasználói prioritás: az original/v1.8 stabil működése elsődleges.
 Ajánlott/támogatott firmware: eredeti DX7 Mk I v1.8 (IG11469).
 SER-7 jelenleg nem támogatott és nem ajánlott; a sikeres betöltés nem
