@@ -64,6 +64,22 @@ static void testInvalidCombinedRomDiagnostic()
         "oversized ROM reports bounded-read limit rather than semantic failure");
     require(!processor->isRomLoaded() && !error.contains(fixture.getFile().getFullPathName()),
         "file failures remain unloaded and disclose no personal path");
+    for (uint8_t fill : {uint8_t(0), uint8_t(255)})
+    {
+        bytes.assign(VDX7Engine::kFirmwareSize, fill);
+        require(fixture.getFile().replaceWithData(bytes.data(), bytes.size()), "write blank firmware fixture");
+        require(!processor->loadRomFromFile(fixture.getFile(), &error)
+            && error == "ROM firmware was rejected by the engine." && !processor->isRomLoaded(),
+            "processor exposes blank firmware rejection rather than success or size error");
+    }
+    bytes.assign(VDX7Engine::kFirmwareSize, 0);
+    bytes[0] = 1; // Non-uniform input bypasses the blank-image guard.
+    bytes[bytes.size() - 2] = 0xbf;
+    bytes[bytes.size() - 1] = 0xff;
+    require(fixture.getFile().replaceWithData(bytes.data(), bytes.size()), "write invalid reset-vector fixture");
+    require(!processor->loadRomFromFile(fixture.getFile(), &error)
+        && error == "ROM firmware was rejected by the engine." && !processor->isRomLoaded(),
+        "processor exposes reset-vector rejection before boot");
 }
 
 static void set(VDX7AudioProcessor& p, const juce::String& id, float v)
