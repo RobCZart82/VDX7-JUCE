@@ -16,6 +16,15 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+2026-10-07 #147 következő kontrollköre: az első head Windows/macOS/sanitizer
+PASS, de a Draft kompatibilitási kapu megmarad. A reset-vektor admission
+külön null/size-védett, mellékhatásmentes helperbe került; az összes 65536
+16 bites cím szintetikus tesztje védi a C000 határt és a bájtsorrendet.
+A helyi firmware-kontroll és állapotmegőrzés továbbra is külön bizonyíték,
+nem bizonyíték SER7 vagy más firmware funkcionális bootjára.
+Az új head CI-eredménye szükséges; a változatlan core könyvtárral linkelt
+helyi komponensfuttatás nem új teljes pluginbuild. REAPER NOT RUN.
+
 2026-10-07 checkpoint: #146 beolvadt, Windows/macOS/ASan-UBSan PASS;
 a ROM-mentes processor/projektállapot instrumentált lefedettségi kapuja teljesült.
 Új részfeladat alapja: `343676eea7596dd70e58b7642c48ecd7364b453a`.

@@ -1,5 +1,6 @@
 #include "VDX7Engine.h"
 #include "VDX7RomLoadMessage.h"
+#include "VDX7FirmwareValidation.h"
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -52,6 +53,16 @@ int main(int argc, char** argv)
             && diagnostic.code == VDX7Engine::RomLoadDiagnostic::Code::invalidInput,
             "partial companion rejected before access");
         std::vector<uint8_t> emptyFirmware(VDX7Engine::kFirmwareSize, 0);
+        require(!VDX7FirmwareValidation::resetVectorInRom(nullptr, emptyFirmware.size())
+            && !VDX7FirmwareValidation::resetVectorInRom(emptyFirmware.data(), emptyFirmware.size() - 1),
+            "vector validation rejects null/partial input before access");
+        for (unsigned address = 0; address <= 0xffff; ++address)
+        {
+            emptyFirmware[emptyFirmware.size() - 2] = uint8_t(address >> 8);
+            emptyFirmware[emptyFirmware.size() - 1] = uint8_t(address);
+            require(VDX7FirmwareValidation::resetVectorInRom(emptyFirmware.data(), emptyFirmware.size())
+                == (address >= 0xc000), "all 65536 reset-vector boundary controls");
+        }
         for (uint8_t fill : {uint8_t(0), uint8_t(255)})
         {
             std::fill(emptyFirmware.begin(), emptyFirmware.end(), fill);
@@ -91,6 +102,7 @@ int main(int argc, char** argv)
                 && diagnostic.code == Code::firmwareRejected && engine->isLoaded()
                 && engine->saveRam(after) && before == after,
                 "invalid cold-boot vector preserves loaded RAM");
+            std::fill(emptyFirmware.begin(), emptyFirmware.end(), uint8_t(255));
             require(!engine->loadRomImage(emptyFirmware.data(), emptyFirmware.size(), nullptr, 0, &diagnostic)
                 && diagnostic.code == Code::firmwareRejected && engine->isLoaded()
                 && engine->saveRam(after) && before == after
