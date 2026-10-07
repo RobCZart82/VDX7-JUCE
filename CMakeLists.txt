@@ -314,6 +314,10 @@ if(VDX7_ENABLE_ROM_TESTS)
         COMMAND vdx7_processor_tests --init-preset-gui "${VDX7_TEST_ROM_FILE}")
     set_tests_properties(vdx7_init_preset_gui PROPERTIES TIMEOUT 90
         LABELS "local-rom;firmware-v1_8;init-preset;gui" FIXTURES_REQUIRED vdx7_v18_rom)
+    add_test(NAME vdx7_init_preset_audio_matrix
+        COMMAND vdx7_processor_tests --init-preset-audio-matrix "${VDX7_TEST_ROM_FILE}")
+    set_tests_properties(vdx7_init_preset_audio_matrix PROPERTIES TIMEOUT 240
+        LABELS "local-rom;firmware-v1_8;init-preset;audio-matrix" FIXTURES_REQUIRED vdx7_v18_rom)
     set_tests_properties(vdx7_export_acknowledgement PROPERTIES TIMEOUT 90
         LABELS "local-rom;firmware-v1_8;sysex-export" FIXTURES_REQUIRED vdx7_v18_rom)
     if(VDX7_TEST_FACTORY_BANK_FOLDER)

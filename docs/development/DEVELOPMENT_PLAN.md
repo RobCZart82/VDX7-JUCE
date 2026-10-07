@@ -181,8 +181,11 @@ Optimalizálás csak mérés után: érvényes és korai/késői hibás adat, co
 
 #### Aktuális fejlesztés
 
-2026-10-07: #150 adatgenerátora main-ban van. Az új fejlesztési kör beköti
-az UTILITY → Init Preset megerősítést és a munkahangszín cseréjét. A megerősítés
+2026-10-07: #150 adatgenerátora és #152 megerősített Init művelete main-ban van.
+#152 Windows/macOS/sanitizer ellenőrzése PASS, a vegyes hangszín/kiválasztás
+befogási versenyhelyzete javítva, review rendezve. Merge main: `269e230`.
+A merge utáni platformellenőrzés és az új tesztág ellenőrzése külön kapu.
+Az UTILITY → Init Preset megerősítést kér a munkahangszín cseréjéhez. A megerősítés
 csak a befogott hangszínre érvényes: közben változó tartalom/kiválasztás/revízió
 új megerősítést igényel. Mégse nem indít cserét. A gyári katalógus és a lemezen
 lévő USER.vub változatlan; a RAM-ban csak az aktuális szerkeszthető másolat cserélődik.
@@ -196,7 +199,12 @@ A pontos teszteredmények a [fejlesztési validációban](../validation/VALIDATI
 szerepelnek: helyi 15/15 ROM-mentes CTest ASan/UBSan mellett, 78 Python-teszt,
 privát v1.8 Init processor- és párbeszédablak-teszt PASS. Friss
 platform/sanitizer/review és valódi host-elfogadás
-előtt D2 nincs késznek vagy kiadottnak jelölve.
+előtt D2 nincs késznek vagy kiadottnak jelölve. Következő részfeladat a külön
+opt-in audio-mátrix: 44,1/48/96/192 kHz × 32/512/2048 mintás blokk,
+megszólaló/sustainnel kitartott hangok alatti Init, felengedés, új hangindítás
+és módosított Init projekt-visszaállítása. Ezek processor-harness tesztek,
+nem valódi REAPER- vagy hangminőségi elfogadások. Kizárólag az azonosított
+1.8-as firmware-rel értékelendők; az 1.6-os maskrom nem azonos tesztalap.
 
 #### Eredeti specifikáció és adatmodell checkpoint
 
