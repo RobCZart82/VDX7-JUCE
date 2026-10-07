@@ -82,6 +82,17 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
         return false;
     }
 
+    // HD6303R::reset reads the big-endian vector at FFFE. On cold boot
+    // executable firmware is mapped only at C000..FFFF; lower memory is
+    // RAM/peripherals, not another installed boot ROM. Do not whitelist bytes.
+    const unsigned resetAddress = (unsigned(firmware[kFirmwareSize - 2]) << 8)
+        | unsigned(firmware[kFirmwareSize - 1]);
+    if (resetAddress < 0xc000)
+    {
+        if (diagnostic) diagnostic->code = RomLoadDiagnostic::Code::firmwareRejected;
+        return false;
+    }
+
     if (!dx7_.loadFirmware(firmware, kFirmwareSize))
     {
         if (diagnostic) diagnostic->code = RomLoadDiagnostic::Code::firmwareRejected;

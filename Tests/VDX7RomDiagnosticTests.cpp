@@ -59,6 +59,17 @@ int main(int argc, char** argv)
                 && diagnostic.code == Code::firmwareRejected && !engine->isLoaded(),
                 "blank or erased firmware rejected before boot");
         }
+        // Non-uniform images bypass the blank-image guard, but cannot cold-boot
+        // from RAM/peripherals. Check zero and the ROM lower-bound predecessor.
+        emptyFirmware[0] = 1;
+        for (unsigned address : {0u, 0xbfffu})
+        {
+            emptyFirmware[VDX7Engine::kFirmwareSize - 2] = uint8_t(address >> 8);
+            emptyFirmware[VDX7Engine::kFirmwareSize - 1] = uint8_t(address);
+            require(!engine->loadRomImage(emptyFirmware.data(), emptyFirmware.size(), nullptr, 0, &diagnostic)
+                && diagnostic.code == Code::firmwareRejected && !engine->isLoaded(),
+                "non-uniform firmware with reset vector below ROM rejected");
+        }
         if (argc == 2)
         {
             // Opt-in local firmware prefix only; never copies private bank data.
@@ -73,6 +84,13 @@ int main(int argc, char** argv)
             require(engine->saveRam(before), "capture loaded RAM");
             const int program = engine->currentProgram(), bank = engine->currentBank();
             const auto voices = engine->factoryVoices();
+            auto invalidVector = firmware;
+            invalidVector[VDX7Engine::kFirmwareSize - 2] = 0xbf;
+            invalidVector[VDX7Engine::kFirmwareSize - 1] = 0xff;
+            require(!engine->loadRomImage(invalidVector.data(), invalidVector.size(), nullptr, 0, &diagnostic)
+                && diagnostic.code == Code::firmwareRejected && engine->isLoaded()
+                && engine->saveRam(after) && before == after,
+                "invalid cold-boot vector preserves loaded RAM");
             require(!engine->loadRomImage(emptyFirmware.data(), emptyFirmware.size(), nullptr, 0, &diagnostic)
                 && diagnostic.code == Code::firmwareRejected && engine->isLoaded()
                 && engine->saveRam(after) && before == after

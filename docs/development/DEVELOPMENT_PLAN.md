@@ -16,6 +16,19 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+2026-10-07 checkpoint: #146 beolvadt, Windows/macOS/ASan-UBSan PASS;
+a ROM-mentes processor/projektállapot instrumentált lefedettségi kapuja teljesült.
+Új részfeladat alapja: `343676eea7596dd70e58b7642c48ecd7364b453a`.
+Cold-boot reset-vektor ellenőrzés: a core FFFE/FFFF big-endian vektort olvas;
+a wrapper ROM-ja C000..FFFF között található. Az ez alá mutató vektor
+elutasítása firmwareRejected kategóriával, még állapotváltoztatás előtt.
+PASS: helyi MSVC ROM-mentes 0000/BFFF kontrollok; privát firmware-prefix
+betöltés és hibás reset-vektor után RAM-megőrzés. Korábbi változatlan core
+könyvtárral linkelt komponensellenőrzés, nem új teljes pluginbuild.
+NOT RUN: REAPER, más firmware-változatok (például SER7) kézi kompatibilitása;
+CI/review még szükséges. E szűk admission-védelem nem boot-egészség igazolás:
+ROM-ba mutató vektor mellett hibás kód továbbra is elfogadható.
+
 2026-10-07 új checkpoint: #145 beolvadt, Windows/macOS/sanitizer PASS,
 review-megjegyzés nincs. Következő részfeladat alapja:
 `6868007efe3f565bffd66fa1a5df53771858213a`.
