@@ -9,6 +9,7 @@
 #include "PluginEditor.h"
 #include <juce_cryptography/juce_cryptography.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <optional>
@@ -627,6 +628,7 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
     if (data[0] == 0xf0)
     {
         if (!engine_.handleSysex(data, static_cast<std::size_t>(size))) return false;
+        clearImportedBankOriginLocked();
         initVoices_ = 0;
         modifiedVoices_.store(0xffffffffu); // Incoming bank has not been exported.
         return true;
@@ -639,7 +641,7 @@ bool VDX7AudioProcessor::handleMidiEventLocked(const uint8_t* data, int size)
         return false;
     engine_.handleMidi(data, size);
     const bool bankChange = engine_.factoryBankLoadRevision() != bankRevision;
-    if (bankChange) { modifiedVoices_.store(0); initVoices_ = 0; }
+    if (bankChange) { modifiedVoices_.store(0); initVoices_ = 0; clearImportedBankOriginLocked(); }
     if (engine_.isMidiRecovering())
     {
         clearKeyboardSnapshot();
@@ -673,6 +675,7 @@ void VDX7AudioProcessor::applyPendingCommands()
                 // before. Earlier edits must never migrate into this new bank.
                 if (engine_.selectFactoryBank(command.value))
                 {
+                    clearImportedBankOriginLocked();
                     selectionChanged = true;
                     modifiedVoices_.store(0);
                     initVoices_ = 0;
@@ -1141,6 +1144,8 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     juce::ValueTree deferredEdits;
     std::vector<uint8_t> ram;
     VDX7FactoryBanks::Snapshot factoryBanks;
+    ImportedBankSnapshot importedBanks;
+    int importedBankOrigin = -1;
     int bank = -1, program = 0, inputChannel = 0;
     uint32_t modified = 0, initVoices = 0;
     juce::String loadedRomPath;
@@ -1157,6 +1162,8 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
             pendingRestore_.setProperty("midiInputChannel", midiInputChannel_.load(), nullptr);
             capturePendingRestoreEditsLocked();
             pendingCopy = pendingRestore_.createCopy();
+            importedBanks = importedBanks_;
+            importedBankOrigin = importedBankOrigin_;
         }
         else
         {
@@ -1171,6 +1178,8 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
                 engine_.reloadCurrentProgram();
             applyPendingCommands();
             applyPendingPerformanceSettings();
+            importedBanks = importedBanks_;
+            importedBankOrigin = importedBankOrigin_;
             bank = engine_.currentBank();
             inputChannel = midiInputChannel_.load();
             program = engine_.currentProgram();
@@ -1227,8 +1236,16 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 
     // Encode only detached data: XML/base64 work must not keep audio's engine
     // mutex occupied. The RAM, selection and voice parameters share one capture.
+    auto writeImported = [&](juce::ValueTree& target) {
+        if (!importedBanks) return true;
+        auto imported = *importedBanks; // Large detached copy outside engine lock.
+        if (importedBankOrigin >= 0 && importedBankOrigin < int(imported.banks.size()))
+            imported.selectedId = imported.banks[static_cast<std::size_t>(importedBankOrigin)].contentId;
+        return VDX7ImportedBanks::writeState(target, imported);
+    };
     if (pendingCopy.isValid())
     {
+        if (!writeImported(pendingCopy)) return;
         if (auto xml = pendingCopy.createXml()) copyXmlToBinary(*xml, destData);
         return;
     }
@@ -1241,6 +1258,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     // Before first firmware load there is no catalog snapshot to freeze.
     // A pending project with a real catalog took the preserved-copy path above.
     if (loaded) VDX7FactoryBanks::writeState(state, factoryBanks);
+    if (!writeImported(state)) return;
     if (!ram.empty())
     {
         juce::MemoryBlock block(ram.data(), ram.size());
@@ -1276,6 +1294,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 
 void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
+    if (data == nullptr || sizeInBytes < 8 || sizeInBytes > maxProjectStateBytes) return;
     std::unique_ptr<juce::XmlElement> xml(getXmlFromBinary(data, sizeInBytes));
     if (xml == nullptr)
         return;
@@ -1288,7 +1307,15 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     bool hasBankSnapshot = false;
     if (!VDX7FactoryBanks::readState(state, factoryBanks, hasBankSnapshot)) return;
 
+    VDX7ImportedBanks::Snapshot imported;
+    bool hasImportedSnapshot = false;
+    if (!VDX7ImportedBanks::readState(state, imported, hasImportedSnapshot)) return;
+
     const auto ramText = state.getProperty("ram").toString();
+    // An imported origin refers to the editable CUSTOM RAM, never a factory
+    // bank selector or a project without a working-voice snapshot.
+    if (imported.selectedId.isNotEmpty()
+        && (ramText.isEmpty() || state.getProperty("bank", -1).toString() != "-1")) return;
     if (ramText.isNotEmpty())
     {
         juce::MemoryBlock ram;
@@ -1301,6 +1328,11 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     }
 
     auto pendingCopy = state.createCopy();
+    // The immutable catalog separately owns bank data. Keep the pending tree
+    // small enough that its later locked copy does not duplicate the library;
+    // getStateInformation attaches the detached catalog outside the lock.
+    if (auto child = pendingCopy.getChildWithName("ImportedBanks"); child.isValid())
+        pendingCopy.removeChild(child, nullptr);
     if (state.hasProperty("initVoices"))
     {
         const auto bits = state.getProperty("initVoices");
@@ -1316,10 +1348,25 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     const auto correction = state.getProperty("monoNoteZeroCorrection", false);
     if (!correction.isBool() && correction.toString() != "0" && correction.toString() != "1")
         return;
+    ImportedBankSnapshot restoredImported;
+    int restoredImportedOrigin = -1;
+    if (hasImportedSnapshot)
+    {
+        for (int index = 0; index < int(imported.banks.size()); ++index)
+            if (imported.banks[static_cast<std::size_t>(index)].contentId == imported.selectedId)
+                restoredImportedOrigin = index;
+        imported.selectedId.clear(); // Live origin is separately engine-lock owned.
+        restoredImported = std::make_shared<const VDX7ImportedBanks::Snapshot>(std::move(imported));
+    }
+    ImportedBankSnapshot retiredImported; // Release large old data after unlocking.
     {
         std::scoped_lock lock(engineMutex_);
         if (!engine_.configureMonoCorrectionForStateRestore(static_cast<bool>(correction)))
             return;
+        retiredImported = std::move(importedBanks_);
+        importedBanks_ = std::move(restoredImported);
+        importedBankOrigin_ = restoredImportedOrigin;
+        ++importedBankRevision_;
         pendingRestore_ = pendingCopy;
         pendingProjectEdits_.store(true, std::memory_order_release);
         // The audio callback owns deferredMidi_. Publishing an epoch lets it
@@ -1560,6 +1607,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         loadedRomPath_ = file.getFullPathName();
         loadedRomIdentity_ = makeRomContentIdentity(rom, voices);
         baseFactoryBanks_ = { engine_.factoryVoices(), engine_.factoryBankMask() };
+        if (!pendingRestore_.isValid()) clearImportedBankOriginLocked();
         if (library.complete && library.banks.mask != 0)
         {
             auto combined = baseFactoryBanks_;
@@ -1768,6 +1816,7 @@ bool VDX7AudioProcessor::loadPackedVoices(const std::vector<uint8_t>& packed, ju
         }
         std::copy(packed.begin(), packed.end(), ram.begin() + offset);
         if (!engine_.restoreRam(ram)) return false;
+        clearImportedBankOriginLocked();
         engine_.setCurrentBankMarker(-1);
         if (selectProgram >= 0 && selectProgram < 32) engine_.selectProgram(selectProgram);
         if (single)
@@ -2309,6 +2358,80 @@ bool VDX7AudioProcessor::refreshFactoryBanks(const juce::File& folder, juce::Str
         if (library.warnings.size() > 8)
             report += juce::String(library.warnings.size() - 8) + " additional files ignored.";
     }
+    updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    return true;
+}
+
+VDX7AudioProcessor::ImportedBankSnapshot VDX7AudioProcessor::getImportedBankSnapshot() const
+{
+    std::scoped_lock lock(engineMutex_);
+    return importedBanks_;
+}
+
+bool VDX7AudioProcessor::refreshImportedBanks(const juce::File& folder, juce::String& report,
+                                             const std::function<bool()>& shouldCancel)
+{
+    ImportedBankSnapshot previous;
+    uint64_t revision;
+    int previousOrigin = -1;
+    {
+        std::scoped_lock lock(engineMutex_);
+        if (pendingRestore_.isValid()) { report = kPendingProjectMessage; return false; }
+        previous = importedBanks_;
+        previousOrigin = importedBankOrigin_;
+        revision = importedBankRevision_;
+    }
+#if defined(VDX7_TEST_IMPORTED_BANK_BOUNDARY)
+    extern void vdx7TestImportedBankScanBoundary();
+    vdx7TestImportedBankScanBoundary(); // Detached generation, before non-RT I/O.
+#endif
+    auto scanned = VDX7ImportedBanks::scan(folder, shouldCancel);
+    if (!scanned.complete())
+    {
+        report = "Imported scan incomplete; current library preserved.\n" + scanned.warnings.joinIntoString("\n");
+        return false;
+    }
+    VDX7ImportedBanks::Snapshot candidate;
+    candidate.banks = std::move(scanned.banks);
+    if (previous && previousOrigin >= 0 && previousOrigin < int(previous->banks.size()))
+    {
+        candidate.selectedId = previous->banks[static_cast<std::size_t>(previousOrigin)].contentId;
+        const auto found = std::find_if(candidate.banks.begin(), candidate.banks.end(), [&](const auto& bank)
+        { return bank.contentId == candidate.selectedId; });
+        if (found == candidate.banks.end())
+        {
+            if (candidate.banks.size() >= VDX7ImportedBanks::maxFiles)
+            { report = "No room to retain the selected project bank; current library preserved."; return false; }
+            const auto saved = std::find_if(previous->banks.begin(), previous->banks.end(), [&](const auto& bank)
+            { return bank.contentId == candidate.selectedId; });
+            if (saved == previous->banks.end()) return false; // Owned snapshots must be valid.
+            candidate.banks.push_back(*saved);
+            scanned.warnings.add("Selected project bank retained: its source is no longer in this folder.");
+        }
+    }
+    if (!VDX7ImportedBanks::validSnapshot(candidate))
+    { report = "Invalid imported catalog; current library preserved."; return false; }
+    int nextOrigin = -1;
+    for (int index = 0; index < int(candidate.banks.size()); ++index)
+        if (candidate.banks[static_cast<std::size_t>(index)].contentId == candidate.selectedId) nextOrigin = index;
+    candidate.selectedId.clear();
+    auto next = std::make_shared<const VDX7ImportedBanks::Snapshot>(std::move(candidate));
+    if (shouldCancel && shouldCancel())
+    { report = "Imported scan cancelled; current library preserved."; return false; }
+    ImportedBankSnapshot retired;
+    {
+        std::scoped_lock lock(engineMutex_);
+        if (pendingRestore_.isValid() || importedBankRevision_ != revision)
+        { report = "Project or library changed during scan; current library preserved. Refresh again."; return false; }
+        retired = std::move(importedBanks_);
+        importedBanks_ = std::move(next);
+        importedBankOrigin_ = nextOrigin;
+        ++importedBankRevision_;
+    }
+    report = "Imported bank list refreshed. Current sound and edits preserved.";
+    for (int i = 0; i < juce::jmin(8, scanned.warnings.size()); ++i) report += "\n" + scanned.warnings[i];
+    if (scanned.warnings.size() > 8)
+        report += "\n" + juce::String(scanned.warnings.size() - 8) + " additional files ignored.";
     updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
     return true;
 }

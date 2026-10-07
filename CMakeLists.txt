@@ -192,6 +192,8 @@ target_sources(VDX7 PRIVATE
     Source/PluginProcessor.cpp
     Source/VDX7UserBank.cpp
     Source/VDX7FactoryBanks.cpp
+    Source/VDX7ImportedBanks.cpp
+    Source/VDX7ImportedBankState.cpp
     Source/PluginEditor.h
     Source/PluginEditor.cpp
     Source/VDX7AboutPanel.h
@@ -272,6 +274,18 @@ add_test(NAME vdx7_pre_rom_state
     COMMAND vdx7_processor_tests --pre-rom-state-state-only)
 set_tests_properties(vdx7_pre_rom_state PROPERTIES TIMEOUT 30 LABELS "rom-free")
 
+# Catalog/project-state scheduling checks, without UI/startup/selection changes.
+add_executable(vdx7_imported_processor_tests EXCLUDE_FROM_ALL
+    Tests/VDX7ImportedProcessorTests.cpp Source/PluginProcessor.cpp)
+target_link_libraries(vdx7_imported_processor_tests PRIVATE VDX7)
+target_include_directories(vdx7_imported_processor_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,INCLUDE_DIRECTORIES>)
+target_compile_definitions(vdx7_imported_processor_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>
+    VDX7_TEST_IMPORTED_BANK_BOUNDARY=1 VDX7_TEST_STATE_BOUNDARY=1)
+add_test(NAME vdx7_imported_bank_state COMMAND vdx7_imported_processor_tests)
+set_tests_properties(vdx7_imported_bank_state PROPERTIES TIMEOUT 30 LABELS "rom-free;state-boundary")
+
 add_executable(vdx7_stability_tests EXCLUDE_FROM_ALL Tests/VDX7StabilityTests.cpp)
 target_link_libraries(vdx7_stability_tests PRIVATE VDX7)
 target_include_directories(vdx7_stability_tests PRIVATE
@@ -314,6 +328,10 @@ if(VDX7_ENABLE_ROM_TESTS)
     add_test(NAME vdx7_processor COMMAND vdx7_processor_tests)
     add_test(NAME vdx7_pre_rom_state_integration
         COMMAND vdx7_processor_tests --pre-rom-state "${VDX7_TEST_ROM_FILE}")
+    add_test(NAME vdx7_imported_bank_recall
+        COMMAND vdx7_imported_processor_tests "${VDX7_TEST_ROM_FILE}")
+    set_tests_properties(vdx7_imported_bank_recall PROPERTIES TIMEOUT 90
+        LABELS "local-rom;firmware-v1_8;state-boundary" FIXTURES_REQUIRED vdx7_v18_rom)
     add_test(NAME vdx7_export_acknowledgement
         COMMAND vdx7_processor_tests --export-acknowledgement "${VDX7_TEST_ROM_FILE}")
     add_test(NAME vdx7_init_preset
@@ -367,6 +385,7 @@ add_custom_target(vdx7_ci_checks DEPENDS
     vdx7_bounded_file_tests vdx7_voice_data_tests vdx7_factory_banks_tests vdx7_imported_banks_tests
     vdx7_algorithm_tests vdx7_resampling_tests vdx7_rom_diagnostic_tests vdx7_gui_header_tests vdx7_stress_tests
     vdx7_processor_tests vdx7_stability_tests vdx7_midi_range_tests vdx7_timing_tests)
+add_dependencies(vdx7_ci_checks vdx7_imported_processor_tests)
 add_custom_target(vdx7_all_tests DEPENDS vdx7_ci_checks)
 
 if(APPLE)

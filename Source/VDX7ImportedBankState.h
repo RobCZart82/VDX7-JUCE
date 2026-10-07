@@ -9,7 +9,7 @@ struct Snapshot
     std::vector<Bank> banks;
     juce::String selectedId; // Empty means no imported-bank origin; program/RAM are separate.
 };
-// Non-realtime preparatory codec only, not connected to processor state yet.
+// Non-realtime codec used by processor project-state capture and restore.
 // No paths are opened and no sound/selection is applied. Labels are recomputed.
 bool validSnapshot(const Snapshot&);
 // Invalid input leaves the caller's tree untouched. Caller owns exclusive access.
