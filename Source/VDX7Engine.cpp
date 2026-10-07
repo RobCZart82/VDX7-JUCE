@@ -72,6 +72,16 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
         newFactoryVoices.assign(voices, voices + kFactoryVoicesSize);
     }
 
+    // Reject blank/erased images before touching the running instrument.
+    // This narrow guard is not a firmware whitelist or proof of boot health:
+    // non-uniform unknown/custom firmware retains the existing admission policy.
+    if (std::all_of(firmware, firmware + kFirmwareSize, [](uint8_t byte) { return byte == 0; })
+        || std::all_of(firmware, firmware + kFirmwareSize, [](uint8_t byte) { return byte == 255; }))
+    {
+        if (diagnostic) diagnostic->code = RomLoadDiagnostic::Code::firmwareRejected;
+        return false;
+    }
+
     if (!dx7_.loadFirmware(firmware, kFirmwareSize))
     {
         if (diagnostic) diagnostic->code = RomLoadDiagnostic::Code::firmwareRejected;
