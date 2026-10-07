@@ -12,6 +12,8 @@ class SanitizerWorkflowTests(unittest.TestCase):
         selection = re.search(r"-R '([^']+)'", workflow).group(1)
         self.assertIsNotNone(re.fullmatch(selection, "vdx7_pre_rom_state"))
         self.assertIsNotNone(re.fullmatch(selection, "vdx7_rom_diagnostics"))
+        self.assertIn("vdx7_imported_banks_tests", build.split())
+        self.assertIsNotNone(re.fullmatch(selection, "vdx7_imported_banks"))
         for private_test in ("vdx7_processor", "vdx7_pre_rom_state_integration", "vdx7_host_reset"):
             self.assertIsNone(re.fullmatch(selection, private_test))
         self.assertIn("-DVDX7_ENABLE_ROM_TESTS=OFF", workflow)

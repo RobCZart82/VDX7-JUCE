@@ -146,8 +146,11 @@ control demonstrates detection of the review's specific missed-reset failure.
 
 ## Remaining acceptance gates
 
-The #152 merge-main Windows/macOS gate is complete. Fresh checks/review for the
-test-only audio-matrix branch must be verified before its merge.
+The #152 and #153 merge gates are complete. The #153 head `4bc6b7a` passed
+Windows/macOS/ASan-UBSan runs 37646131366, 37646131345 and 37646131405, with
+the corrected review thread resolved and fresh code/security reviews reporting
+no further findings. It merged as `1675c83b12a4728947168c0898b03a6a71dbf145`.
+Its merge-main Windows/macOS runs 37651481436 and 37651481370 also PASS.
 Real Windows/macOS REAPER acceptance and release packaging/publication remain
 separate. D2 is not declared fully accepted or released by these component results.
 
