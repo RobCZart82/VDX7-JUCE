@@ -272,9 +272,49 @@ Helyi ASan/UBSan: 16/16 ROM-mentes CTest és 78 Python-regresszió PASS;
 az új szintetikus tesztben validálás, legacy bájtmegőrzés, csatorna/névfüggetlen
 azonosítás, átnevezés, Unicode, duplikátum, pontos limitek, megszakítás,
 link/FIFO-kezelés és eredményizoláció szerepel. A privát ROM/bank adatai nem
-kellenek ehhez a teszthez. Friss Windows/macOS/sanitizer CI és review még kapu.
-A teljes D3 nincs kész: következő a korlátozott állapotformátum és biztonságos
-processor-bekötés, majd GUI és projekt-recall/host elfogadás.
+kellenek ehhez a teszthez. #154 head `52fe766` Windows/macOS/sanitizer PASS
+(37654489753, 37654489749, 37654489750), kód- és biztonsági review nem talált hibát.
+Beolvadt `54347ce` main-nal; a merge utáni main ellenőrzése külön kapu.
+
+#### Importált bankok projektállapot formátuma
+
+Második előkészítő részfeladat: `VDX7ImportedBankState`, továbbra is csak a
+ROM-mentes komponens tesztcéljába bekötve. Nem bővíti a plugin jelenlegi
+projektformátumát, nem olvas felhasználói mappát és nem állít hangszínt.
+A következő processor-bekötéshez készít validált, önálló pillanatképet.
+
+Az `ImportedBanks` gyermek 1-es verziója legfeljebb 128 teljes 4096 bájtos
+bankot és egy opcionális kiválasztott tartalmi azonosítót tárol. Az azonosító
+a mentett VMEM SHA-256-jával egyezzen; ismételt azonosító, hibás paraméteradat
+vagy nem létező kiválasztás elutasítandó. A programszám és az aktuális,
+akár szerkesztett munkahangszín/RAM külön, a processor állapotának része lesz:
+az eredeti bank kiválasztása nem írhatja felül a projektben mentett szerkesztést.
+
+A bankadat pontos méretű, kanonikus kódolása mellett a fájlnév UTF-8 bájtjai
+is kanonikusan kódoltak, legfeljebb 1024 bájttal. Így az XML-ben tiltott,
+POSIX-fájlnévben megengedett karakterek is adatvesztés nélkül megmaradnak.
+A fájlnév csak címkeadat: visszaállításkor soha nem nyitunk meg belőle fájlt.
+A rövid megjelenítési név nem mentett azonosító, hanem újraszámított címke.
+Átnevezés, azonos rövid címke és a forrásfájl hiánya nem változtatja meg a
+mentett bank tartalmát vagy kiválasztási azonosítóját.
+
+Hiányzó gyermek a régi projektek támogatott, üres állapota; explicit üres
+gyermek megkülönböztethető ettől. Hibás/hiányos mező, ismeretlen verzió,
+dupla gyermek, túl sok bank, nem kanonikus hosszprefix vagy érvénytelen UTF-8
+elutasítása nem módosítja a célpillanatképet és a jelenlétjelzőt.
+Hibás mentési bemenet a többi projektmezőt sem változtatja meg.
+A korlát az adatdekódolásra vonatkozik; a külső XML/binary bemenet méretkapuja
+a processor-bekötés előtt még külön szükséges.
+
+Helyi ASan/UBSan alatt a bővített komponens: XML/direct round trip,
+legacy 127/100 értékek, 128-bankos 512 KiB tartalom, 129-bankos elutasítás,
+1024/1025 UTF-8 bájtos névhatár, Unicode/vezérlőkarakteres név, hamis hash,
+hibás adat és állapotmegőrzés. A hash-ellenőrzést ideiglenesen kihagyó hibás
+kontrollt a teszt elutasította; a kontroll nem kerül commitba.
+Ez nem valódi plugin/REAPER projekt-recall vagy kiadási elfogadás.
+
+A teljes D3 nincs kész: következő a biztonságos processor-bekötés és külső
+állapotbemeneti korlát, majd GUI és projekt-recall/host elfogadás.
 
 #### Megőrzött felhasználói koncepció
 

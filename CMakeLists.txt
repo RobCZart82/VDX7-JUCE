@@ -95,6 +95,7 @@ set_tests_properties(vdx7_factory_banks PROPERTIES TIMEOUT 20 LABELS "rom-free")
 
 # Preparatory catalog only: not linked to the plugin until runtime/state admission.
 add_executable(vdx7_imported_banks_tests Tests/VDX7ImportedBanksTests.cpp
+    Tests/VDX7ImportedBankStateTests.cpp Source/VDX7ImportedBankState.cpp
     Source/VDX7ImportedBanks.cpp Source/VDX7FactoryBanks.cpp)
 target_include_directories(vdx7_imported_banks_tests PRIVATE Source)
 target_link_libraries(vdx7_imported_banks_tests PRIVATE juce::juce_data_structures juce::juce_cryptography vdx7_voice_data)

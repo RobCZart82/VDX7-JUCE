@@ -12,6 +12,8 @@
 static void require(bool ok, const char* message)
 { if (!ok) throw std::runtime_error(message); }
 
+void testImportedBankState();
+
 static std::vector<uint8_t> bank(int coarse)
 {
     auto seed = vdx7InitVoice();
@@ -158,6 +160,7 @@ int main()
             && defaultFolder().getParentDirectory() == VDX7FactoryBanks::defaultFolder().getParentDirectory(),
             "separate macOS/Windows application-data library path");
         require(folder.deleteRecursively(), "clean isolated fixtures");
+        testImportedBankState();
         std::cout << "PASS: bounded imported bank catalog, content identity, Unicode, validation, cancellation and isolation\n";
         return 0;
     }
