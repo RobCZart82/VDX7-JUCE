@@ -137,6 +137,9 @@ static void testInitUnavailable()
     auto p = std::make_unique<VDX7AudioProcessor>(false);
     const auto before = save(*p);
     juce::String error;
+    VDX7AudioProcessor::WorkingVoiceSnapshot unavailable;
+    require(!p->captureWorkingVoiceSnapshot(unavailable, error) && error.isNotEmpty(),
+            "init confirmation snapshot requires ready firmware");
     require(!p->initialiseVoiceFromUi(vdx7InitVoice(), 0, p->getOperatorVoiceRevision(), error) && error.isNotEmpty(),
             "init requires a ready firmware/project");
     require(save(*p) == before, "unavailable init preserves no-ROM state");
@@ -159,6 +162,25 @@ static void testInitPreset(const juce::File& romFile)
     auto other = std::make_unique<VDX7AudioProcessor>(false);
     require(p->loadRomFromFile(romFile) && other->loadRomFromFile(romFile), "init local firmware");
     VDX7RegressionAccess::installSyntheticCatalog(*p);
+    // Identical bytes do not make a changed program selection safe to replace.
+    VDX7AudioProcessor::WorkingVoiceSnapshot selection;
+    juce::String selectionError;
+    other->selectProgramFromUi(0);
+    require(other->captureWorkingVoiceSnapshot(selection, selectionError)
+        && selection.program == 0 && selection.revision == other->getOperatorVoiceRevision(),
+            "init capture has coherent program and revision");
+    other->selectProgramFromUi(1);
+    VDX7AudioProcessor::WorkingVoiceSnapshot identical;
+    require(other->captureWorkingVoiceSnapshot(identical, selectionError)
+        && identical.voice == selection.voice && identical.program == 1,
+            "init identical-byte different-program control");
+    const auto switched = save(*other);
+    require(!other->initialiseVoiceFromUi(selection.voice, selection.program, selection.revision, selectionError)
+        && save(*other) == switched, "init rejects changed selection even with identical bytes");
+    other->selectProgramFromUi(0);
+    const auto switchedBack = save(*other);
+    require(!other->initialiseVoiceFromUi(selection.voice, selection.program, selection.revision, selectionError)
+        && save(*other) == switchedBack, "init rejects selection round trip with identical voice bytes");
     const auto otherBefore = save(*other);
     // Use a synthetic bank and an isolated USER file, never the real user's library.
     const auto seed = vdx7InitVoice();
@@ -180,18 +202,18 @@ static void testInitPreset(const juce::File& romFile)
     const auto controllers = p->getControllerSettings();
     const auto play = p->getPlaySettings();
     const auto bend = p->getPitchBendSettings();
-    VDX7UserBank::Voice captured;
-    require(p->captureUserPatch(captured, error), "capture init confirmation");
-    const int program = p->getCurrentProgram();
-    const auto revision = p->getOperatorVoiceRevision();
+    VDX7AudioProcessor::WorkingVoiceSnapshot confirmation;
+    require(p->captureWorkingVoiceSnapshot(confirmation, error), "capture init confirmation");
+    const int program = confirmation.program;
     require(save(*p) == before, "capture without confirmation changes nothing");
     require(p->renameVoice("NEW EDIT"), "edit while init dialog open");
     const auto edited = save(*p);
-    require(!p->initialiseVoiceFromUi(captured, program, revision, error) && save(*p) == edited,
+    require(!p->initialiseVoiceFromUi(confirmation.voice, confirmation.program, confirmation.revision, error) && save(*p) == edited,
             "stale init confirmation cannot discard later edits");
-    require(p->captureUserPatch(captured, error)
-        && p->initialiseVoiceFromUi(captured, program, p->getOperatorVoiceRevision(), error),
+    require(p->captureWorkingVoiceSnapshot(confirmation, error)
+        && p->initialiseVoiceFromUi(confirmation.voice, confirmation.program, confirmation.revision, error),
             "confirmed init installs working seed");
+    VDX7UserBank::Voice captured;
     VDX7UserBank::Voice actual;
     require(p->captureUserPatch(actual, error) && actual == seed, "init parameters and stored name exact");
     const auto initState = save(*p);
@@ -297,8 +319,9 @@ static void testInitPreset(const juce::File& romFile)
     require(p->captureUserPatch(actual, error) && actual == seed && p->getCurrentPatchName() == "Init Prese",
             "factory reload restores source bytes without init display provenance");
     other->selectProgramFromUi(31);
-    require(other->captureUserPatch(captured, error) && other->initialiseVoiceFromUi(captured, 31,
-            other->getOperatorVoiceRevision(), error), "final-slot init high provenance bit");
+    require(other->captureWorkingVoiceSnapshot(confirmation, error)
+        && other->initialiseVoiceFromUi(confirmation.voice, confirmation.program,
+            confirmation.revision, error), "final-slot init high provenance bit");
     const auto highBitState = save(*other);
     other->setStateInformation(highBitState.getData(), int(highBitState.getSize()));
     require(other->getCurrentProgram() == 31 && other->getCurrentPatchName() == "Init Preset"

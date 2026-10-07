@@ -1627,11 +1627,9 @@ void VDX7AudioProcessorEditor::showUtilityMenu()
 
 void VDX7AudioProcessorEditor::showInitPresetConfirmation()
 {
-    VDX7UserBank::Voice voice;
+    VDX7AudioProcessor::WorkingVoiceSnapshot snapshot;
     juce::String error;
-    if (!processor_.captureUserPatch(voice, error)) { showError("Init Preset unavailable", error); return; }
-    const int program = processor_.getCurrentProgram();
-    const auto revision = processor_.getOperatorVoiceRevision();
+    if (!processor_.captureWorkingVoiceSnapshot(snapshot, error)) { showError("Init Preset unavailable", error); return; }
     juce::Component::SafePointer<VDX7AudioProcessorEditor> safe(this);
     juce::AlertWindow::showOkCancelBox(juce::MessageBoxIconType::WarningIcon,
         "Init Preset?",
@@ -1639,11 +1637,11 @@ void VDX7AudioProcessorEditor::showInitPresetConfirmation()
         "Use SAVE AS first if you want to keep them. Other working sounds, the factory bank catalog "
         "and saved USER files are unchanged. PERFORMANCE and SETTINGS are not reset.",
         "Initialise", "Cancel", nullptr,
-        juce::ModalCallbackFunction::create([safe, voice, program, revision](int result)
+        juce::ModalCallbackFunction::create([safe, snapshot](int result)
         {
             if (safe == nullptr || result == 0) return;
             juce::String error;
-            if (!safe->processor_.initialiseVoiceFromUi(voice, program, revision, error))
+            if (!safe->processor_.initialiseVoiceFromUi(snapshot.voice, snapshot.program, snapshot.revision, error))
                 safe->showError("Init Preset not applied", error);
             safe->refresh(true);
         }));

@@ -13,6 +13,10 @@ Existing unsaved edits to the current working copy must be saved separately
 before confirmation. Cancel does not initiate a replacement. A changed voice,
 selection or publication revision makes the confirmation stale and rejects it.
 The async callback uses an editor SafePointer, including late answers after close.
+Voice bytes, selected program and revision are captured together under the
+processor engine lock, so a concurrent program change cannot mix confirmation
+data from different voices. Identical voice bytes and a selection round trip
+do not make an old confirmation valid.
 
 The VDX7-owned seed from #150 has a 10-character stored name `Init Prese`.
 Display-only per-slot provenance expands this to `Init Preset`; existing dirty
@@ -54,6 +58,16 @@ patches, recorded audio, installed plugin or real DAW project are committed or
 modified. No REAPER instance was launched.
 
 ## Remaining gates
+
+The initial PR Windows/macOS runs failed their registration smoke checks:
+the strict CTest inventory did not yet include the two new opt-in Init tests.
+The inventory now declares both tests without weakening the ROM-free/private
+fixture policy. Actual local ROM-enabled/private-bank and ROM-free CTest JSON
+inventories pass the checker, including its negative controls. These are
+registration checks, not private factory-bank integration execution.
+The review's mixed-capture race is corrected by the locked working-voice
+snapshot; the local processor regression covers identical-byte selection
+changes and returning to the original program before confirming.
 
 Fresh branch Windows/macOS builds, hosted sanitizer results and review remain
 the PR merge gates. The baseline merge-main runs are green but are not PASS for

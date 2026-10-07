@@ -82,6 +82,14 @@ public:
     bool exportSyx(const juce::File&, bool entireBank, juce::String& error);
     // Message-thread library operations. Capture is immutable across open dialogs.
     bool captureUserPatch(VDX7UserBank::Voice&, juce::String& error);
+    struct WorkingVoiceSnapshot
+    {
+        VDX7UserBank::Voice voice{};
+        int program = 0;
+        uint32_t revision = 0;
+    };
+    // Voice bytes and stale-selection tokens belong to the same locked capture.
+    bool captureWorkingVoiceSnapshot(WorkingVoiceSnapshot&, juce::String& error);
     bool loadUserBank(const juce::File&, juce::String& error);
     static juce::File userBankFile();
     bool renameVoice(const juce::String& name);

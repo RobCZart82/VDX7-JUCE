@@ -1686,13 +1686,23 @@ juce::File VDX7AudioProcessor::userBankFile()
 
 bool VDX7AudioProcessor::captureUserPatch(VDX7UserBank::Voice& voice, juce::String& error)
 {
+    WorkingVoiceSnapshot snapshot;
+    if (!captureWorkingVoiceSnapshot(snapshot, error)) return false;
+    voice = snapshot.voice;
+    return true;
+}
+
+bool VDX7AudioProcessor::captureWorkingVoiceSnapshot(WorkingVoiceSnapshot& snapshot, juce::String& error)
+{
     std::scoped_lock lock(engineMutex_);
     if (pendingRestore_.isValid()) { error = kPendingProjectMessage; return false; }
     if (!engine_.isLoaded()) { error = "Load the firmware first."; return false; }
     flushVoiceEditsLocked();
     std::vector<uint8_t> ram;
     if (!engine_.saveRam(ram)) { error = "Cannot capture voice RAM."; return false; }
-    std::copy_n(ram.begin() + engine_.currentProgram() * 128, 128, voice.begin());
+    snapshot.program = engine_.currentProgram();
+    std::copy_n(ram.begin() + snapshot.program * 128, 128, snapshot.voice.begin());
+    snapshot.revision = getOperatorVoiceRevision();
     return true;
 }
 
