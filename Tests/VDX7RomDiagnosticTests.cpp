@@ -51,6 +51,14 @@ int main(int argc, char** argv)
             companion.data(), companion.size() - 1, &diagnostic)
             && diagnostic.code == VDX7Engine::RomLoadDiagnostic::Code::invalidInput,
             "partial companion rejected before access");
+        std::vector<uint8_t> emptyFirmware(VDX7Engine::kFirmwareSize, 0);
+        for (uint8_t fill : {uint8_t(0), uint8_t(255)})
+        {
+            std::fill(emptyFirmware.begin(), emptyFirmware.end(), fill);
+            require(!engine->loadRomImage(emptyFirmware.data(), emptyFirmware.size(), nullptr, 0, &diagnostic)
+                && diagnostic.code == Code::firmwareRejected && !engine->isLoaded(),
+                "blank or erased firmware rejected before boot");
+        }
         if (argc == 2)
         {
             // Opt-in local firmware prefix only; never copies private bank data.
@@ -65,6 +73,11 @@ int main(int argc, char** argv)
             require(engine->saveRam(before), "capture loaded RAM");
             const int program = engine->currentProgram(), bank = engine->currentBank();
             const auto voices = engine->factoryVoices();
+            require(!engine->loadRomImage(emptyFirmware.data(), emptyFirmware.size(), nullptr, 0, &diagnostic)
+                && diagnostic.code == Code::firmwareRejected && engine->isLoaded()
+                && engine->saveRam(after) && before == after
+                && program == engine->currentProgram() && bank == engine->currentBank()
+                && voices == engine->factoryVoices(), "erased firmware rejection preserves running instrument");
             image.back() = 128;
             require(!engine->loadRomImage(image.data(), image.size(), nullptr, 0, &diagnostic)
                 && diagnostic.code == VDX7Engine::RomLoadDiagnostic::Code::invalidFactoryData,

@@ -16,6 +16,22 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+2026-10-07 aktuális checkpoint: #144 beolvadt; a `d8b83a52243fd0102392bc240c40b20317ddd0f0`
+main platformellenőrzései és a #144 Windows/macOS/sanitizer ellenőrzése PASS.
+A korábbi „friss PR/merge utáni ellenőrzés” kapu már teljesült.
+Új audit reprodukálta: a teljesen nulla 16 KB-os firmware sikeresnek látszott,
+miközben az emulátor illegal-opcode üzeneteket írt. Első, szűk javítás:
+teljesen nulla/FF firmware elutasítása állapotváltoztatás előtt; nincs ROM-whitelist.
+PASS: helyi MSVC közvetlen regresszió és privát firmware-prefix kontroll,
+betöltött RAM/katalógus/kiválasztás megőrzésével; változatlan korábbi core könyvtárral
+linkelve, nem új teljes pluginbuild. Az új javítás CI/review kapuja még nyitott.
+NOT RUN: REAPER és új teljes helyi pluginbuild.
+Hátravan: nem homogén hibás firmware felismerése és valódi boot-egészség feltételének
+specifikációja kompatibilitási kontrollokkal. A `bootFailed` továbbra sem bizonyít
+firmware-egészséget; e részfeladatot nem jelöljük megoldottnak.
+A sanitizer közvetlen engine-tesztet futtat, a teljes processor/projektállapot
+teszt instrumentált lefedettsége külön nyitott feladat.
+
 Aktuális állapot: FEJLESZTÉS ALATT. #139–#143 beolvadt;
 az `08aae7cae05d4a185d972a26d51b2023df6e0ab8` main Windows/macOS
 ellenőrzése 15/15 ROM-mentes CTesttel sikeres.
