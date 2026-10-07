@@ -16,6 +16,18 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+2026-10-07 funkcionális kontroll: új kézi opt-in `VDX7FirmwareAudioTests.cpp`
+azonos saját szintetikus single-carrier bankkal, 48 kHz-en, boot/patch ülepedés
+után MIDI note-on/off és véges hangkimenet ellenőrzés. PASS: v1.8
+(peak 0.0423122, release tail 0), original maskrom (peak 0.0423116, tail 0).
+FAIL: SER7 ugyanebben a kontrollban nem adott mérhető note-on hangot.
+Ez nem általános SER7-inkompatibilitási bizonyíték: MIDI fogadási beállítás,
+banktelepítés és firmware-RAM kezelés külön diagnózisa szükséges.
+A #147 Draft marad; puszta betöltési PASS nem zárja le ezt a kaput.
+Helyben frissen fordított wrapper, változatlan korábbi Release core könyvtár;
+nem új teljes pluginbuild. REAPER NOT RUN. A teszt nem alapértelmezett CTest,
+nem igényel nyilvános CI-ben privát ROM-ot; sem ROM-, sem hangadatot nem ment.
+
 2026-10-07 privát kompatibilitási kontroll: a felhasználó további helyi
 firmware-eket biztosított fejlesztési tesztekhez. PASS: 16 KB `DX7-V1-8.OBJ`
 (SHA256 `6e7aa7b3605131c124914abbc74078acf7bd78354379d6b3ad78373ab7bfd383`)
