@@ -329,6 +329,126 @@ static void testInitPreset(const juce::File& romFile)
     std::cout << "PASS: confirmed/stale init, USER isolation, globals, finite note/release audio, export and project/pending recall\n";
 }
 
+static void testInitAudioMatrix(const juce::File& romFile)
+{
+    // A processor harness, not a DAW or a listening-quality claim. Fixtures
+    // contain only the VDX7-owned seed and never touch the user's bank folder.
+    int cases = 0;
+    for (const double sampleRate : {44100.0, 48000.0, 96000.0, 192000.0})
+    for (const int blockSize : {32, 512, 2048})
+    {
+        std::cout << "Init audio case: rate=" << sampleRate << " block=" << blockSize << std::endl;
+        auto p = std::make_unique<VDX7AudioProcessor>(false);
+        require(p->loadRomFromFile(romFile), "matrix firmware load");
+        VDX7RegressionAccess::installSyntheticCatalog(*p);
+        require(p->selectFactoryBank(0) && p->renameVoice("MATRIX"), "matrix synthetic source");
+        // OP1 is the audible carrier in algorithm 32. Start with different
+        // synthesis bytes so a name/provenance-only Init cannot pass.
+        set(*p, VDX7ParameterIDs::operatorParameter(0, VDX7VoiceData::Parameter::coarse), 2);
+        set(*p, VDX7ParameterIDs::operatorParameter(0, VDX7VoiceData::Parameter::fine), 37);
+        set(*p, VDX7ParameterIDs::operatorParameter(0, VDX7VoiceData::Parameter::outputLevel), 80);
+        require(p->setControllerSettingFromUi(0, 0, 42) && p->setMasterTuneFromUi(7)
+            && p->setMidiInputChannelFromUi(3), "matrix PERFORMANCE/SETTINGS control");
+        p->prepareToPlay(sampleRate, blockSize);
+        juce::AudioBuffer<float> audio(2, blockSize);
+        juce::MidiBuffer midi;
+        auto render = [&](double seconds)
+        {
+            std::array<float, 2> peaks{};
+            const int blocks = int(std::ceil(seconds * sampleRate / blockSize));
+            for (int b = 0; b < blocks; ++b)
+            {
+                p->processBlock(audio, midi);
+                midi.clear(); // Do not depend on a plugin clearing its MIDI output.
+                for (int ch = 0; ch < 2; ++ch)
+                    for (int s = 0; s < blockSize; ++s)
+                    {
+                        const float sample = audio.getSample(ch, s);
+                        require(std::isfinite(sample), "matrix stereo output is finite");
+                        peaks[ch] = std::max(peaks[ch], std::abs(sample));
+                    }
+            }
+            return std::min(peaks[0], peaks[1]);
+        };
+        auto quiet = [&]
+        {
+            return audio.getMagnitude(0, 0, blockSize) < 0.0001f
+                && audio.getMagnitude(1, 0, blockSize) < 0.0001f;
+        };
+        render(0.25);
+        const auto controllers = p->getControllerSettings();
+        const auto play = p->getPlaySettings();
+        const auto bend = p->getPitchBendSettings();
+        midi.addEvent(juce::MidiMessage::noteOn(3, 60, uint8_t(100)), 0);
+        midi.addEvent(juce::MidiMessage::noteOn(3, 64, uint8_t(90)), blockSize / 2);
+        require(render(0.25) > 0.0001f, "matrix source has audible held-note control");
+        midi.addEvent(juce::MidiMessage::controllerEvent(3, 64, 127), 0);
+        midi.addEvent(juce::MidiMessage::noteOff(3, 60), blockSize / 2);
+        midi.addEvent(juce::MidiMessage::noteOff(3, 64), blockSize - 1);
+        render(0.5);
+        require(audio.getMagnitude(0, 0, blockSize) > 0.0001f
+            && audio.getMagnitude(1, 0, blockSize) > 0.0001f, "matrix pedal sustains released notes");
+        midi.addEvent(juce::MidiMessage::noteOn(3, 67, uint8_t(90)), 0);
+        require(render(0.1) > 0.0001f, "matrix simultaneous held/sustained-note control");
+
+        VDX7AudioProcessor::WorkingVoiceSnapshot snapshot;
+        juce::String error;
+        require(p->captureWorkingVoiceSnapshot(snapshot, error), "matrix init capture while sounding");
+        const auto seed = vdx7InitVoice();
+        require(!std::equal(snapshot.voice.begin(), snapshot.voice.begin() + 118, seed.begin())
+            && VDX7VoiceData::getOperatorParameter(snapshot.voice.data(), snapshot.voice.size(),
+                0, VDX7VoiceData::Parameter::coarse) == 2
+            && VDX7VoiceData::getOperatorParameter(snapshot.voice.data(), snapshot.voice.size(),
+                0, VDX7VoiceData::Parameter::fine) == 37
+            && VDX7VoiceData::getOperatorParameter(snapshot.voice.data(), snapshot.voice.size(),
+                0, VDX7VoiceData::Parameter::outputLevel) == 80,
+                "matrix sounding source synthesis differs from Init, excluding its name");
+        render(double(blockSize * 2) / sampleRate);
+        require(p->initialiseVoiceFromUi(snapshot.voice, snapshot.program, snapshot.revision, error),
+                "matrix init confirmation after intervening audio callbacks");
+        VDX7UserBank::Voice actual;
+        require(p->captureUserPatch(actual, error) && actual == vdx7InitVoice()
+            && p->getCurrentPatchName() == "Init Preset" && p->isCurrentVoiceModified(),
+                "matrix init bytes and dirty title exact");
+        require(p->getControllerSettings() == controllers && p->getPlaySettings() == play
+            && p->getPitchBendSettings() == bend && p->getMasterTune() == 7
+            && p->getMidiInputChannel() == 3, "matrix init preserves performance and settings");
+        render(0.1);
+        midi.addEvent(juce::MidiMessage::controllerEvent(3, 64, 0), 0);
+        midi.addEvent(juce::MidiMessage::noteOff(3, 60), blockSize / 2);
+        midi.addEvent(juce::MidiMessage::noteOff(3, 64), blockSize - 1);
+        midi.addEvent(juce::MidiMessage::noteOff(3, 67), blockSize - 1);
+        render(2.0);
+        require(quiet(), "matrix init leaves no stuck held/sustained note after releases");
+        midi.addEvent(juce::MidiMessage::noteOn(3, 67, uint8_t(100)), blockSize - 1);
+        require(render(0.25) > 0.0001f, "matrix fresh note works after active init");
+        midi.addEvent(juce::MidiMessage::noteOff(3, 67), 0);
+        render(2.0);
+        require(quiet(), "matrix fresh init note retires");
+
+        // The same processor restores a real serialized project round trip,
+        // including an edited Init voice, then proves subsequent note delivery.
+        set(*p, VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback), 6);
+        const auto edited = save(*p);
+        p->setStateInformation(edited.getData(), int(edited.getSize()));
+        require(p->captureUserPatch(actual, error)
+            && VDX7VoiceData::getVoiceParameter(actual.data(), actual.size(),
+                    VDX7VoiceData::VoiceParameter::feedback) == 6
+            && p->getCurrentPatchName() == "Init Preset" && p->isCurrentVoiceModified(),
+                "matrix edited init recall retains values and dirty provenance");
+        render(0.25);
+        midi.addEvent(juce::MidiMessage::noteOn(3, 72, uint8_t(100)), blockSize / 2);
+        require(render(0.25) > 0.0001f, "matrix recalled edited init produces audio");
+        midi.addEvent(juce::MidiMessage::noteOff(3, 72), blockSize - 1);
+        render(2.0);
+        require(quiet(), "matrix recalled edited init retires");
+        p->releaseResources();
+        ++cases;
+    }
+    require(cases == 12, "complete init audio matrix");
+    std::cout << "PASS: 12 Init sample-rate/block cases, active/sustain release, fresh notes and edited recall\n";
+}
+
 static void testInitDialog(const juce::File& romFile)
 {
     auto p = std::make_unique<VDX7AudioProcessor>(false);
@@ -1138,6 +1258,11 @@ int main(int argc, char** argv)
         if (argc == 3 && juce::String(argv[1]) == "--init-preset-gui")
         {
             testInitDialog(juce::File(argv[2]));
+            return 0;
+        }
+        if (argc == 3 && juce::String(argv[1]) == "--init-preset-audio-matrix")
+        {
+            testInitAudioMatrix(juce::File(argv[2]));
             return 0;
         }
         if (argc == 4 && juce::String(argv[1]) == "--factory-bank-library")
