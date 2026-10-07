@@ -1,6 +1,6 @@
 # VDX7 egységes fejlesztési terv
 
-Frissítve: 2026-10-06. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
+Frissítve: 2026-10-07. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás verzióját és pontos funkciókörét később rögzítjük.
 Ez a dokumentum nem új kiadás publikálási engedélye.
@@ -15,6 +15,11 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 ## Jóváhagyott későbbi fejlesztések
 
 ### D1 Részletes ROM hibajelzés
+
+PR-kezelési átadás ChatGPT Work/Codex számára:
+[A 147 számú Draft PR és a halasztott SER7 diagnosztika](../validation/HANDOFF_20261007_PR147_DEFERRED_SER7_HU.md).
+Az általános reset-cím védelem már #149-cel beolvadt; a #147 teljes
+beolvasztása nem javasolt, SER7-támogatást a zöld CI nem igazol.
 
 2026-10-07 különválasztás: új `fix/cold-boot-vector-guard` ág alapja
 `4508caff3e799ee4c5729a6b1176e12e0019f17b`. Csak az általános reset-vektor
