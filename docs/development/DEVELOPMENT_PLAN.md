@@ -16,6 +16,17 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ### D1 Részletes ROM hibajelzés
 
+2026-10-07 SER7 csatornakontroll: a kézi firmware-hangteszt opcionális
+0..15 nyers MIDI csatornát fogad. Ez diagnosztikai bypass a core FIFO-ba,
+nem új production MIDI-szabály. Frissen fordított helyi wrapperrel SER7:
+FAIL mind a 16 csatornán (nincs mérhető note-on hang), core getter RX=0.
+Pozitív kontroll: v1.8 normál és nyers channel 0 PASS; original maskrom
+nyers channel 0 PASS. Ez az egyszerű hostcsatorna-normalizálási hipotézist
+nem támasztja alá; SER7 valódi fogadási állapotát a v1.8-ra írt getter
+önmagában nem bizonyítja. Következő: bank/RAM és firmware-interfész vizsgálata.
+NOT RUN: REAPER, teljes SER7-funkciómátrix. Változatlan korábbi core könyvtár;
+nincs új teljes pluginbuild. A #147 továbbra is Draft, friss CI szükséges.
+
 2026-10-07 funkcionális kontroll: új kézi opt-in `VDX7FirmwareAudioTests.cpp`
 azonos saját szintetikus single-carrier bankkal, 48 kHz-en, boot/patch ülepedés
 után MIDI note-on/off és véges hangkimenet ellenőrzés. PASS: v1.8
