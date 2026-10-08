@@ -16,7 +16,7 @@ tesztkör korlátozza az állításokat. A teljes név szerinti jegyzék alább 
 
 - [Init Preset development validation](VALIDATION_20261007_INIT_PRESET.md)
 
-- [A 147 számú PR és a halasztott SER7 diagnosztika átadása](HANDOFF_20261007_PR147_DEFERRED_SER7_HU.md)
+- [A 147 számú PR történeti SER7 átadása, a 2026-10-08-i végleges támogatási döntéssel](HANDOFF_20261007_PR147_DEFERRED_SER7_HU.md)
 
 - [VALIDATION_20261006_ROM_DIAGNOSTIC_WIRING.md](VALIDATION_20261006_ROM_DIAGNOSTIC_WIRING.md)
 

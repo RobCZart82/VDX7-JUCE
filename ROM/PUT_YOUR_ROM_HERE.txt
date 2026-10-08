@@ -1,7 +1,10 @@
 Do not commit/distribute Yamaha firmware with this source project.
 
-Supported firmware: original Yamaha DX7 Mk I v1.8 (IG11469).
-Special Edition / SER-7 firmware is not supported.
+Only officially supported firmware: original Yamaha DX7 Mk I v1.8 (IG11469).
+All other firmware versions, including Special Edition / SER-7 and modified
+images, are unsupported and will not be supported in future VDX7 releases.
+Operation and stability with any other firmware are not guaranteed.
+This permanent support policy does not add a v1.8-only loader whitelist.
 Successful loading of another firmware image does not establish compatibility.
 See docs/guides/GUIDE_EN.md or docs/guides/GUIDE_HU.md for firmware identification.
 

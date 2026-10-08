@@ -3,6 +3,33 @@
 Dátum: 2026-10-07. Címzett: a VDX7-JUCE fejlesztését folytató ChatGPT Work és Codex.
 Ellenőrzött main: `9ed484f893db6f14e3dfb1b5e8bca9a0b36f9fce`.
 
+## 2026-10-08: végleges támogatási döntés, a további SER7-munka visszavonva
+
+A felhasználó végleges döntése szerint hivatalosan kizárólag az eredeti Yamaha
+DX7 Mk I v1.8 (IG11469) támogatott. Minden más firmware-verzió, köztük a SER-7
+és a módosított képek nem támogatottak, és a jövőben sem lesznek támogatottak.
+Az [egységes fejlesztési terv](../development/DEVELOPMENT_PLAN.md) vezeti ezt a döntést.
+
+Az alábbi 2026-10-07-es átadás és teszteredmények történeti bizonyítékok.
+A benne szereplő „halasztott munkacsomag”, „folytatásakor” és SER7-támogatási
+teendők nem aktív utasítások: ez a döntés felülírja őket. A diagnosztika
+megőrzendő, de SER7-támogatást nem fejlesztünk. Ez nem általános műszaki
+lehetetlenségi állítás és nem betöltési tiltás.
+
+### PR-rendezési eredmény — 2026-10-08
+
+A felhasználó külön kérésére a [#147-et](https://github.com/RobCZart82/VDX7-JUCE/pull/147)
+beolvasztás nélkül lezártuk. Az eredeti védelem #149-cel már main-ban van;
+a megmaradt SER7-kutatás nem része a végleges fejlesztési koncepciónak.
+A `test/firmware-reset-vector-admission` ág és az alább azonosított head
+megmarad, nincs törlés vagy history-átírás. A lezárási magyarázat a PR
+leírásának elején és külön hozzászólásban is megtalálható; az eredeti leírás
+megőrzött történeti checkpoint. A [#159](https://github.com/RobCZart82/VDX7-JUCE/pull/159)
+dokumentálja a támogatási döntést és ezt az eredményt. Az alábbi „nyitott
+Draft”, „folytatás” és PR-bezárásra vonatkozó mondatok a régi állapotot írják le.
+
+## Eredeti átadás — 2026-10-07, történeti állapot
+
 **A [147 számú PR](https://github.com/RobCZart82/VDX7-JUCE/pull/147) teljes beolvasztása nem javasolt.**
 A PR nyitott Draft, és a halasztott SER7-diagnosztika kódját, kontrolljait és
 történeti eredményeit őrzi. Az általános firmware reset-cím védelem és regressziói

@@ -5,6 +5,53 @@ Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás verzióját és pontos funkciókörét később rögzítjük.
 Ez a dokumentum nem új kiadás publikálási engedélye.
 
+## Végleges firmware-támogatási döntés — 2026-10-08
+
+Felhasználói döntés: **hivatalosan kizárólag az eredeti Yamaha DX7 Mk I v1.8
+(IG11469) támogatott. Minden más firmware-verzió, köztük a Special Edition /
+SER-7 és a módosított képek nem támogatottak, és a jövőben sem lesznek támogatottak.**
+Az eredeti koncepció szerinti fejlesztést v1.8-ra hangolva folytatjuk;
+minden más firmware működése és stabilitása nem biztosított. Ez nem az eredeti
+v1.8 hibamentességének vagy minden host/OS kombináció elfogadásának állítása.
+Ez végleges projektirány, nem ideiglenes vagy halasztott kompatibilitási cél.
+A SER7 és a kettős firmware-támogatás kikerül a jövőbeli fejlesztési körből;
+a korábbi diagnosztika és PASS/FAIL/NOT RUN bizonyítékok történeti anyagként
+megőrzendők, nem aktív mérföldkövek vagy kiadási kapuk.
+
+Az új motorjavítások, a firmware-függő RAM/címprofilok, projekt-visszatöltés és
+kiadási elfogadás támogatott alapja az eredeti v1.8. Más firmware betölthetősége
+nem jelent támogatást vagy későbbi támogatási ígéretet. A döntés nem ír elő új
+firmware-engedélyezési listát, nem módosítja a betöltőt, a régi projektállapotokat
+vagy a már publikált csomagokat; nem állítja, hogy a v1.8 hibamentes.
+
+Dokumentációs kör alapja: `d8e0da69e8822a67cbd032facc813600559a6e7b` main.
+A HU/EN README, kézikönyvek és ROM-elhelyezési útmutató ezt azonosan rögzítik.
+A #147 teljes beolvasztása továbbra sem indokolt: az eredeti védelem #149-cel
+elkészült; a SER7-kutatás történeti anyag. A felhasználó külön PR-rendezési
+kérésére a [#147-et](https://github.com/RobCZart82/VDX7-JUCE/pull/147) 2026-10-08-án
+beolvasztás nélkül lezártuk. A `test/firmware-reset-vector-admission` ág és a
+`bac64d8596a498b4c3fa34c8437391018a6d2adb` head megmarad; az ág nincs törölve
+vagy átírva. A lezárás indoka a PR leírásában és hozzászólásában is szerepel.
+Az új koncepcióval összhangban a [#159](https://github.com/RobCZart82/VDX7-JUCE/pull/159)
+viszi a kizárólag dokumentációs támogatási döntést és ezt a PR-rendezési
+checkpointot; beolvasztási feltétele a végleges head zöld CI-je és a review-k
+ellenőrzése. A checkpoint rögzítésekor a CI még folyamatban van.
+Az alábbi korábbi checkpointokban
+szereplő halasztott SER7-fejlesztést ez a döntés felülírja.
+
+E kör ellenőrzése: PASS a támogatási szövegek egyezése hét dokumentációs
+felületen, a történeti teszteredmények megőrzése, a nyolcfájlos kizárólag
+dokumentációs diff és `git diff --check`, valamint az érintett Markdown-fájlok
+190 helyi fájlhivatkozása. A meglévő Python-regressziók végső helyi futása
+78 tesztből 77 PASS, 1 SKIP (Windows symlink-jogosultság), 0 FAIL/ERROR.
+Parancs: `python -m unittest discover -s Tests -p "test_*.py" -v`.
+A korlátozott környezetben a kezdeti futások ideiglenes mappa/hardlink
+jogosultsági hibákkal FAIL státuszúak voltak; az írható munkamappát használó,
+korlátozott környezeten kívüli újrafuttatás PASS. Ezek nem firmware-próbák.
+NOT RUN: új C++/pluginbuild, privát firmware-, REAPER- és macOS-elfogadás
+(nincs működésváltozás). A friss PR platform/sanitizer CI-je külön ellenőrzendő;
+a helyi eredmények nem helyettesítik azt.
+
 ## Kiindulási állapot és bizonyíték
 
 - [Publikált 1.0.1 és elfogadott teszthalasztások](../validation/VALIDATION_20261005_PUBLICATION_101.md).
@@ -30,8 +77,8 @@ friss CI-kapui ettől különállóak.
 Hátravan: nem homogén sérült végrehajtható firmware és valódi boot-egészség
 követelményeinek specifikációja, kompatibilitási kontrollok és az érintett
 privát-ROM/hostpróbák tételes elfogadása. Optimalizálás csak mérés után.
-A már beolvadt PR/CI kapukat nem nyitjuk újra. SER7 külön halasztott munka;
-#147 Draft marad, teljes beolvasztása nem indokolt. A következő kiadásba kerülő
+A már beolvadt PR/CI kapukat nem nyitjuk újra. SER7-támogatás nincs és nem lesz;
+#147 beolvasztás nélkül lezárva, diagnosztikai ága megőrizve. A következő kiadásba kerülő
 D1-kör külön döntést igényel; a publikált 1.0.1 csomagok nem változnak.
 
 #### Korábbi részfeladatok és átadás
@@ -41,7 +88,7 @@ Az alábbi dátumozott checkpointok történeti bizonyítékok. A bennük szerep
 felül a fenti aktuális összefoglalót.
 
 PR-kezelési átadás ChatGPT Work/Codex számára:
-[A 147 számú Draft PR és a halasztott SER7 diagnosztika](../validation/HANDOFF_20261007_PR147_DEFERRED_SER7_HU.md).
+[A 147 számú Draft PR és a történeti SER7 diagnosztika](../validation/HANDOFF_20261007_PR147_DEFERRED_SER7_HU.md).
 Az általános reset-cím védelem már #149-cel beolvadt; a #147 teljes
 beolvasztása nem javasolt, SER7-támogatást a zöld CI nem igazol.
 
