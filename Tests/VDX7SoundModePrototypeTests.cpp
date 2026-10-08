@@ -1,6 +1,7 @@
 // D5 measurement harness only. No production mode switch or firmware is used.
 #include "EGS.h"
 #include "VDX7SoundModeTransitionPrototype.h"
+#include "VDX7SoundModeStatePrototype.h"
 
 #include <algorithm>
 #include <array>
@@ -413,15 +414,101 @@ void transitionOutputCharacterization(bool unmutedSwitch)
             std::cout << "  ramped trace peak=" << peak << " (raw upstream units, not host clipping verdict)\n";
         }
 }
+
+void stateContractCharacterization(bool replayStaleAsCurrent)
+{
+    namespace State = VDX7SoundModeStatePrototype;
+    using Mode = State::Mode;
+    State::Owner first, second;
+    require(first.snapshot().desired == Mode::classic && !first.rendererRequest(),
+            "new instance is Classic with no request to an absent engine");
+    require(first.requestFromUi(Mode::clean, first.snapshot().projectRevision),
+            "a current UI may request Clean before the first ROM");
+    require(first.capture() == State::Encoded { "1", "1" } && !first.rendererRequest(),
+            "no-ROM save preserves desired Clean without a renderer dispatch");
+    const auto saved = first.capture();
+    require(second.restore(saved.version, saved.mode, false), "model restores valid pending Clean");
+    require(second.capture() == saved && !second.rendererRequest(),
+            "pending save preserves desired Clean and does not touch an unrelated renderer");
+    require(second.completeCompatibleRestore(second.snapshot().projectRevision), "current compatible restore completes");
+    require(second.rendererRequest() == Mode::clean, "compatible restore dispatches desired Clean");
+    second.loseEngine();
+    require(second.capture() == saved && !second.rendererRequest(),
+            "losing the model engine preserves desired mode");
+
+    // Rejection is whole-transaction preservation, not a fallback mutation.
+    for (std::string_view bad : { "", "2", "-1", "+1", "01", "1 ", " 1", "1.0", "1x", "true", "Clean" })
+    {
+        const auto before = second.snapshot();
+        require(!second.restore("1", bad, true) && second.snapshot() == before,
+                "malformed mode rejects without changing desired/revision/pending/readiness");
+        require(!second.restore(bad, "1", true) && second.snapshot() == before,
+                "malformed or unknown feature version rejects without mutation");
+    }
+    const auto beforePartial = second.snapshot();
+    require(!second.restore(std::nullopt, "1", true) && second.snapshot() == beforePartial,
+            "mode without its feature version rejects atomically");
+    require(!second.restore("1", std::nullopt, true) && second.snapshot() == beforePartial,
+            "feature version without its mode rejects atomically");
+
+    const auto staleUi = first.snapshot();
+    require(first.restore(std::nullopt, std::nullopt, true), "legacy project is accepted");
+    require(first.capture() == State::Encoded { "1", "0" } && first.rendererRequest() == Mode::classic,
+            "legacy restore after Clean explicitly selects Classic");
+    const auto submittedRevision = replayStaleAsCurrent ? first.snapshot().projectRevision : staleUi.projectRevision;
+    require(!first.requestFromUi(Mode::clean, submittedRevision),
+            "a UI token from before project recall cannot overwrite the recalled mode");
+    require(first.rendererRequest() == Mode::classic, "stale UI rejection preserves recalled Classic");
+
+    const auto currentRevision = first.snapshot().projectRevision;
+    require(first.requestFromUi(Mode::clean, currentRevision)
+                && first.requestFromUi(Mode::classic, currentRevision)
+                && first.requestFromUi(Mode::clean, currentRevision),
+            "current-project UI requests coalesce to the latest mode");
+    require(first.capture() == saved, "save before audio observation captures the latest desired mode");
+    require(second.restore("1", "0", false), "pending Classic project is accepted");
+    require(first.capture() == saved && second.capture() == State::Encoded { "1", "0" },
+            "project modes remain instance-local");
+    const auto oldCompletion = second.snapshot().projectRevision;
+    require(second.restore("1", "1", false), "a newer pending Clean project is accepted");
+    const auto beforeLateCompletion = second.snapshot();
+    require(!second.completeCompatibleRestore(oldCompletion) && second.snapshot() == beforeLateCompletion,
+            "an older pending completion cannot mark a newer project engine-ready");
+    const auto pendingRevision = second.snapshot().projectRevision;
+    require(second.requestFromUi(Mode::classic, pendingRevision)
+                && second.capture() == State::Encoded { "1", "0" } && !second.rendererRequest(),
+            "pending mode edit changes saved intent without dispatching to the renderer");
+    require(second.requestFromUi(Mode::clean, pendingRevision), "current pending project accepts mode edit");
+    require(second.capture() == saved && !second.rendererRequest(), "pending edit is saved but not dispatched");
+    require(second.completeCompatibleRestore(pendingRevision), "latest compatible restore completes");
+    require(second.rendererRequest() == Mode::clean, "pending edit survives compatible restore completion");
+
+    const auto beforeInvalidUi = first.snapshot();
+    require(!first.requestFromUi(static_cast<Mode>(255), currentRevision)
+                && first.snapshot() == beforeInvalidUi, "invalid internal UI mode rejects without mutation");
+    State::Owner exhausted(std::numeric_limits<std::uint64_t>::max());
+    const auto beforeExhaustion = exhausted.snapshot();
+    require(!exhausted.restore("1", "1", true) && exhausted.snapshot() == beforeExhaustion,
+            "project revision exhaustion must not reuse a stale token");
+
+    // Desired project value stays Clean while an audio-local ramp is still Classic.
+    VDX7SoundModeTransitionPrototype transition;
+    transition.request(first.rendererRequest() == Mode::clean);
+    const auto inFlight = transition.next();
+    require(!inFlight.clean && inFlight.gain < 1.0f && first.capture() == saved,
+            "save captures desired mode rather than transient active mode or gain");
+    std::cout << "state contract: legacy/strict decode, no-ROM/pending save, stale-UI ordering and isolation PASS\n";
+}
 } // namespace
 
 int main(int argc, char** argv)
 {
     const bool negativeControl = argc == 2 && std::string_view(argv[1]) == "--ignore-clean-negative-control";
     const bool unmutedSwitch = argc == 2 && std::string_view(argv[1]) == "--unmuted-switch-negative-control";
-    if (argc != 1 && !negativeControl && !unmutedSwitch)
+    const bool staleUi = argc == 2 && std::string_view(argv[1]) == "--stale-ui-negative-control";
+    if (argc != 1 && !negativeControl && !unmutedSwitch && !staleUi)
     {
-        std::cerr << "Usage: vdx7_sound_mode_prototype_tests [--ignore-clean-negative-control | --unmuted-switch-negative-control]\n";
+        std::cerr << "Usage: vdx7_sound_mode_prototype_tests [--ignore-clean-negative-control | --unmuted-switch-negative-control | --stale-ui-negative-control]\n";
         return 2;
     }
     try
@@ -431,6 +518,7 @@ int main(int argc, char** argv)
         outputCharacterization();
         transitionStateCharacterization();
         transitionOutputCharacterization(unmutedSwitch);
+        stateContractCharacterization(staleUi);
         std::cout << "PASS: ROM-free upstream characterization only; no shipped switch or sound-quality verdict\n";
         return 0;
     }
