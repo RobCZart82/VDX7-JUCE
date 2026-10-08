@@ -2,6 +2,9 @@
 
 Date: 2026-10-08. Baseline: `9ee7c9d6ff85381e853fb0fd7c2e7c13f78322d3`.
 Branch: `test/classic-clean-threaded-ownership`.
+PR: [#167](https://github.com/RobCZart82/VDX7-JUCE/pull/167).
+Validated component/test revision: `56f0b47264ce9cdd094ae3960783d62b32dfed43`;
+the following checkpoint commit adds only these PR references.
 The [active development plan](../development/DEVELOPMENT_PLAN.md) and
 [state contract](../development/CLASSIC_CLEAN_STATE_CONTRACT.md) define the scope.
 

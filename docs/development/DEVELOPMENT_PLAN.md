@@ -890,6 +890,8 @@ kör a processor owner tranzakció és regressziói, nem a kapcsoló korai aktiv
 ág: `test/classic-clean-threaded-ownership`. A baseline Windows/macOS CI-je
 PASS (37832216599, 37832216642); #165 és #166 beolvadt. A fenti codec-kör
 korábbi PR-kapui teljesültek, a valódi processor/DSP/host-kapuk nem.
+Pull request: [#167](https://github.com/RobCZart82/VDX7-JUCE/pull/167), nyitott;
+friss final-head platform/sanitizer CI és review szükséges a merge előtt.
 
 Új önálló `Source/VDX7SoundModeOwner.h` az átadott engine-mutexet használja:
 kívánt mód és projekt-revízió egy tranzakcióban; UI/audio try-lock BUSY esetén
