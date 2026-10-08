@@ -764,6 +764,9 @@ REAPER nélkül elvégezhető, teszt-only részlépés az engedélyezett D5 irá
 nem a következő kiadás funkciókörének eldöntése. Friss baseline:
 `1568c2c112658d715ded26c00c76243e3e25a67e`. Ág:
 `test/classic-clean-dsp-prototype`. [Részletes mérés és reprodukció](../validation/CLASSIC_CLEAN_UPSTREAM_PROTOTYPE_20261008.md).
+Pull request: [#162](https://github.com/RobCZart82/VDX7-JUCE/pull/162), nyitott.
+Beolvasztás csak a végleges head zöld Windows/macOS/sanitizer CI-je és rendezett
+review után; létrehozáskor az ellenőrzések futottak, nincs még CI PASS-állítás.
 
 Az új `vdx7_sound_mode_prototype` ROM-mentes teszt a rögzített upstream
 inverse-log táblázatot mindkét polaritással, 192 OPS ingert és 4 szintetikus
