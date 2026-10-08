@@ -84,6 +84,85 @@ struct VDX7RegressionAccess
     }
 };
 
+static void testStartup()
+{
+    Fixtures fixtures;
+    const auto folder = fixtures.folder("startup");
+    const auto first = syntheticBank(400), second = syntheticBank(401);
+    put(folder, first); put(folder, second);
+    auto p = std::make_unique<VDX7AudioProcessor>(false, juce::File(), folder);
+    const auto initial = p->getImportedBankSnapshot();
+    require(initial && initial->banks.size() == 2,
+        "new instance scans injected imported folder before any explicit refresh");
+    require(initial->banks[0].packed == first.packed && initial->selectedId.isEmpty()
+        && p->getImportedBankSelection().index == -1 && !p->isRomLoaded(),
+        "startup builds an exact unselected catalog without firmware or working-bank changes");
+    const auto before = save(*p);
+    const auto third = syntheticBank(402);
+    put(folder, third);
+    p->prepareToPlay(48000, 64);
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    p->processBlock(audio, midi);
+    p->releaseResources();
+    require(p->getImportedBankSnapshot() == initial && save(*p) == before,
+        "prepare/process/release never rescan or modify startup library");
+    auto q = std::make_unique<VDX7AudioProcessor>(false, juce::File(), folder);
+    require(q->getImportedBankSnapshot()->banks.size() == 3 && initial->banks.size() == 2,
+        "new instances see new files while existing instances retain isolated catalogs");
+    restore(*q, before);
+    require(q->getImportedBankSnapshot()->banks.size() == 2
+        && catalog(*q).banks[0].packed == first.packed,
+        "restored project replaces startup catalog without reading newer disk banks");
+    auto legacy = tree(before);
+    legacy.removeChild(legacy.getChildWithName("ImportedBanks"), nullptr);
+    restore(*q, binary(legacy));
+    require(!q->getImportedBankSnapshot(), "legacy project absence overrides startup catalog too");
+    juce::String report;
+    require(p->refreshImportedBanks(folder, report) && p->getImportedBankSnapshot()->banks.size() == 3,
+        "existing instance sees added files only on explicit Refresh");
+    require(p->getImportedBankStartupReport().contains("2 bank(s)")
+        && !p->getStatusText().contains("startup warning"), "startup report remains historical after Refresh");
+
+    const auto missing = fixtures.root.getChildFile("missing");
+    auto empty = std::make_unique<VDX7AudioProcessor>(false, juce::File(), missing);
+    require(empty->getImportedBankSnapshot() && empty->getImportedBankSnapshot()->banks.empty()
+        && !missing.exists() && !empty->getStatusText().contains("startup warning"),
+        "missing folder is a complete empty scan and is never created at startup");
+    auto pathError = std::make_unique<VDX7AudioProcessor>(false, juce::File(), folder.getChildFile(first.fileName));
+    require(!pathError->getImportedBankSnapshot()
+        && pathError->getImportedBankStartupReport().contains("Scan incomplete")
+        && pathError->getStatusText().contains("startup warning"), "bad startup path preserves unscanned state with diagnostics");
+    require(!pathError->refreshImportedBanks(folder.getChildFile(first.fileName), report)
+        && pathError->getStatusText().contains("startup warning"), "failed Refresh cannot dismiss startup warning");
+    const auto excessive = fixtures.folder("startup-limit");
+    for (int n = 0; n < 129; ++n)
+    {
+        auto alias = first; alias.fileName = juce::String(n) + ".syx"; put(excessive, alias);
+    }
+    auto limited = std::make_unique<VDX7AudioProcessor>(false, juce::File(), excessive);
+    require(!limited->getImportedBankSnapshot()
+        && limited->getImportedBankStartupReport().contains("Scan incomplete"),
+        "startup file limit never publishes a partial catalog");
+    const auto noisy = fixtures.folder("startup-warnings");
+    put(noisy, first);
+    auto alias = first; alias.fileName = "alias.syx"; put(noisy, alias);
+    for (int n = 0; n < 12; ++n)
+        require(noisy.getChildFile("broken-" + juce::String(n) + ".syx").replaceWithData("invalid", 7), "write rejected synthetic fixture");
+    auto warnings = std::make_unique<VDX7AudioProcessor>(false, juce::File(), noisy);
+    require(warnings->getImportedBankSnapshot() && warnings->getImportedBankSnapshot()->banks.size() == 1
+        && warnings->getImportedBankStartupReport().contains("5 additional warnings")
+        && warnings->getStatusText().contains("startup warning"),
+        "valid startup subset publishes with bounded duplicate and invalid-file warnings");
+    require(warnings->getImportedBankStartupReport().getNumBytesAsUTF8() < 2048,
+        "startup report stays bounded for diagnostic display");
+    const auto historical = warnings->getImportedBankStartupReport();
+    require(warnings->refreshImportedBanks(folder, report)
+        && !warnings->getStatusText().contains("startup warning")
+        && warnings->getImportedBankStartupReport() == historical, "successful Refresh clears marker but preserves historical report");
+    require(!tree(save(*warnings)).hasProperty("ImportedBankStartupReport"), "startup diagnostics are not project state");
+}
+
 static void testNoRom()
 {
     Fixtures fixtures;
@@ -92,7 +171,8 @@ static void testNoRom()
     put(folder, first); put(folder, second);
     auto p = std::make_unique<VDX7AudioProcessor>(false);
     require(!p->getImportedBankSnapshot() && !tree(save(*p)).getChildWithName("ImportedBanks").isValid(),
-        "fresh instance does not scan/create an owner library");
+        "isolated processor without injected folder does not scan/create an owner library");
+    require(p->getImportedBankStartupReport().isEmpty(), "isolated processor has no synthetic startup report");
     juce::String report;
     require(p->refreshImportedBanks(folder, report), "explicit pre-ROM catalog refresh");
     const auto before = p->getImportedBankSnapshot();
@@ -237,9 +317,13 @@ static void testWithRom(const juce::File& rom)
     const auto folder = fixtures.folder("library");
     const auto selected = syntheticBank(200);
     put(folder, selected); put(folder, syntheticBank(201));
-    auto p = std::make_unique<VDX7AudioProcessor>(false);
+    auto p = std::make_unique<VDX7AudioProcessor>(false, juce::File(), folder);
+    const auto startup = p->getImportedBankSnapshot();
+    require(startup && startup->banks.size() == 2, "private-ROM path starts with unselected startup catalog");
     p->prepareToPlay(48000, 128);
     require(p->loadRomFromFile(rom), "private verified firmware");
+    require(p->getImportedBankSnapshot() == startup && p->getImportedBankSelection().index == -1,
+        "ROM load preserves startup library and never auto-selects its working bank");
     require(p->setControllerSettingFromUi(0, 0, 42) && p->setPlaySettingFromUi(3, 63)
         && p->setPitchBendSettingFromUi(0, 7) && p->setMasterTuneFromUi(7)
         && p->setMidiInputChannelFromUi(3), "non-default settings before imported selection");
@@ -383,7 +467,7 @@ int main(int argc, char** argv)
     {
         require(argc == 1 || argc == 2, "optional local verified ROM path only");
         if (argc == 2) testWithRom(juce::File(argv[1]));
-        else { testNoRom(); testBoundaries(); }
+        else { testStartup(); testNoRom(); testBoundaries(); }
         std::cout << "PASS: imported catalog processor ownership, binary state and bounded scheduling\n";
         return 0;
     }

@@ -182,7 +182,14 @@ Open folder to create/reveal the separate library folder, then place your own
 32-voice `.syx` banks there and choose Refresh. Windows uses
 `%APPDATA%\VDX7-JUCE\Imported Banks`; macOS uses
 `~/Library/Application Support/VDX7-JUCE/Imported Banks`.
-This step requires an explicit refresh, not an automatic startup scan.
+New instances scan the folder once during construction, outside audio processing;
+adding files to an already open instance still requires Refresh. A missing folder
+means an empty library and is not created automatically. A restored project's
+saved library takes precedence, including older projects without a library.
+Hover over the status text for startup diagnostics, or use UTILITY → Imported Banks →
+Startup scan report. The report is historical; a successful Refresh clears the
+startup warning marker and displays its own result. Scans are file/byte bounded,
+not guaranteed to finish within a fixed time on slow storage.
 The LCD Bank list shows an Imported Banks group with shortened, numbered names;
 hover over a row or the selected bank for its full filename and content ID.
 Selecting a bank copies it into CUSTOM working RAM at program 01. Unsaved edits
@@ -192,7 +199,7 @@ and scan limits are reported; incomplete scans preserve the previous library.
 If the list changes while you choose, reopen it and choose again. Projects retain
 the selected bank and edited working sound even when the source file disappears.
 These additions are not in the published 1.0.1 packages; real host acceptance
-and startup integration remain separate development gates.
+remains a separate development gate.
 
 UTILITY provides voice renaming (1–10 printable ASCII characters) and operator copy/paste. SysEx export is in SAVE AS. Copy/paste includes all 21 operator fields. Its clipboard is local to the plug-in instance and is not stored in projects.
 

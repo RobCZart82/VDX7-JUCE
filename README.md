@@ -19,6 +19,12 @@ changes. The pending-project protection and source-package verifier corrections
 are included in 1.0.1, not retroactively installed in 1.0.0.
 See the [active corrective plan](docs/development/DEVELOPMENT_PLAN.md).
 
+New development builds add an Imported Banks library: new instances scan its
+folder once; existing instances use UTILITY → Imported Banks → Refresh. Restored
+project banks take precedence. Startup diagnostics are available in the status
+tooltip and the UTILITY report. See the [user guide](docs/guides/GUIDE_EN.md).
+This feature is not in the already published 1.0.1 packages; host acceptance remains pending.
+
 ![VDX7 Mk1. EDIT — operator controls, envelopes and algorithm display](docs/screenshots/vdx7-edit.png)
 
 ![VDX7 Mk1. PERFORMANCE — play mode, pitch bend, portamento and controller assignments](docs/screenshots/vdx7-performance.png)

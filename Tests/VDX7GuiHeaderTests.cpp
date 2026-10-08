@@ -14,6 +14,7 @@
 struct VDX7RegressionAccess
 {
     static juce::ComboBox& bank(VDX7AudioProcessorEditor& e) { return e.bank_; }
+    static juce::Label& status(VDX7AudioProcessorEditor& e) { return e.status_; }
     static void refresh(VDX7AudioProcessorEditor& e) { e.refresh(true); }
     static VDX7AudioProcessor::ImportedBankSnapshot catalog(VDX7AudioProcessorEditor& e) { return e.bankCatalog_; }
     static void choose(VDX7AudioProcessorEditor& e, int id,
@@ -72,10 +73,15 @@ void checkImportedBankUi(const juce::File& firmware = {}, bool cancelConfirmatio
         require(folder.file.getChildFile(prefix + juce::String(n) + ".syx")
             .replaceWithData(syx.data(), syx.size()), "write synthetic imported GUI bank");
     }
-    auto p = std::make_unique<VDX7AudioProcessor>(false);
+    require(folder.file.getChildFile("broken.syx").replaceWithData("invalid", 7), "write rejected startup GUI fixture");
+    auto p = std::make_unique<VDX7AudioProcessor>(false, juce::File(), folder.file);
     juce::String report;
-    require(p->refreshImportedBanks(folder.file, report), "prepare imported GUI catalog");
+    require(p->getImportedBankSnapshot() && p->getImportedBankSnapshot()->banks.size() == 2,
+            "startup prepares imported GUI catalog before editor construction");
     VDX7AudioProcessorEditor editor(*p);
+    require(VDX7RegressionAccess::status(editor).getTooltip().contains("Imported Banks startup scan")
+        && VDX7RegressionAccess::status(editor).getTooltip().contains("broken.syx"),
+        "startup diagnostics remain visible in the status tooltip without firmware");
     auto& bank = VDX7RegressionAccess::bank(editor);
     require(bank.getNumItems() == 11, "bank selector includes two imported banks below existing choices");
     require(!bank.isEnabled(), "imported bank selection remains disabled without firmware");

@@ -193,7 +193,14 @@ Open folder létrehozza/megnyitja a külön bankmappát. Ide tedd a saját,
 32-hangszínes `.syx` bankokat, majd válaszd a Refresh műveletet. Windows:
 `%APPDATA%\VDX7-JUCE\Imported Banks`; macOS:
 `~/Library/Application Support/VDX7-JUCE/Imported Banks`.
-Ebben a lépésben explicit frissítés kell, nincs automatikus induláskori scan.
+Az új példány létrehozásakor egyszer beolvassa a mappát, az audiofeldolgozáson
+kívül; nyitott példányban új fájlokhoz továbbra is Refresh kell. A hiányzó mappa
+üres könyvtár, nem hozza létre automatikusan. A visszatöltött projekt mentett
+könyvtára elsőbbséget kap, a könyvtár nélküli régi projektek is.
+Az induláskori jelentés az állapotszöveg tooltipjében és az UTILITY → Imported Banks →
+Startup scan report alatt olvasható. Ez történeti jelentés; sikeres Refresh
+törli az induláskori figyelmeztetés jelzőjét, és saját friss eredményt mutat.
+A scan fájl- és bájtkorlátos, lassú háttértáron nem garantált a futási idő.
 Az LCD Bank listájában Imported Banks csoport, rövidített, számozott nevek
 láthatók; a sor és a kiválasztott bank tooltipje a teljes fájlnevet és
 tartalmi azonosítót mutatja. Kiválasztáskor CUSTOM munkamásolat készül,
@@ -203,7 +210,7 @@ a listát módosítja, nem az aktuális hangot. Hibás fájlok és limitek jelen
 adnak; hiányos scan esetén a korábbi könyvtár megmarad. Közben változó listánál
 nyisd meg újra a választót. A projekt a kiválasztott bankot és a szerkesztett
 hangot eltűnt forrásfájl mellett is őrzi. Ezek nincsenek a publikált 1.0.1-ben;
-a valódi host-elfogadás és az induláskori bekötés külön fejlesztési kapu.
+a valódi host-elfogadás külön fejlesztési kapu marad.
 
 A UTILITY menüben hangszínátnevezés (1–10 nyomtatható ASCII karakter) és operátormásolás/-beillesztés található. A SysEx-export a SAVE AS menüben van. A másolás mind a 21 operátormezőt tartalmazza. Vágólapja a pluginpéldányhoz tartozik, a projekt nem tárolja.
 

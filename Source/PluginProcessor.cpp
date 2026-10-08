@@ -175,7 +175,8 @@ juce::String VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter para
         kVoiceParameterSuffixes[static_cast<std::size_t>(safeParameter)]);
 }
 
-VDX7AudioProcessor::VDX7AudioProcessor(bool detectRom, const juce::File& bankFolder)
+VDX7AudioProcessor::VDX7AudioProcessor(bool detectRom, const juce::File& bankFolder,
+                                     const juce::File& importedBankFolder)
     : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       parameters_(*this, nullptr, kParameterStateType, createParameterLayout())
 {
@@ -223,6 +224,32 @@ VDX7AudioProcessor::VDX7AudioProcessor(bool detectRom, const juce::File& bankFol
     detectRom_ = detectRom;
     factoryBankFolder_ = bankFolder != juce::File() ? bankFolder
         : (detectRom_ ? factoryBankFolder() : juce::File());
+    // Read-only, bounded non-RT I/O before this instance is exposed to the host.
+    // No worker can publish late over a restored project. Isolated processors
+    // opt in with an injected folder rather than reading the user's library.
+    if (detectRom_ || importedBankFolder != juce::File())
+    {
+        const auto folder = importedBankFolder != juce::File() ? importedBankFolder
+                                                               : VDX7ImportedBanks::defaultFolder();
+        auto scanned = VDX7ImportedBanks::scan(folder);
+        importedBankStartupReport_ = "Imported Banks startup scan\n";
+        if (scanned.complete())
+        {
+            importedBankStartupReport_ += juce::String(int(scanned.banks.size())) + " bank(s) available.";
+            VDX7ImportedBanks::Snapshot catalog;
+            catalog.banks = std::move(scanned.banks);
+            importedBanks_ = std::make_shared<const VDX7ImportedBanks::Snapshot>(std::move(catalog));
+            ++importedBankRevision_;
+        }
+        else
+            importedBankStartupReport_ += "Scan incomplete; no partial library published. Use UTILITY > Imported Banks > Refresh after correcting the folder.";
+        for (int i = 0; i < juce::jmin(8, scanned.warnings.size()); ++i)
+            importedBankStartupReport_ += "\n" + scanned.warnings[i];
+        if (scanned.warnings.size() > 8)
+            importedBankStartupReport_ += "\n" + juce::String(scanned.warnings.size() - 8) + " additional warnings.";
+        importedBankStartupWarningPending_.store(!scanned.complete() || !scanned.warnings.isEmpty(),
+                                                 std::memory_order_relaxed);
+    }
     keyboardState_.addListener(this);
     if (detectRom_) autoDetectRom();
     startTimerHz(30); // Processor-owned: publication does not require an editor.
@@ -2469,6 +2496,7 @@ bool VDX7AudioProcessor::refreshImportedBanks(const juce::File& folder, juce::St
         importedBankOrigin_ = nextOrigin;
         ++importedBankRevision_;
     }
+    importedBankStartupWarningPending_.store(false, std::memory_order_relaxed);
     report = "Imported bank list refreshed. Current sound and edits preserved.";
     for (int i = 0; i < juce::jmin(8, scanned.warnings.size()); ++i) report += "\n" + scanned.warnings[i];
     if (scanned.warnings.size() > 8)
@@ -2520,7 +2548,8 @@ juce::String VDX7AudioProcessor::getStatusText() const
     const auto critical = getCriticalStatusText();
     if (critical.isNotEmpty()) return critical;
     std::scoped_lock lock(metadataMutex_);
-    return statusText_;
+    return statusText_ + (importedBankStartupWarningPending_.load(std::memory_order_relaxed)
+        ? "\nImported Banks: startup warning (hover status for report)" : "");
 }
 
 juce::String VDX7AudioProcessor::getCriticalStatusText() const

@@ -1495,6 +1495,9 @@ void VDX7AudioProcessorEditor::refresh(bool refreshMetadata)
         status_.setText(VDX7StatusPresentation::choose(processor_.getCriticalStatusText(),
                             processor_.hasUnexportedEdits(), processor_.getStatusText()),
                         juce::dontSendNotification);
+        const auto startupReport = processor_.getImportedBankStartupReport();
+        status_.setTooltip(processor_.getStatusText()
+                           + (startupReport.isNotEmpty() ? "\n\n" + startupReport : ""));
         loadRom_.setTooltip(processor_.getRomPath());
     }
 
@@ -1667,6 +1670,7 @@ void VDX7AudioProcessorEditor::showUtilityMenu()
     juce::PopupMenu imported;
     imported.addItem(10, "Open folder...");
     imported.addItem(11, "Refresh");
+    imported.addItem(12, "Startup scan report...", processor_.getImportedBankStartupReport().isNotEmpty());
     menu.addSubMenu("Imported Banks", imported);
     menu.addSeparator();
     menu.addItem(4, "Copy OP" + juce::String(selectedOperator_+1));
@@ -1690,6 +1694,10 @@ void VDX7AudioProcessorEditor::showUtilityMenu()
                     break;
                 }
                 case 11: safe->refreshImportedBankFolder(); break;
+                case 12:
+                    juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,
+                        "Imported Banks: startup scan", safe->processor_.getImportedBankStartupReport());
+                    break;
                 case 4: safe->processor_.copyOperator(op); break;
                 case 5: safe->processor_.pasteOperator(op); break;
                 default: break;

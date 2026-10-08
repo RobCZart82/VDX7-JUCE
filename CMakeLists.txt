@@ -274,7 +274,7 @@ add_test(NAME vdx7_pre_rom_state
     COMMAND vdx7_processor_tests --pre-rom-state-state-only)
 set_tests_properties(vdx7_pre_rom_state PROPERTIES TIMEOUT 30 LABELS "rom-free")
 
-# Catalog/project-state scheduling checks, without UI/startup/selection changes.
+# Catalog startup, project-state and selection scheduling checks without a DAW.
 add_executable(vdx7_imported_processor_tests EXCLUDE_FROM_ALL
     Tests/VDX7ImportedProcessorTests.cpp Source/PluginProcessor.cpp)
 target_link_libraries(vdx7_imported_processor_tests PRIVATE VDX7)
