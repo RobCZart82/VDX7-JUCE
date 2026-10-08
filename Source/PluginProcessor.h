@@ -32,7 +32,8 @@ class VDX7AudioProcessor final : public juce::AudioProcessor,
                                   private juce::Timer
 {
 public:
-    explicit VDX7AudioProcessor(bool detectRom = true, const juce::File& bankFolder = {});
+    explicit VDX7AudioProcessor(bool detectRom = true, const juce::File& bankFolder = {},
+                               const juce::File& importedBankFolder = {});
     ~VDX7AudioProcessor() override;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -140,7 +141,8 @@ public:
     static juce::File factoryBankFolder() { return VDX7FactoryBanks::defaultFolder(); }
     // Explicit non-RT refresh. Does not replace the current working voice RAM.
     bool refreshFactoryBanks(const juce::File& folder, juce::String& report);
-    // Non-RT catalog/state integration. Startup scan remains a separate step.
+    // Non-RT catalog/state integration. New production instances scan once in
+    // construction; subsequent project restore takes precedence over that scan.
     // Handles contain library data, not live selection. Detached immutable
     // handles keep large copies/encoding out of locks.
     using ImportedBankSnapshot = std::shared_ptr<const VDX7ImportedBanks::Snapshot>;
@@ -152,6 +154,8 @@ public:
     };
     // Catalog and numeric live origin captured under one lock for the UI.
     ImportedBankSelection getImportedBankSelection() const;
+    // Written only during construction: historical report, never project state.
+    juce::String getImportedBankStartupReport() const { return importedBankStartupReport_; }
     bool refreshImportedBanks(const juce::File&, juce::String& report,
                               const std::function<bool()>& shouldCancel = {});
     // Explicit non-RT selection of an editable copy, not a file reopen. The
@@ -321,6 +325,8 @@ private:
     ImportedBankSnapshot importedBanks_; // Null = legacy/unscanned, immutable; engineMutex_ owned.
     int importedBankOrigin_ = -1; // Index in immutable catalog; audio clears numerically, no allocation.
     uint64_t importedBankRevision_ = 0; // Publication/origin/restore generation under engineMutex_.
+    juce::String importedBankStartupReport_; // Immutable after construction; safe UI copy.
+    std::atomic<bool> importedBankStartupWarningPending_ { false };
     juce::File factoryBankFolder_; // Empty for isolated tests unless explicitly supplied.
     juce::File romFile_;
     juce::String statusText_ { "ROM not loaded" };
