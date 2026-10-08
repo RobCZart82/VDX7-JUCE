@@ -73,9 +73,12 @@ Windows 10 x64 REAPER use; this is not the complete final-RC test matrix. Physic
 Intel Mac acceptance and exact-candidate checks remain separate. Standalone runs
 without a DAW when built locally.
 
-**Recommended and supported firmware: original Yamaha DX7 Mk I v1.8 (IG11469).** A legally
-obtained user-supplied ROM is required for sound. **Special Edition / SER-7
-firmware is not supported and is not recommended for VDX7.** Successful file
+**The only officially supported firmware is original Yamaha DX7 Mk I v1.8 (IG11469).** A legally
+obtained user-supplied ROM is required for sound. **All other firmware versions,
+including Special Edition / SER-7 and modified images, are unsupported and will
+not be supported in future VDX7 releases.** This is the project's permanent
+support policy, not a deferred compatibility milestone. It does not introduce
+a v1.8-only loader whitelist. Successful file
 loading alone does not establish working MIDI, audio or project recall. Supported layouts and
 optional external factory-bank data are described in the
 [firmware guide](docs/guides/GUIDE_EN.md#3-firmware-and-banks).

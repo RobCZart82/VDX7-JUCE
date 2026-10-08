@@ -82,9 +82,12 @@ használatról számolt be; ezek nem azonosak a végleges RC teljes tesztmátrix
 A fizikai Intel Mac elfogadása és a pontos RC-n végzett tesztek külön ellenőrzendők.
 A helyben fordított Standalone DAW nélkül fut.
 
-**Ajánlott és támogatott firmware: eredeti Yamaha DX7 Mk I v1.8 (IG11469).**
+**Az egyetlen hivatalosan támogatott firmware az eredeti Yamaha DX7 Mk I v1.8 (IG11469).**
 A megszólaláshoz saját, jogszerűen használható ROM szükséges.
-**A Special Edition / SER-7 firmware nem támogatott és a VDX7-hez nem ajánlott.**
+**Minden más firmware-verzió, köztük a Special Edition / SER-7 és a módosított
+firmware-képek nem támogatottak, és a VDX7 jövőbeli kiadásaiban sem lesznek támogatottak.**
+Ez végleges támogatási politika, nem halasztott kompatibilitási mérföldkő.
+Nem vezet be kizárólag a v1.8-at engedélyező betöltési korlátozást.
 A fájl sikeres betöltése önmagában nem igazolja a MIDI, hangkimenet vagy projekt-visszatöltés működését.
 A formátumokat és az opcionális külső gyári hangadatot a
 [firmware-útmutató](docs/guides/GUIDE_HU.md#3-firmware-és-bankok) ismerteti.
