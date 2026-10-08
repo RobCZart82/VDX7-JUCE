@@ -1,8 +1,10 @@
 // D5 measurement harness only. No production mode switch or firmware is used.
 #include "EGS.h"
+#include "VDX7SoundModeTransitionPrototype.h"
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -247,14 +249,179 @@ void outputCharacterization()
                       << " return first-sample delta=" << std::abs(after.front() - uninterrupted[1024]) << '\n';
         }
 }
+
+void transitionStateCharacterization()
+{
+    using Transition = VDX7SoundModeTransitionPrototype;
+    Transition idle;
+    for (int i = 0; i < 1024; ++i)
+    {
+        const auto step = idle.next();
+        require(step.gain == 1.0f && !step.clean && !step.switched,
+                "idle transition must preserve default Classic at unity gain");
+    }
+
+    Transition transition;
+    for (bool wanted : { true, false })
+    {
+        transition.request(wanted);
+        unsigned switches = 0;
+        float previousGain = 1.0f;
+        for (unsigned i = 0; i < 2 * Transition::rampSamples; ++i)
+        {
+            transition.request(wanted); // Repeated identical requests must not restart the ramp.
+            const auto step = transition.next();
+            require(step.gain >= 0.0f && step.gain <= 1.0f,
+                    "transition gain stays bounded");
+            require(std::abs(step.gain - previousGain) <= 1.0f / Transition::rampSamples,
+                    "transition gain changes by at most one fixed step");
+            if (step.switched)
+            {
+                ++switches;
+                require(i == Transition::rampSamples - 1 && step.gain == 0.0f,
+                        "single mode request switches exactly at the mute boundary");
+            }
+            if (i == 2 * Transition::rampSamples - 1)
+                require(step.clean == wanted && step.gain == 1.0f,
+                        "single request settles within 512 native samples");
+            previousGain = step.gain;
+        }
+        require(switches == 1, "single request changes mode exactly once");
+    }
+
+    Transition cancellation;
+    cancellation.request(true);
+    for (int i = 0; i < 96; ++i)
+        require(!cancellation.next().switched, "mode must not switch before the mute boundary");
+    cancellation.request(false);
+    for (int i = 0; i < 96; ++i)
+    {
+        const auto step = cancellation.next();
+        require(!step.clean && !step.switched, "cancelled request must not apply a stale mode");
+        if (i == 95)
+            require(step.gain == 1.0f, "cancelled ramp returns to unity without a mode change");
+    }
+
+    // Latest request wins; repeated requests cannot grow a queue or reset gain.
+    Transition rapid;
+    float previousGain = 1.0f;
+    for (int i = 0; i < 4096; ++i)
+    {
+        const bool wanted = (i % 31) < 17;
+        rapid.request(wanted);
+        const auto step = rapid.next();
+        require(step.gain >= 0.0f && step.gain <= 1.0f
+                    && std::abs(step.gain - previousGain) <= 1.0f / Transition::rampSamples,
+                "rapid requests preserve the bounded gain trajectory");
+        require(!step.switched || step.gain == 0.0f,
+                "rapid requests only switch at the mute boundary");
+        require(!step.switched || step.clean == wanted,
+                "rapid requests apply the latest mode rather than an earlier pending value");
+        previousGain = step.gain;
+    }
+    for (bool wanted : { true, false })
+    {
+        rapid.request(wanted);
+        Transition::Step final {};
+        for (unsigned i = 0; i < 2 * Transition::rampSamples; ++i)
+            final = rapid.next();
+        require(final.clean == wanted && final.gain == 1.0f,
+                "latest request settles within the bound after requests stop");
+    }
+}
+
+struct TransitionFrame
+{
+    float raw, output, gain;
+    bool clean, switched;
+    bool operator==(const TransitionFrame&) const = default;
+};
+
+std::vector<TransitionFrame> transitionTrace(int voices, int pitch, int partition,
+                                            bool requests, bool unmutedSwitch)
+{
+    EgsFixture fixture(voices, pitch);
+    fixture.render(2048);
+    VDX7SoundModeTransitionPrototype transition;
+    std::vector<TransitionFrame> result;
+    constexpr int total = 2048;
+    result.reserve(total); // Measurement storage allocated before the sample loop.
+    for (int blockStart = 0; blockStart < total; blockStart += partition)
+        for (int i = blockStart; i < std::min(total, blockStart + partition); ++i)
+        {
+            // Events have exact absolute native-sample offsets in this test;
+            // this is not a host/GUI scheduling or atomic request implementation.
+            if (requests && (i == 0 || i == 1024))
+                transition.request(i == 0);
+            const auto step = transition.next();
+            if (step.switched)
+                fixture.egs.clean(step.clean);
+            float raw = 0.0f;
+            int written = 0;
+            fixture.egs.clock(&raw, written, 96);
+            require(written == 1 && std::isfinite(raw), "transition clocks exactly one finite EGS sample");
+            const float gain = unmutedSwitch && step.switched ? 1.0f : step.gain;
+            const float output = raw * gain;
+            require(!step.switched || (gain == 0.0f && output == 0.0f),
+                    "mode changes must be rendered at zero output");
+            result.push_back({ raw, output, gain, step.clean, step.switched });
+        }
+    return result;
+}
+
+void transitionOutputCharacterization(bool unmutedSwitch)
+{
+    for (int voices : { 1, 16 })
+        for (int pitch : { 9000, 14000 })
+        {
+            EgsFixture control(voices, pitch);
+            control.render(2048);
+            const auto original = control.render(2048);
+            const auto idle = transitionTrace(voices, pitch, 64, false, false);
+            for (std::size_t i = 0; i < idle.size(); ++i)
+                require(std::bit_cast<std::uint32_t>(idle[i].output) == std::bit_cast<std::uint32_t>(original[i]),
+                        "idle transition wrapper is bit-identical to uninterrupted Classic EGS");
+            const auto trace = transitionTrace(voices, pitch, 64, true, unmutedSwitch);
+            for (int partition : { 1, 7, 511, 2048 })
+                require(trace == transitionTrace(voices, pitch, partition, true, false),
+                        "same native-offset requests are invariant across synthetic partitions");
+
+            unsigned switches = 0;
+            double peak = 0.0;
+            for (std::size_t i = 0; i < trace.size(); ++i)
+            {
+                const auto& frame = trace[i];
+                require(std::isfinite(frame.output) && std::abs(frame.output) <= std::abs(frame.raw),
+                        "transition never amplifies its raw EGS sample");
+                peak = std::max(peak, static_cast<double>(std::abs(frame.output)));
+                if (frame.switched)
+                {
+                    ++switches;
+                    require(i > 0 && frame.gain == 0.0f && frame.output == 0.0f,
+                            "rendered mode boundary is muted");
+                    const float previous = trace[i - 1].output;
+                    require(std::abs(previous) <= std::abs(trace[i - 1].raw) / 256.0f,
+                            "sample immediately before a mode change has at most one-step gain");
+                    std::cout << "transition: voices=" << voices << " pitch-register=" << pitch
+                              << " native-offset=" << i << " clean=" << frame.clean
+                              << " raw boundary step=" << std::abs(frame.raw - trace[i - 1].raw)
+                              << " ramped boundary step=" << std::abs(frame.output - previous) << '\n';
+                }
+            }
+            require(switches == 2 && !trace.back().clean && trace.back().gain == 1.0f,
+                    "rendered trace completes both requests and returns to full-gain Classic");
+            std::cout << "  ramped trace peak=" << peak << " (raw upstream units, not host clipping verdict)\n";
+        }
+}
 } // namespace
 
 int main(int argc, char** argv)
 {
     const bool negativeControl = argc == 2 && std::string_view(argv[1]) == "--ignore-clean-negative-control";
-    if (argc != 1 && !negativeControl)
+    const bool unmutedSwitch = argc == 2 && std::string_view(argv[1]) == "--unmuted-switch-negative-control";
+    if (argc != 1 && !negativeControl && !unmutedSwitch)
     {
-        std::cerr << "Usage: vdx7_sound_mode_prototype_tests [--ignore-clean-negative-control]\n";
+        std::cerr << "Usage: vdx7_sound_mode_prototype_tests [--ignore-clean-negative-control | --unmuted-switch-negative-control]\n";
         return 2;
     }
     try
@@ -262,6 +429,8 @@ int main(int argc, char** argv)
         conversionCharacterization();
         operatorCharacterization(negativeControl);
         outputCharacterization();
+        transitionStateCharacterization();
+        transitionOutputCharacterization(unmutedSwitch);
         std::cout << "PASS: ROM-free upstream characterization only; no shipped switch or sound-quality verdict\n";
         return 0;
     }
