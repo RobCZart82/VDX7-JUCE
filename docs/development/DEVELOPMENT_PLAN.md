@@ -285,10 +285,10 @@ Elfogadás: cancel/confirm, bank- és settings-azonosság, dirty jelző, export/
 ### D3 Importált DX7 bankkönyvtár
 
 Állapot: FEJLESZTÉS ALATT, jóváhagyva 2026-10-05; katalógus, projektadat és
-processor-bekötés, importált bankkiválasztás és GUI is beolvadt (#154–#158).
-Az induláskori scan aktuális fejlesztési alapja:
-`4b9e6864df868a1ce21a030ea3810f2b8a0244a3` main, #159 után.
-Windows/macOS main ellenőrzés PASS (37737116633, 37737116561).
+processor-bekötés, importált bankkiválasztás, GUI és induláskori scan beolvadt
+(#154–#158, #160). A kapacitás-GUI tesztkör aktuális fejlesztési alapja:
+`8d84de7bf10acf88dfdab722eef2221a38aa8428` main, #160 után.
+Windows/macOS main ellenőrzés PASS (37742318734, 37742318665).
 Ez nem a teljes D3 vagy valódi host-elfogadás.
 Külön Windows/macOS bedobós mappában több szabványos 32-hangszínes
 bank legyen egyszerre használható. Új példány beolvassa, nyitott példányban
@@ -508,7 +508,7 @@ Azóta #158 beolvadt `d8e0da69e8822a67cbd032facc813600559a6e7b` main-nal,
 a platform/sanitizer CI-kapuk ellenőrzése után. Helyi sanitizer és valódi
 Windows/macOS REAPER elfogadás NOT RUN. Nincs új release vagy tag.
 
-#### Induláskori bankscan – aktuális munkakör, 2026-10-08
+#### Induláskori bankscan – beolvadt #160, 2026-10-08
 
 Ág: `feat/imported-bank-startup-scan`; alap a fenti `4b9e686` main.
 Új production processor létrehozásakor egyszer, szinkron módon és az
@@ -560,13 +560,96 @@ Ellenőrzések:
   A kontroll nem igazolja a módosítatlan Yamaha gyári bankok teljes elfogadását.
 - PASS: külön 16 KiB-os v1.8 GUI-harness 5/5 bankválasztás és 5/5 dirty Mégse,
   startup tooltip, elavult popup és billentyűzetes ütemezés ellenőrzésével.
-- NOT RUN: új PR Windows/macOS/sanitizer CI és végleges review (PR megnyitása
-  után szükséges); valódi Windows/macOS REAPER, AU/Logic, telepítő- és kiadási QA.
+- PASS: #160 végleges `9c4f3c1` head Windows/macOS/sanitizer CI
+  (37740080181, 37740080187, 37740080208); nincs megoldatlan review-szál.
+  Beolvadt `8d84de7bf10acf88dfdab722eef2221a38aa8428` main-nal;
+  a merge utáni platformellenőrzések is PASS (37742318734, 37742318665).
+- NOT RUN: valódi Windows/macOS REAPER, AU/Logic, telepítő- és kiadási QA.
 
-Hátravan D3-hoz: új PR zöld végleges head és review, majd a következő jelölt
+Hátravan D3-hoz: a következő jelölt
 valódi Windows/macOS új példány/projekt-recall/Refresh/tooltip/görgetés próbái,
 több bankkal és több példánnyal, régi projekt megnyitásával, eltűnt/cserélt
 forrásfájl mellett is. A helyi tesztek nem új kiadás publikálási engedélyei.
+
+#### Maximális banklista és példányizoláció – aktuális tesztfejlesztés, 2026-10-08
+
+Ág: `test/imported-bank-capacity-ui`; alap a fenti `8d84de7` main.
+Csak a meglévő `vdx7_gui_header` teszt és ez a terv változik. Nincs új
+production viselkedés, DSP-/firmware-módosítás vagy új támogatási ígéret.
+E körben nem reprodukáltunk új működési hibát: a hiányzó határeset-lefedettséget
+pótoljuk, nem egy feltételezett bug kedvéért írjuk át a működő kódot.
+
+Új automatikus lefedettség saját, külön ideiglenes mappában generált 128
+szabványos bankkal, azonos hosszú Unicode-fájlnévprefix mellett:
+
+- 137 választható banklistaelem (8 gyári + USER + 128 importált), változatlan
+  ROM nélküli tiltás; minden importált sor ID/név/hash összerendelése.
+- 1/2/3 számjegyű sorszám, legfeljebb 15 karakteres egyértelmű címke;
+  teljes fájlnév és tartalmi azonosító tooltip; minden sor 260 × 26 méretű
+  komponens-pillanatképe érvényes. Egyoszlopos popup konfiguráció megmarad.
+- A hibás 129. SysEx-jelölt is beleszámít a limitbe: Refresh megőrzi a teljes
+  processor-state-et és a 128 soros listát, startup nem publikál részlistát.
+- A hibás startup utáni mentett projekt 128 bankot állít vissza, és a kritikus
+  függőprojekt-jelzés elsőbbséget kap az induláskori figyelmeztetéssel szemben.
+- Két példány külön, teljes és tartalmilag azonos induláskori katalógusa;
+  fájltörlés és csak a második példány Refresh
+  művelete nem módosítja az első processor/editor 128 bankját.
+- Tényleges binary projekt-recall az összes szintetikus forrásfájl eltávolítása
+  után is 128 bankot mutat, minden bank bájtjai és metaadatai egyeznek az
+  eredeti katalógussal; az editor mind az öt támogatott méretben renderel,
+  gyermekkomponensei a felület határain belül maradnak.
+- Külön privát v1.8 harness-ben a tényleges editor választási útja a legutolsó
+  (128.) és első bankot is helyesen kapcsolja, eltűnt forrásmappa mellett.
+
+Eredmények: PASS az újrafordított helyi MSVC Release GUI-teszt (meglévő core/
+plugin könyvtárakkal; nem új teljes pluginbuild), 17/17 ROM-mentes CTest,
+78 Python-tesztből 77 PASS / 1 SKIP (Windows symlink-jogosultság), 0 FAIL/ERROR,
+tesztleltár-ellenőrző önellenőrzése és diff-formaellenőrzés. Privát v1.8
+kapacitás-harness 5/5 teljes futás PASS (minden futás első/utolsó választással).
+Firmware SHA-256 az előző checkpointtal azonos; nincs privát adat commitban.
+
+Negatív kontroll: `--imported-bank-capacity-negative-control` szándékosan
+WRONG címkét állít be az utolsó menüelem szövegmezőjében; a teszt a várt címke-összerendelési
+ellenőrzésnél FAIL/exit 1. A normál futás változatlan PASS. Ez önálló tesztmód,
+nem production módosítás és nem a normál CTestbe regisztrált hibás teszt.
+Privát opt-in parancs: `vdx7_gui_header_tests --imported-bank-capacity-rom <privát-v1.8-ROM>`.
+
+#161 review-javítás, 2026-10-08: a kezdeti `9e0a9df` head mindhárom CI-je
+PASS (37744007512, 37744007466, 37744007450), de két jogos P2 tesztlefedettségi
+észrevétel blokkolta a merge-et. A puszta pointer-különbség nem bizonyította
+a második példány teljes startup katalógusát, és a recall csak a bankszámot
+és az utolsó bank bájtjait ellenőrizte. Ezek nem bizonyított production hibák.
+
+A javítás a második startup pillanatkép létezését, 128 bankját, külön tulajdonát
+és teljes egyezését is ellenőrzi, még az editorok létrehozása előtt. A forrás
+nélküli recall és a hibás startupot felülíró project-recall minden bank
+`packed`, `contentId`, `fileName`, `displayName` mezőjét, a bankok sorrendjét
+és a katalógus `selectedId` mezőjét összehasonlítja az `original` értékkel.
+Null pillanatkép nem dereferálódik, hanem az összehasonlítás elutasítja.
+
+Reprodukció: a régi bankszám/utolsó-bank összehasonlítás mellé beillesztett
+kontroll az első bank egy bájtját módosítja, a bankszám és az utolsó bank
+változatlan. Az új követelmény a régi összehasonlítással elvárt FAIL/exit 1
+eredményt adott (`catalog comparison rejects nonfinal bank data changes`).
+A teljes összehasonlítással a normál teszt PASS. Nyolc beépített negatív
+kontroll védi: null, hiányos katalógus, nem utolsó bank bájteltérése, bankok
+felcserélése, hibás azonosító/fájlnév/megjelenítési név és eltérő kiválasztás.
+Az egyező külön másolat pozitív kontroll; a kontrollok csak saját, memóriabeli
+tesztadatot módosítanak, nem a processort, fájlt vagy privát firmware-t.
+
+Review-javítás végső helyi eredménye: PASS újrafordított MSVC GUI-teszt,
+17/17 ROM-mentes CTest, 77 Python PASS / 1 jogosultsági SKIP, 0 FAIL/ERROR,
+5/5 privát v1.8 kapacitás-harness; a korábbi címke-negatív mód továbbra is a
+várt címke-ellenőrzésnél FAIL/exit 1. Tesztleltár-önellenőrzés és diff-forma PASS.
+Az új head CI/review kapuja külön szükséges; a régi head zöld eredménye nem
+engedélyezi az új head beolvasztását. Production kód és release változatlan.
+
+NOT RUN: e kör új PR platform/sanitizer CI-je és végleges review (PR után
+ellenőrizendő); instrumentált GUI-harness (a meglévő sanitizer workflow
+nem futtat GUI-tesztet); valódi popup-görgetés/kijelző-DPI, billentyűzetes navigáció
+128 bank között, audio többpéldányos terhelés, REAPER/Logic, telepítő/kiadási QA.
+A sorok és az editor érvényes renderképe nem vizuális vagy hallásos hostelfogadás.
+A D3 fenti valódi hostkapui továbbra is nyitottak; nincs release/tag/asset változás.
 
 #### Megőrzött felhasználói koncepció
 

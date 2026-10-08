@@ -176,6 +176,177 @@ void checkImportedBankUi(const juce::File& firmware = {}, bool cancelConfirmatio
             "refresh removes stale rows but preserves the selected project bank and factory/USER choices");
 }
 
+bool sameImportedCatalog(const VDX7AudioProcessor::ImportedBankSnapshot& actual,
+                         const VDX7AudioProcessor::ImportedBankSnapshot& expected)
+{
+    if (!actual || !expected || actual->selectedId != expected->selectedId
+        || actual->banks.size() != expected->banks.size()) return false;
+    for (std::size_t i = 0; i < expected->banks.size(); ++i)
+    {
+        const auto& a = actual->banks[i];
+        const auto& b = expected->banks[i];
+        if (a.packed != b.packed || a.contentId != b.contentId
+            || a.fileName != b.fileName || a.displayName != b.displayName) return false;
+    }
+    return true;
+}
+
+void checkCatalogComparison(const VDX7AudioProcessor::ImportedBankSnapshot& original)
+{
+    using Snapshot = VDX7ImportedBanks::Snapshot;
+    auto altered = std::make_shared<Snapshot>(*original);
+    require(sameImportedCatalog(altered, original), "complete detached catalog is an equal positive control");
+    require(!sameImportedCatalog({}, original), "catalog comparison rejects missing second-instance startup");
+    altered->banks.pop_back();
+    require(!sameImportedCatalog(altered, original), "catalog comparison rejects incomplete second-instance startup");
+    altered = std::make_shared<Snapshot>(*original);
+    altered->banks[0].packed[0] ^= 1;
+    require(altered->banks.size() == original->banks.size()
+        && altered->banks.back().packed == original->banks.back().packed,
+        "nonfinal corruption preserves the previous count/last-bank-only oracle");
+    require(!sameImportedCatalog(altered, original), "catalog comparison rejects nonfinal bank data changes");
+    altered = std::make_shared<Snapshot>(*original);
+    std::swap(altered->banks[0], altered->banks[1]);
+    require(!sameImportedCatalog(altered, original), "catalog comparison rejects bank reordering");
+    altered = std::make_shared<Snapshot>(*original);
+    altered->banks[0].contentId = "wrong";
+    require(!sameImportedCatalog(altered, original), "catalog comparison rejects changed bank identity");
+    altered = std::make_shared<Snapshot>(*original);
+    altered->banks[0].fileName = "wrong.syx";
+    require(!sameImportedCatalog(altered, original), "catalog comparison rejects changed filename metadata");
+    altered = std::make_shared<Snapshot>(*original);
+    altered->banks[0].displayName = "wrong";
+    require(!sameImportedCatalog(altered, original), "catalog comparison rejects changed display metadata");
+    altered = std::make_shared<Snapshot>(*original);
+    altered->selectedId = original->banks[0].contentId;
+    require(!sameImportedCatalog(altered, original), "catalog comparison rejects changed catalog selection");
+}
+
+void checkImportedBankCapacityUi(bool negativeControl = false, const juce::File& firmware = {})
+{
+    struct Folder
+    {
+        juce::File file = juce::File::getSpecialLocation(juce::File::tempDirectory)
+            .getNonexistentChildFile("vdx7-capacity-gui", {}, false);
+        Folder() { require(file.createDirectory().wasOk(), "isolated capacity GUI folder"); }
+        ~Folder() { file.deleteRecursively(); }
+    } folder;
+    const auto prefix = juce::String::charToString(0x1f3b9) + "IdenticalLongUnicodeBankPrefix-";
+    for (int n = 0; n < VDX7ImportedBanks::maxFiles; ++n)
+    {
+        auto voice = vdx7InitVoice();
+        voice[0] = static_cast<uint8_t>(n % 100);
+        voice[1] = static_cast<uint8_t>(n / 100);
+        std::vector<uint8_t> packed;
+        for (int slot = 0; slot < 32; ++slot) packed.insert(packed.end(), voice.begin(), voice.end());
+        const auto syx = VDX7Sysex::encode(packed);
+        require(folder.file.getChildFile(prefix + juce::String(n).paddedLeft('0', 3) + ".syx")
+            .replaceWithData(syx.data(), syx.size()), "write 128 distinct synthetic capacity banks");
+    }
+    auto first = std::make_unique<VDX7AudioProcessor>(false, juce::File(), folder.file);
+    auto second = std::make_unique<VDX7AudioProcessor>(false, juce::File(), folder.file);
+    const auto original = first->getImportedBankSnapshot();
+    const auto secondStartup = second->getImportedBankSnapshot();
+    require(original && original->banks.size() == 128
+        && secondStartup && secondStartup->banks.size() == 128
+        && secondStartup != original && sameImportedCatalog(secondStartup, original),
+        "both instances start with independent complete and equal capacity catalogs");
+    checkCatalogComparison(original);
+    VDX7AudioProcessorEditor firstEditor(*first), secondEditor(*second);
+    auto& choices = VDX7RegressionAccess::bank(firstEditor);
+    require(choices.getNumItems() == 137 && !choices.isEnabled(),
+            "all 128 bank choices coexist with factory and USER rows without firmware");
+    if (negativeControl) choices.changeItemText(227, "WRONG"); // Deliberate UI-only oracle control.
+    juce::StringArray labels;
+    int index = 0;
+    for (juce::PopupMenu::MenuItemIterator it(*choices.getRootMenu()); it.next();)
+    {
+        const auto& item = it.getItem();
+        if (item.itemID < 100) continue;
+        require(item.itemID == 100 + index && item.text.startsWith(juce::String(index + 1) + ". ")
+            && item.text.length() <= 15 && !labels.contains(item.text),
+            "capacity row IDs and 1/2/3-digit labels stay bounded, unique and correctly mapped");
+        labels.add(item.text);
+        auto* row = dynamic_cast<VDX7ImportedBankMenuItem*>(item.customComponent.get());
+        const auto& bank = original->banks[static_cast<std::size_t>(index)];
+        require(row && row->getTooltip() == VDX7ImportedBankMenuItem::details(bank)
+            && row->getName() == bank.fileName, "every capacity row retains exact filename and bank identity");
+        int width = 0, height = 0;
+        row->getIdealSize(width, height);
+        require(width == 260 && height == 26, "capacity does not enlarge popup row dimensions");
+        row->setSize(width, height);
+        require(row->createComponentSnapshot(row->getLocalBounds()).isValid(), "every capacity popup row renders");
+        ++index;
+    }
+    require(index == 128 && labels[127].startsWith("128. "), "last supported bank is present and distinguishable");
+    juce::Label popupLabel;
+    const auto options = firstEditor.getLookAndFeel().getOptionsForComboBoxPopupMenu(choices, popupLabel);
+    require(options.getMaximumNumColumns() == 1 && options.getMinimumWidth() == 260,
+            "maximal catalog retains single-column scrolling configuration");
+    juce::MemoryBlock saved;
+    first->getStateInformation(saved);
+    const auto overflow = folder.file.getChildFile("overflow.syx");
+    require(overflow.replaceWithData("invalid", 7), "129th SysEx candidate still counts towards the scan limit");
+    juce::String report;
+    require(!first->refreshImportedBanks(folder.file, report), "over-capacity Refresh rejected");
+    VDX7RegressionAccess::refresh(firstEditor);
+    juce::MemoryBlock afterFailure;
+    first->getStateInformation(afterFailure);
+    require(first->getImportedBankSnapshot() == original && saved == afterFailure
+        && choices.getNumItems() == 137, "failed Refresh preserves full state and all displayed bank rows");
+    {
+        auto limited = std::make_unique<VDX7AudioProcessor>(false, juce::File(), folder.file);
+        VDX7AudioProcessorEditor limitedEditor(*limited);
+        require(!limited->getImportedBankSnapshot()
+            && VDX7RegressionAccess::bank(limitedEditor).getNumItems() == 9
+            && VDX7RegressionAccess::status(limitedEditor).getTooltip().contains("Scan incomplete"),
+            "over-capacity startup shows diagnostics rather than a partial library");
+        limited->setStateInformation(saved.getData(), int(saved.getSize()));
+        VDX7RegressionAccess::refresh(limitedEditor);
+        require(sameImportedCatalog(limited->getImportedBankSnapshot(), original)
+            && VDX7RegressionAccess::bank(limitedEditor).getNumItems() == 137
+            && limited->getCriticalStatusText().isNotEmpty()
+            && limited->getStatusText() == limited->getCriticalStatusText(),
+            "saved capacity catalog overrides failed startup and critical project status wins over warnings");
+    }
+    require(overflow.deleteFile() && folder.file.getChildFile(original->banks[0].fileName).deleteFile(),
+            "remove only isolated overflow and synthetic first bank");
+    require(second->refreshImportedBanks(folder.file, report), "refresh only the second instance after disk change");
+    VDX7RegressionAccess::refresh(secondEditor);
+    require(second->getImportedBankSnapshot()->banks.size() == 127
+        && VDX7RegressionAccess::bank(secondEditor).getNumItems() == 136
+        && first->getImportedBankSnapshot() == original && choices.getNumItems() == 137,
+        "second-instance Refresh cannot change first-instance catalog or editor rows");
+    require(folder.file.deleteRecursively(), "remove only isolated synthetic capacity source folder");
+    second->setStateInformation(saved.getData(), int(saved.getSize()));
+    VDX7RegressionAccess::refresh(secondEditor);
+    require(sameImportedCatalog(second->getImportedBankSnapshot(), original)
+        && VDX7RegressionAccess::bank(secondEditor).getNumItems() == 137,
+        "actual binary project recall restores every bank byte and metadata field without source files");
+    for (const auto& preset : VDX7GuiScale::presets)
+    {
+        secondEditor.setSize(preset.width, preset.height);
+        for (auto* child : secondEditor.getChildren())
+            require(secondEditor.getLocalBounds().contains(child->getBounds()), "maximal catalog editor fits every supported size");
+        require(secondEditor.createComponentSnapshot(secondEditor.getLocalBounds()).isValid(),
+                "maximal catalog editor renders at every supported size");
+    }
+    if (firmware != juce::File())
+    {
+        require(first->loadRomFromFile(firmware), "opt-in private firmware for capacity GUI selection");
+        VDX7RegressionAccess::refresh(firstEditor);
+        VDX7RegressionAccess::choose(firstEditor, 227, original);
+        require(first->getImportedBankSelection().index == 127 && choices.getSelectedId() == 227
+            && first->getCurrentBank() == -1 && first->getCurrentProgram() == 0,
+            "last displayed bank selects the last immutable bank, not a truncated-label match");
+        VDX7RegressionAccess::choose(firstEditor, 100, original);
+        require(first->getImportedBankSelection().index == 0 && choices.getSelectedId() == 100
+            && first->getImportedBankSnapshot() == original,
+            "first bank remains selectable after last bank without disk files or catalog mutation");
+    }
+    std::cout << "PASS: 128-bank GUI capacity, overflow, instance isolation and source-free project recall\n";
+}
+
 void checkWhiteKeyHover()
 {
     juce::MidiKeyboardState state;
@@ -222,6 +393,17 @@ int main(int argc, char** argv)
         {
             checkImportedBankUi(juce::File(argv[2]), true);
             std::cout << "PASS: imported bank dirty confirmation and cancel preserve full project state\n";
+            return 0;
+        }
+        if (argc == 2 && juce::String(argv[1]) == "--imported-bank-capacity-negative-control")
+        {
+            checkImportedBankCapacityUi(true);
+            throw std::runtime_error("capacity GUI negative control unexpectedly passed");
+        }
+        if (argc == 3 && juce::String(argv[1]) == "--imported-bank-capacity-rom")
+        {
+            checkImportedBankCapacityUi(false, juce::File(argv[2]));
+            std::cout << "PASS: first/last capacity GUI selection with private firmware and missing source folder\n";
             return 0;
         }
         // Optional local visual QA, not part of headless/hosted CI.
@@ -273,6 +455,7 @@ int main(int argc, char** argv)
             return 0;
         }
         checkImportedBankUi();
+        checkImportedBankCapacityUi();
         checkWhiteKeyHover();
         for (std::size_t i = 0; i < VDX7GuiScale::presets.size(); ++i)
         {
