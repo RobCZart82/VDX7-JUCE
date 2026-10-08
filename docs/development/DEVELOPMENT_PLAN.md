@@ -764,9 +764,11 @@ REAPER nélkül elvégezhető, teszt-only részlépés az engedélyezett D5 irá
 nem a következő kiadás funkciókörének eldöntése. Friss baseline:
 `1568c2c112658d715ded26c00c76243e3e25a67e`. Ág:
 `test/classic-clean-dsp-prototype`. [Részletes mérés és reprodukció](../validation/CLASSIC_CLEAN_UPSTREAM_PROTOTYPE_20261008.md).
-Pull request: [#162](https://github.com/RobCZart82/VDX7-JUCE/pull/162), nyitott.
-Beolvasztás csak a végleges head zöld Windows/macOS/sanitizer CI-je és rendezett
-review után; létrehozáskor az ellenőrzések futottak, nincs még CI PASS-állítás.
+Pull request: [#162](https://github.com/RobCZart82/VDX7-JUCE/pull/162), beolvadt.
+Végleges `698ab5b` head Windows 37751934159, macOS 37751934313 és sanitizer
+37751934179 PASS; nincs review-szál vagy review-tiltás. Merge main:
+`e528fe8b4f8e067dc6877aa5495a23f91a5ac813`. Külön main Windows 37755305211
+és macOS 37755305412 PASS. Az alábbi korábbi PR NOT RUN már e körre lezárt.
 
 Az új `vdx7_sound_mode_prototype` ROM-mentes teszt a rögzített upstream
 inverse-log táblázatot mindkét polaritással, 192 OPS ingert és 4 szintetikus
@@ -789,6 +791,31 @@ meghallgatás, valódi host mátrix. Következő részlépés: bounded átmenet/
 és headroom prototípus, majd állapot/audio-határi kérés specifikációja;
 csak ezek után minimális production implementáció és SETTINGS. A részletes
 jelentés nem javult hangminőség, teljes D5 elfogadás vagy publikálási engedély.
+
+#### D5 korlátozott váltási prototípus — 2026-10-08
+
+Kiinduló main: `e528fe8b4f8e067dc6877aa5495a23f91a5ac813`; ág:
+`test/classic-clean-bounded-transition`. [Részletes mérés és kapuk](../validation/CLASSIC_CLEAN_BOUNDED_TRANSITION_20261008.md).
+Teszt-only egy-EGS lehalkítás → nulla gainen váltás → visszaerősítés jelölt.
+Kísérleti 256 + 256 natív mintás rámpa (~10.43 ms), nincs második firmware-motor.
+Latest request wins; ismételt kérés nem indítja újra, visszavonás/gyors kérés
+korlátozott gain-lépésű. A kérések megszűnése után legfeljebb 512 mintán belül
+teljes gainen a kívánt mód fut. Tartósan sűrű kérések hosszan halkíthatnak.
+
+PASS helyben: teljes MSVC CI-tesztcél build, 18/18 ROM-mentes CTest, Python
+77 PASS / 1 Windows symlink SKIP, 0 FAIL/ERROR; mute-megkerülés és ignore-clean
+negatív kontroll elvárt FAIL/exit 1. Idle wrapper bitazonos Classic EGS-sel;
+négy szintetikus EGS inger kétirányú váltása véges, nulla natív váltási mintával.
+Azonos native-offset requestek mellett 1/7/64/511/2048 partíció trace-egyezés.
+Ez nem valódi host-buffer/GUI scheduling vagy sűrű teljes EGS váltás elfogadása.
+
+Production, SETTINGS, állapotformátum, 148 paraméter és kiadás változatlan.
+NOT RUN: új PR végső CI/review, privát v1.8 lifecycle/állapot/MIDI/tail,
+SRC utáni átmenet, CPU/allokáció/host és meghallgatás. Rövid mute-dip és régi
+Classic filter-history marad: nincs általános kattanásmentességi PASS. Következő
+részlépés az explicit kívánt/aktív mód és projekt/audio-tulajdonosi/lifecycle
+specifikáció, majd az érintett privát regresszió és csak utána production/GUI.
+Kísérleti hossz és gain-politika nem végleges hangzási szerződés.
 
 ## Teszt és karakterizálási backlog
 
