@@ -827,6 +827,8 @@ Kísérleti hossz és gain-politika nem végleges hangzási szerződés.
 Baseline: `0a8b1bdaa5e99652b4aa2a1958dca04e9ba7f152`; ág:
 `test/classic-clean-state-contract`. [Részletes műszaki szerződés](CLASSIC_CLEAN_STATE_CONTRACT.md)
 és [soros tesztmodell validációja](../validation/CLASSIC_CLEAN_STATE_CONTRACT_20261008.md).
+Pull request: [#164](https://github.com/RobCZart82/VDX7-JUCE/pull/164), nyitott;
+merge csak végleges head zöld Windows/macOS/sanitizer és rendezett review után.
 Ez nem production codec/lock/SETTINGS, hanem annak explicit specifikációja
 és teszt-only modellel ellenőrzött invariánsai. A meglévő `VDX7STATE` save/
 pending/restore és engine native/SRC belépési pontokat a fenti SHA-n áttekintettük.
