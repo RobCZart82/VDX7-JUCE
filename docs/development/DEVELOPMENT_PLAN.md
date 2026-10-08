@@ -796,6 +796,9 @@ jelentés nem javult hangminőség, teljes D5 elfogadás vagy publikálási enge
 
 Kiinduló main: `e528fe8b4f8e067dc6877aa5495a23f91a5ac813`; ág:
 `test/classic-clean-bounded-transition`. [Részletes mérés és kapuk](../validation/CLASSIC_CLEAN_BOUNDED_TRANSITION_20261008.md).
+Pull request: [#163](https://github.com/RobCZart82/VDX7-JUCE/pull/163), nyitott;
+csak végleges head zöld Windows/macOS/sanitizer és rendezett review után
+olvasztható be. A létrehozási checkpoint nem CI PASS-állítás.
 Teszt-only egy-EGS lehalkítás → nulla gainen váltás → visszaerősítés jelölt.
 Kísérleti 256 + 256 natív mintás rámpa (~10.43 ms), nincs második firmware-motor.
 Latest request wins; ismételt kérés nem indítja újra, visszavonás/gyors kérés
