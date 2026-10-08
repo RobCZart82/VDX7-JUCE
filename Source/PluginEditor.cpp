@@ -490,11 +490,8 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     utilityTab_.setTooltip("Initialise or rename the working voice, and copy/paste the selected operator.");
     utilityTab_.onClick = [this] { showUtilityMenu(); };
 
-    static constexpr const char* bankNames[] =
-        { "ROM1A", "ROM1B", "ROM2A", "ROM2B", "ROM3A", "ROM3B", "ROM4A", "ROM4B" };
-    for (int i = 0; i < 8; ++i)
-        bank_.addItem(bankNames[i], i + 1);
-    bank_.addItem("USER (load copy)", 9);
+    rebuildBankChoices(processor_.getImportedBankSnapshot());
+    bank_.getProperties().set("vdx7BankPopup", true);
 
     for (int i = 0; i < 32; ++i)
         program_.addItem(juce::String(i + 1).paddedLeft('0', 2), i + 1);
@@ -697,21 +694,11 @@ VDX7AudioProcessorEditor::VDX7AudioProcessorEditor(VDX7AudioProcessor& processor
     bank_.onChange = [this]
     {
         if (internalUiUpdate_) return;
-        const int bankIndex = bank_.getSelectedId() - 1;
-        if (bankIndex >= 0)
-        {
-            refresh(false);
-            confirmReplacement([this, bankIndex]
-            {
-                if (bankIndex == 8)
-                {
-                    juce::String error;
-                    if (!processor_.loadUserBank(VDX7AudioProcessor::userBankFile(), error))
-                        showError("USER bank", error);
-                }
-                else processor_.selectFactoryBank(bankIndex);
-            });
-        }
+        const int choice = bank_.getSelectedId();
+        const auto catalog = bankCatalog_; // Keep the keyboard choice's displayed generation.
+        bank_.setSelectedId(displayedBankId_, juce::dontSendNotification);
+        refresh(false);
+        applyBankChoice(choice, catalog);
     };
 
     program_.onChange = [this]
@@ -1394,6 +1381,64 @@ void VDX7AudioProcessorEditor::timerCallback()
         metadataRefreshCounter_ = 0;
 }
 
+void VDX7AudioProcessorEditor::rebuildBankChoices(const VDX7AudioProcessor::ImportedBankSnapshot& catalog)
+{
+    bank_.clear(juce::dontSendNotification);
+    static constexpr const char* names[] =
+        { "ROM1A", "ROM1B", "ROM2A", "ROM2B", "ROM3A", "ROM3B", "ROM4A", "ROM4B" };
+    for (int i = 0; i < 8; ++i) bank_.addItem(names[i], i + 1);
+    bank_.addItem("USER (load copy)", 9);
+    bank_.addSectionHeading("Imported Banks");
+    if (catalog)
+        for (int i = 0; i < int(catalog->banks.size()); ++i)
+        {
+            const auto& item = catalog->banks[static_cast<std::size_t>(i)];
+            bank_.getRootMenu()->addItem(juce::PopupMenu::Item(VDX7ImportedBankMenuItem::label(item, i))
+                .setID(100 + i).setCustomComponent(new VDX7ImportedBankMenuItem(item, i)));
+        }
+    if (!catalog || catalog->banks.empty())
+        bank_.getRootMenu()->addItem(juce::PopupMenu::Item("No imported banks").setID(0).setEnabled(false));
+    bankCatalog_ = catalog;
+}
+
+void VDX7AudioProcessorEditor::applyBankChoice(int choice,
+    const VDX7AudioProcessor::ImportedBankSnapshot& catalog)
+{
+    if (choice == 0) return; // Popup cancellation.
+    const int importedIndex = choice - 100;
+    if (choice >= 100 && (!catalog || importedIndex >= int(catalog->banks.size()))) return;
+    if (choice < 100 && (choice < 1 || choice > 9)) return;
+    juce::Component::SafePointer<VDX7AudioProcessorEditor> safe(this);
+    confirmReplacement([safe, choice, catalog, importedIndex]
+    {
+        if (safe == nullptr) return;
+        juce::String error;
+        if (choice >= 100)
+        {
+            const auto& bank = catalog->banks[static_cast<std::size_t>(importedIndex)];
+            if (!safe->processor_.selectImportedBank(catalog, bank.contentId, 0, error))
+                safe->showError("Imported bank not applied", error);
+        }
+        else if (choice == 9)
+        {
+            if (!safe->processor_.loadUserBank(VDX7AudioProcessor::userBankFile(), error))
+                safe->showError("USER bank", error);
+        }
+        else safe->processor_.selectFactoryBank(choice - 1);
+        safe->refresh(true);
+    });
+}
+
+void VDX7AudioProcessorEditor::refreshImportedBankFolder()
+{
+    juce::String report;
+    const bool ok = processor_.refreshImportedBanks(VDX7ImportedBanks::defaultFolder(), report);
+    juce::AlertWindow::showMessageBoxAsync(ok ? juce::MessageBoxIconType::InfoIcon
+                                            : juce::MessageBoxIconType::WarningIcon,
+        "Imported banks", report);
+    refresh(true);
+}
+
 void VDX7AudioProcessorEditor::refresh(bool refreshMetadata)
 {
     internalUiUpdate_ = true;
@@ -1408,8 +1453,23 @@ void VDX7AudioProcessorEditor::refresh(bool refreshMetadata)
     patch_.setText(juce::String(programIndex + 1).paddedLeft('0', 2) + "   " + patchName,
                    juce::dontSendNotification);
 
-    bank_.setSelectedId(bankIndex >= 0 ? bankIndex + 1 : 0, juce::dontSendNotification);
-    bank_.setTextWhenNothingSelected(loaded ? "CUSTOM" : "");
+    // Freeze the displayed generation while the standard JUCE popup is open,
+    // and while its/keyboard's asynchronous selection callback is pending.
+    // Keep JUCE's native keyboard and accessibility behaviour, without rebinding IDs.
+    if (!bank_.isPopupActive() && bank_.getSelectedId() == displayedBankId_)
+    {
+        const auto imported = processor_.getImportedBankSelection();
+        if (bankCatalog_ != imported.catalog) rebuildBankChoices(imported.catalog);
+        displayedBankId_ = bankIndex >= 0 ? bankIndex + 1 : 0;
+        const bool hasOrigin = imported.catalog && imported.index >= 0
+            && imported.index < int(imported.catalog->banks.size());
+        if (bankIndex < 0 && hasOrigin) displayedBankId_ = 100 + imported.index;
+        bank_.setSelectedId(displayedBankId_, juce::dontSendNotification);
+        bank_.setTextWhenNothingSelected(loaded ? "CUSTOM" : "");
+        bank_.setTooltip(hasOrigin ? VDX7ImportedBankMenuItem::details(
+            imported.catalog->banks[static_cast<std::size_t>(imported.index)])
+            : "Factory, USER or imported bank. Imported Banks tools are in UTILITY.");
+    }
     program_.setSelectedId(programIndex + 1, juce::dontSendNotification);
     for (int i = 1; i <= 8; ++i) bank_.setItemEnabled(i, processor_.hasFactoryBank(i - 1));
     bank_.setEnabled(ready);
@@ -1604,6 +1664,10 @@ void VDX7AudioProcessorEditor::showUtilityMenu()
     juce::PopupMenu menu;
     menu.addItem(1, "Rename voice...");
     menu.addItem(2, "Init Preset...");
+    juce::PopupMenu imported;
+    imported.addItem(10, "Open folder...");
+    imported.addItem(11, "Refresh");
+    menu.addSubMenu("Imported Banks", imported);
     menu.addSeparator();
     menu.addItem(4, "Copy OP" + juce::String(selectedOperator_+1));
     menu.addItem(5, "Paste into OP" + juce::String(selectedOperator_+1), processor_.hasCopiedOperator());
@@ -1617,6 +1681,15 @@ void VDX7AudioProcessorEditor::showUtilityMenu()
             {
                 case 1: safe->renameVoice(); break;
                 case 2: safe->showInitPresetConfirmation(); break;
+                case 10:
+                {
+                    const auto folder = VDX7ImportedBanks::defaultFolder();
+                    if (folder.createDirectory().failed())
+                        safe->showError("Imported banks", "Cannot create the imported bank folder.");
+                    else folder.revealToUser();
+                    break;
+                }
+                case 11: safe->refreshImportedBankFolder(); break;
                 case 4: safe->processor_.copyOperator(op); break;
                 case 5: safe->processor_.pasteOperator(op); break;
                 default: break;

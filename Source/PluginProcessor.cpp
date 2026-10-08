@@ -2380,6 +2380,12 @@ VDX7AudioProcessor::ImportedBankSnapshot VDX7AudioProcessor::getImportedBankSnap
     return importedBanks_;
 }
 
+VDX7AudioProcessor::ImportedBankSelection VDX7AudioProcessor::getImportedBankSelection() const
+{
+    std::scoped_lock lock(engineMutex_);
+    return { importedBanks_, importedBankOrigin_ };
+}
+
 bool VDX7AudioProcessor::selectImportedBank(const ImportedBankSnapshot& expectedCatalog,
                                           const juce::String& contentId, int program, juce::String& error)
 {

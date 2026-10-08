@@ -187,6 +187,23 @@ Az új hangszín exportálásig `Init Preset *` néven látszik; tárolt DX7-nev
 és a kijelzés eredete a DAW-projekttel mentődik. Saját VDX7 kezdőhangszín,
 nem Yamaha INIT dump, és nincs benne a már publikált 1.0.1 csomagokban.
 
+Importált bankkönyvtár (új fejlesztési buildek, kompatibilis ROM betöltése után): UTILITY → Imported Banks →
+Open folder létrehozza/megnyitja a külön bankmappát. Ide tedd a saját,
+32-hangszínes `.syx` bankokat, majd válaszd a Refresh műveletet. Windows:
+`%APPDATA%\VDX7-JUCE\Imported Banks`; macOS:
+`~/Library/Application Support/VDX7-JUCE/Imported Banks`.
+Ebben a lépésben explicit frissítés kell, nincs automatikus induláskori scan.
+Az LCD Bank listájában Imported Banks csoport, rövidített, számozott nevek
+láthatók; a sor és a kiválasztott bank tooltipje a teljes fájlnevet és
+tartalmi azonosítót mutatja. Kiválasztáskor CUSTOM munkamásolat készül,
+01-es programmal; nem mentett szerkesztéseknél megerősítés kell.
+A gyári/USER/forrásfájlok és a beállítások nem íródnak felül. A Refresh csak
+a listát módosítja, nem az aktuális hangot. Hibás fájlok és limitek jelentést
+adnak; hiányos scan esetén a korábbi könyvtár megmarad. Közben változó listánál
+nyisd meg újra a választót. A projekt a kiválasztott bankot és a szerkesztett
+hangot eltűnt forrásfájl mellett is őrzi. Ezek nincsenek a publikált 1.0.1-ben;
+a valódi host-elfogadás és az induláskori bekötés külön fejlesztési kapu.
+
 A UTILITY menüben hangszínátnevezés (1–10 nyomtatható ASCII karakter) és operátormásolás/-beillesztés található. A SysEx-export a SAVE AS menüben van. A másolás mind a 21 operátormezőt tartalmazza. Vágólapja a pluginpéldányhoz tartozik, a projekt nem tárolja.
 
 A SAVE AS... alapművelete egy rögzített hangszínmásolat mentése a tartós USER-bank

@@ -1,6 +1,8 @@
 #include "PluginEditor.h"
 #include "VDX7AboutPanel.h"
 #include "VDX7GuiScale.h"
+#include "VDX7InitVoice.h"
+#include "VDX7Sysex.h"
 
 #include <array>
 #include <cmath>
@@ -9,11 +11,163 @@
 #include <stdexcept>
 #include <vector>
 
+struct VDX7RegressionAccess
+{
+    static juce::ComboBox& bank(VDX7AudioProcessorEditor& e) { return e.bank_; }
+    static void refresh(VDX7AudioProcessorEditor& e) { e.refresh(true); }
+    static VDX7AudioProcessor::ImportedBankSnapshot catalog(VDX7AudioProcessorEditor& e) { return e.bankCatalog_; }
+    static void choose(VDX7AudioProcessorEditor& e, int id,
+                       const VDX7AudioProcessor::ImportedBankSnapshot& token)
+    { e.applyBankChoice(id, token); }
+};
+
 namespace
 {
 void require(bool condition, const char* message)
 {
     if (!condition) throw std::runtime_error(message);
+}
+
+bool cancelExpectedDialog(const juce::String& title)
+{
+    bool presented = false;
+    const auto started = juce::Time::getMillisecondCounter();
+    std::function<void()> inspect;
+    inspect = [&]
+    {
+        auto* modal = juce::ModalComponentManager::getInstance()->getModalComponent(0);
+        if (modal != nullptr && modal->getName() == title)
+        {
+            presented = true;
+            modal->exitModalState(0);
+            juce::Timer::callAfterDelay(30, [] { juce::MessageManager::getInstance()->stopDispatchLoop(); });
+        }
+        else if (juce::Time::getMillisecondCounter() - started >= 2000)
+            juce::MessageManager::getInstance()->stopDispatchLoop();
+        else juce::Timer::callAfterDelay(10, inspect);
+    };
+    juce::Timer::callAfterDelay(10, inspect);
+    juce::MessageManager::getInstance()->runDispatchLoop();
+    return presented;
+}
+
+void checkImportedBankUi(const juce::File& firmware = {}, bool cancelConfirmation = false,
+                         const juce::File& preview = {})
+{
+    struct Folder
+    {
+        juce::File file = juce::File::getSpecialLocation(juce::File::tempDirectory)
+            .getNonexistentChildFile("vdx7-imported-gui", {}, false);
+        Folder() { require(file.createDirectory().wasOk(), "isolated imported GUI folder"); }
+        ~Folder() { file.deleteRecursively(); }
+    } folder;
+    const auto prefix = juce::String::charToString(0x1f3b9) + "VeryLongIdenticalBankPrefix";
+    for (int n = 1; n <= 2; ++n)
+    {
+        auto voice = vdx7InitVoice();
+        voice[0] = static_cast<uint8_t>(n);
+        std::vector<uint8_t> bank;
+        for (int slot = 0; slot < 32; ++slot) bank.insert(bank.end(), voice.begin(), voice.end());
+        const auto syx = VDX7Sysex::encode(bank);
+        require(folder.file.getChildFile(prefix + juce::String(n) + ".syx")
+            .replaceWithData(syx.data(), syx.size()), "write synthetic imported GUI bank");
+    }
+    auto p = std::make_unique<VDX7AudioProcessor>(false);
+    juce::String report;
+    require(p->refreshImportedBanks(folder.file, report), "prepare imported GUI catalog");
+    VDX7AudioProcessorEditor editor(*p);
+    auto& bank = VDX7RegressionAccess::bank(editor);
+    require(bank.getNumItems() == 11, "bank selector includes two imported banks below existing choices");
+    require(!bank.isEnabled(), "imported bank selection remains disabled without firmware");
+    require(bank.getItemText(9) != bank.getItemText(10), "equal shortened prefixes remain distinguishable");
+    require(bank.getItemText(9).length() <= 15 && bank.getItemText(10).length() <= 15,
+            "imported labels fit the planned character limit");
+    const auto oldCatalog = p->getImportedBankSnapshot();
+    int importedRows = 0;
+    for (juce::PopupMenu::MenuItemIterator it(*bank.getRootMenu()); it.next();)
+    {
+        const auto& item = it.getItem();
+        if (item.itemID < 100) continue;
+        auto* row = dynamic_cast<VDX7ImportedBankMenuItem*>(item.customComponent.get());
+        require(row != nullptr && row->getTooltip().contains(prefix)
+            && row->getTooltip().contains(oldCatalog->banks[static_cast<std::size_t>(importedRows)].contentId),
+            "popup row tooltip contains full Unicode filename and content identity");
+        int width = 0, height = 0;
+        row->getIdealSize(width, height);
+        require(width == 260 && height == 26, "imported menu rows have bounded layout");
+        row->setSize(width, height);
+        require(row->createComponentSnapshot(row->getLocalBounds()).isValid(), "imported popup row renders");
+        if (importedRows == 0 && preview != juce::File())
+        {
+            row->setLookAndFeel(&editor.getLookAndFeel());
+            juce::FileOutputStream stream(preview);
+            require(stream.openedOk() && juce::PNGImageFormat().writeImageToStream(
+                row->createComponentSnapshot(row->getLocalBounds()), stream), "imported row visual QA written");
+            row->setLookAndFeel(nullptr);
+        }
+        ++importedRows;
+    }
+    require(importedRows == 2, "both imported popup rows are checked");
+    juce::Label popupLabel;
+    const auto options = editor.getLookAndFeel().getOptionsForComboBoxPopupMenu(bank, popupLabel);
+    require(options.getMaximumNumColumns() == 1 && options.getMinimumWidth() == 260,
+            "bank popup stays single-column and bounded-width with JUCE scrolling");
+    if (firmware != juce::File())
+    {
+        // This executable's opt-in harness uses JUCE dialogs, not native OS UI.
+        juce::LookAndFeel::getDefaultLookAndFeel().setUsingNativeAlertWindows(false);
+        require(p->loadRomFromFile(firmware), "opt-in private firmware loaded");
+        require(p->selectImportedBank(oldCatalog, oldCatalog->banks[0].contentId, 7, report),
+                "select imported bank for display test");
+        VDX7RegressionAccess::refresh(editor);
+        require(bank.isEnabled() && bank.getSelectedId() == 100
+            && bank.getTooltip().contains(oldCatalog->banks[0].fileName), "live imported origin and full tooltip displayed");
+        if (cancelConfirmation)
+        {
+            require(p->renameVoice("GUI EDIT"), "dirty voice before imported-bank confirmation");
+            juce::MemoryBlock before;
+            p->getStateInformation(before);
+            VDX7RegressionAccess::choose(editor, 101, oldCatalog);
+            const bool confirmationPresented = cancelExpectedDialog("Unexported voice edits");
+            juce::MemoryBlock after;
+            p->getStateInformation(after);
+            require(confirmationPresented && before == after
+                && p->getImportedBankSelection().index == 0 && bank.getSelectedId() == 100,
+                "cancelled dirty-bank replacement preserves full processor state and displayed bank");
+            return;
+        }
+        bank.showPopup();
+        require(bank.isPopupActive(), "standard JUCE bank popup opened");
+        require(p->refreshImportedBanks(folder.file, report), "replace catalog during open popup");
+        VDX7RegressionAccess::refresh(editor);
+        require(VDX7RegressionAccess::catalog(editor) == oldCatalog,
+                "open popup keeps its displayed generation even when processor catalog changes");
+        bank.hidePopup();
+        bank.setSelectedId(101, juce::dontSendNotification); // Queued result from that popup.
+        VDX7RegressionAccess::refresh(editor);
+        require(VDX7RegressionAccess::catalog(editor) == oldCatalog, "pending result retains old popup token");
+        bank.onChange();
+        require(p->getCurrentProgram() == 7 && p->getImportedBankSelection().index == 0,
+                "old popup choice cannot select another bank from a refreshed list");
+        const bool errorPresented = cancelExpectedDialog("Imported bank not applied");
+        require(errorPresented, "stale imported choice presents an error");
+        VDX7RegressionAccess::refresh(editor);
+        // Keyboard choices are asynchronous in JUCE. A timer tick must not
+        // overwrite the pending ID or remap it before onChange runs.
+        bank.setSelectedId(101, juce::dontSendNotification);
+        VDX7RegressionAccess::refresh(editor);
+        require(bank.getSelectedId() == 101, "timer preserves pending keyboard selection");
+        bank.onChange();
+        require(p->getCurrentProgram() == 0 && p->getImportedBankSelection().index == 1,
+                "keyboard selection applies the displayed bank through the processor API");
+        require(bank.getSelectedId() == 101, "bank selector follows the applied imported origin");
+        VDX7RegressionAccess::choose(editor, 0, p->getImportedBankSnapshot());
+        require(p->getImportedBankSelection().index == 1, "popup cancellation leaves imported selection unchanged");
+    }
+    require(p->refreshImportedBanks(folder.file.getChildFile("missing"), report), "empty explicit refresh");
+    VDX7RegressionAccess::refresh(editor);
+    require(bank.getNumItems() == (firmware == juce::File() ? 9 : 10),
+            "refresh removes stale rows but preserves the selected project bank and factory/USER choices");
 }
 
 void checkWhiteKeyHover()
@@ -46,6 +200,24 @@ int main(int argc, char** argv)
     juce::ScopedJuceInitialiser_GUI gui;
     try
     {
+        if (argc == 3 && juce::String(argv[1]) == "--imported-bank-preview")
+        {
+            checkImportedBankUi({}, false, juce::File(argv[2]));
+            std::cout << "PASS: imported bank row visual QA and ROM-free UI checks\n";
+            return 0;
+        }
+        if (argc == 3 && juce::String(argv[1]) == "--imported-bank-rom")
+        {
+            checkImportedBankUi(juce::File(argv[2]));
+            std::cout << "PASS: imported bank UI, private firmware selection, stale popup and keyboard scheduling\n";
+            return 0;
+        }
+        if (argc == 3 && juce::String(argv[1]) == "--imported-bank-cancel-rom")
+        {
+            checkImportedBankUi(juce::File(argv[2]), true);
+            std::cout << "PASS: imported bank dirty confirmation and cancel preserve full project state\n";
+            return 0;
+        }
         // Optional local visual QA, not part of headless/hosted CI.
         if (argc == 3 && juce::String(argv[1]) == "--settings-preview")
         {
@@ -94,6 +266,7 @@ int main(int argc, char** argv)
             juce::Thread::sleep(1000);
             return 0;
         }
+        checkImportedBankUi();
         checkWhiteKeyHover();
         for (std::size_t i = 0; i < VDX7GuiScale::presets.size(); ++i)
         {
