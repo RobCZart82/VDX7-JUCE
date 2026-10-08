@@ -165,3 +165,26 @@ elkészülte nem engedély a DSP nélküli Clean-metaadat szállítására.
 
 [A szerződésmodell reprodukciója és eredménye](../validation/CLASSIC_CLEAN_STATE_CONTRACT_20261008.md).
 Ez nem release/tag/asset változtatási engedély vagy teljes D5 elfogadás.
+
+## 7. Megvalósítási checkpoint — JUCE codec, 2026-10-08
+
+A #164 szerződés `328d93992a764dbd1ac89a50feb3ad4e1e2692b3` main-ba került.
+Az erre épülő `test/classic-clean-juce-state-codec` ág önálló,
+`Source/VDX7SoundModeState.h` helperrel és `Tests/VDX7SoundModeStateTests.cpp`
+teszttel ellenőrzi a 2. pont típusait, elutasításait, detached írását és valódi
+JUCE XML/AudioProcessor-binary körútját. A teljes idegen payload megőrzési
+fixture szintetikus, nem semantikailag teljes érvényes projekt vagy valódi ROM.
+
+`read()` csak a rootot és a D5 párt validálja, siker esetén ad kívánt enumot.
+Nem validál RAM/bank/ROM-identitást, és nem installál projektet. A
+`writeDetached()` coherens, caller által már captured tree + desired értékből
+új deep másolatot készít; rossz root/enum esetén invalid tree-t ad mutation
+nélkül. Mindkét művelet nem-audio-threadre való; nem thread-safe snapshot/
+mailbox vagy engine-dispatch. A pending tree régi párját a captured desired
+felülírhatja, de csak az új másolatban; restore-admission ettől külön művelet.
+
+A helper nincs bekötve production restore/save-be. A 3–5. pont integrációja,
+valódi thread/reentráns save és hallásos kapuk nyitva maradnak. XML az eredeti
+bool/double típust nem őrzi meg: a helper a ténylegesen dekódolt scalar
+reprezentációt ellenőrzi, nem elveszett típusprovenance-t rekonstruál.
+[E kör pontos eredményei](../validation/CLASSIC_CLEAN_JUCE_CODEC_20261008.md).
