@@ -909,7 +909,8 @@ T1–T4 lefedettségi halasztásai a publikálási jegyzékben rögzítettek; T5
 ### M5 JUCE-frissítés: előzetes mérlegelés és regressziós kapuk
 
 Felhasználói kérés és tervezési checkpoint: 2026-10-08. Ellenőrzött main:
-`328d93992a764dbd1ac89a50feb3ad4e1e2692b3`. Státusz: **TERVEZETT**.
+`0dafa214d75d6882939b51148d9ec46ec6734710` (a #166 main-frissítése után).
+Státusz: **TERVEZETT**.
 Ebben a dokumentációs körben nincs CMake/dependency/build/source-package vagy
 production módosítás; a frissítés, új build és runtime elfogadás **NOT RUN**.
 
@@ -967,9 +968,18 @@ a saját használat összevetése alapján kell GO / NO-GO döntést rögzíteni
 3. Tiszta külön build a régi és az új pinhez, azonos VDX7 kód/konfiguráció/
    fixture mellett. Csak a szükséges kompatibilitási adaptáció engedett.
    CMake pin, `scripts/package_source.py` `JUCE_SHA`, a manifest/acceptance/
-   provenance ellenőrzések és source-archive tartalom legyenek összhangban.
-   Az offline corresponding-source buildnek is ténylegesen az új SHA-t kell
-   használnia. Régi release/tag/asset vagy elfogadási bizonyíték nem írható át.
+   provenance ellenőrzések, source-archive tartalom és a README-ből hivatkozott
+   [nyilvános függőségi útmutató](../guides/SOURCE_DEPENDENCIES.md) JUCE-verziója,
+   teljes revision SHA-ja és fordítási útmutatása legyenek összhangban.
+   Rögzítsük a CMake által ténylegesen használt JUCE-forrás elérési útját és
+   azonosságát: Git checkoutnál a tiszta fa teljes commit SHA-ját, kicsomagolt
+   corresponding-source esetén az ellenőrzött manifestet és fájlhasheket.
+   A cache `FETCHCONTENT_SOURCE_DIR_JUCE` és a vendored `third_party/JUCE`
+   felülírásait is ellenőrizzük; eltérő forrás mellett a build nem igazolja
+   a jelölt tesztelését. Az útmutató szerinti tiszta és offline buildnek is
+   ténylegesen az új SHA-hoz tartozó forrást kell használnia.
+   Régi release/tag/asset vagy elfogadási bizonyíték nem írható át; történeti
+   útmutatók verzióadatai nem keverhetők az új jelölt fordítási lépéseivel.
 4. Windows x64 és macOS universal VST3/AU/Standalone build; teljes regisztrált
    ROM-free CTest (nem fix régi tesztszám), Python leltár/csomagolási tesztek,
    ASan/UBSan, GUI és régi/új XML-binary állapotkörút. Az aktuális D5 codec
