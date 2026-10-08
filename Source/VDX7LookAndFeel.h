@@ -24,6 +24,7 @@ public:
                       int buttonX, int buttonY, int buttonW, int buttonH,
                       juce::ComboBox&) override;
     juce::Font getComboBoxFont(juce::ComboBox&) override;
+    juce::PopupMenu::Options getOptionsForComboBoxPopupMenu(juce::ComboBox&, juce::Label&) override;
     void positionComboBoxText(juce::ComboBox&, juce::Label&) override;
     void drawComboBoxTextWhenNothingSelected(juce::Graphics&, juce::ComboBox&, juce::Label&) override;
 

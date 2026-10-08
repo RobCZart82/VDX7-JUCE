@@ -1,4 +1,5 @@
 #include "VDX7LookAndFeel.h"
+#include "VDX7ImportedBankMenu.h"
 #include "VDX7MechanicalDrawing.h"
 
 #include <BinaryData.h>
@@ -330,6 +331,15 @@ void VDX7LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, boo
     arrow.lineTo(centreX + 4.0f, centreY - 2.0f);
     g.setColour(box.findColour(juce::ComboBox::arrowColourId));
     g.strokePath(arrow, juce::PathStrokeType(1.5f));
+}
+
+juce::PopupMenu::Options VDX7LookAndFeel::getOptionsForComboBoxPopupMenu(juce::ComboBox& box, juce::Label& label)
+{
+    auto options = juce::LookAndFeel_V4::getOptionsForComboBoxPopupMenu(box, label);
+    if (bool(box.getProperties().getWithDefault("vdx7BankPopup", false)))
+        options = options.withMinimumWidth(VDX7ImportedBankMenuItem::menuWidth)
+            .withMaximumNumColumns(1).withStandardItemHeight(VDX7ImportedBankMenuItem::menuHeight);
+    return options;
 }
 
 juce::Font VDX7LookAndFeel::getComboBoxFont(juce::ComboBox& box)

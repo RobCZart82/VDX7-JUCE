@@ -140,11 +140,18 @@ public:
     static juce::File factoryBankFolder() { return VDX7FactoryBanks::defaultFolder(); }
     // Explicit non-RT refresh. Does not replace the current working voice RAM.
     bool refreshFactoryBanks(const juce::File& folder, juce::String& report);
-    // Non-RT catalog/state integration. No startup scan or new GUI yet.
+    // Non-RT catalog/state integration. Startup scan remains a separate step.
     // Handles contain library data, not live selection. Detached immutable
     // handles keep large copies/encoding out of locks.
     using ImportedBankSnapshot = std::shared_ptr<const VDX7ImportedBanks::Snapshot>;
     ImportedBankSnapshot getImportedBankSnapshot() const;
+    struct ImportedBankSelection
+    {
+        ImportedBankSnapshot catalog;
+        int index = -1;
+    };
+    // Catalog and numeric live origin captured under one lock for the UI.
+    ImportedBankSelection getImportedBankSelection() const;
     bool refreshImportedBanks(const juce::File&, juce::String& report,
                               const std::function<bool()>& shouldCancel = {});
     // Explicit non-RT selection of an editable copy, not a file reopen. The

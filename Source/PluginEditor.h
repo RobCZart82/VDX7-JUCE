@@ -7,6 +7,7 @@
 #include "PluginProcessor.h"
 #include "VDX7LookAndFeel.h"
 #include "VDX7PerformancePanel.h"
+#include "VDX7ImportedBankMenu.h"
 
 class VDX7Keyboard final : public juce::MidiKeyboardComponent
 {
@@ -80,6 +81,9 @@ private:
     void updateResponsiveTypography();
     void timerCallback() override;
     void refresh(bool refreshMetadata);
+    void rebuildBankChoices(const VDX7AudioProcessor::ImportedBankSnapshot&);
+    void applyBankChoice(int, const VDX7AudioProcessor::ImportedBankSnapshot&);
+    void refreshImportedBankFolder();
     void chooseRom();
     void chooseSyx();
     void showUtilityMenu();
@@ -94,6 +98,7 @@ private:
 
     VDX7AudioProcessor& processor_;
     VDX7LookAndFeel lookAndFeel_;
+    juce::TooltipWindow tooltips_ { nullptr, 600 };
     VDX7Keyboard keyboard_;
     VDX7PerformancePanel performancePanel_;
     bool performanceVisible_ = false;
@@ -136,6 +141,8 @@ private:
     std::array<juce::TextButton, VDX7VoiceData::kOperatorCount> operatorTabs_;
     juce::ComboBox bank_;
     juce::ComboBox program_;
+    VDX7AudioProcessor::ImportedBankSnapshot bankCatalog_;
+    int displayedBankId_ = 0;
 
     juce::Slider masterVolume_;
     VDX7WheelSlider pitchWheel_ { true };
