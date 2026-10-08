@@ -16,6 +16,8 @@ class SanitizerWorkflowTests(unittest.TestCase):
         self.assertIsNotNone(re.fullmatch(selection, "vdx7_imported_banks"))
         self.assertIn("vdx7_imported_processor_tests", build.split())
         self.assertIsNotNone(re.fullmatch(selection, "vdx7_imported_bank_state"))
+        self.assertIn("vdx7_sound_mode_prototype_tests", build.split())
+        self.assertIsNotNone(re.fullmatch(selection, "vdx7_sound_mode_prototype"))
         for private_test in ("vdx7_processor", "vdx7_pre_rom_state_integration", "vdx7_host_reset", "vdx7_imported_bank_recall"):
             self.assertIsNone(re.fullmatch(selection, private_test))
         self.assertIn("-DVDX7_ENABLE_ROM_TESTS=OFF", workflow)

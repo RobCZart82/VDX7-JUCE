@@ -254,6 +254,12 @@ target_link_libraries(vdx7_resampling_tests PRIVATE vdx7_core vdx7_voice_data)
 add_test(NAME vdx7_resampling COMMAND vdx7_resampling_tests)
 set_tests_properties(vdx7_resampling PROPERTIES TIMEOUT 60 LABELS "rom-free")
 
+# D5 upstream characterization, not a production Sound mode implementation.
+add_executable(vdx7_sound_mode_prototype_tests Tests/VDX7SoundModePrototypeTests.cpp)
+target_link_libraries(vdx7_sound_mode_prototype_tests PRIVATE vdx7_core)
+add_test(NAME vdx7_sound_mode_prototype COMMAND vdx7_sound_mode_prototype_tests)
+set_tests_properties(vdx7_sound_mode_prototype PROPERTIES TIMEOUT 30 LABELS "rom-free;prototype")
+
 # ROM-free GUI regression for Settings presets, About artwork and EDIT/PERFORMANCE layout.
 add_executable(vdx7_gui_header_tests Tests/VDX7GuiHeaderTests.cpp)
 target_link_libraries(vdx7_gui_header_tests PRIVATE VDX7)
@@ -386,6 +392,7 @@ add_custom_target(vdx7_ci_checks DEPENDS
     vdx7_algorithm_tests vdx7_resampling_tests vdx7_rom_diagnostic_tests vdx7_gui_header_tests vdx7_stress_tests
     vdx7_processor_tests vdx7_stability_tests vdx7_midi_range_tests vdx7_timing_tests)
 add_dependencies(vdx7_ci_checks vdx7_imported_processor_tests)
+add_dependencies(vdx7_ci_checks vdx7_sound_mode_prototype_tests)
 add_custom_target(vdx7_all_tests DEPENDS vdx7_ci_checks)
 
 if(APPLE)
