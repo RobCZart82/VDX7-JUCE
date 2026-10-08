@@ -30,11 +30,11 @@ jobs:
             vdx7_voice_data_tests vdx7_user_bank_tests vdx7_factory_banks_tests vdx7_imported_banks_tests vdx7_deferred_midi_tests \
             vdx7_latest_display_tests vdx7_bounded_file_tests \
             vdx7_algorithm_tests vdx7_status_priority_tests vdx7_resampling_tests vdx7_rom_diagnostic_tests \
-            vdx7_processor_tests vdx7_imported_processor_tests
+            vdx7_processor_tests vdx7_imported_processor_tests vdx7_sound_mode_prototype_tests
       - name: Run ASan and UBSan checks
         run: |
           ctest --test-dir build-sanitized --output-on-failure --no-tests=error \
-            -R '^vdx7_(voice_data|user_bank|factory_banks|imported_banks|imported_bank_state|deferred_midi|latest_display|bounded_file|algorithms|status_priority|resampling|rom_diagnostics|pre_rom_state)$'
+            -R '^vdx7_(voice_data|user_bank|factory_banks|imported_banks|imported_bank_state|deferred_midi|latest_display|bounded_file|algorithms|status_priority|resampling|rom_diagnostics|pre_rom_state|sound_mode_prototype)$'
       - name: Preserve test diagnostics
         if: always()
         uses: actions/upload-artifact@v4

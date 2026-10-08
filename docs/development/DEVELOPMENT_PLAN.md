@@ -644,6 +644,13 @@ várt címke-ellenőrzésnél FAIL/exit 1. Tesztleltár-önellenőrzés és diff
 Az új head CI/review kapuja külön szükséges; a régi head zöld eredménye nem
 engedélyezi az új head beolvasztását. Production kód és release változatlan.
 
+#161 lezárási checkpoint, 2026-10-08: a végleges `79c89b0` head mindhárom
+ellenőrzése PASS (Windows 37748503315, macOS 37748503316, sanitizer 37748503319),
+mindkét review-szál megoldott. A PR beolvadt
+`1568c2c112658d715ded26c00c76243e3e25a67e` main-nal; a külön main Windows
+37749995687 és macOS 37749995747 futás is PASS. Az alábbi NOT RUN platform-PR
+kapu e régi körre már lezárult; a valódi host és instrumentált GUI továbbra sem PASS.
+
 NOT RUN: e kör új PR platform/sanitizer CI-je és végleges review (PR után
 ellenőrizendő); instrumentált GUI-harness (a meglévő sanitizer workflow
 nem futtat GUI-tesztet); valódi popup-görgetés/kijelző-DPI, billentyűzetes navigáció
@@ -750,6 +757,38 @@ váltási/mentési specifikáció → minimális engine/processor implementáci�
 SETTINGS GUI → platform/sanitizer és valódi hostmérések → HU/EN útmutató és review.
 Az 1.0.1 binárisok/assetek változatlanok; új funkció csak új, külön jóváhagyott
 jelöltben és kiadási folyamatban szállítható.
+
+#### D5 első upstream mérési prototípus — 2026-10-08
+
+REAPER nélkül elvégezhető, teszt-only részlépés az engedélyezett D5 irányhoz;
+nem a következő kiadás funkciókörének eldöntése. Friss baseline:
+`1568c2c112658d715ded26c00c76243e3e25a67e`. Ág:
+`test/classic-clean-dsp-prototype`. [Részletes mérés és reprodukció](../validation/CLASSIC_CLEAN_UPSTREAM_PROTOTYPE_20261008.md).
+Pull request: [#162](https://github.com/RobCZart82/VDX7-JUCE/pull/162), nyitott.
+Beolvasztás csak a végleges head zöld Windows/macOS/sanitizer CI-je és rendezett
+review után; létrehozáskor az ellenőrzések futottak, nincs még CI PASS-állítás.
+
+Az új `vdx7_sound_mode_prototype` ROM-mentes teszt a rögzített upstream
+inverse-log táblázatot mindkét polaritással, 192 OPS ingert és 4 szintetikus
+EGS jelút/átmeneti esetet vizsgál. Default/explicit Classic és már futó állapoton
+óraléptetés nélküli true/false körút bitazonos; Clean determinisztikus és
+mérhetően eltér, a peer példány változatlan. A Clean-kérést figyelmen kívül hagyó
+negatív mód az elvárt ellenőrzésnél FAIL/exit 1. A két EGS út eltérő gainnel
+dolgozik; Clean nem lépteti a Classic filter-historyt. A visszatérés a folyamatos
+Classic kontrolltól eltér, ezért nyers bool-váltás még nem kattanásmentes elfogadás.
+
+PASS helyben: MSVC CI-tesztcél build, 18/18 ROM-mentes CTest, Python 77 PASS /
+1 symlink-jogosultsági SKIP, 0 FAIL/ERROR; tesztleltár és negatív kontroll.
+Az új cél normál CI és ASan/UBSan kiválasztásában szerepel, de az új PR CI/review
+eredménye külön ellenőrizendő, egyelőre NOT RUN. Production kód, SETTINGS,
+paraméterek/állapotformátum, firmware, resampler és kiadás változatlan.
+
+NOT RUN: privát v1.8 teljes pipeline/reset/betöltési/módmegőrzési teszt,
+állapotmentés/GUI, spektrum/CPU/latencia/allokációs mérés, loudness-matched
+meghallgatás, valódi host mátrix. Következő részlépés: bounded átmenet/history
+és headroom prototípus, majd állapot/audio-határi kérés specifikációja;
+csak ezek után minimális production implementáció és SETTINGS. A részletes
+jelentés nem javult hangminőség, teljes D5 elfogadás vagy publikálási engedély.
 
 ## Teszt és karakterizálási backlog
 
