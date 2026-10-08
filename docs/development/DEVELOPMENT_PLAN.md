@@ -33,9 +33,11 @@ beolvasztás nélkül lezártuk. A `test/firmware-reset-vector-admission` ág é
 `bac64d8596a498b4c3fa34c8437391018a6d2adb` head megmarad; az ág nincs törölve
 vagy átírva. A lezárás indoka a PR leírásában és hozzászólásában is szerepel.
 Az új koncepcióval összhangban a [#159](https://github.com/RobCZart82/VDX7-JUCE/pull/159)
-viszi a kizárólag dokumentációs támogatási döntést és ezt a PR-rendezési
-checkpointot; beolvasztási feltétele a végleges head zöld CI-je és a review-k
-ellenőrzése. A checkpoint rögzítésekor a CI még folyamatban van.
+vitte a kizárólag dokumentációs támogatási döntést és ezt a PR-rendezési
+checkpointot. Beolvadt `4b9e6864df868a1ce21a030ea3810f2b8a0244a3` main-nal;
+a végleges `356ef05` head Windows/macOS/sanitizer CI-je PASS
+(37735596350, 37735596360, 37735596354), nincs megoldatlan review-szál.
+A merge utáni Windows/macOS futás is PASS (37737116633, 37737116561).
 Az alábbi korábbi checkpointokban
 szereplő halasztott SER7-fejlesztést ez a döntés felülírja.
 
@@ -49,8 +51,8 @@ A korlátozott környezetben a kezdeti futások ideiglenes mappa/hardlink
 jogosultsági hibákkal FAIL státuszúak voltak; az írható munkamappát használó,
 korlátozott környezeten kívüli újrafuttatás PASS. Ezek nem firmware-próbák.
 NOT RUN: új C++/pluginbuild, privát firmware-, REAPER- és macOS-elfogadás
-(nincs működésváltozás). A friss PR platform/sanitizer CI-je külön ellenőrzendő;
-a helyi eredmények nem helyettesítik azt.
+(nincs működésváltozás). A friss PR platform/sanitizer CI-je azóta a fenti
+futásokkal PASS; a helyi eredmények önmagukban nem helyettesítették azt.
 
 ## Kiindulási állapot és bizonyíték
 
@@ -283,10 +285,10 @@ Elfogadás: cancel/confirm, bank- és settings-azonosság, dirty jelző, export/
 ### D3 Importált DX7 bankkönyvtár
 
 Állapot: FEJLESZTÉS ALATT, jóváhagyva 2026-10-05; katalógus, projektadat és
-processor-bekötés és importált bankkiválasztás is beolvadt (#154–#157).
-Aktuális main alap: `ef60bd908bc0206a3bb51557a3f95a0e256e76ef`.
-Windows/macOS main: 17/17 ROM-mentes CTest és 78 Python-teszt PASS
-(37677145604, 37677145672); #157 head platform/sanitizer PASS.
+processor-bekötés, importált bankkiválasztás és GUI is beolvadt (#154–#158).
+Az induláskori scan aktuális fejlesztési alapja:
+`4b9e6864df868a1ce21a030ea3810f2b8a0244a3` main, #159 után.
+Windows/macOS main ellenőrzés PASS (37737116633, 37737116561).
 Ez nem a teljes D3 vagy valódi host-elfogadás.
 Külön Windows/macOS bedobós mappában több szabványos 32-hangszínes
 bank legyen egyszerre használható. Új példány beolvassa, nyitott példányban
@@ -296,9 +298,9 @@ explicit Refresh banks; külön a Factory Banks mappától és USER.vub-tól.
 
 Kiindulás: `1675c83`, #153 után mindkét main platformellenőrzés zöld.
 Az első részfeladatban az önálló `VDX7ImportedBanks` modul csak tesztcélba
-volt bekötve. A harmadik részfeladat már a processorhoz kapcsolja; startup
-scan és új GUI-menü továbbra sincs.
-Az alábbi könyvtárak a modul célútvonalai, még nem működő felhasználói funkció:
+volt bekötve. A harmadik részfeladat a processorhoz, #158 a GUI-hoz kapcsolta;
+az induláskori scan az alábbi új checkpoint része. Az alábbi könyvtárak
+az új fejlesztési buildek célútvonalai, nem a publikált 1.0.1 funkciói:
 macOS `~/Library/Application Support/VDX7-JUCE/Imported Banks`, Windows
 `%APPDATA%\VDX7-JUCE\Imported Banks`. A modul nem hozza létre őket magától.
 
@@ -469,11 +471,11 @@ A determinisztikus ütemezési teszt nem teljes körű többszálú stresszteszt
 A fent rögzített korábbi privát host-reset CTest-időtúllépés továbbra is
 külön korlát; nincs teljes privát tesztcsomag-PASS vagy kiadási elfogadás.
 
-A teljes D3 nincs kész: következő a GUI, induláskori scan/frissítés és
-Windows/macOS host-elfogadás.
+A teljes D3 nincs kész: #157 idején a GUI, induláskori scan/frissítés és
+Windows/macOS host-elfogadás volt hátra; az újabb checkpointokat lásd alább.
 A privát firmware-es processor-teszt nem helyettesíti a valódi REAPER-próbát.
 
-#### Felületi bekötés – aktuális munkakör
+#### Felületi bekötés – beolvadt #158
 
 2026-10-08, `feat/imported-bank-ui`, alap `ef60bd9`: az LCD bankválasztó
 Imported Banks csoportjának, rövid/megkülönböztethető címkéinek és teljes név
@@ -502,8 +504,69 @@ utánuk a teljes 17/17 ROM-mentes CTest ismét PASS. Menü-sor PNG vizuális
 ellenőrzése PASS; ez nem teljes popup-görgetési vagy valódi hostteszt.
 Python: 78 teszt, 77 PASS / 1 jogosultság miatti SKIP; nincs FAIL.
 Tesztleltár-ellenőrző önellenőrzés és diff-formaellenőrzés PASS.
-Friss PR Windows/macOS/sanitizer és review még szükséges; helyi sanitizer és
-valódi Windows/macOS REAPER elfogadás NOT RUN. Nincs új release vagy tag.
+Azóta #158 beolvadt `d8e0da69e8822a67cbd032facc813600559a6e7b` main-nal,
+a platform/sanitizer CI-kapuk ellenőrzése után. Helyi sanitizer és valódi
+Windows/macOS REAPER elfogadás NOT RUN. Nincs új release vagy tag.
+
+#### Induláskori bankscan – aktuális munkakör, 2026-10-08
+
+Ág: `feat/imported-bank-startup-scan`; alap a fenti `4b9e686` main.
+Új production processor létrehozásakor egyszer, szinkron módon és az
+audiofeldolgozáson kívül lefut a meglévő, csak olvasó scan. Nem hoz létre
+mappát, nem rekurzív, az 512 bejegyzés / 128 SysEx / fájlonként 4104 bájt
+korlát változatlan. Ez munka-/memóriakorlát, nem falióra szerinti időgarancia;
+lassú vagy elakadt háttértár lassíthatja a példány létrehozását. Nem új szálon
+fut, ezért késői worker-eredmény nem írhatja felül a host projekt-visszatöltését.
+Az izolált `detectRom=false` tesztprocessor csak külön beadott mappával olvas.
+
+Teljes scan kiválasztás nélküli, változtathatatlan katalógust publikál.
+Érvényes részhalmaz hibás/duplikált fájl kihagyásával megjelenhet; limit- vagy
+útvonalhiba esetén részleges katalógus nem kerül be. Hiányzó mappa szabályos,
+üres könyvtár. Nincs automatikus bankváltás vagy RAM/Factory/USER módosítás.
+Prepare/process/release, timer és későbbi ROM-betöltés nem indít új scan-t.
+Új fájlokat új példány, vagy a nyitott példány explicit Refresh művelete lát.
+
+A későbbi projekt-visszatöltés bankadatát használjuk, nem az aktuális
+mappatartalmat. A régi projekt hiányzó `ImportedBanks` gyermeke is elsőbbséget
+kap: null/legacy könyvtárat állít vissza, nincs hallgatólagos újrabeolvasás.
+Az induláskori jelentés nem projektadat: az állapotszöveg tooltipjében ROM
+nélkül is olvasható, betöltött ROM mellett UTILITY → Imported Banks → Startup
+scan report alatt is. Legfeljebb nyolc részletes figyelmeztetés és a többi
+száma látható. Kritikus állapotjelzés elsőbbsége megmarad; sikeres explicit
+Refresh törli az induláskori jelzőt, sikertelen nem. A jelentés történeti marad.
+HU/EN README és kézikönyv frissítve; nincs támogatási kör vagy release-módosítás.
+
+Ellenőrzések:
+
+- FAIL (elvárt reprodukció): csak a harmadik konstruktorparaméter beadását
+  előkészítve, scan nélkül az új példány banklistája hiányzott. Futó teszt,
+  nem fordítási hiba; a javítás után ugyanez PASS.
+- PASS: MSVC Release `vdx7_ci_checks` és Windows `VDX7_VST3` build a meglévő,
+  rögzített függőségű buildmappában; a módosított processor/editor/tesztek
+  újrafordítva. Nem új, teljesen üres build vagy macOS helyi fordítás.
+- PASS: végső 17/17 ROM-mentes CTest, köztük az induláskori lista, pontos bankadat,
+  kiválasztás hiánya, missing/path/limit, részhalmaz/duplikáció/figyelmeztetés,
+  két példány izolációja, projekt/legacy elsőbbség és explicit Refresh;
+  GUI-szinten a startup lista és hibás fájl tooltipje ROM nélkül is.
+- PASS: Python 78 tesztből 77 PASS / 1 SKIP (Windows symlink-jogosultság),
+  0 FAIL/ERROR; tesztleltár-ellenőrző önellenőrzése és diff-formaellenőrzés.
+- FAIL (teszt-előfeltétel): a 16 KiB-os privát v1.8 fájllal a teljes importált
+  processor-integráció a gyári bankváltásnál megállt, mert nincs gyári bankadat.
+  Ez nem teljes privát-suite PASS és nem bizonyított startup-regresszió.
+- PASS: az ugyanilyen firmware-prefixű helyi 48 KiB-os, érvényes bankadatú
+  kontrollal a teljes importált processor-integráció; startup után ROM-betöltés,
+  kiválasztás, RAM/settings/factory megőrzés, recall és késleltetett visszatöltés.
+  Firmware-prefix SHA-256: `6e7aa7b3605131c124914abbc74078acf7bd78354379d6b3ad78373ab7bfd383`.
+  A kontroll nem igazolja a módosítatlan Yamaha gyári bankok teljes elfogadását.
+- PASS: külön 16 KiB-os v1.8 GUI-harness 5/5 bankválasztás és 5/5 dirty Mégse,
+  startup tooltip, elavult popup és billentyűzetes ütemezés ellenőrzésével.
+- NOT RUN: új PR Windows/macOS/sanitizer CI és végleges review (PR megnyitása
+  után szükséges); valódi Windows/macOS REAPER, AU/Logic, telepítő- és kiadási QA.
+
+Hátravan D3-hoz: új PR zöld végleges head és review, majd a következő jelölt
+valódi Windows/macOS új példány/projekt-recall/Refresh/tooltip/görgetés próbái,
+több bankkal és több példánnyal, régi projekt megnyitásával, eltűnt/cserélt
+forrásfájl mellett is. A helyi tesztek nem új kiadás publikálási engedélyei.
 
 #### Megőrzött felhasználói koncepció
 

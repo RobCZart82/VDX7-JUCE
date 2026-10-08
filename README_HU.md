@@ -19,6 +19,13 @@ válts bankot/programot/performance-beállítást. A projektvédelmi és forrás
 ellenőrzési javítás az 1.0.1-ben elérhető, az 1.0.0 telepített
 példányait nem frissíti automatikusan. [Aktív terv](docs/development/DEVELOPMENT_PLAN.md).
 
+Új fejlesztési buildekben importált bankkönyvtár is van: az új példány egyszer
+beolvassa a mappát, a nyitott példány UTILITY → Imported Banks → Refresh művelettel
+frissíthető. A visszatöltött projekt bankjai elsőbbséget kapnak. Induláskori jelentés
+az állapotszöveg tooltipjében és a UTILITY jelentésében olvasható.
+[Kézikönyv](docs/guides/GUIDE_HU.md). Ez nincs a publikált 1.0.1 csomagokban;
+a valódi host-elfogadás még hátravan.
+
 ![VDX7 Mk1. EDIT — operátorok, burkológörbék és algoritmusábra](docs/screenshots/vdx7-edit.png)
 
 ![VDX7 Mk1. PERFORMANCE — játékmód, pitch bend, portamento és vezérlő-hozzárendelések](docs/screenshots/vdx7-performance.png)
