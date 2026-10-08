@@ -591,10 +591,12 @@ szabványos bankkal, azonos hosszú Unicode-fájlnévprefix mellett:
   processor-state-et és a 128 soros listát, startup nem publikál részlistát.
 - A hibás startup utáni mentett projekt 128 bankot állít vissza, és a kritikus
   függőprojekt-jelzés elsőbbséget kap az induláskori figyelmeztetéssel szemben.
-- Két példány külön katalógusa; fájltörlés és csak a második példány Refresh
+- Két példány külön, teljes és tartalmilag azonos induláskori katalógusa;
+  fájltörlés és csak a második példány Refresh
   művelete nem módosítja az első processor/editor 128 bankját.
 - Tényleges binary projekt-recall az összes szintetikus forrásfájl eltávolítása
-  után is 128 bankot mutat; az editor mind az öt támogatott méretben renderel,
+  után is 128 bankot mutat, minden bank bájtjai és metaadatai egyeznek az
+  eredeti katalógussal; az editor mind az öt támogatott méretben renderel,
   gyermekkomponensei a felület határain belül maradnak.
 - Külön privát v1.8 harness-ben a tényleges editor választási útja a legutolsó
   (128.) és első bankot is helyesen kapcsolja, eltűnt forrásmappa mellett.
@@ -611,6 +613,36 @@ WRONG címkét állít be az utolsó menüelem szövegmezőjében; a teszt a vá
 ellenőrzésnél FAIL/exit 1. A normál futás változatlan PASS. Ez önálló tesztmód,
 nem production módosítás és nem a normál CTestbe regisztrált hibás teszt.
 Privát opt-in parancs: `vdx7_gui_header_tests --imported-bank-capacity-rom <privát-v1.8-ROM>`.
+
+#161 review-javítás, 2026-10-08: a kezdeti `9e0a9df` head mindhárom CI-je
+PASS (37744007512, 37744007466, 37744007450), de két jogos P2 tesztlefedettségi
+észrevétel blokkolta a merge-et. A puszta pointer-különbség nem bizonyította
+a második példány teljes startup katalógusát, és a recall csak a bankszámot
+és az utolsó bank bájtjait ellenőrizte. Ezek nem bizonyított production hibák.
+
+A javítás a második startup pillanatkép létezését, 128 bankját, külön tulajdonát
+és teljes egyezését is ellenőrzi, még az editorok létrehozása előtt. A forrás
+nélküli recall és a hibás startupot felülíró project-recall minden bank
+`packed`, `contentId`, `fileName`, `displayName` mezőjét, a bankok sorrendjét
+és a katalógus `selectedId` mezőjét összehasonlítja az `original` értékkel.
+Null pillanatkép nem dereferálódik, hanem az összehasonlítás elutasítja.
+
+Reprodukció: a régi bankszám/utolsó-bank összehasonlítás mellé beillesztett
+kontroll az első bank egy bájtját módosítja, a bankszám és az utolsó bank
+változatlan. Az új követelmény a régi összehasonlítással elvárt FAIL/exit 1
+eredményt adott (`catalog comparison rejects nonfinal bank data changes`).
+A teljes összehasonlítással a normál teszt PASS. Nyolc beépített negatív
+kontroll védi: null, hiányos katalógus, nem utolsó bank bájteltérése, bankok
+felcserélése, hibás azonosító/fájlnév/megjelenítési név és eltérő kiválasztás.
+Az egyező külön másolat pozitív kontroll; a kontrollok csak saját, memóriabeli
+tesztadatot módosítanak, nem a processort, fájlt vagy privát firmware-t.
+
+Review-javítás végső helyi eredménye: PASS újrafordított MSVC GUI-teszt,
+17/17 ROM-mentes CTest, 77 Python PASS / 1 jogosultsági SKIP, 0 FAIL/ERROR,
+5/5 privát v1.8 kapacitás-harness; a korábbi címke-negatív mód továbbra is a
+várt címke-ellenőrzésnél FAIL/exit 1. Tesztleltár-önellenőrzés és diff-forma PASS.
+Az új head CI/review kapuja külön szükséges; a régi head zöld eredménye nem
+engedélyezi az új head beolvasztását. Production kód és release változatlan.
 
 NOT RUN: e kör új PR platform/sanitizer CI-je és végleges review (PR után
 ellenőrizendő); instrumentált GUI-harness (a meglévő sanitizer workflow
