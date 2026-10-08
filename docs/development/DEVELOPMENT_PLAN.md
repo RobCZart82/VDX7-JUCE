@@ -869,10 +869,126 @@ T1–T4 lefedettségi halasztásai a publikálási jegyzékben rögzítettek; T5
 - M2: egységes sajátkód-warning cél, harmadik fél kódjának és release buildnek indokolatlan `-Werror` terhelése nélkül.
 - M3: Actions runtime/runner-image figyelmeztetések ellenőrzése a munka idején, pontos környezet/provenance és tesztelt változtatás. Régi figyelmeztetésből nem következik mai FAIL.
 - M4: aktuális útmutatók/licencközlések/elérési utak karbantartása; történeti állítások nem kerülnek friss eredményként átírásra.
+- M5: JUCE-frissítés külön, visszavonható munkacsomagban, előzetes haszon/kockázat
+  mérlegeléssel és az alábbi kompatibilitási kapukkal. Tervezett, nem végrehajtott
+  dependency update; nem automatikus kiadási blocker.
+
+### M5 JUCE-frissítés: előzetes mérlegelés és regressziós kapuk
+
+Felhasználói kérés és tervezési checkpoint: 2026-10-08. Ellenőrzött main:
+`328d93992a764dbd1ac89a50feb3ad4e1e2692b3`. Státusz: **TERVEZETT**.
+Ebben a dokumentációs körben nincs CMake/dependency/build/source-package vagy
+production módosítás; a frissítés, új build és runtime elfogadás **NOT RUN**.
+
+**Kiindulás és céljelölt.** A main `CMakeLists.txt` JUCE pinje
+`e18f7f506c0b96f2c738a0bcd7fe6467a5005ad8`, amelynek upstream verziója 9.0.1.
+A vizsgálandó jelölt 9.0.3, **nem** mozgó `master`/`develop` vagy tagre hagyatkozó
+automatikus frissítés. Végrehajtáskor ismét ellenőrizni és teljes commit SHA-val
+rögzíteni kell a jelöltet; e terv még nem választ új csomagolási pinértéket.
+Ez azonos 9.0-s sorozaton belüli update, de ettől nem kockázatmentes.
+
+**Haszon, nem ígéret.** A hivatalos 9.0.2/9.0.3 változáslista CoreAudio
+sample-rate/buffer/default-device és Multi-Output javításokat, Windows ablak/
+fókusz javításokat, valamint MIDI/grafikai/hosting változásokat tartalmaz.
+CoreAudio-eszközkezelés elsősorban a standalone változatnál érdekes; REAPER-ben
+az audioeszközt a host kezeli. A VST3 **hosting** javítás nem automatikusan a
+VDX7 mint VST3 **plugin** hibajavítása. OpenGL/UMP/egyéb funkció csak akkor
+indok a frissítésre, ha a használt wrapper/standalone út ténylegesen érintett.
+A VDX7 FM-motorja és SRC-je külön komponens: nincs automatikus jobb hangzás,
+kisebb CPU vagy kattanásmentesség állítás. Először az érintett upstream diff és
+a saját használat összevetése alapján kell GO / NO-GO döntést rögzíteni.
+
+**Előre figyelendő kockázatok.** Ezek lehetséges regressziók, nem talált VDX7-hibák:
+
+- API/fordítás: a 9.0.2 változtatja a `ThreadPool::addJob` callable szerződését
+  és eltávolítja a `getMidiInputSelectorListBox` API-t; 9.0.3-ban a
+  `SystemStats::isOperatingSystem64Bit()` jelentése pontosodik. Saját Source,
+  tesztek és a ténylegesen használt JUCE wrapper útjai ellenőrzendők, nem csak
+  verziószámcsere. Régebbi 9.0.1 migration tételek nem új 9.0.3 regressziók.
+- GUI: betűméret/szövegelhelyezés, SVG/PNG, HiDPI, öt fix méret, fókusz,
+  billentyűzet, popup és natív fájlválasztó eltérhet. Nem GUI-újratervezés:
+  screenshot/teszt összehasonlítás és célzott adaptáció kell, ha eltérés lesz.
+- Wrapper/projekt: 148 paraméter ID/sorrend/normalizálás, pluginazonosítók,
+  VST3/AU csatorna/MIDI/lifecycle, XML/binary restore és host-notification
+  regresszió kockázat. Régi project, ROM nélkül/pending restore, USER/IMPORTED/
+  dirty állapot és több példány nem sérülhet.
+- Audio/standalone: device start/stop/default switch, buffer/sample-rate,
+  latency/tail/első blokk, MIDI időbélyeg és sustained voice ellenőrzendő.
+  Változatlan Retromulator/SRC mellett is lehet eltérés a wrapper kimenetében;
+  a Classic null-difference hiányát nem lehet motorváltozás hiányából levezetni.
+- Build/csomag: compiler/SDK/minimum OS, universal arm64+x86_64, függőségi
+  forráscsomag, notices és provenance eltérések. A CMake cache
+  `FETCHCONTENT_SOURCE_DIR_JUCE` vagy vendored `third_party/JUCE` felülírhatja
+  a letöltési pint: a tényleges fordított forrás identityjét is igazolni kell.
+  Egy régi cache-sel zöld build nem az új JUCE tesztelése.
+
+**Logikus sorrend és megállási pontok:**
+
+1. Zárjuk le a folyamatban lévő önálló D5 részlépést, és rögzítsünk friss,
+   zöld baseline-t. Az M5 update külön PR/ág legyen, ne ugyanabban a commitban
+   Classic/Clean DSP/SETTINGS, bankfunkció vagy Retromulator-frissítés.
+   Jelölthöz közeledő release közben ne kezdjünk indokolatlan dependency cserét.
+2. Jelölt SHA + changelog/breaking diff + érintett VDX7 útvonalak és indoklás.
+   Ha nincs releváns előny vagy elfogadható ellenőrzési környezet, a halasztás
+   érvényes NO-GO; a jelenlegi JUCE nem pusztán korától bizonyított hibás.
+3. Tiszta külön build a régi és az új pinhez, azonos VDX7 kód/konfiguráció/
+   fixture mellett. Csak a szükséges kompatibilitási adaptáció engedett.
+   CMake pin, `scripts/package_source.py` `JUCE_SHA`, a manifest/acceptance/
+   provenance ellenőrzések és source-archive tartalom legyenek összhangban.
+   Az offline corresponding-source buildnek is ténylegesen az új SHA-t kell
+   használnia. Régi release/tag/asset vagy elfogadási bizonyíték nem írható át.
+4. Windows x64 és macOS universal VST3/AU/Standalone build; teljes regisztrált
+   ROM-free CTest (nem fix régi tesztszám), Python leltár/csomagolási tesztek,
+   ASan/UBSan, GUI és régi/új XML-binary állapotkörút. Az aktuális D5 codec
+   tesztet is futtatni kell, ha addig main-ba került. E kör REAPER nélkül
+   megkezdhető, de CI nem bizonyít teljes valódi hostkompatibilitást.
+5. Privát eredeti v1.8-mal azonos Classic bemenet/állapot mellett determinisztikus
+   összevetés: hangkimenet hash/null-difference, első eltérés, peak/RMS,
+   44.1/48/96 kHz, reset/reload/pending és MIDI/mono/dirty regresszió. Eltérés
+   esetén okfeltárás és dokumentált elfogadási döntés, nem automatikus PASS
+   vagy tolerancia lazítása. Yamaha-adat/audio nem kerül repositoryba/artifactba.
+6. Új bináris valódi standalone és REAPER VST3/AU smoke: betöltés, hang/MIDI,
+   save/reopen, GUI, több példány, buffer/sample-rate és offline render az
+   érintett T1–T4 körből. Hiányzó helyi DAW esetén **NOT RUN**, régi csomag
+   felhasználói PASS-a nem az új binary eredménye. Valódi hostteszt vagy külön,
+   tételes maintainer-halasztás a kiadási kapunál szükséges.
+7. Final-head Windows/macOS/sanitizer zöld + rendezett review után component
+   merge, majd main Actions külön ellenőrzése. Nyitott hiba, indokolatlan hang/
+   projekt/GUI eltérés vagy csomag-provenance mismatch mellett STOP/NO-GO.
+   Kiadás csak az új binary csomag-/host-kapuin és külön publikálási engedélyen
+   keresztül; merge és publication nem ugyanaz a döntés.
+
+**Ütemezési hatás és visszaút.** Igen, a JUCE-csere késleltethet mérföldkövet:
+API-adaptáció, mindkét platform teljes rebuildje, új regresszió diagnózisa és
+a valódi hostkörnyezet elérhetősége plusz munkát okozhat. Pontos időígéret
+csak az elővizsgálat/első build után adható. A D5 hasznos, független munkája
+közben haladhat, de ugyanazon builden ne keverjük az M5 és D5 változtatásokat;
+merge után a még nyitott feature PR-eket friss main-en ismét ellenőrizzük.
+Ha a céljelölt előnye nem arányos a kockázattal/idővel, M5 halasztandó, nem
+kell miatta teljes release-t feltartani, kivéve igazolt releváns blocker esetén.
+Merge előtt branch félretehető; utána szokásos revert PR állítsa vissza együtt
+a korábbi JUCE pint/adaptációkat/csomagolási adatokat, új ellenőrzéssel.
+Nincs force push, main-reset, régi tag mozgatása vagy asset felülírás.
+
+Végrehajtáskor ide rögzítendő: baseline és jelölt SHA, érintett diff/indok,
+GO/NO-GO és halasztás oka, PR, **PASS/FAIL/NOT RUN/SKIP** eredmények, tényleges
+dependency provenance, host/architektúra/csomagazonosság, végső kockázati és
+visszaállítási döntés. Ma nincs elvégzett update vagy új binary elfogadás.
+
+Források: [rögzített 9.0.1 upstream verzió](https://github.com/juce-framework/JUCE/blob/e18f7f506c0b96f2c738a0bcd7fe6467a5005ad8/CMakeLists.txt),
+[9.0.3 változáslista](https://github.com/juce-framework/JUCE/blob/9.0.3/CHANGE_LIST.md),
+[breaking changes](https://github.com/juce-framework/JUCE/blob/9.0.3/BREAKING_CHANGES.md).
 
 ## Végrehajtás és kiadási kapuk
 
 Javasolt sorrend: reprodukált blocker, ha lesz → D1 → D2 → D3; D4 külön host/packaging munkacsomag, D5 külön hangzási prototípus és SETTINGS munkacsomag. A következő kiadás pontos körét és D5 prioritását fejlesztés előtt rögzítjük. A rendezés nem indítja el automatikusan ezeket az implementációkat.
+
+M5 JUCE-update: a folyamatban lévő D5 részlépés lezárása után önálló
+karbantartási döntési pont, lehetőleg új production D5 integráció vagy release-
+freeze előtt, ha a releváns haszon igazolt és a tesztkapuk teljesíthetők.
+Nem automatikus előfeltétele minden további fejlesztésnek, nem része a D5 DSP
+commitnak, és nem új kiadási/publikálási engedély. Az esetleges M5 csúszást,
+halasztást és feature PR-ek új baseline-ját az M5 checkpointban vezetjük.
 
 Minden kör: friss main → minimális változtatás és regresszió → érintett/full automatizált Windows/macOS és sanitizer ellenőrzések → review → zöld PR merge → külön main Actions ellenőrzés. Megőrzendő a pluginazonosság, 148 paraméter ID/sorrend, projektkompatibilitás, Native/Correct viselkedés, 12–120 hangterjedelem, bounded MIDI, állapotvédelem és jóváhagyott GUI. Callbackben nincs új fájl-I/O vagy nem korlátozott munka.
 
