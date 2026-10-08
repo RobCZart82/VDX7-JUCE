@@ -915,6 +915,11 @@ Helyi PASS: teljes macOS ARM64 CI-tesztcél fordítás, 20/20 ROM-mentes CTest
 ASan/UBSan mellett, új ownership teszt 50 ismétlésben, mindkét negatív kontroll
 elvárt FAIL/exit 1; 78 Python-teszt, leltár és 138 helyi dokumentációs hivatkozás.
 ThreadSanitizer és tényleges processor/DSP/host-integráció NOT RUN.
+Az első #167 final-head macOS/sanitizer build fordításkor elbukott: Xcode 15.4
+nem biztosított `std::jthread`-et. A teszt ezt automatikusan joinoló `std::thread`
+wrapperre cseréli, új normál/kivételes élettartam-próbákkal; a többszálú és
+negatív kontrollok változatlanok. A fenti helyi tesztkör a javítás után ismét
+PASS; az új final-head platform/sanitizer CI külön, kötelező megerősítés.
 Következő kör: a tényleges processor tranzakcióihoz illesztés és epoch/mono/
 ROM/pending regresszió, a DSP nélküli Clean-szállítás tilalmának megtartásával.
 

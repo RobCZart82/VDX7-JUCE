@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <string_view>
 #include <thread>
+#include <utility>
 
 using Owner = VDX7SoundModeOwner;
 using Mode = Owner::Mode;
@@ -15,6 +16,36 @@ namespace Codec = VDX7SoundModeState;
 static bool preLockAudio = false, notifyUnderLock = false;
 static void require(bool ok, const char* message)
 { if (!ok) throw std::runtime_error(message); }
+
+// Xcode 15.4's libc++ has no std::jthread. These tests need joining, not stop
+// tokens: keep the same real threads and unwind-safe lifetime on that toolchain.
+class JoiningThread
+{
+public:
+    template<class Work>
+    explicit JoiningThread(Work&& work) : thread_(std::forward<Work>(work)) {}
+    JoiningThread(const JoiningThread&) = delete;
+    JoiningThread& operator=(const JoiningThread&) = delete;
+    ~JoiningThread() { if (thread_.joinable()) thread_.join(); }
+    void join() { thread_.join(); }
+private:
+    std::thread thread_;
+};
+
+static void testJoiningLifetime()
+{
+    bool finished = false;
+    { JoiningThread worker([&] { finished = true; }); }
+    require(finished, "thread scope exit waits for the worker");
+    finished = false;
+    try
+    {
+        JoiningThread worker([&] { finished = true; });
+        throw std::runtime_error("intentional joining lifetime probe");
+    }
+    catch (const std::runtime_error&) {}
+    require(finished, "exception unwinding joins before destroying captured state");
+}
 
 // Explicit rendezvous, not sleeps or hopes about scheduler order. A watchdog
 // converts a missing signal to failure instead of hanging a CI worker forever.
@@ -141,8 +172,8 @@ static void testBusyAndIsolation()
     int notifications = 0, visits = 0;
     {
         const std::lock_guard lock(f.mutex);
-        std::jthread ui([&] { request = f.owner.tryRequest(Mode::clean, before.revision, [&] { ++notifications; }); });
-        std::jthread render([&] { audio = f.owner.tryWithAudioOwner([&](Mode) noexcept { ++visits; }); });
+        JoiningThread ui([&] { request = f.owner.tryRequest(Mode::clean, before.revision, [&] { ++notifications; }); });
+        JoiningThread render([&] { audio = f.owner.tryWithAudioOwner([&](Mode) noexcept { ++visits; }); });
         ui.join(); render.join(); // Both must finish while another thread owns the mutex.
         require(other.owner.tryRequest(Mode::clean, 0, [] {}) == Owner::Request::accepted,
                 "a separate instance does not inherit another instance's lock");
@@ -165,7 +196,7 @@ static void testAudioPostLockAndProtectedPayload()
     Mode observed = Mode::classic;
     int marker = 0;
     Owner::Audio result = Owner::Audio::unavailable;
-    std::jthread audio([&]
+    JoiningThread audio([&]
     {
         const auto stale = f.owner.snapshot().desired;
         capturedBeforeLock.signal();
@@ -184,12 +215,12 @@ static void testAudioPostLockAndProtectedPayload()
 
     Gate insideAudio, leaveAudio;
     bool contenderGotLock = true;
-    std::jthread heldAudio([&]
+    JoiningThread heldAudio([&]
     {
         f.owner.tryWithAudioOwner([&](Mode) noexcept { insideAudio.signal(); leaveAudio.wait(); });
     });
     insideAudio.wait();
-    std::jthread contender([&]
+    JoiningThread contender([&]
     {
         const std::unique_lock lock(f.mutex, std::try_to_lock);
         contenderGotLock = lock.owns_lock();
@@ -206,12 +237,12 @@ static void testStaleUIAndCompletion()
     Gate uiCaptured, allowUI, completionCaptured, allowCompletion;
     Owner::Request request = Owner::Request::accepted;
     bool completed = true;
-    std::jthread ui([&]
+    JoiningThread ui([&]
     {
         uiCaptured.signal(); allowUI.wait();
         request = f.owner.tryRequest(Mode::clean, old.revision, [] {});
     });
-    std::jthread completion([&]
+    JoiningThread completion([&]
     {
         completionCaptured.signal(); allowCompletion.wait();
         completed = f.complete(old.revision, true);
@@ -247,7 +278,7 @@ static void testDetachedConcurrentSave()
     require(f.owner.tryRequest(Mode::clean, revision, [] {}) == Owner::Request::accepted, "pending desired edit");
     Gate detached, encodeNow;
     juce::ValueTree saved;
-    std::jthread saving([&]
+    JoiningThread saving([&]
     {
         const auto captured = f.capture();
         detached.signal(); encodeNow.wait();
@@ -281,7 +312,7 @@ static void testNotificationOutsideLockAndReentrantRecall()
     bool lockWasFree = false;
     const auto probe = [&]
     {
-        std::jthread thread([&]
+        JoiningThread thread([&]
         {
             const std::unique_lock lock(f.mutex, std::try_to_lock);
             lockWasFree = lock.owns_lock();
@@ -319,6 +350,7 @@ int main(int argc, char** argv)
         if (argc == 2 && std::string_view(argv[1]) == "--pre-lock-audio-negative-control") preLockAudio = true;
         else if (argc == 2 && std::string_view(argv[1]) == "--notify-under-lock-negative-control") notifyUnderLock = true;
         else require(argc == 1, "unknown ownership test argument");
+        testJoiningLifetime();
         testAdmissionAndRevision();
         testBusyAndIsolation();
         testAudioPostLockAndProtectedPayload();

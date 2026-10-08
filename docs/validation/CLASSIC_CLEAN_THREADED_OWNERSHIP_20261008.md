@@ -3,8 +3,9 @@
 Date: 2026-10-08. Baseline: `9ee7c9d6ff85381e853fb0fd7c2e7c13f78322d3`.
 Branch: `test/classic-clean-threaded-ownership`.
 PR: [#167](https://github.com/RobCZart82/VDX7-JUCE/pull/167).
-Validated component/test revision: `56f0b47264ce9cdd094ae3960783d62b32dfed43`;
-the following checkpoint commit adds only these PR references.
+Initial locally validated component/test revision: `56f0b47264ce9cdd094ae3960783d62b32dfed43`;
+the next checkpoint adds only PR references. The subsequent compatibility fix
+and its separate validation are recorded below.
 The [active development plan](../development/DEVELOPMENT_PLAN.md) and
 [state contract](../development/CLASSIC_CLEAN_STATE_CONTRACT.md) define the scope.
 
@@ -75,6 +76,28 @@ ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1:print_
 ASan/UBSan do not constitute ThreadSanitizer coverage. No leak-detection or
 real-time allocation/CPU guarantee is claimed. Final-head GitHub Windows/macOS/
 sanitizer CI and review remain separate merge gates.
+
+## Xcode compatibility correction
+
+The first final-head macOS build (37837520325) and ASan/UBSan build
+(37837520353) failed during compilation, before test execution. Both used
+Xcode 15.4 and reported no `std::jthread` in `std`; Windows (37837520328) passed.
+The initial local AppleClang 21 build did not expose this toolchain mismatch.
+
+The test now uses a small noncopyable `JoiningThread` around `std::thread`.
+Scope exit joins a still-joinable worker; explicit joins, rendezvous, watchdogs,
+negative controls and all ownership assertions remain. No stop token was used
+by the original fixture. Additional lifetime probes verify joining on normal
+scope exit and exception unwinding before captured state is destroyed.
+No owner component, plugin code, toolchain pin or workflow gate was changed.
+
+After the correction, the local full `vdx7_ci_checks` build passed, followed by
+20/20 ROM-free CTests under ASan/UBSan, 50 consecutive ownership repetitions,
+both negative controls with the intended exit 1, 78 Python tests and registration
+self-tests. These results use the same local AppleClang 21 configuration above;
+the corrected final-head GitHub Xcode 15.4 build remains a required independent
+confirmation before merge. This correction does not turn the earlier failed
+CI runs into PASS evidence.
 
 ## Remaining gates
 
