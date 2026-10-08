@@ -884,6 +884,38 @@ valódi REAPER és hallásos elfogadás. A soros modell és e codec együtt sem
 bizonyít production race-biztonságot vagy jobb hangminőséget. Következő logikus
 kör a processor owner tranzakció és regressziói, nem a kapcsoló korai aktiválása.
 
+#### D5 önálló zárolásos állapottulajdonos
+
+2026-10-08, baseline `9ee7c9d6ff85381e853fb0fd7c2e7c13f78322d3`;
+ág: `test/classic-clean-threaded-ownership`. A baseline Windows/macOS CI-je
+PASS (37832216599, 37832216642); #165 és #166 beolvadt. A fenti codec-kör
+korábbi PR-kapui teljesültek, a valódi processor/DSP/host-kapuk nem.
+
+Új önálló `Source/VDX7SoundModeOwner.h` az átadott engine-mutexet használja:
+kívánt mód és projekt-revízió egy tranzakcióban; UI/audio try-lock BUSY esetén
+nincs várakozás vagy rejtett queue; stale UI/completion és revíziótúlcsordulás
+nem mutálhat projektet. A host-értesítés a lockon kívül fut. A mode/payload
+mentési pillanatkép ugyanazon lock alatt mély másolat, a kódolás lockon kívüli.
+A pending completion nem írja vissza a tree-ben maradt régi módot.
+
+Ez **nem PluginProcessor-integráció**: a komponens teljes projekt/ROM admissiont
+a callertől vár, a teszt saját szintetikus payloadot használ. A valódi processor
+state epochja, mono-policy mellékhatásai, ROM-installja és engine/SRC útja még
+nincs ehhez kötve. Nincs Clean-metaadat vagy kapcsoló a működő pluginban.
+[A pontos tesztkör és eredmények](../validation/CLASSIC_CLEAN_THREADED_OWNERSHIP_20261008.md).
+
+Valódi szálak és vezérelt rendezvous teszteli a pre/post-lock audio-olvasást,
+stale UI-t és completiont, pending editet, külön példányokat, reentráns save/
+recallt és a capture után érkező új projekt melletti JUCE binary-mentést.
+Két hibás tesztadapternek elvárt FAIL-t kell adnia. A platform/sanitizer CI és
+review új kapu; a szálas harness sem teljes production versenybiztonsági bizonyíték.
+Helyi PASS: teljes macOS ARM64 CI-tesztcél fordítás, 20/20 ROM-mentes CTest
+ASan/UBSan mellett, új ownership teszt 50 ismétlésben, mindkét negatív kontroll
+elvárt FAIL/exit 1; 78 Python-teszt, leltár és 138 helyi dokumentációs hivatkozás.
+ThreadSanitizer és tényleges processor/DSP/host-integráció NOT RUN.
+Következő kör: a tényleges processor tranzakcióihoz illesztés és epoch/mono/
+ROM/pending regresszió, a DSP nélküli Clean-szállítás tilalmának megtartásával.
+
 ## Teszt és karakterizálási backlog
 
 Az alábbiak nem bizonyított hibák. Az 1.0.1-nél elfogadott halasztás nem PASS, és nem automatikus felmentés minden jövőbeli jelöltre.

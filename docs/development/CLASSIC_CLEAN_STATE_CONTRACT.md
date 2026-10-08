@@ -188,3 +188,28 @@ valódi thread/reentráns save és hallásos kapuk nyitva maradnak. XML az erede
 bool/double típust nem őrzi meg: a helper a ténylegesen dekódolt scalar
 reprezentációt ellenőrzi, nem elveszett típusprovenance-t rekonstruál.
 [E kör pontos eredményei](../validation/CLASSIC_CLEAN_JUCE_CODEC_20261008.md).
+
+## 8. Önálló zárolásos tulajdonos
+
+Az önálló `Source/VDX7SoundModeOwner.h` egy caller által átadott, a payloadot is
+védő `std::mutex` referenciáját használja; nem hoz létre második engine-lockot.
+Az entry pointok a lockon kívül hívandók. A payload commit callback lock alatt
+fut, nem dobhat kivételt, nem értesíthet hostot és nem léphet vissza az ownerbe.
+A host-notification callback viszont lockon kívüli és reentráns lehet.
+
+`installValidated()` csak az enumot és a revíziókimerülést ellenőrzi: a teljes
+projekt és firmware kompatibilitását a callernek a commit előtt igazolnia kell.
+`completePending()` ugyanígy külső kompatibilitási eredményt kap, de a mai
+revíziót/pending állapotot saját lock alatt ismét ellenőrzi. A capture ugyanazon
+lock alatt mély másolatot készít a payloadról és befogja a kívánt módot; XML/
+binary kódolás utána történik. Az audio-visit csak ready, nem-pending állapotban,
+egyetlen try-lock után hívja a nem dobó renderer callbacket a mai kívánt móddal.
+
+A komponens nincs bekötve a PluginProcessorba vagy a renderelőbe. A valódi
+processor már megszerzett lockjából nem szabad újra meghívni ezeket a lockoló
+entry pointokat. Epoch, mono-policy, tényleges ROM-admission és native/SRC mód/
+gain ordering integrációja továbbra is külön ellenőrzendő. A szintetikus
+payloados, vezérelt valódi szálas teszt nem igazol teljes plugin race-biztonságot,
+hangzási módot vagy új kiadás elfogadását.
+
+[Szálas ownership reprodukció és korlátok](../validation/CLASSIC_CLEAN_THREADED_OWNERSHIP_20261008.md).

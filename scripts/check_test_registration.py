@@ -13,6 +13,7 @@ ROM_FREE.add("imported_bank_state")
 ROM_FREE.add("cc120_timeline_unit")
 ROM_FREE.add("sound_mode_prototype")
 ROM_FREE.add("sound_mode_state")
+ROM_FREE.add("sound_mode_ownership")
 LOCAL_ROM = set("""stability midi_range timing processor stress v18_profile host_reset
 reactivation reset_history_pair firmware_ownership history_retirement overlap_retirement
 reset_gate_overflow expanded_lifecycle mono_boundary_characterization

@@ -290,6 +290,17 @@ target_compile_definitions(vdx7_sound_mode_state_tests PRIVATE
 add_test(NAME vdx7_sound_mode_state COMMAND vdx7_sound_mode_state_tests)
 set_tests_properties(vdx7_sound_mode_state PROPERTIES TIMEOUT 30 LABELS "rom-free;state-boundary")
 
+# Standalone owner admission, not yet live PluginProcessor/renderer integration.
+find_package(Threads REQUIRED)
+add_executable(vdx7_sound_mode_ownership_tests Tests/VDX7SoundModeOwnershipTests.cpp)
+target_link_libraries(vdx7_sound_mode_ownership_tests PRIVATE VDX7 Threads::Threads)
+target_include_directories(vdx7_sound_mode_ownership_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,INCLUDE_DIRECTORIES>)
+target_compile_definitions(vdx7_sound_mode_ownership_tests PRIVATE
+    $<TARGET_PROPERTY:VDX7,COMPILE_DEFINITIONS>)
+add_test(NAME vdx7_sound_mode_ownership COMMAND vdx7_sound_mode_ownership_tests)
+set_tests_properties(vdx7_sound_mode_ownership PROPERTIES TIMEOUT 30 LABELS "rom-free;state-boundary;prototype")
+
 # Catalog startup, project-state and selection scheduling checks without a DAW.
 add_executable(vdx7_imported_processor_tests EXCLUDE_FROM_ALL
     Tests/VDX7ImportedProcessorTests.cpp Source/PluginProcessor.cpp)
@@ -404,6 +415,7 @@ add_custom_target(vdx7_ci_checks DEPENDS
 add_dependencies(vdx7_ci_checks vdx7_imported_processor_tests)
 add_dependencies(vdx7_ci_checks vdx7_sound_mode_prototype_tests)
 add_dependencies(vdx7_ci_checks vdx7_sound_mode_state_tests)
+add_dependencies(vdx7_ci_checks vdx7_sound_mode_ownership_tests)
 add_custom_target(vdx7_all_tests DEPENDS vdx7_ci_checks)
 
 if(APPLE)
