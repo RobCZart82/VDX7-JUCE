@@ -67,6 +67,8 @@ Ha nincs hang, ellenőrizd a firmware állapotát, a MIDI útvonalát, a sáv mo
 **Az egyetlen hivatalosan támogatott firmware az eredeti Yamaha DX7 Mk I v1.8 (IG11469).**
 **Minden más firmware-verzió, köztük a Special Edition / SER-7 és a módosított
 firmware-képek nem támogatottak, és a VDX7 jövőbeli kiadásaiban sem lesznek támogatottak.**
+Minden más firmware működése és stabilitása nem biztosított. A fejlesztést és
+a firmware-függő ellenőrzéseket az eredeti v1.8-ra hangolva folytatjuk.
 Ez a végleges támogatási politika felváltja a korábban halasztott SER7-kompatibilitási
 munkát; nem későbbi támogatási ígéret.
 A sikeres ROM-betöltés önmagában nem jelent támogatott kompatibilitást;

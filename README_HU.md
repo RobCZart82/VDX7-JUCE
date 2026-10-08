@@ -86,6 +86,8 @@ A helyben fordított Standalone DAW nélkül fut.
 A megszólaláshoz saját, jogszerűen használható ROM szükséges.
 **Minden más firmware-verzió, köztük a Special Edition / SER-7 és a módosított
 firmware-képek nem támogatottak, és a VDX7 jövőbeli kiadásaiban sem lesznek támogatottak.**
+Minden más firmware működése és stabilitása nem biztosított. A fejlesztést és
+a firmware-függő ellenőrzéseket az eredeti v1.8-ra hangolva folytatjuk.
 Ez végleges támogatási politika, nem halasztott kompatibilitási mérföldkő.
 Nem vezet be kizárólag a v1.8-at engedélyező betöltési korlátozást.
 A fájl sikeres betöltése önmagában nem igazolja a MIDI, hangkimenet vagy projekt-visszatöltés működését.

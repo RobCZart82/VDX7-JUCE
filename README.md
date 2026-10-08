@@ -76,7 +76,9 @@ without a DAW when built locally.
 **The only officially supported firmware is original Yamaha DX7 Mk I v1.8 (IG11469).** A legally
 obtained user-supplied ROM is required for sound. **All other firmware versions,
 including Special Edition / SER-7 and modified images, are unsupported and will
-not be supported in future VDX7 releases.** This is the project's permanent
+not be supported in future VDX7 releases.** Operation and stability with any
+other firmware are not guaranteed. Development and firmware-dependent
+validation remain focused on original v1.8. This is the project's permanent
 support policy, not a deferred compatibility milestone. It does not introduce
 a v1.8-only loader whitelist. Successful file
 loading alone does not establish working MIDI, audio or project recall. Supported layouts and

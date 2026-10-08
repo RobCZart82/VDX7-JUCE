@@ -10,6 +10,9 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 Felhasználói döntés: **hivatalosan kizárólag az eredeti Yamaha DX7 Mk I v1.8
 (IG11469) támogatott. Minden más firmware-verzió, köztük a Special Edition /
 SER-7 és a módosított képek nem támogatottak, és a jövőben sem lesznek támogatottak.**
+Az eredeti koncepció szerinti fejlesztést v1.8-ra hangolva folytatjuk;
+minden más firmware működése és stabilitása nem biztosított. Ez nem az eredeti
+v1.8 hibamentességének vagy minden host/OS kombináció elfogadásának állítása.
 Ez végleges projektirány, nem ideiglenes vagy halasztott kompatibilitási cél.
 A SER7 és a kettős firmware-támogatás kikerül a jövőbeli fejlesztési körből;
 a korábbi diagnosztika és PASS/FAIL/NOT RUN bizonyítékok történeti anyagként
