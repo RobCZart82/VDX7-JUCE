@@ -827,8 +827,11 @@ Kísérleti hossz és gain-politika nem végleges hangzási szerződés.
 Baseline: `0a8b1bdaa5e99652b4aa2a1958dca04e9ba7f152`; ág:
 `test/classic-clean-state-contract`. [Részletes műszaki szerződés](CLASSIC_CLEAN_STATE_CONTRACT.md)
 és [soros tesztmodell validációja](../validation/CLASSIC_CLEAN_STATE_CONTRACT_20261008.md).
-Pull request: [#164](https://github.com/RobCZart82/VDX7-JUCE/pull/164), nyitott;
-merge csak végleges head zöld Windows/macOS/sanitizer és rendezett review után.
+Pull request: [#164](https://github.com/RobCZart82/VDX7-JUCE/pull/164), beolvasztva
+2026-10-08: `328d93992a764dbd1ac89a50feb3ad4e1e2692b3`.
+Végleges head `5386aafc049f2e43a1375ac4e5134651e956fec7`: Windows
+`37766081260`, macOS `37766081404`, sanitizer `37766081269` PASS;
+nem volt nyitott review thread vagy elutasító review.
 Ez nem production codec/lock/SETTINGS, hanem annak explicit specifikációja
 és teszt-only modellel ellenőrzött invariánsai. A meglévő `VDX7STATE` save/
 pending/restore és engine native/SRC belépési pontokat a fenti SHA-n áttekintettük.
@@ -846,10 +849,40 @@ PASS helyben: teljes MSVC CI-tesztcél build, 18/18 ROM-mentes CTest; Python
 77 PASS / 1 symlink-jogosultsági SKIP, 0 FAIL/ERROR; három negatív kontroll,
 tesztleltár és diff. Az új stale-token-megkerülés elvárt FAIL/exit 1; a normál
 modell PASS. Minden production mező/paraméter/hangmotor és release változatlan.
-NOT RUN: új PR final-head CI/review, JUCE typed/binary codec, valódi thread/
+E checkpoint idején NOT RUN: JUCE typed/binary codec, valódi thread/
 reentráns save, natív overshoot/SRC ordering, privát v1.8 lifecycle és SETTINGS/
 REAPER/hallásos kapuk. Következő kör: valódi codec és processor ownership
 regresszió, majd engine/firmware integráció és UI, e sorrendben.
+
+#### D5 valódi JUCE property/XML/binary kódoló — 2026-10-08
+
+Baseline: `328d93992a764dbd1ac89a50feb3ad4e1e2692b3` (#164 merge);
+ág: `test/classic-clean-juce-state-codec`.
+[Részletes reprodukció és átadási jelentés](../validation/CLASSIC_CLEAN_JUCE_CODEC_20261008.md).
+
+Elkészült az önálló `Source/VDX7SoundModeState.h`: a valódi `juce::var`
+int/int64/string típusát és pontos értékét ellenőrzi, legacy root esetén
+Classic-ot ad vissza; hibás/fél pár, ismeretlen verzió vagy rossz root esetén
+elutasít és nem módosítja a caller kívánt módját. A writer deep detached
+ValueTree-másolatba csak a kívánt Version/Mode párt írja, az eredeti rootot és
+gyermekeket nem módosítja. **Nem kötöttük be a PluginProcessorba:** a plugin
+nem ment/alkalmaz új Clean állapotot, SETTINGS/DSP és 148 paraméter változatlan.
+
+PASS helyben: MSVC teljes CI-tesztcél build; 19/19 ROM-mentes CTest, benne
+`vdx7_sound_mode_state`; tényleges JUCE XML és AudioProcessor binary körút,
+szintetikus RAM és az összes egyéb tree-adat megőrzése; mindkét negatív kontroll
+elvárt FAIL/exit 1; CTest leltár és checker self-test. A sanitizer workflow az
+új cél fordítását és futtatási kiválasztását is tartalmazza; ez konfigurációs
+ellenőrzés, nem helyi ASan/UBSan eredmény.
+
+Python regresszió: 77 PASS / 1 Windows symlink-jogosultsági SKIP, 0 FAIL/ERROR.
+
+Nyitva: e rész-PR final-head Windows/macOS/sanitizer és review; valódi processor
+restore/save/pending/UI/audio ownership és determinisztikus versenytesztek;
+engine overshoot/SRC/lifecycle, privát v1.8 Classic null-difference, SETTINGS,
+valódi REAPER és hallásos elfogadás. A soros modell és e codec együtt sem
+bizonyít production race-biztonságot vagy jobb hangminőséget. Következő logikus
+kör a processor owner tranzakció és regressziói, nem a kapcsoló korai aktiválása.
 
 ## Teszt és karakterizálási backlog
 
