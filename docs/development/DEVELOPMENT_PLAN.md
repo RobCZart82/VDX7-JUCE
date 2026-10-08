@@ -27,8 +27,16 @@ vagy a már publikált csomagokat; nem állítja, hogy a v1.8 hibamentes.
 Dokumentációs kör alapja: `d8e0da69e8822a67cbd032facc813600559a6e7b` main.
 A HU/EN README, kézikönyvek és ROM-elhelyezési útmutató ezt azonosan rögzítik.
 A #147 teljes beolvasztása továbbra sem indokolt: az eredeti védelem #149-cel
-elkészült; a SER7-kutatás történeti anyag. Ez a dokumentációs döntés önmagában
-nem zárja be a PR-t és nem törli az ágát. Az alábbi korábbi checkpointokban
+elkészült; a SER7-kutatás történeti anyag. A felhasználó külön PR-rendezési
+kérésére a [#147-et](https://github.com/RobCZart82/VDX7-JUCE/pull/147) 2026-10-08-án
+beolvasztás nélkül lezártuk. A `test/firmware-reset-vector-admission` ág és a
+`bac64d8596a498b4c3fa34c8437391018a6d2adb` head megmarad; az ág nincs törölve
+vagy átírva. A lezárás indoka a PR leírásában és hozzászólásában is szerepel.
+Az új koncepcióval összhangban a [#159](https://github.com/RobCZart82/VDX7-JUCE/pull/159)
+viszi a kizárólag dokumentációs támogatási döntést és ezt a PR-rendezési
+checkpointot; beolvasztási feltétele a végleges head zöld CI-je és a review-k
+ellenőrzése. A checkpoint rögzítésekor a CI még folyamatban van.
+Az alábbi korábbi checkpointokban
 szereplő halasztott SER7-fejlesztést ez a döntés felülírja.
 
 E kör ellenőrzése: PASS a támogatási szövegek egyezése hét dokumentációs
@@ -70,7 +78,7 @@ Hátravan: nem homogén sérült végrehajtható firmware és valódi boot-egés
 követelményeinek specifikációja, kompatibilitási kontrollok és az érintett
 privát-ROM/hostpróbák tételes elfogadása. Optimalizálás csak mérés után.
 A már beolvadt PR/CI kapukat nem nyitjuk újra. SER7-támogatás nincs és nem lesz;
-#147 Draft marad, teljes beolvasztása nem indokolt. A következő kiadásba kerülő
+#147 beolvasztás nélkül lezárva, diagnosztikai ága megőrizve. A következő kiadásba kerülő
 D1-kör külön döntést igényel; a publikált 1.0.1 csomagok nem változnak.
 
 #### Korábbi részfeladatok és átadás
