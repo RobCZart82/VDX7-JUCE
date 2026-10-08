@@ -796,9 +796,11 @@ jelentés nem javult hangminőség, teljes D5 elfogadás vagy publikálási enge
 
 Kiinduló main: `e528fe8b4f8e067dc6877aa5495a23f91a5ac813`; ág:
 `test/classic-clean-bounded-transition`. [Részletes mérés és kapuk](../validation/CLASSIC_CLEAN_BOUNDED_TRANSITION_20261008.md).
-Pull request: [#163](https://github.com/RobCZart82/VDX7-JUCE/pull/163), nyitott;
-csak végleges head zöld Windows/macOS/sanitizer és rendezett review után
-olvasztható be. A létrehozási checkpoint nem CI PASS-állítás.
+Pull request: [#163](https://github.com/RobCZart82/VDX7-JUCE/pull/163), beolvadt.
+Végleges `6299bcc` Windows 37758436342, macOS 37758436321 és sanitizer
+37758436437 PASS; nincs review-szál vagy review-tiltás. Merge main:
+`0a8b1bdaa5e99652b4aa2a1958dca04e9ba7f152`. Külön main Windows 37760679834
+és macOS 37760679901 PASS. Az alábbi régi PR NOT RUN e körre már lezárt.
 Teszt-only egy-EGS lehalkítás → nulla gainen váltás → visszaerősítés jelölt.
 Kísérleti 256 + 256 natív mintás rámpa (~10.43 ms), nincs második firmware-motor.
 Latest request wins; ismételt kérés nem indítja újra, visszavonás/gyors kérés
@@ -819,6 +821,33 @@ Classic filter-history marad: nincs általános kattanásmentességi PASS. Köve
 részlépés az explicit kívánt/aktív mód és projekt/audio-tulajdonosi/lifecycle
 specifikáció, majd az érintett privát regresszió és csak utána production/GUI.
 Kísérleti hossz és gain-politika nem végleges hangzási szerződés.
+
+#### D5 állapot- és kérésátadási szerződés — 2026-10-08
+
+Baseline: `0a8b1bdaa5e99652b4aa2a1958dca04e9ba7f152`; ág:
+`test/classic-clean-state-contract`. [Részletes műszaki szerződés](CLASSIC_CLEAN_STATE_CONTRACT.md)
+és [soros tesztmodell validációja](../validation/CLASSIC_CLEAN_STATE_CONTRACT_20261008.md).
+Ez nem production codec/lock/SETTINGS, hanem annak explicit specifikációja
+és teszt-only modellel ellenőrzött invariánsai. A meglévő `VDX7STATE` save/
+pending/restore és engine native/SRC belépési pontokat a fenti SHA-n áttekintettük.
+
+Jelölt feature-séma: `soundModeVersion=1`, `soundMode=0/1` root-metaadat.
+Mindkettő hiánya legacy Classic; jelenlévő hibás/fél pár vagy ismeretlen verzió
+egész restore-elutasítás, nem fallback-mutation. A kívánt mód mentendő, nem
+rámpa/aktív mód. Per-instance current-project revision védi a stale UI-kérést
+és későn befejezett restore-t; pending módszerkesztés menthető, de unrelated
+engine-re nem dispatcholható. UI try-lock BUSY/STALE nem rejtett queue; audio
+a már meglévő owner-lock határán figyeli a latest desired értéket. E valódi
+lock/codec/admission még implementálandó, nem a soros modellből bizonyított.
+
+PASS helyben: teljes MSVC CI-tesztcél build, 18/18 ROM-mentes CTest; Python
+77 PASS / 1 symlink-jogosultsági SKIP, 0 FAIL/ERROR; három negatív kontroll,
+tesztleltár és diff. Az új stale-token-megkerülés elvárt FAIL/exit 1; a normál
+modell PASS. Minden production mező/paraméter/hangmotor és release változatlan.
+NOT RUN: új PR final-head CI/review, JUCE typed/binary codec, valódi thread/
+reentráns save, natív overshoot/SRC ordering, privát v1.8 lifecycle és SETTINGS/
+REAPER/hallásos kapuk. Következő kör: valódi codec és processor ownership
+regresszió, majd engine/firmware integráció és UI, e sorrendben.
 
 ## Teszt és karakterizálási backlog
 
