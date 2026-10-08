@@ -176,6 +176,23 @@ Its sound, edits, dirty marker and display provenance are saved with the DAW
 project. This is a VDX7-created editing seed, not a Yamaha INIT dump, and is
 not included in the already published 1.0.1 packages.
 
+Imported-bank library (new development builds, compatible firmware loaded): use UTILITY → Imported Banks →
+Open folder to create/reveal the separate library folder, then place your own
+32-voice `.syx` banks there and choose Refresh. Windows uses
+`%APPDATA%\VDX7-JUCE\Imported Banks`; macOS uses
+`~/Library/Application Support/VDX7-JUCE/Imported Banks`.
+This step requires an explicit refresh, not an automatic startup scan.
+The LCD Bank list shows an Imported Banks group with shortened, numbered names;
+hover over a row or the selected bank for its full filename and content ID.
+Selecting a bank copies it into CUSTOM working RAM at program 01. Unsaved edits
+require confirmation. Factory/USER/source files are not overwritten; settings
+are preserved. Refresh changes the list, not the current sound. Invalid files
+and scan limits are reported; incomplete scans preserve the previous library.
+If the list changes while you choose, reopen it and choose again. Projects retain
+the selected bank and edited working sound even when the source file disappears.
+These additions are not in the published 1.0.1 packages; real host acceptance
+and startup integration remain separate development gates.
+
 UTILITY provides voice renaming (1–10 printable ASCII characters) and operator copy/paste. SysEx export is in SAVE AS. Copy/paste includes all 21 operator fields. Its clipboard is local to the plug-in instance and is not stored in projects.
 
 SAVE AS... defaults to saving a captured patch into one of 32 persistent USER bank

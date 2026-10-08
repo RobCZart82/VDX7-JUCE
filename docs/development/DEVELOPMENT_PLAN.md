@@ -1,6 +1,6 @@
 # VDX7 egységes fejlesztési terv
 
-Frissítve: 2026-10-07. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
+Frissítve: 2026-10-08. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás verzióját és pontos funkciókörét később rögzítjük.
 Ez a dokumentum nem új kiadás publikálási engedélye.
@@ -236,7 +236,11 @@ Elfogadás: cancel/confirm, bank- és settings-azonosság, dirty jelző, export/
 ### D3 Importált DX7 bankkönyvtár
 
 Állapot: FEJLESZTÉS ALATT, jóváhagyva 2026-10-05; katalógus, projektadat és
-processor-bekötés beolvadt, importált bankkiválasztás külön ágon, 2026-10-07.
+processor-bekötés és importált bankkiválasztás is beolvadt (#154–#157).
+Aktuális main alap: `ef60bd908bc0206a3bb51557a3f95a0e256e76ef`.
+Windows/macOS main: 17/17 ROM-mentes CTest és 78 Python-teszt PASS
+(37677145604, 37677145672); #157 head platform/sanitizer PASS.
+Ez nem a teljes D3 vagy valódi host-elfogadás.
 Külön Windows/macOS bedobós mappában több szabványos 32-hangszínes
 bank legyen egyszerre használható. Új példány beolvassa, nyitott példányban
 explicit Refresh banks; külön a Factory Banks mappától és USER.vub-tól.
@@ -373,7 +377,7 @@ vagy publikálás.
 
 #### Importált bank kiválasztása
 
-Negyedik részfeladat, külön ágon: explicit, audio callbacken kívüli
+Negyedik részfeladat, #157-tel main-ba beolvasztva: explicit, audio callbacken kívüli
 `selectImportedBank` művelet. A választás a teljes VMEM tartalmi azonosítójára
 és az aktuális, változtathatatlan katalógus tokenjére épül; nem listapozícióra,
 rövid névre vagy forrásfájl újbóli megnyitására. Az érvénytelen/hiányzó bank,
@@ -421,6 +425,38 @@ külön korlát; nincs teljes privát tesztcsomag-PASS vagy kiadási elfogadás.
 A teljes D3 nincs kész: következő a GUI, induláskori scan/frissítés és
 Windows/macOS host-elfogadás.
 A privát firmware-es processor-teszt nem helyettesíti a valódi REAPER-próbát.
+
+#### Felületi bekötés – aktuális munkakör
+
+2026-10-08, `feat/imported-bank-ui`, alap `ef60bd9`: az LCD bankválasztó
+Imported Banks csoportjának, rövid/megkülönböztethető címkéinek és teljes név
+tooltipjének bekötése. UTILITY alatt külön mappanyitás és explicit Refresh;
+frissítés nem cserél munkahangszínt. A felület a megjelenített változatlan
+katalógustokenből választ, nem fájlt nyit újra; elavult listát nem alkalmazhat.
+GUI-regresszió: két azonos hosszú Unicode-prefixű bank, nincs ROM,
+katalóguscsere/üres frissítés, felületi állapot és a régi bankválasztók megőrzése.
+Az induláskori automatikus scan külön következő részfeladat marad.
+Helyi végső ellenőrzés: friss MSVC Release teszt- és Windows VST3-build,
+17/17 ROM-mentes CTest
+PASS, köztük a két Unicode-prefixű bank felületi listája, rövid/egyértelmű
+címkéje, teljes tooltipje, sor-renderelése, ROM nélküli tiltás és üres frissítés.
+A teszt a bekötés előtti `ef60bd9` felületen elvárt FAIL-t adott (banklista hiánya).
+Privát v1.8 firmware-rel, saját szintetikus bankokkal két külön opt-in GUI-harness:
+importált eredet kijelzése, elavult popup választásának elutasítása,
+timer közbeni billentyűzetes választás és dirty megerősítés Mégse ága teljes
+processor-state azonossággal. A standard JUCE popup nyitva tartása és a még
+feldolgozatlan választás befagyasztja a megjelenített katalógust; nincs átírt
+Combobox popup-életciklus. Az aszinkron ablakteszt konkrét ablaknévre vár,
+2 másodperces watchdoggal, nem egy fix rövid idő után feltételezi a megjelenést.
+Nem valódi REAPER vagy teljes firmware-tesztsor. A privát firmware SHA-256:
+`6e7aa7b3605131c124914abbc74078acf7bd78354379d6b3ad78373ab7bfd383`.
+Végső ismételt opt-in eredmény: 5/5 választási és 5/5 Mégse teszt PASS;
+utánuk a teljes 17/17 ROM-mentes CTest ismét PASS. Menü-sor PNG vizuális
+ellenőrzése PASS; ez nem teljes popup-görgetési vagy valódi hostteszt.
+Python: 78 teszt, 77 PASS / 1 jogosultság miatti SKIP; nincs FAIL.
+Tesztleltár-ellenőrző önellenőrzés és diff-formaellenőrzés PASS.
+Friss PR Windows/macOS/sanitizer és review még szükséges; helyi sanitizer és
+valódi Windows/macOS REAPER elfogadás NOT RUN. Nincs új release vagy tag.
 
 #### Megőrzött felhasználói koncepció
 
