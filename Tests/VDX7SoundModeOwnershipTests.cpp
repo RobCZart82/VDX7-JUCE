@@ -13,9 +13,30 @@
 using Owner = VDX7SoundModeOwner;
 using Mode = Owner::Mode;
 namespace Codec = VDX7SoundModeState;
-static bool preLockAudio = false, notifyUnderLock = false;
+static bool preLockAudio = false, notifyUnderLock = false, cachedRomAdmission = false;
 static void require(bool ok, const char* message)
 { if (!ok) throw std::runtime_error(message); }
+
+struct NoopCommit { void operator()() const noexcept {} };
+struct ReadyQuery { bool operator()() const noexcept { return true; } };
+struct ThrowingQuery { bool operator()() const { return true; } };
+struct RvalueOnlyQuery { bool operator()() && noexcept { return true; } };
+struct LvalueThrowingQuery
+{
+    bool operator()() && noexcept { return true; }
+    bool operator()() & { return true; }
+};
+template<class Check>
+concept InstallQueryAccepted = requires(Owner& owner, Check check)
+{ owner.installValidated(Mode::classic, std::move(check), NoopCommit{}); };
+template<class Check>
+concept CompletionQueryAccepted = requires(Owner& owner, Check check)
+{ owner.completePending(0, std::move(check), NoopCommit{}); };
+static_assert(InstallQueryAccepted<ReadyQuery> && CompletionQueryAccepted<ReadyQuery>);
+static_assert(!InstallQueryAccepted<bool> && !CompletionQueryAccepted<bool>);
+static_assert(!InstallQueryAccepted<ThrowingQuery> && !CompletionQueryAccepted<ThrowingQuery>);
+static_assert(!InstallQueryAccepted<RvalueOnlyQuery> && !CompletionQueryAccepted<RvalueOnlyQuery>);
+static_assert(!InstallQueryAccepted<LvalueThrowingQuery> && !CompletionQueryAccepted<LvalueThrowingQuery>);
 
 // Xcode 15.4's libc++ has no std::jthread. These tests need joining, not stop
 // tokens: keep the same real threads and unwind-safe lifetime on that toolchain.
@@ -92,7 +113,10 @@ struct Fixture
         Mode desired = Mode::classic;
         if (!Codec::read(tree, desired) || !tree["syntheticProject"].isInt()) return false;
         auto detached = tree.createCopy();
-        return owner.installValidated(desired, ready, [&]() noexcept { payload = detached; });
+        // Immutable synthetic readiness only. Real mutable ROM admission must
+        // be queried by the predicate under the owner lock (see race tests).
+        return owner.installValidated(desired, [ready]() noexcept { return ready; },
+            [&]() noexcept { payload = detached; });
     }
     Owner::Capture capture() const
     { return owner.capture([&] { return payload; }); }
@@ -103,7 +127,7 @@ struct Fixture
     }
     bool complete(uint64_t revision, bool compatible)
     {
-        return owner.completePending(revision, compatible,
+        return owner.completePending(revision, [compatible]() noexcept { return compatible; },
             [&]() noexcept { ++completedInstalls; });
     }
 };
@@ -142,7 +166,7 @@ static void testAdmissionAndRevision()
             "identical project recall retires old token too");
     bool invalidCommitted = false;
     const auto validState = f.owner.snapshot();
-    require(!f.owner.installValidated(static_cast<Mode>(255), true,
+    require(!f.owner.installValidated(static_cast<Mode>(255), []() noexcept { return true; },
                 [&]() noexcept { invalidCommitted = true; })
             && !invalidCommitted && f.owner.snapshot() == validState,
             "invalid owner enum cannot invoke payload commit or change revision");
@@ -304,6 +328,129 @@ static void testDetachedConcurrentSave()
             "encoding old captured project cannot mutate new live project");
 }
 
+// Simulated identity, NOT firmware: all mutable identity access uses the same
+// engine/payload mutex. A ROM reload alone does not advance project revision.
+static void testRomCompletionAdmission()
+{
+    Fixture f;
+    require(f.recall(project(60, Mode::clean), false), "ROM race pending project");
+    const auto before = f.capture();
+    int currentRom = 1;
+    constexpr int expectedRom = 1;
+    Gate checked, completeNow;
+    bool completed = true;
+    JoiningThread worker([&]
+    {
+        bool cached;
+        { const std::lock_guard lock(f.mutex); cached = currentRom == expectedRom; }
+        checked.signal(); completeNow.wait();
+        completed = f.owner.completePending(before.mode.revision,
+            [&]() noexcept { return cachedRomAdmission ? cached : currentRom == expectedRom; },
+            [&]() noexcept { ++f.completedInstalls; });
+    });
+    checked.wait();
+    { const std::lock_guard lock(f.mutex); currentRom = 2; }
+    completeNow.signal(); worker.join();
+    require(!completed && f.completedInstalls == 0 && f.owner.snapshot() == before.mode
+            && f.capture().payload.isEquivalentTo(before.payload),
+            "ROM reload without project recall must reject stale compatible completion");
+}
+
+static void testRomInstallAdmission()
+{
+    Fixture f;
+    int currentRom = 1;
+    constexpr int expectedRom = 1;
+    auto candidate = project(61, Mode::clean);
+    Gate checked, installNow;
+    bool installed = false;
+    JoiningThread worker([&]
+    {
+        bool cached;
+        { const std::lock_guard lock(f.mutex); cached = currentRom == expectedRom; }
+        checked.signal(); installNow.wait();
+        installed = f.owner.installValidated(Mode::clean,
+            [&]() noexcept { return cachedRomAdmission ? cached : currentRom == expectedRom; },
+            [&]() noexcept { f.payload = candidate; });
+    });
+    checked.wait();
+    { const std::lock_guard lock(f.mutex); currentRom = 2; }
+    installNow.signal(); worker.join();
+    const auto after = f.capture();
+    require(installed && after.mode.revision == 1 && after.mode.desired == Mode::clean
+            && after.mode.pending && !after.mode.ready
+            && (int) after.payload["syntheticProject"] == 61,
+            "ROM reload before project install must keep validated project pending, not falsely ready");
+}
+
+static void testAdmissionLockAndGuards()
+{
+    // Both predicates and their subsequent payload commit retain ownership.
+    for (const bool completing : { false, true })
+    {
+        Fixture f;
+        require(f.recall(project(70, Mode::clean), false), "lock probe pending project");
+        const auto revision = f.owner.snapshot().revision;
+        int currentRom = 1;
+        Gate inCheck, leaveCheck;
+        bool accepted = false, checkLockWasFree = true, commitLockWasFree = true;
+        int checks = 0, commits = 0;
+        auto check = [&]() noexcept
+        {
+            ++checks;
+            inCheck.signal(); leaveCheck.wait();
+            return currentRom == 1;
+        };
+        auto commit = [&]() noexcept
+        {
+            ++commits;
+            JoiningThread contender([&]
+            {
+                const std::unique_lock lock(f.mutex, std::try_to_lock);
+                commitLockWasFree = lock.owns_lock();
+            });
+            contender.join();
+        };
+        JoiningThread worker([&]
+        {
+            accepted = completing ? f.owner.completePending(revision, check, commit)
+                : f.owner.installValidated(Mode::clean, check, commit);
+        });
+        inCheck.wait();
+        JoiningThread reload([&]
+        {
+            const std::unique_lock lock(f.mutex, std::try_to_lock);
+            checkLockWasFree = lock.owns_lock();
+            if (checkLockWasFree) currentRom = 2;
+        });
+        reload.join(); leaveCheck.signal(); worker.join();
+        require(accepted && checks == 1 && commits == 1 && !checkLockWasFree && !commitLockWasFree
+                && f.owner.snapshot().ready && !f.owner.snapshot().pending,
+                "ROM admission and payload commit must hold the same mutex continuously");
+    }
+    Fixture f;
+    require(f.recall(project(71, Mode::clean), false), "guard probe pending project");
+    const auto before = f.capture();
+    int checks = 0, commits = 0;
+    auto mismatch = [&]() noexcept { ++checks; return false; };
+    auto commit = [&]() noexcept { ++commits; };
+    require(!f.owner.completePending(before.mode.revision + 1, mismatch, commit) && checks == 0 && commits == 0,
+            "stale project cannot invoke ROM check or payload commit");
+    require(!f.owner.completePending(before.mode.revision, mismatch, commit) && checks == 1 && commits == 0
+            && f.owner.snapshot() == before.mode && f.capture().payload.isEquivalentTo(before.payload),
+            "current mismatch preserves full pending snapshot without commit");
+    auto match = [&]() noexcept { ++checks; return true; };
+    require(f.owner.completePending(before.mode.revision, match, commit), "matching completion control");
+    const int checked = checks;
+    require(!f.owner.completePending(before.mode.revision, match, commit) && checks == checked && commits == 1,
+            "already completed project cannot query or commit again");
+    require(!f.owner.installValidated(static_cast<Mode>(255), match, commit) && checks == checked && commits == 1,
+            "invalid enum never evaluates readiness or payload commit");
+    Fixture exhausted(std::numeric_limits<uint64_t>::max());
+    require(!exhausted.owner.installValidated(Mode::clean, match, commit) && checks == checked && commits == 1,
+            "revision exhaustion never evaluates readiness or payload commit");
+}
+
 static void testNotificationOutsideLockAndReentrantRecall()
 {
     Fixture f;
@@ -349,12 +496,23 @@ int main(int argc, char** argv)
     {
         if (argc == 2 && std::string_view(argv[1]) == "--pre-lock-audio-negative-control") preLockAudio = true;
         else if (argc == 2 && std::string_view(argv[1]) == "--notify-under-lock-negative-control") notifyUnderLock = true;
+        else if (argc == 2 && std::string_view(argv[1]) == "--rom-completion-repro-only")
+        { testRomCompletionAdmission(); return 0; }
+        else if (argc == 2 && std::string_view(argv[1]) == "--rom-install-repro-only")
+        { testRomInstallAdmission(); return 0; }
+        else if (argc == 2 && std::string_view(argv[1]) == "--cached-rom-completion-negative-control")
+        { cachedRomAdmission = true; testRomCompletionAdmission(); return 0; }
+        else if (argc == 2 && std::string_view(argv[1]) == "--cached-rom-install-negative-control")
+        { cachedRomAdmission = true; testRomInstallAdmission(); return 0; }
         else require(argc == 1, "unknown ownership test argument");
         testJoiningLifetime();
         testAdmissionAndRevision();
         testBusyAndIsolation();
         testAudioPostLockAndProtectedPayload();
         testStaleUIAndCompletion();
+        testRomCompletionAdmission();
+        testRomInstallAdmission();
+        testAdmissionLockAndGuards();
         testDetachedConcurrentSave();
         testNotificationOutsideLockAndReentrantRecall();
         std::cout << "PASS: standalone sound-mode owner, real mutex/thread rendezvous and reentrant detached save\n";

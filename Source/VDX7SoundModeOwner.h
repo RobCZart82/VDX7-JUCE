@@ -8,8 +8,11 @@
 
 // Preparatory component, NOT connected to PluginProcessor/DSP yet. The caller's
 // existing engine mutex must outlive this owner and protect the payload too.
-// Call these entry points without already holding that mutex. Payload callbacks
-// execute under it and must not reenter the owner, notify a host, or do file I/O.
+// Call these entry points without already holding that mutex. Readiness and
+// payload callbacks execute under it: no reentry, host notification or file I/O.
+// Readiness predicates must freshly inspect bounded, mutex-protected engine/ROM
+// identity, not return an earlier mutable-state result. All identity mutations
+// must use the same mutex. Payload commits must not invalidate that admission.
 // Full project/ROM admission remains the caller's job; the D5 codec is not that
 // admission. No Clean metadata may be shipped before renderer integration.
 class VDX7SoundModeOwner
@@ -56,28 +59,35 @@ public:
     }
 
     // Non-audio. Only call AFTER validation of the complete candidate project.
-    // A nonthrowing payload commit and the mode/revision form one transaction.
+    // Immutable project validation can precede this call; mutable engine/ROM
+    // readiness must be rechecked by the predicate under this ownership lock.
+    // Nonthrowing readiness, payload commit and mode/revision are one transaction.
     // Even identical recalls get a new revision; exhaustion never wraps.
-    template<class Commit>
-    bool installValidated(Mode desired, bool engineReady, Commit&& commit)
+    template<class CheckReady, class Commit>
+        requires (std::is_nothrow_invocable_r_v<bool, CheckReady&>
+                  && std::is_nothrow_invocable_v<Commit&>)
+    bool installValidated(Mode desired, CheckReady&& checkReady, Commit&& commit)
     {
-        static_assert(std::is_nothrow_invocable_v<Commit>);
         if (!VDX7SoundModeState::isValid(desired)) return false;
         const std::lock_guard lock(mutex_);
         if (state_.revision == std::numeric_limits<uint64_t>::max()) return false;
+        const bool engineReady = checkReady();
         commit();
         state_ = { desired, state_.revision + 1, !engineReady, engineReady };
         return true;
     }
 
-    // Non-audio. Compatibility must come from the real ROM admission, not from
-    // the mode value. Do not read an old desired value from the pending tree.
-    template<class Commit>
-    bool completePending(uint64_t revision, bool compatible, Commit&& commit)
+    // Non-audio. Recheck real ROM compatibility under this lock, not a cached
+    // bool or the mode value. A ROM-only change need not retire project revision.
+    // Do not read an old desired value from the pending tree.
+    template<class CheckCompatible, class Commit>
+        requires (std::is_nothrow_invocable_r_v<bool, CheckCompatible&>
+                  && std::is_nothrow_invocable_v<Commit&>)
+    bool completePending(uint64_t revision, CheckCompatible&& checkCompatible, Commit&& commit)
     {
-        static_assert(std::is_nothrow_invocable_v<Commit>);
         const std::lock_guard lock(mutex_);
-        if (!compatible || revision != state_.revision || !state_.pending) return false;
+        if (revision != state_.revision || !state_.pending) return false;
+        if (!checkCompatible()) return false;
         commit();
         state_.pending = false;
         state_.ready = true;
