@@ -9,6 +9,7 @@
 #include "dx7.h"
 #include "VDX7VoiceData.h"
 #include "VDX7Resampler.h"
+#include "VDX7NativeSoundMode.h"
 
 class VDX7Engine
 {
@@ -70,6 +71,11 @@ public:
     // transaction has drained. Ordinary audio continues, unlike CC120 mute.
     bool isControllerResetInProgress() const noexcept { return controllerResetActive_; }
     void render(float* left, float* right, int numSamples);
+    // Engine-owner only. Internal renderer integration; no processor/UI Clean
+    // admission yet. Latest intent is applied at a complete native scan boundary.
+    void requestSoundMode(bool clean) noexcept { nativeSoundMode_.request(clean); }
+    VDX7NativeSoundMode::Snapshot soundModeSnapshot() const noexcept
+    { return nativeSoundMode_.snapshot(); }
 
     void handleMidi(const uint8_t* data, int size);
     bool handleSysex(const uint8_t* data, std::size_t size);
@@ -145,6 +151,7 @@ private:
     dx7Emu::App_ToSynth appToSynth_;
     dx7Emu::NullToGui nullToGui_;
     dx7Emu::DX7 dx7_;
+    VDX7NativeSoundMode nativeSoundMode_;
 
     std::vector<uint8_t> factoryVoices_;
     uint8_t factoryBankMask_ = 0;

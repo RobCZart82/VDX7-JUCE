@@ -159,6 +159,37 @@ Clean writer/admission, audio owner/renderer/lifecycle és SETTINGS még nyitott
 Ezek következnek az alábbi sorrendben; nincs új release-publikálás.
 [Bekötés, tesztkör és korlátok](../validation/PROCESSOR_MODE_PROJECT_OWNER_20261009.md).
 
+#175 végső `ca64937a965226f81060519a2e3b2aae36e254fd` fejének Windows/macOS/
+ASan–UBSan ellenőrzése PASS; nyitott review-beszélgetés nélkül main-ba került
+`edb0de367cc6b909af5f7e6f493fa8e0d005c23a` merge-commitként. A külön main
+[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37978342086) és
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37978342099) kör PASS.
+E részlépés lezárt, nem teljes D5 vagy release-elfogadás.
+
+### D5 natív motorátmenet részlépése
+
+Baseline: `edb0de367cc6b909af5f7e6f493fa8e0d005c23a`; külön ág:
+`feature/engine-sound-mode-transition`. A valódi motor EGS-clock útján az új
+`VDX7NativeSoundMode` adapter a teljes, 96 órajelű operátor–voice kör elején
+alkalmazza a következő mintához tartozó módot és gain-t. A 256+256 natív mintás
+mute-ramp nulla szintjén kapcsol; a már előállított native/SRC history nem kap
+új címkét vagy új szorzót. Instrukcióhatári overshoot megmarad. Steady Classic
+ugyanazt a korábbi EGS-clock hívást használja.
+
+22 ROM-free CTest, 94 Python, macOS dev-build és célzott ASan–UBSan PASS.
+Privát original v1.8, saját tesztparaméterek: a korábbi motorhoz mért 18 Classic
+eset 589 824 float mintája bitazonos; Clean nem nulla, eltérő és véges 44,1/48/96
+kHz-en. Azonos MIDI/módkérés/sustain idővonal 1/64/257/511-es host partitionben
+azonos kimenetet ad. RAM/program/bank/latency változatlan a scalar live requestnél.
+
+Ez motor-részlépés: a processor nem kér Clean-t, nincs új writer, Clean project
+admission vagy SETTINGS. A cold install unity-start, teljes processor-owned
+audio dispatch és reset/restore/mono lifecycle összehangolása még nyitott.
+Az upstream Classic szűrőhistory megmarad Clean alatt; visszatérés hallásos/
+spektrális és teljes hangszín/headroom/CPU elfogadása külön kapu. A mute-ramp
+nem bizonyítottan kattanásmentes UX. Final-head CI/review és main-kör még szükséges.
+[Natív ordering, kontrollok és mérések](../validation/NATIVE_SOUND_MODE_TRANSITION_20261009.md).
+
 ### Végrehajtási sorrend és kiadási megállási kapuk
 
 1. **D5 processor-állapot integráció:** az elkészült codec/owner a valódi

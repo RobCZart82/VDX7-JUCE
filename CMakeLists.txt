@@ -262,6 +262,19 @@ target_link_libraries(vdx7_sound_mode_prototype_tests PRIVATE vdx7_core)
 add_test(NAME vdx7_sound_mode_prototype COMMAND vdx7_sound_mode_prototype_tests)
 set_tests_properties(vdx7_sound_mode_prototype PROPERTIES TIMEOUT 30 LABELS "rom-free;prototype")
 
+# Production native adapter; processor Clean admission/UI remain separately gated.
+add_executable(vdx7_native_sound_mode_tests Tests/VDX7NativeSoundModeTests.cpp Source/VDX7Engine.cpp)
+target_include_directories(vdx7_native_sound_mode_tests PRIVATE Source)
+target_link_libraries(vdx7_native_sound_mode_tests PRIVATE vdx7_core vdx7_voice_data)
+add_test(NAME vdx7_native_sound_mode COMMAND vdx7_native_sound_mode_tests)
+set_tests_properties(vdx7_native_sound_mode PROPERTIES TIMEOUT 30 LABELS "rom-free")
+
+# Local baseline comparison tool only: explicit ROM argument, raw floats stdout.
+add_executable(vdx7_classic_render_reference EXCLUDE_FROM_ALL
+    Tests/VDX7ClassicRenderReference.cpp Source/VDX7Engine.cpp)
+target_include_directories(vdx7_classic_render_reference PRIVATE Source)
+target_link_libraries(vdx7_classic_render_reference PRIVATE vdx7_core vdx7_voice_data)
+
 # ROM-free GUI regression for Settings presets, About artwork and EDIT/PERFORMANCE layout.
 add_executable(vdx7_gui_header_tests Tests/VDX7GuiHeaderTests.cpp)
 target_link_libraries(vdx7_gui_header_tests PRIVATE VDX7)
@@ -423,6 +436,7 @@ add_custom_target(vdx7_ci_checks DEPENDS
     vdx7_processor_tests vdx7_stability_tests vdx7_midi_range_tests vdx7_timing_tests)
 add_dependencies(vdx7_ci_checks vdx7_imported_processor_tests)
 add_dependencies(vdx7_ci_checks vdx7_sound_mode_prototype_tests)
+add_dependencies(vdx7_ci_checks vdx7_native_sound_mode_tests)
 add_dependencies(vdx7_ci_checks vdx7_sound_mode_state_tests)
 add_dependencies(vdx7_ci_checks vdx7_sound_mode_ownership_tests)
 add_custom_target(vdx7_all_tests DEPENDS vdx7_ci_checks)
