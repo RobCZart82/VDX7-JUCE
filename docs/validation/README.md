@@ -14,6 +14,8 @@ tesztkör korlátozza az állításokat. A teljes név szerinti jegyzék alább 
 
 ## Reports by filename
 
+- [Classic Clean threaded ownership validation](CLASSIC_CLEAN_THREADED_OWNERSHIP_20261008.md)
+
 - [Init Preset development validation](VALIDATION_20261007_INIT_PRESET.md)
 
 - [A 147 számú PR történeti SER7 átadása, a 2026-10-08-i végleges támogatási döntéssel](HANDOFF_20261007_PR147_DEFERRED_SER7_HU.md)

@@ -188,3 +188,45 @@ valódi thread/reentráns save és hallásos kapuk nyitva maradnak. XML az erede
 bool/double típust nem őrzi meg: a helper a ténylegesen dekódolt scalar
 reprezentációt ellenőrzi, nem elveszett típusprovenance-t rekonstruál.
 [E kör pontos eredményei](../validation/CLASSIC_CLEAN_JUCE_CODEC_20261008.md).
+
+## 8. Önálló zárolásos tulajdonos
+
+Az önálló `Source/VDX7SoundModeOwner.h` egy caller által átadott, a payloadot is
+védő `std::mutex` referenciáját használja; nem hoz létre második engine-lockot.
+Az entry pointok a lockon kívül hívandók. A payload commit callback lock alatt
+fut, nem dobhat kivételt, nem értesíthet hostot és nem léphet vissza az ownerbe.
+A host-notification callback viszont lockon kívüli és reentráns lehet.
+
+`installValidated()` az enumot és a revíziókimerülést ellenőrzi: az immutable
+teljes projektvalidáció a caller dolga, a mutable engine/ROM készültséget viszont
+egy nem dobó, readonly predikátum **a megszerzett lock alatt** frissen ellenőrzi,
+a payload commit előtt. Mismatch mellett a valid projekt pendingként települ.
+`completePending()` a mai revíziót/pending állapotot saját lock alatt ellenőrzi,
+majd ugyanazon lock alatt futtatja a nem dobó kompatibilitási predikátumot.
+Mismatch nem commitolhat vagy változtathat snapshotot. A predikátum és a commit
+között nincs unlock; plain bool vagy dobó predicate nem elfogadott API-argumentum.
+2026-10-09: ez a korábbi pre-lock bool API javítása a #167 review alapján.
+
+A valódi ROM-admissiont továbbra is a caller adja: cache-ben tárolt, mai,
+ugyanezzel a mutexszel védett engine/ROM identityt hasonlítson a validált
+projekt elvárásához. Korábban számolt mutable bool lambda mögé rejtése sem
+helyes integráció; az új negatív kontrollok ezt kimutatják. Nincs hash/fájl-I/O,
+host-értesítés, reentry vagy más engine-mutáció a readonly bounded predicate-ben.
+A payload commit nem változtathatja meg az admission alapjául szolgáló ROM-
+kompatibilitást. Minden identity-writer ugyanazt a mutexet köteles használni.
+A későbbi ROM-reload miatti ready invalidation a production lifecycle-adapter
+külön feladata, nem e check/commit atomi határának teljes lifecycle bizonyítéka.
+
+A capture ugyanazon
+lock alatt mély másolatot készít a payloadról és befogja a kívánt módot; XML/
+binary kódolás utána történik. Az audio-visit csak ready, nem-pending állapotban,
+egyetlen try-lock után hívja a nem dobó renderer callbacket a mai kívánt móddal.
+
+A komponens nincs bekötve a PluginProcessorba vagy a renderelőbe. A valódi
+processor már megszerzett lockjából nem szabad újra meghívni ezeket a lockoló
+entry pointokat. Epoch, mono-policy, tényleges ROM-admission és native/SRC mód/
+gain ordering integrációja továbbra is külön ellenőrzendő. A szintetikus
+payloados, vezérelt valódi szálas teszt nem igazol teljes plugin race-biztonságot,
+hangzási módot vagy új kiadás elfogadását.
+
+[Szálas ownership reprodukció és korlátok](../validation/CLASSIC_CLEAN_THREADED_OWNERSHIP_20261008.md).

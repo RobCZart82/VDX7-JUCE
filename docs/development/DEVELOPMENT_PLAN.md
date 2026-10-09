@@ -1,6 +1,6 @@
 # VDX7 egységes fejlesztési terv
 
-Frissítve: 2026-10-08. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
+Frissítve: 2026-10-09. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás verzióját és pontos funkciókörét később rögzítjük.
 Ez a dokumentum nem új kiadás publikálási engedélye.
@@ -883,6 +883,82 @@ engine overshoot/SRC/lifecycle, privát v1.8 Classic null-difference, SETTINGS,
 valódi REAPER és hallásos elfogadás. A soros modell és e codec együtt sem
 bizonyít production race-biztonságot vagy jobb hangminőséget. Következő logikus
 kör a processor owner tranzakció és regressziói, nem a kapcsoló korai aktiválása.
+
+#### D5 önálló zárolásos állapottulajdonos
+
+2026-10-08, baseline `9ee7c9d6ff85381e853fb0fd7c2e7c13f78322d3`;
+ág: `test/classic-clean-threaded-ownership`. A baseline Windows/macOS CI-je
+PASS (37832216599, 37832216642); #165 és #166 beolvadt. A fenti codec-kör
+korábbi PR-kapui teljesültek, a valódi processor/DSP/host-kapuk nem.
+Pull request: [#167](https://github.com/RobCZart82/VDX7-JUCE/pull/167), nyitott;
+friss final-head platform/sanitizer CI és review szükséges a merge előtt.
+
+Új önálló `Source/VDX7SoundModeOwner.h` az átadott engine-mutexet használja:
+kívánt mód és projekt-revízió egy tranzakcióban; UI/audio try-lock BUSY esetén
+nincs várakozás vagy rejtett queue; stale UI/completion és revíziótúlcsordulás
+nem mutálhat projektet. A host-értesítés a lockon kívül fut. A mode/payload
+mentési pillanatkép ugyanazon lock alatt mély másolat, a kódolás lockon kívüli.
+A pending completion nem írja vissza a tree-ben maradt régi módot.
+
+Ez **nem PluginProcessor-integráció**: a komponens teljes projekt/ROM admissiont
+a callertől vár, a teszt saját szintetikus payloadot használ. A valódi processor
+state epochja, mono-policy mellékhatásai, ROM-installja és engine/SRC útja még
+nincs ehhez kötve. Nincs Clean-metaadat vagy kapcsoló a működő pluginban.
+[A pontos tesztkör és eredmények](../validation/CLASSIC_CLEAN_THREADED_OWNERSHIP_20261008.md).
+
+Valódi szálak és vezérelt rendezvous teszteli a pre/post-lock audio-olvasást,
+stale UI-t és completiont, pending editet, külön példányokat, reentráns save/
+recallt és a capture után érkező új projekt melletti JUCE binary-mentést.
+Két hibás tesztadapternek elvárt FAIL-t kell adnia. A platform/sanitizer CI és
+review új kapu; a szálas harness sem teljes production versenybiztonsági bizonyíték.
+Helyi PASS: teljes macOS ARM64 CI-tesztcél fordítás, 20/20 ROM-mentes CTest
+ASan/UBSan mellett, új ownership teszt 50 ismétlésben, mindkét negatív kontroll
+elvárt FAIL/exit 1; 78 Python-teszt, leltár és 138 helyi dokumentációs hivatkozás.
+ThreadSanitizer és tényleges processor/DSP/host-integráció NOT RUN.
+Az első #167 final-head macOS/sanitizer build fordításkor elbukott: Xcode 15.4
+nem biztosított `std::jthread`-et. A teszt ezt automatikusan joinoló `std::thread`
+wrapperre cseréli, új normál/kivételes élettartam-próbákkal; a többszálú és
+negatív kontrollok változatlanok. A fenti helyi tesztkör a javítás után ismét
+PASS; az új final-head platform/sanitizer CI külön, kötelező megerősítés.
+Következő kör: a tényleges processor tranzakcióihoz illesztés és epoch/mono/
+ROM/pending regresszió, a DSP nélküli Clean-szállítás tilalmának megtartásával.
+
+#### #167 ROM-admission versenyhelyzet javítása — 2026-10-09
+
+Main baseline: `9ee7c9d6ff85381e853fb0fd7c2e7c13f78322d3`; PR kiinduló head:
+`2ebe4bed1cea3cc03b043cc24c68e3b190bb12cf`. Helyi javítóág:
+`fix/pr167-rom-admission`, a javítás a meglévő #167
+`test/classic-clean-threaded-ownership` ágára kerül, nem új competing roadmap.
+
+A kiinduló head Windows `37839598022`, macOS `37839598025` és sanitizer
+`37839598014` CI-je PASS, de a review valós komponenshibát talált: a lock előtt
+számolt `compatible`/`engineReady` bool elavulhatott egy ROM-csere miatt, miközben
+a projekt revisionje nem változott. A két új vezérelt szálas reprodukció a
+javítás előtt külön-külön FAIL/exit 1: téves completion, illetve téves ready
+project install. Ez nem kiadott pluginhibára vonatkozó állítás: nincs production
+bekötés, nincs valódi ROM a fixture-ben.
+
+Mindkét owner API most nem dobó predikátumot kér, amely a mai védett ROM/engine
+identitást **a közös mutex alatt** olvassa. Az admission és a payload commit
+között a lock nem oldódik fel. Bool és dobó predikátum fordításkor elutasított.
+Stale/non-pending/exhausted/invalid művelet nem futtathat checket vagy commitot;
+mai mismatch completion snapshot-mutation nélkül elutasított. Mismatch mellett
+egy teljesen valid új projekt installja továbbra is megengedett pendingként,
+nem tévesen readyként. A predikátum bounded, readonly; nincs file/hash/host/reentry,
+és a commit nem érvénytelenítheti a vizsgált kompatibilitást.
+
+PASS eddig helyben: mindkét eredeti repro javítás után, teljes owner teszt,
+50 egymást követő ismétlés; négy negatív kontroll elvárt FAIL/exit 1 (köztük
+a két új cached-ROM adapter); same-lock predicate/commit és guard tesztek.
+PASS: teljes Windows MSVC CI-tesztcél build és 20/20 ROM-mentes CTest; Python
+78 futott = 77 PASS / 1 Windows symlink-jogosultsági SKIP, 0 FAIL/ERROR;
+leltár/checker self-test, 23 helyi dokumentumlink és diff-ellenőrzés.
+Új final-head Windows/macOS/ASan/UBSan és review még külön merge-kapu;
+a korábbi zöld head nem az új javítás tesztje. Helyi sanitizer/TSan NOT RUN.
+[Részletes reprodukció és friss eredmények](../validation/CLASSIC_CLEAN_THREADED_OWNERSHIP_20261008.md).
+Production processor ROM-readiness érvénytelenítés egy későbbi ROM-cserénél,
+epoch/mono/DSP/SRC/REAPER továbbra is külön integrációs kapu; nincs új D5 vagy
+release elfogadás, dependency pin vagy firmware-policy változás.
 
 ## Teszt és karakterizálási backlog
 
