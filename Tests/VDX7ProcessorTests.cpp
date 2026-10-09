@@ -215,6 +215,11 @@ static void compatibilityFingerprint(const juce::File& rom, const juce::File& ou
                 midi.addEvent(juce::MidiMessage::noteOn(1, 64, uint8_t(100)), size / 2);
                 require(render(*pending, 0.20) > 0.0001, "comparison recalled project has non-silent output");
                 require(pending->loadRomFromFile(rom), "comparison direct reload");
+                // A firmware-only file contains no voices. Reinstall the
+                // owned synthetic seed; don't assert factory-data preservation.
+                VDX7RegressionAccess::installSyntheticCatalog(*pending);
+                require(pending->selectFactoryBank(0) && pending->setPlaySettingFromUi(0, 1),
+                    "comparison reselection after firmware-only reload");
                 render(*pending, 0.10);
                 midi.addEvent(juce::MidiMessage::noteOn(1, 69, uint8_t(90)), 0);
                 require(render(*pending, 0.20) > 0.0001, "comparison recovers after direct reload");
