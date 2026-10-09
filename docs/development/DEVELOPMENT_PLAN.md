@@ -39,20 +39,31 @@ firmware-támogatást. Kizárólag original DX7 Mk I v1.8 a támogatott tesztala
 4. **SETTINGS és platformkapuk:** kapcsoló csak a működő DSP/állapot után;
    billentyűzet, hozzáférhető név, helyes pending/BUSY/STALE kijelzés, régi
    projektek és öt GUI-méret. Friss Windows/macOS és sanitizer, rendezett review.
-5. **Új jelölt valódi host/hallásos elfogadása:** Windows/macOS REAPER,
-   sample-rate/buffer, offline render, mentés/újranyitás, több példány, váltás
-   kitartott hang alatt, hangerőben egyeztetett Classic/Clean meghallgatás.
-   Helyi DAW nélkül e kapuk NOT RUN; külön tételes halasztás csak új, explicit
-   tulajdonosi döntéssel, nem az 1.0.1 régi halasztásaiból. Nem halasztjuk
-   automatikusan magát a D5 funkciót vagy annak helyességi bizonyítékát.
-6. **Verzió és kiadási csomagok:** a választott új verzióra a CMake/installer,
+5. **Verzió és kiadási csomagok:** a választott új verzióra a CMake/installer,
    source packager címke/validáció, tesztek és approval összhangban frissítendők
    (a jelen tooling 1.0.0/1.0.1 címkékre korlátozott). Négy felhasználói letöltés:
    Windows EXE + Manual ZIP, macOS PKG + Manual ZIP; teljes megfelelő forrás,
    hash/provenance, offline build, telepítés/upgrade/uninstall az exact jelölthöz.
-7. **HU/EN dokumentáció és publikálási döntés:** README, kézikönyv, release notes,
-   Classic/Clean különbség/default/recall/downgrade és aláírási korlátok;
-   rögzített SHA/verzió/csomagok és PASS/FAIL/NOT RUN/SKIP elfogadási jegyzék.
+   A csomagba kerülő HU/EN README/kézikönyv és Classic/Clean/default/recall/
+   downgrade/aláírási tájékoztató ekkor már legyen végleges. **Host-elfogadás
+   előtt** rögzítjük a product/packager SHA-t, a tényleges kijelzett verziót és
+   az elkészült telepítő/manual/source fájlok SHA256-ját: ez a fagyasztott jelölt.
+6. **Új jelölt valódi host/hallásos elfogadása:** az 5. lépésben rögzített,
+   változatlan telepítő/manual csomagokból telepített binárisokkal Windows/macOS
+   REAPER; sample-rate/buffer, offline render, mentés/újranyitás, több példány,
+   váltás kitartott hang alatt, hangerőben egyeztetett Classic/Clean meghallgatás.
+   Jegyzőkönyvben csomaghash, pluginverzió és host/OS/architektúra legyen.
+   Korábbi dev-build mérése előzetes bizonyíték, nem e csomag végső elfogadása.
+   Helyi DAW nélkül e kapuk NOT RUN; külön tételes halasztás csak új, explicit
+   tulajdonosi döntéssel, nem az 1.0.1 régi halasztásaiból. Nem halasztjuk
+   automatikusan magát a D5 funkciót vagy annak helyességi bizonyítékát.
+   Ha teszt után kód, compiled verzió, dependency, build/installer vagy payload
+   változik, új jelölt/hash kell és az érintett package/host/hallásos kapuk
+   megismétlendők. Egy változott csomag nem örökölheti a régi végső PASS-t.
+7. **Elfogadási dokumentáció és publikálási döntés:** a fenti pontos,
+   változatlan csomagokra rögzített SHA/verzió/host/beállítás és
+   PASS/FAIL/NOT RUN/SKIP jegyzék, HU/EN release notes és jóváhagyás.
+   Ez a lépés nem cseréli újra a már tesztelt csomagba ágyazott dokumentumokat.
    Csak ezután külön publikálási engedély; régi tag/asset nem írható felül.
 
 REAPER nélkül az 1–4. lépés automatizálható részei és a csomagoló/dokumentáció
@@ -66,6 +77,16 @@ Markdown-diff és formaellenőrzése, 24 helyi fájlhivatkozás; Python 94 futot
 93 PASS / 1 Windows symlink-jogosultsági SKIP, 0 FAIL/ERROR. Új C++/DSP build,
 privát firmware-render és REAPER ebben a dokumentációs körben NOT RUN.
 A fenti #169 adatok ellenőrzött korábbi körből valók, nem új D5 teszteredmények.
+
+#170 review-korrekció: a két tervellentmondás külön ellenőrzése javítás előtt
+FAIL (aktív végrehajtási rész újra ütemezi a lezárt M5-öt; host kapu megelőzi
+a verzió/csomag fagyasztást). Az alábbi aktuális sorrendben M5 már kész,
+és végső host/hallásos PASS csak az 5. lépés exact jelöltjéhez tartozhat.
+A korrekció dokumentációs; nem történt új csomagolás vagy hostteszt.
+Javítás után PASS: öt sorrend/azonosság/státusz ellenőrzés, három dependency/
+source-documentation guard teszt, 24 helyi fájlhivatkozás és diff-formaellenőrzés.
+A teljes 94-es helyi Python-kör fent az előző `0a89ba3` head eredménye;
+a korrekció új final-head platform/sanitizer CI-je és review külön kapu.
 
 ## Végleges firmware-támogatási döntés — 2026-10-08
 
@@ -1238,19 +1259,22 @@ Források: [rögzített 9.0.1 upstream verzió](https://github.com/juce-framewor
 
 Aktuális sorrend a 2026-10-09-i döntéssel: új reprodukált blocker, ha lesz →
 D5 valódi processor/állapot integráció → motor/átmenet és privát mérések →
-SETTINGS → platform és valódi host/hallásos elfogadás → új verzió/csomagoló →
-exact jelölt csomagteszt és HU/EN dokumentáció → külön publikálási döntés.
+SETTINGS → platformkapuk → új verzió/csomagoló és csomagba kerülő HU/EN útmutató →
+exact jelölt build/csomagteszt/fagyasztás → ugyanazon csomagból valódi
+host/hallásos elfogadás → elfogadási jegyzék és külön publikálási döntés.
 D1/D2/D3 már elkészült működését regresszióval megőrizzük; D4 külön jóváhagyandó
 host/packaging munkacsomag. A D5 a következő kiadás része, nem későbbi opcionális
 release-feature. A fenti részletes kiadási kapuk felülírják a korábbi nyitott
 scope/prioritás kérdést; a dokumentálás nem megvalósítás vagy publikálás.
 
-M5 JUCE-update: a folyamatban lévő D5 részlépés lezárása után önálló
-karbantartási döntési pont, lehetőleg új production D5 integráció vagy release-
-freeze előtt, ha a releváns haszon igazolt és a tesztkapuk teljesíthetők.
-Nem automatikus előfeltétele minden további fejlesztésnek, nem része a D5 DSP
-commitnak, és nem új kiadási/publikálási engedély. Az esetleges M5 csúszást,
-halasztást és feature PR-ek új baseline-ját az M5 checkpointban vezetjük.
+M5 JUCE 9.0.3 dependency-update: **#169-cel már main-ban, automatizált kapui
+lezártak**; nem ütemezünk új pin-cserét vagy GO/NO-GO kísérletet a D5 után,
+és nem kell megismételni a lezárt dependency-fejlesztést. A korábbi sorrend
+történeti indoklása az M5 dátumozott specifikációjában marad, nem aktív feladat.
+M5-ből csak az új kiadási jelölt tényleges standalone/REAPER host-elfogadása
+maradt nyitott; a release-scope 5–6. lépéséhez kapcsolódik, nem akadálya a
+D5 implementáció indításának. Régi bináris vagy régi halasztás nem igazolja
+az új jelöltet; nincs új publikálási engedély az update beolvadásából.
 
 Minden kör: friss main → minimális változtatás és regresszió → érintett/full automatizált Windows/macOS és sanitizer ellenőrzések → review → zöld PR merge → külön main Actions ellenőrzés. Megőrzendő a pluginazonosság, 148 paraméter ID/sorrend, projektkompatibilitás, Native/Correct viselkedés, 12–120 hangterjedelem, bounded MIDI, állapotvédelem és jóváhagyott GUI. Callbackben nincs új fájl-I/O vagy nem korlátozott munka.
 
