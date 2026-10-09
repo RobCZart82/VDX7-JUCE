@@ -44,8 +44,30 @@ def dependency(source, path, name):
     return actual
 
 
+def configured_sources(build, source, juce, core, cache):
+    # These are observations emitted by the product configure (or the exact
+    # workflow/approval hook for an older product), not caller-supplied identities.
+    # Read literals only; never source/execute generated CMake or infer a
+    # default _deps checkout when the evidence is missing.
+    record = build / "VDX7DependencySources.cmake"
+    if not record.is_file():
+        raise ValueError("Missing configured dependency source record; reconfigure with the provenance hook")
+    observed = cmake_values(record.read_text(encoding="utf-8"))
+    checks = (
+        (required(cache, "CMAKE_HOME_DIRECTORY"), source, "wrapper"),
+        (required(observed, "VDX7_SOURCE_DIR"), source, "wrapper"),
+        (required(observed, "VDX7_JUCE_SOURCE_DIR"), juce, "JUCE"),
+        (required(observed, "VDX7_CORE_SOURCE_DIR"), core / "source/dx7Lib", "Retromulator"),
+    )
+    for actual, supplied, name in checks:
+        path = Path(actual)
+        if not path.is_absolute() or path.resolve() != supplied.resolve():
+            raise ValueError(f"Configured {name} source mismatch")
+
+
 def collect(build, source, juce, core, platform, environment, inno=None, inno_version=None):
     cache = cache_values((build / "CMakeCache.txt").read_text(encoding="utf-8"))
+    configured_sources(build, source, juce, core, cache)
     compiler_files = list((build / "CMakeFiles").glob("*/CMakeCXXCompiler.cmake"))
     if len(compiler_files) != 1:
         raise ValueError("Expected exactly one configured C++ compiler record")

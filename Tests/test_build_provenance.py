@@ -2,11 +2,14 @@
 import importlib.util
 from pathlib import Path
 import tempfile
+import shutil
+import subprocess
 import unittest
 import sys
 from unittest.mock import patch
 
 SCRIPT = Path(__file__).parents[1] / "scripts/write_build_provenance.py"
+HOOK = Path(__file__).parents[1] / "cmake/VDX7DependencySources.cmake"
 spec = importlib.util.spec_from_file_location("build_provenance", SCRIPT)
 provenance = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(provenance)
@@ -32,6 +35,7 @@ class BuildProvenanceTests(unittest.TestCase):
         self.environment = {"RUNNER_OS": "Windows", "RUNNER_ARCH": "X64", "ImageOS": "win22",
                             "ImageVersion": "20261001.1", "GITHUB_RUN_ID": "123", "GITHUB_RUN_ATTEMPT": "1"}
         self.windows()
+        self.configured_sources()
 
     def windows(self):
         self.cache.write_text("CMAKE_GENERATOR:INTERNAL=Visual Studio 17 2022\n"
@@ -57,6 +61,98 @@ class BuildProvenanceTests(unittest.TestCase):
         with patch.object(provenance, "command", side_effect=self.command):
             return provenance.collect(**arguments)
 
+    def configured_sources(self, source=None, juce=None, core=None):
+        # Literal metadata written by CMake from its resolved source directories.
+        source = source or self.source
+        juce = juce or self.root / "JUCE"
+        core = core or self.root / "retromulator/source/dx7Lib"
+        (self.build / "VDX7DependencySources.cmake").write_text(
+            f'set(VDX7_SOURCE_DIR "{source.as_posix()}")\n'
+            f'set(VDX7_JUCE_SOURCE_DIR "{juce.as_posix()}")\n'
+            f'set(VDX7_CORE_SOURCE_DIR "{core.as_posix()}")\n')
+        with self.cache.open("a") as stream:
+            stream.write(f"CMAKE_HOME_DIRECTORY:INTERNAL={self.source.as_posix()}\n")
+
+    def test_other_compiled_juce_checkout_cannot_be_reported_as_supplied_pin(self):
+        self.configured_sources(juce=self.root / "old-JUCE")
+        with self.assertRaisesRegex(ValueError, "Configured JUCE source mismatch"):
+            self.collect()
+
+    def test_other_compiled_core_cannot_be_reported_as_supplied_pin(self):
+        self.configured_sources(core=self.root / "other-core/source/dx7Lib")
+        with self.assertRaisesRegex(ValueError, "Configured Retromulator source mismatch"):
+            self.collect()
+
+    def test_other_configured_wrapper_cannot_supply_the_dependency_pins(self):
+        self.configured_sources(source=self.root / "other-wrapper")
+        with self.assertRaisesRegex(ValueError, "Configured wrapper source mismatch"):
+            self.collect()
+
+    def test_missing_malformed_relative_or_wrong_cache_evidence_fails_closed(self):
+        record = self.build / "VDX7DependencySources.cmake"
+        original = record.read_text()
+        for text in (None, "", original.replace("VDX7_JUCE_SOURCE_DIR", "WRONG_KEY"),
+                     original.replace((self.root / "JUCE").as_posix(), "relative/JUCE")):
+            with self.subTest(record=text):
+                if text is None:
+                    record.unlink()
+                else:
+                    record.write_text(text)
+                with patch.object(provenance, "command") as run:
+                    with self.assertRaises(ValueError):
+                        provenance.collect(self.build, self.source, self.root / "JUCE",
+                                           self.root / "retromulator", "Windows-x64", self.environment)
+                    run.assert_not_called()
+                record.write_text(original)
+        self.cache.write_text(self.cache.read_text().replace(
+            self.source.as_posix(), (self.root / "other-product").as_posix()))
+        with self.assertRaisesRegex(ValueError, "Configured wrapper source mismatch"):
+            self.collect()
+
+    def test_aliases_are_normalized_and_generated_cmake_is_not_executed(self):
+        record = self.build / "VDX7DependencySources.cmake"
+        record.write_text(record.read_text().replace(
+            (self.root / "JUCE").as_posix(), (self.root / "unused/../JUCE").as_posix())
+            + f'file(WRITE "{(self.root / "must-not-exist").as_posix()}" "executed")\n')
+        self.assertEqual(self.collect()["JUCE commit"], "a" * 40)
+        self.assertFalse((self.root / "must-not-exist").exists())
+
+    def test_real_mismatch_capture_preserves_existing_output(self):
+        self.configured_sources(juce=self.root / "old-JUCE")
+        output = self.root / "old-evidence.txt"
+        output.write_text("previous evidence")
+        argv = [str(SCRIPT), "--build", str(self.build), "--source", str(self.source),
+                "--juce", str(self.root / "JUCE"), "--core", str(self.root / "retromulator"),
+                "--platform", "Windows-x64", "--output", str(output)]
+        with patch.object(sys, "argv", argv), patch.object(provenance, "command") as run:
+            with self.assertRaisesRegex(ValueError, "Configured JUCE source mismatch"):
+                provenance.main()
+            run.assert_not_called()
+        self.assertEqual(output.read_text(), "previous evidence")
+
+    @unittest.skipUnless(shutil.which("cmake"), "CMake required for actual configure hook test")
+    def test_actual_cmake_hook_supports_old_product_and_duplicate_include(self):
+        for current in (False, True):
+            for vendored in (False, True):
+                with self.subTest(current_product=current, vendored=vendored):
+                    src = self.root / f"product-{current}-{vendored}"
+                    src.mkdir()
+                    configured_juce = src / ("third_party/JUCE" if vendored else "build/_deps/juce-src")
+                    configured_core = src / ("third_party/dx7Lib" if vendored else "build/_deps/retromulator-src/source/dx7Lib")
+                    include = f'include("{HOOK.as_posix()}")\n' if current else ""
+                    (src / "CMakeLists.txt").write_text(
+                        'cmake_minimum_required(VERSION 3.22)\nproject(VDX7_JUCE LANGUAGES NONE)\n'
+                        + include + f'set(juce_SOURCE_DIR "{configured_juce.as_posix()}")\n'
+                        + f'set(VDX7_CORE_DIR "{configured_core.as_posix()}")\n')
+                    build = src / "build"
+                    subprocess.run([shutil.which("cmake"), "-S", str(src), "-B", str(build),
+                                    "-DCMAKE_PROJECT_VDX7_JUCE_INCLUDE=" + str(HOOK)],
+                                   check=True, capture_output=True, text=True)
+                    observed = provenance.cmake_values((build / "VDX7DependencySources.cmake").read_text())
+                    self.assertEqual(Path(observed["VDX7_SOURCE_DIR"]).resolve(), src.resolve())
+                    self.assertEqual(Path(observed["VDX7_JUCE_SOURCE_DIR"]).resolve(), configured_juce.resolve())
+                    self.assertEqual(Path(observed["VDX7_CORE_SOURCE_DIR"]).resolve(), configured_core.resolve())
+
     def test_windows_observed_versions_and_hash(self):
         result = self.collect()
         self.assertEqual(result["Windows SDK"], "10.0.26100.0")
@@ -69,6 +165,7 @@ class BuildProvenanceTests(unittest.TestCase):
         self.cache.write_text("CMAKE_GENERATOR:INTERNAL=Xcode\nCMAKE_COMMAND:INTERNAL=cmake\n"
                               "CMAKE_OSX_ARCHITECTURES:STRING=arm64;x86_64\n"
                               "CMAKE_OSX_SYSROOT:PATH=/SDK/MacOSX15.2.sdk\nCMAKE_OSX_DEPLOYMENT_TARGET:STRING=11.0\n")
+        self.configured_sources()
         self.compiler.write_text('set(CMAKE_CXX_COMPILER_ID "AppleClang")\nset(CMAKE_CXX_COMPILER_VERSION "16.0.0")\n')
         with patch.object(provenance, "command", side_effect=self.command) as run:
             result = provenance.collect(self.build, self.source, self.root / "JUCE", self.root / "retromulator",
@@ -136,6 +233,7 @@ class BuildProvenanceTests(unittest.TestCase):
         self.environment["RUNNER_OS"] = "macOS"
         self.cache.write_text("CMAKE_GENERATOR:INTERNAL=Xcode\nCMAKE_COMMAND:INTERNAL=cmake\n"
                               "CMAKE_OSX_ARCHITECTURES:STRING=arm64\nCMAKE_OSX_DEPLOYMENT_TARGET:STRING=11.0\n")
+        self.configured_sources()
         self.compiler.write_text('set(CMAKE_CXX_COMPILER_ID "AppleClang")\nset(CMAKE_CXX_COMPILER_VERSION "16.0.0")\n')
         with self.assertRaises(ValueError):
             self.collect(platform="macOS-universal")
