@@ -3,6 +3,8 @@
 Dátum: 2026-10-09. Baseline main:
 `2e42412c7da50eea10a17f222983e959a2e76310` (#170 már beolvadt).
 Ág: `feature/classic-clean-processor-admission`.
+[Pull request #171](https://github.com/RobCZart82/VDX7-JUCE/pull/171),
+implementációs commit: `5127f0180aca20aed4973ae5b32c6ba8e1fe7306`.
 Irányadó feladatlista: [DEVELOPMENT_PLAN](../development/DEVELOPMENT_PLAN.md).
 Szerződés: [Classic/Clean state](../development/CLASSIC_CLEAN_STATE_CONTRACT.md).
 
@@ -69,7 +71,7 @@ Retromulator pin változatlan: `d5473776a0449d60a997b91bdc888598a33265ac`.
 | Python unittest | PASS / SKIP | 94 futott: 93 PASS, 1 Windows symlink-jogosultsági SKIP, 0 FAIL/ERROR |
 | CTest-leltár | PASS | Tényleges local JSON-leltár; checker self-test pozitív és 9 negatív kontroll; configure-integration a Python-körben |
 | Classic kontroll-összevetés | PASS | 30 rate/buffer/mono eset, 5 760 512 float érték, 0 eltérés; state/peak/RMS/silence metrikák azonosak |
-| Új final-head Windows/macOS/sanitizer Actions és review | NOT RUN | PR létrehozása után külön ellenőrizendő; korábbi #170 zöld státusza nem e kód eredménye |
+| Új final-head Windows/macOS/sanitizer Actions és review | PENDING | #171 ellenőrzései elindultak; még nincs elfogadott final-head PASS. Korábbi #170 zöld státusza nem e kód eredménye |
 | Helyi macOS / ASan / UBSan | NOT RUN | Nem áll rendelkezésre e helyi Windows ellenőrzésben |
 | Clean DSP / SETTINGS / teljes mode ownership | NOT RUN | Még nincs integrálva, nem a jelen védelem bizonyítéka |
 | Valódi REAPER / hallásos / új release csomagelfogadás | NOT RUN | Nincs erre használt DAW vagy fagyasztott új release-csomag |

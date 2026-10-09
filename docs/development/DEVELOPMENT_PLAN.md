@@ -27,7 +27,9 @@ firmware-támogatást. Kizárólag original DX7 Mk I v1.8 a támogatott tesztala
 ### D5 valódi processor-admission részlépés — 2026-10-09
 
 Baseline: `2e42412c7da50eea10a17f222983e959a2e76310` (#170 után), külön ág:
-`feature/classic-clean-processor-admission`. A valódi `setStateInformation()`
+`feature/classic-clean-processor-admission`,
+[PR #171](https://github.com/RobCZart82/VDX7-JUCE/pull/171).
+A valódi `setStateInformation()`
 már a mono-policy, imported/pending state, MIDI epoch és APVTS módosítása
 **előtt** használja a D5 readerét. Hiányos/hibás/újabb sémapár elutasítandó.
 Legacy és explicit Classic megmarad. **Érvényes Clean is teljes elutasítás**,
@@ -42,7 +44,7 @@ megőrzés FAIL a változatlan production kódon. Javítás után 21 ROM-free CT
 PASS, 8 célzott privát v1.8 teszt PASS, Windows VST3/Standalone és ci_checks
 build PASS; Python 94 futott, 93 PASS / 1 symlink SKIP. A 30 korábbi Classic
 kontrollhoz mért 5 760 512 float minta, projektállapot és metrika azonos: PASS.
-Új final-head platform-CI/review még ellenőrizendő; helyi macOS/sanitizer és
+Új final-head platform-CI/review folyamatban, még nem elfogadott; helyi macOS/sanitizer és
 valódi REAPER/hallásos teszt NOT RUN. Teljes új release-funkció elfogadása nincs.
 
 Következő nyitott lépés: kívánt mód és payload koherens valódi save/restore/
