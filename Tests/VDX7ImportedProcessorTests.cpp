@@ -136,6 +136,11 @@ static void testParameterSnapshot(const juce::File& rom = {})
 
 struct VDX7RegressionAccess
 {
+    static auto restoreGeneration(VDX7AudioProcessor& p)
+    {
+        std::scoped_lock lock(p.engineMutex_);
+        return std::make_pair(p.midiTimelineEpoch_.load(), p.importedBankRevision_);
+    }
     static bool pendingOwnsCatalog(VDX7AudioProcessor& p)
     {
         std::scoped_lock lock(p.engineMutex_);
@@ -149,6 +154,127 @@ struct VDX7RegressionAccess
         return data;
     }
 };
+
+static void testParameterAdmission(const juce::File& rom = {})
+{
+    Fixtures fixtures;
+    const auto folder = fixtures.folder("parameter-admission");
+    put(folder, syntheticBank(480));
+    auto p = std::make_unique<VDX7AudioProcessor>(false, juce::File(), folder);
+    if (rom.existsAsFile()) require(p->loadRomFromFile(rom), "admission private ROM control");
+    p->prepareToPlay(48000, 64);
+    auto* volume = p->parameters().getParameter(VDX7ParameterIDs::masterVolume);
+    volume->setValueNotifyingHost(volume->convertTo0to1(-12.0f));
+    require(p->setMidiInputChannelFromUi(3), "seed admission routing");
+    const auto valid = save(*p);
+
+    // Repeat after a genuine restore to cover both live and pending payloads.
+    for (const bool pending : {false, true})
+    {
+        if (pending) restore(*p, valid);
+        const auto before = save(*p);
+        const auto snapshot = p->getImportedBankSnapshot();
+        const auto generation = VDX7RegressionAccess::restoreGeneration(*p);
+        const auto checkRejected = [&](juce::ValueTree incoming) {
+            incoming.setProperty("midiInputChannel", 9, nullptr);
+            incoming.setProperty("monoNoteZeroCorrection", true, nullptr);
+            incoming.removeChild(incoming.getChildWithName("ImportedBanks"), nullptr);
+            restore(*p, binary(incoming));
+            require(p->getMidiInputChannel() == 3 && p->getImportedBankSnapshot() == snapshot,
+                "invalid parameters preserve routing and exact imported catalog ownership");
+            require(VDX7RegressionAccess::restoreGeneration(*p) == generation,
+                "invalid parameters do not advance MIDI epoch or catalog revision");
+            require(save(*p) == before, "invalid parameters preserve entire saved project and pending payload");
+            for (const auto child : tree(before).getChildWithName("PARAMETERS"))
+            {
+                const auto actual = p->parameters().getRawParameterValue(child["id"].toString())->load();
+                require(std::isfinite(actual), "rejected restore leaves every live host value finite");
+            }
+        };
+        // NaN must be rejected for every host ID, not just the three global controls.
+        for (const auto child : tree(before).getChildWithName("PARAMETERS"))
+        {
+            auto incoming = tree(before);
+            incoming.getChildWithName("PARAMETERS").getChildWithProperty("id", child["id"])
+                .setProperty("value", "nan", nullptr);
+            checkRejected(incoming);
+        }
+        for (const auto* bad : {"NaN", "inf", "-inf", "1e999", "1e39", "", "garbage", "0.5junk",
+                               "1e", "+", ".", "0x1", " 0.5", "0.5 "})
+            for (const auto* id : {VDX7ParameterIDs::masterVolume, VDX7ParameterIDs::pitchWheel,
+                                  VDX7ParameterIDs::modWheel})
+            {
+                auto incoming = tree(before);
+                incoming.getChildWithName("PARAMETERS").getChildWithProperty("id", id)
+                    .setProperty("value", bad, nullptr);
+                checkRejected(incoming);
+            }
+        auto duplicate = tree(before);
+        auto parameters = duplicate.getChildWithName("PARAMETERS");
+        parameters.addChild(parameters.getChild(0).createCopy(), -1, nullptr);
+        checkRejected(duplicate);
+        auto competing = tree(before);
+        competing.addChild(competing.getChildWithName("PARAMETERS").createCopy(), -1, nullptr);
+        checkRejected(competing);
+        auto wrongType = tree(before);
+        auto known = wrongType.getChildWithName("PARAMETERS").getChild(0);
+        juce::ValueTree badChild("OTHER");
+        badChild.setProperty("id", known["id"], nullptr);
+        badChild.setProperty("value", 0, nullptr);
+        wrongType.getChildWithName("PARAMETERS").addChild(badChild, -1, nullptr);
+        checkRejected(wrongType);
+    }
+
+    auto positive = tree(valid);
+    auto parameters = positive.getChildWithName("PARAMETERS");
+    parameters.getChildWithProperty("id", VDX7ParameterIDs::masterVolume).setProperty("value", "-1.25e1", nullptr);
+    parameters.getChildWithProperty("id", VDX7ParameterIDs::pitchWheel).setProperty("value", "-.5", nullptr);
+    parameters.getChildWithProperty("id", VDX7ParameterIDs::modWheel).setProperty("value", "+.25", nullptr);
+    positive.setProperty("midiInputChannel", 9, nullptr);
+    restore(*p, binary(positive));
+    require(p->getMidiInputChannel() == 9
+        && std::abs(p->parameters().getRawParameterValue(VDX7ParameterIDs::masterVolume)->load() + 12.5f) < 0.01f
+        && std::abs(p->parameters().getRawParameterValue(VDX7ParameterIDs::pitchWheel)->load() + 0.5f) < 0.001f
+        && std::abs(p->parameters().getRawParameterValue(VDX7ParameterIDs::modWheel)->load() - 0.25f) < 0.001f,
+        "complete decimal/scientific values reach actual processor restore");
+    // Backward compatibility: finite values still use the existing range clamp.
+    auto clamped = tree(valid);
+    clamped.getChildWithName("PARAMETERS").getChildWithProperty("id", VDX7ParameterIDs::modWheel)
+        .setProperty("value", 2.0f, nullptr);
+    restore(*p, binary(clamped));
+    require(p->parameters().getRawParameterValue(VDX7ParameterIDs::modWheel)->load() == 1.0f,
+        "finite out-of-range values retain legacy clamping");
+    auto defaulted = tree(valid);
+    auto defaultParameters = defaulted.getChildWithName("PARAMETERS");
+    defaultParameters.getChildWithProperty("id", VDX7ParameterIDs::modWheel).removeProperty("value", nullptr);
+    juce::ValueTree unknown("PARAM");
+    unknown.setProperty("id", "futureParameter", nullptr);
+    unknown.setProperty("value", "nan", nullptr); // APVTS never consumes unknown IDs.
+    defaultParameters.addChild(unknown, -1, nullptr);
+    defaulted.setProperty("midiInputChannel", 8, nullptr);
+    restore(*p, binary(defaulted));
+    require(p->getMidiInputChannel() == 8
+        && p->parameters().getRawParameterValue(VDX7ParameterIDs::modWheel)->load() == 0.0f,
+        "missing values use defaults and unknown IDs remain ignored");
+    auto partial = tree(valid);
+    partial.getChildWithName("PARAMETERS").removeAllChildren(nullptr);
+    partial.setProperty("midiInputChannel", 7, nullptr);
+    restore(*p, binary(partial));
+    require(p->getMidiInputChannel() == 7, "empty legacy parameter tree reaches restore");
+    auto legacy = tree(valid);
+    legacy.removeChild(legacy.getChildWithName("PARAMETERS"), nullptr);
+    restore(*p, binary(legacy));
+    require(p->getMidiInputChannel() == 3, "partial and RAM-only legacy snapshots remain admissible");
+    juce::AudioBuffer<float> audio(2, 64);
+    juce::MidiBuffer midi;
+    midi.addEvent(juce::MidiMessage::noteOn(3, 60, juce::uint8(100)), 0);
+    p->processBlock(audio, midi);
+    for (int channel = 0; channel < audio.getNumChannels(); ++channel)
+        for (int sample = 0; sample < audio.getNumSamples(); ++sample)
+            require(std::isfinite(audio.getSample(channel, sample)), "post-admission render stays finite");
+    p->releaseResources();
+    std::cout << "PASS: malformed host parameter snapshots rejected before all project mutation\n";
+}
 
 static void testStartup()
 {
@@ -536,11 +662,12 @@ int main(int argc, char** argv)
             require(argc == 2 || argc == 3, "snapshot-only accepts an optional private ROM");
             if (argc == 3) require(juce::File(argv[2]).existsAsFile(), "explicit snapshot ROM exists");
             testParameterSnapshot(argc == 3 ? juce::File(argv[2]) : juce::File());
+            testParameterAdmission(argc == 3 ? juce::File(argv[2]) : juce::File());
             return 0;
         }
         require(argc == 1 || argc == 2, "optional local verified ROM path only");
-        if (argc == 2) { testParameterSnapshot(juce::File(argv[1])); testWithRom(juce::File(argv[1])); }
-        else { testParameterSnapshot(); testStartup(); testNoRom(); testBoundaries(); }
+        if (argc == 2) { testParameterSnapshot(juce::File(argv[1])); testParameterAdmission(juce::File(argv[1])); testWithRom(juce::File(argv[1])); }
+        else { testParameterSnapshot(); testParameterAdmission(); testStartup(); testNoRom(); testBoundaries(); }
         std::cout << "PASS: imported catalog processor ownership, binary state and bounded scheduling\n";
         return 0;
     }

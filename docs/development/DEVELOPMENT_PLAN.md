@@ -73,8 +73,30 @@ Clean-elfogadás, és nincs új lock vagy hosthívás az audio callbackben.
 Ez a capture **utáni** keveredést javítja, nem teszi az önálló automatizációs
 írásokat vagy egy capture közben zajló teljes restore-t atomikus tranzakcióvá.
 A valódi desired-mode/payload/pending/ROM-epoch ownership továbbra is nyitott.
-A PR végső fejének Windows/macOS/sanitizer CI-je és review-ja külön kapu.
+A #172 végső fejének Windows/macOS/sanitizer CI-je PASS, és a PR
+`6d66610109a867e9c1494f95081c594a2a8506ea` merge-commitként main-ba került.
+A külön main Windows-kör PASS; a macOS-kör még folyamatban van, ezért a main
+platformkapuja még nem lezárt.
 [Reprodukció és célzott ellenőrzések](../validation/PROJECT_SNAPSHOT_CAPTURE_20261009.md).
+
+### Reprodukált projektparaméter blocker javítása
+
+Baseline: `6d66610109a867e9c1494f95081c594a2a8506ea` (#172 után);
+ág: `fix/validate-project-parameters`, [PR #173](https://github.com/RobCZart82/VDX7-JUCE/pull/173).
+A hibás PARAMETERS értékek eddig
+NaN-ként bekerülhettek az APVTS-be, és a projekt más beállításai is módosultak.
+Most a teljes számformátum, double/float végesség és ismert ID-k egyértelműsége
+ellenőrzött minden restore-módosítás előtt. Régi részleges/RAM-only állapot,
+defaultok és véges tartománykorlátozás megmarad; a legacy EG/fine nyers bankadat
+változatlan. Az audio callback, hostparaméterek és Clean admission nem változik.
+
+A guard nélküli actual-processor negatív kontroll FAIL; a javítás után
+21 ROM-free CTest, 94 Python teszt, célzott no-ROM/private v1.8 ASan–UBSan,
+legacy bank round trip és macOS dev-build PASS. A végső PR-fej platform-CI-je,
+review-ja és a merge utáni main-kör még külön kapu. E javítás után a korábban
+rögzített D5 valódi állapot/renderer integráció következik; nincs új release
+vagy publikálási engedély.
+[Részletes ellenőrzések](../validation/PROJECT_PARAMETER_ADMISSION_20261009.md).
 
 ### Végrehajtási sorrend és kiadási megállási kapuk
 
