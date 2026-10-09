@@ -12,8 +12,10 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstring>
 #include <optional>
+#include <set>
 
 namespace
 {
@@ -21,6 +23,62 @@ constexpr const char* kStateType = "VDX7STATE";
 constexpr const char* kParameterStateType = "PARAMETERS";
 constexpr const char* kPendingProjectMessage =
     "Project preserved: load the matching saved ROM before import/export or selection.";
+
+bool isFiniteParameterValue(const juce::var& value)
+{
+    if (!value.isInt() && !value.isInt64() && !value.isDouble() && !value.isString())
+        return false;
+    // XML properties become strings. JUCE's numeric conversion accepts prefixes
+    // and NaN, so first require a complete decimal (including scientific notation).
+    const auto text = value.toString();
+    if (text.isEmpty() || text.length() > 128) return false;
+    int index = 0;
+    const auto digit = [&](int i) { return i < text.length() && text[i] >= '0' && text[i] <= '9'; };
+    if (text[index] == '+' || text[index] == '-') ++index;
+    int digits = 0;
+    while (digit(index)) { ++index; ++digits; }
+    if (index < text.length() && text[index] == '.')
+    {
+        ++index;
+        while (digit(index)) { ++index; ++digits; }
+    }
+    if (digits == 0) return false;
+    if (index < text.length() && (text[index] == 'e' || text[index] == 'E'))
+    {
+        ++index;
+        if (index < text.length() && (text[index] == '+' || text[index] == '-')) ++index;
+        const int exponentStart = index;
+        while (digit(index)) ++index;
+        if (index == exponentStart) return false;
+    }
+    if (index != text.length()) return false;
+    const auto number = text.getDoubleValue();
+    return std::isfinite(number) && std::isfinite(static_cast<float>(number));
+}
+
+bool hasValidParameterState(const juce::ValueTree& state,
+                            const juce::AudioProcessorValueTreeState& parameters)
+{
+    bool found = false;
+    for (const auto parameterState : state)
+    {
+        if (!parameterState.hasType(kParameterStateType)) continue;
+        if (found) return false; // No ambiguous competing parameter snapshots.
+        found = true;
+        std::set<juce::String> ids;
+        for (const auto child : parameterState)
+        {
+            const auto id = child.getProperty("id").toString();
+            if (parameters.getParameter(id) == nullptr) continue; // Unknown IDs are ignored by APVTS.
+            if (!child.hasType("PARAM") || !ids.insert(id).second) return false;
+            // Older partial states may omit parameters or use their default value.
+            // Retain APVTS's finite range clamping, including legacy raw EG/fine
+            // values whose packed RAM remains authoritative on firmware restore.
+            if (child.hasProperty("value") && !isFiniteParameterValue(child["value"])) return false;
+        }
+    }
+    return true;
+}
 
 juce::String makeRomContentIdentity(const std::vector<uint8_t>& rom,
                                     const std::vector<uint8_t>& companionVoices)
@@ -1346,6 +1404,10 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     auto state = juce::ValueTree::fromXml(*xml);
     if (!state.isValid() || state.getType().toString() != kStateType)
         return;
+
+    // Reject malformed host values before changing policy, catalogs, pending
+    // payload, routing or the MIDI epoch. Never publish non-finite values to APVTS.
+    if (!hasValidParameterState(state, parameters_)) return;
 
     // Validate before mono-policy, catalog/pending, MIDI epoch or host parameter
     // mutation. Never silently turn a newer Clean project into Classic audio:
