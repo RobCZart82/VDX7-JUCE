@@ -1,7 +1,10 @@
 # Projektparaméterek ellenőrzése visszatöltés előtt
 
 Dátum: 2026-10-09. Baseline: `6d66610109a867e9c1494f95081c594a2a8506ea`.
-Javítási ág: `fix/validate-project-parameters`. A hibás projektparaméterek
+Javítási ág: `fix/validate-project-parameters`, [PR #173](https://github.com/RobCZart82/VDX7-JUCE/pull/173).
+Tesztelt kódcommit: `24ac3e7e4776800dae2285469efa172787407ec7`;
+a következő commit csak e PR-hivatkozást és a terv állapotát frissíti.
+A hibás projektparaméterek
 ellenőrzése a Classic/Clean integráció előtti állapotvédelmi javítás;
 nem új hangmód, firmware-támogatás vagy release-elfogadás.
 
