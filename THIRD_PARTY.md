@@ -18,8 +18,12 @@ wrapper code.
 
 ## JUCE
 
-The wrapper fetches JUCE 9.0.1 from:
+The current development wrapper fetches JUCE 9.0.3 from:
 https://github.com/juce-framework/JUCE
+
+Exact revision: be29c81492b6151c8ea8d14c840e1311963b3a83.
+The already published 1.0.1 source/binary packages retain their historical
+JUCE 9.0.1 revision; this development update does not replace those packages.
 
 This release uses JUCE under AGPLv3. See NOTICE.md, LICENSE.txt and the
 complete corresponding-source archive, which preserves JUCE's third-party

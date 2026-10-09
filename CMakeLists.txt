@@ -29,7 +29,7 @@ endif()
 FetchContent_Declare(
     JUCE
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-    GIT_TAG e18f7f506c0b96f2c738a0bcd7fe6467a5005ad8
+    GIT_TAG be29c81492b6151c8ea8d14c840e1311963b3a83
     GIT_SHALLOW FALSE
 )
 FetchContent_MakeAvailable(JUCE)

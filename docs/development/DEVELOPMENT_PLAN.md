@@ -995,7 +995,33 @@ T1–T4 lefedettségi halasztásai a publikálási jegyzékben rögzítettek; T5
 
 ### M5 JUCE-frissítés: előzetes mérlegelés és regressziós kapuk
 
-#### Aktuális M5 előkészítő checkpoint — 2026-10-09
+#### Aktuális M5 JUCE 9.0.3 kompatibilitási kísérlet — 2026-10-09
+
+Baseline `bc8c1664ad13a11208773d5b227cb113033555ec`; ág
+`maintenance/juce-903-compatibility`. #168 már beolvadt: végleges head
+Windows/macOS/sanitizer és merge utáni main Windows/macOS PASS, nincs nyitott
+review. A provenance előfeltétel lezárult; az alábbi régi #168 checkpoint
+nyitott PR-kapuja teljesült, nem új blocker.
+
+Külön jelöltben a CMake + creation packager + aktív dependency útmutató és
+THIRD_PARTY JUCE pinje 9.0.3 / `be29c81492b6151c8ea8d14c840e1311963b3a83`.
+Main/release elfogadás még nincs. Reprodukált és javított historical source
+verification regresszió: az új verifier olvashatja az explicit régi 9.0.1 tuple-t,
+de új creation nem használhat történeti vagy ismeretlen pint. Az approval és
+a kiadott assetek változatlanok.
+
+Új privát processor comparator: 30 rate/buffer/mono-policy eset, közvetlen
+PCM null-difference, binary state/recall hash, reset/reload/pending és véges,
+nem néma kontrollok. Régi JUCE ismétlési kontroll PASS 5 760 512 mintára.
+Tiszta régi/új build és összevetés PASS: mind a 30 esetben nincs PCM/state/
+recall/metric eltérés. Új Windows VST3 + Standalone build, 20/20 ROM-mentes
+CTest, 50 ownership ismétlés és source configure/Git guard PASS; Python
+93 tesztből 92 PASS / 1 Windows symlink SKIP. Teljes source-archive/offline
+próba, friss final-head Windows/macOS/sanitizer CI és review még hátravan.
+[Pontos kör és eredménykövetés](../validation/JUCE_903_COMPATIBILITY_20261009.md).
+E kísérlet nem D5 DSP integráció, T1–T4 host-elfogadás vagy release approval.
+
+#### M5 előkészítő checkpoint (#168) — 2026-10-09
 
 Baseline `e4000390188618d63acce1301a1d13a6616ae9ed` main; ág
 `fix/build-provenance-source-binding`. A #167 önálló részlépés lezárult.
