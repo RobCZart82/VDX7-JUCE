@@ -247,3 +247,33 @@ payloados, vezérelt valódi szálas teszt nem igazol teljes plugin race-biztons
 hangzási módot vagy új kiadás elfogadását.
 
 [Szálas ownership reprodukció és korlátok](../validation/CLASSIC_CLEAN_THREADED_OWNERSHIP_20261008.md).
+
+## 9. Processor project owner részintegráció 2026-10-09
+
+Baseline: `541c39cd8ee6bba0643df52dbfd90716c3a6b268` (#174 után),
+`feature/processor-mode-project-state` ág. E checkpoint az előző, önálló
+komponensre vonatkozó „nincs bekötve” állapotot részben felváltja: az owner
+most a valódi processor Classic kívánt módját, projektgenerációját és pending
+completion állapotát kezeli. Nem fut mellette második projekt-revízió.
+
+A `*Locked` adapterek a már megszerzett, pontosan az owner engine mutexéhez
+tartozó `unique_lock`-ot kérik; nem lockolnak újra. Hibás vagy felengedett token
+nem hívhat readiness predicate-et vagy payload commitot. A predicate/commit
+nem dobhat és nem értesíthet hostot. A teljes state/mono-policy admission
+továbbra is caller feladat; a tényleges ROM-kompatibilitás a processor meglévő
+identity-ellenőrzéséből származik, frissen, ugyanazon lock alatt.
+
+Az elfogadott új payload először pending. A megfelelő aktuális ROM mellett
+a RAM-install és owner completion együtt történik; loaded, de mismatched
+engine nem ready projekt. Nem-pending friss boot/reload readiness frissítése
+nem emeli a projektgenerációt, és nem oldhat fel pending state-et.
+A save a módot a payload capture-rel együtt rögzíti, majd a lockon kívül kódol.
+Még nincs új normál writer: csak már explicit Classic pending pár íródik a
+captured desired értékből. Legacy save nem kap új mezőpárt vagy runtime tokent.
+
+Ez nem a végleges Clean recall. Érvényes Clean változatlanul fail-closed;
+nincs production request/audio-visit, új UI-kapcsoló vagy DSP. Az összes APVTS/
+host-publikáció atomikus restore-ja és readiness-változtató audio-lifecycle út
+külön integrációs kapu. A dokumentum 2–6. pontjának Clean/live-request/renderer
+szerződése továbbra is a végső funkció követelménye.
+[Actual processor ellenőrzések](../validation/PROCESSOR_MODE_PROJECT_OWNER_20261009.md).

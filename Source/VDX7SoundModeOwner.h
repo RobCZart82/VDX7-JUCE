@@ -4,11 +4,14 @@
 #include <cstdint>
 #include <limits>
 #include <mutex>
+#include <stdexcept>
 #include <type_traits>
 
-// Preparatory component, NOT connected to PluginProcessor/DSP yet. The caller's
+// Project-state owner; PluginProcessor uses the externally locked entry points.
+// Clean requests/audio dispatch remain gated on renderer integration. The caller's
 // existing engine mutex must outlive this owner and protect the payload too.
-// Call these entry points without already holding that mutex. Readiness and
+// Self-locking entry points require an unlocked caller; *Locked entry points
+// require a currently owned unique_lock for this exact mutex. Readiness and
 // payload callbacks execute under it: no reentry, host notification or file I/O.
 // Readiness predicates must freshly inspect bounded, mutex-protected engine/ROM
 // identity, not return an earlier mutable-state result. All identity mutations
@@ -42,6 +45,53 @@ public:
         return state_;
     }
 
+    // Adapt to an ALREADY owned engine transaction without a second lock.
+    // A token from another mutex, or a deferred/unlocked token, cannot grant access.
+    Snapshot snapshotLocked(const std::unique_lock<std::mutex>& lock) const
+    {
+        if (!owns(lock)) throw std::logic_error("sound-mode owner requires its engine lock");
+        return state_;
+    }
+
+    template<class CheckReady, class Commit>
+        requires (std::is_nothrow_invocable_r_v<bool, CheckReady&>
+                  && std::is_nothrow_invocable_v<Commit&>)
+    bool installValidatedLocked(const std::unique_lock<std::mutex>& lock, Mode desired,
+                                CheckReady&& checkReady, Commit&& commit)
+    {
+        if (!owns(lock) || !VDX7SoundModeState::isValid(desired)
+            || state_.revision == std::numeric_limits<uint64_t>::max()) return false;
+        const bool engineReady = checkReady();
+        commit();
+        state_ = { desired, state_.revision + 1, !engineReady, engineReady };
+        return true;
+    }
+
+    template<class CheckCompatible, class Commit>
+        requires (std::is_nothrow_invocable_r_v<bool, CheckCompatible&>
+                  && std::is_nothrow_invocable_v<Commit&>)
+    bool completePendingLocked(const std::unique_lock<std::mutex>& lock, uint64_t revision,
+                               CheckCompatible&& checkCompatible, Commit&& commit)
+    {
+        if (!owns(lock) || revision != state_.revision || !state_.pending) return false;
+        if (!checkCompatible()) return false;
+        commit();
+        state_.pending = false;
+        state_.ready = true;
+        return true;
+    }
+
+    // Non-pending fresh boot/failure/lifecycle may alter readiness without a
+    // project recall. Never resolve a pending project through this refresh.
+    template<class CheckReady>
+        requires std::is_nothrow_invocable_r_v<bool, CheckReady&>
+    bool refreshReadinessLocked(const std::unique_lock<std::mutex>& lock, CheckReady&& checkReady)
+    {
+        if (!owns(lock)) return false;
+        state_.ready = !state_.pending && checkReady();
+        return true;
+    }
+
     // Notification is deliberately outside ownership; it may synchronously
     // save or recall another project. Never write state after that callback.
     template<class Notify>
@@ -69,12 +119,8 @@ public:
     bool installValidated(Mode desired, CheckReady&& checkReady, Commit&& commit)
     {
         if (!VDX7SoundModeState::isValid(desired)) return false;
-        const std::lock_guard lock(mutex_);
-        if (state_.revision == std::numeric_limits<uint64_t>::max()) return false;
-        const bool engineReady = checkReady();
-        commit();
-        state_ = { desired, state_.revision + 1, !engineReady, engineReady };
-        return true;
+        const std::unique_lock lock(mutex_);
+        return installValidatedLocked(lock, desired, checkReady, commit);
     }
 
     // Non-audio. Recheck real ROM compatibility under this lock, not a cached
@@ -85,13 +131,8 @@ public:
                   && std::is_nothrow_invocable_v<Commit&>)
     bool completePending(uint64_t revision, CheckCompatible&& checkCompatible, Commit&& commit)
     {
-        const std::lock_guard lock(mutex_);
-        if (revision != state_.revision || !state_.pending) return false;
-        if (!checkCompatible()) return false;
-        commit();
-        state_.pending = false;
-        state_.ready = true;
-        return true;
+        const std::unique_lock lock(mutex_);
+        return completePendingLocked(lock, revision, checkCompatible, commit);
     }
 
     // Non-audio: clone under ownership; XML/binary encoding belongs outside.
@@ -119,6 +160,9 @@ public:
     }
 
 private:
+    friend struct VDX7RegressionAccess; // Test-only exhaustion probe.
+    bool owns(const std::unique_lock<std::mutex>& lock) const noexcept
+    { return lock.owns_lock() && lock.mutex() == &mutex_; }
     std::mutex& mutex_;
     Snapshot state_;
 };

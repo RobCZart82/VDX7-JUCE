@@ -37,6 +37,16 @@ static_assert(!InstallQueryAccepted<bool> && !CompletionQueryAccepted<bool>);
 static_assert(!InstallQueryAccepted<ThrowingQuery> && !CompletionQueryAccepted<ThrowingQuery>);
 static_assert(!InstallQueryAccepted<RvalueOnlyQuery> && !CompletionQueryAccepted<RvalueOnlyQuery>);
 static_assert(!InstallQueryAccepted<LvalueThrowingQuery> && !CompletionQueryAccepted<LvalueThrowingQuery>);
+template<class Check>
+concept LockedQueriesAccepted = requires(Owner& owner, const std::unique_lock<std::mutex>& lock, Check check)
+{
+    owner.installValidatedLocked(lock, Mode::classic, std::move(check), NoopCommit{});
+    owner.completePendingLocked(lock, 0, std::move(check), NoopCommit{});
+    owner.refreshReadinessLocked(lock, std::move(check));
+};
+static_assert(LockedQueriesAccepted<ReadyQuery>);
+static_assert(!LockedQueriesAccepted<bool> && !LockedQueriesAccepted<ThrowingQuery>);
+static_assert(!LockedQueriesAccepted<RvalueOnlyQuery> && !LockedQueriesAccepted<LvalueThrowingQuery>);
 
 // Xcode 15.4's libc++ has no std::jthread. These tests need joining, not stop
 // tokens: keep the same real threads and unwind-safe lifetime on that toolchain.
@@ -490,6 +500,49 @@ static void testNotificationOutsideLockAndReentrantRecall()
             "request never overwrites a newer recall after the notification returns");
 }
 
+static void testAlreadyOwnedAdapter()
+{
+    std::mutex mutex, unrelated;
+    Owner owner(mutex);
+    int checks = 0, commits = 0;
+    auto ready = [&]() noexcept { ++checks; return true; };
+    auto commit = [&]() noexcept { ++commits; };
+    {
+        std::unique_lock wrong(unrelated);
+        require(!owner.installValidatedLocked(wrong, Mode::clean, ready, commit)
+            && !owner.completePendingLocked(wrong, 0, ready, commit)
+            && !owner.refreshReadinessLocked(wrong, ready) && checks == 0 && commits == 0,
+            "unrelated lock cannot admit project, complete pending or query readiness");
+        bool rejected = false;
+        try { (void)owner.snapshotLocked(wrong); }
+        catch (const std::logic_error&) { rejected = true; }
+        require(rejected, "wrong-lock snapshot is not a fictitious default project");
+    }
+    std::unique_lock lock(mutex, std::defer_lock);
+    require(!owner.installValidatedLocked(lock, Mode::classic, ready, commit)
+        && checks == 0 && commits == 0, "unowned correct-mutex token cannot commit");
+    lock.lock();
+    require(owner.installValidatedLocked(lock, Mode::clean,
+        []() noexcept { return false; }, commit), "already owned pending install does not relock");
+    const auto pending = owner.snapshotLocked(lock);
+    require(pending.pending && !pending.ready && pending.revision == 1 && commits == 1,
+        "pending payload and mode use one revision under caller lock");
+    require(owner.refreshReadinessLocked(lock, ready) && checks == 0
+        && owner.snapshotLocked(lock) == pending,
+        "fresh loaded engine cannot bypass pending identity admission");
+    require(!owner.completePendingLocked(lock, 0, ready, commit) && checks == 0 && commits == 1,
+        "stale completion does not call real readiness or commit");
+    require(owner.completePendingLocked(lock, 1, ready, commit)
+        && checks == 1 && commits == 2 && owner.snapshotLocked(lock).ready,
+        "current compatible completion under same owned lock");
+    require(owner.refreshReadinessLocked(lock, []() noexcept { return false; })
+        && !owner.snapshotLocked(lock).ready && !owner.snapshotLocked(lock).pending,
+        "ROM-only unavailability retires readiness, not project or mode");
+    require(owner.refreshReadinessLocked(lock, ready) && owner.snapshotLocked(lock).ready
+        && owner.snapshotLocked(lock).desired == Mode::clean && owner.snapshotLocked(lock).revision == 1,
+        "fresh nonpending readiness preserves desired and revision");
+}
+
 int main(int argc, char** argv)
 {
     try
@@ -506,6 +559,7 @@ int main(int argc, char** argv)
         { cachedRomAdmission = true; testRomInstallAdmission(); return 0; }
         else require(argc == 1, "unknown ownership test argument");
         testJoiningLifetime();
+        testAlreadyOwnedAdapter();
         testAdmissionAndRevision();
         testBusyAndIsolation();
         testAudioPostLockAndProtectedPayload();
