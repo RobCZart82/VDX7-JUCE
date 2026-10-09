@@ -5,6 +5,12 @@ Specifikációs checkpoint: 2026-10-08, main
 Ág: `test/classic-clean-state-contract`. Irányadó feladatlista:
 [D5 az egységes tervben](DEVELOPMENT_PLAN.md).
 
+Kiadási scope döntés, 2026-10-09: a tulajdonos a következő release-t a teljes
+Classic/Clean funkcióval együtt kéri. Az irányadó terv új release-scope kapui
+érvényesek; az alábbi szerződés/tesztkomponensek önmagukban nem teljesítés.
+SETTINGS-integráció, valódi DSP, projektkompatibilitás és új jelölt elfogadása
+még szükséges; verziószám és publikálási engedély e döntésből nem következik.
+
 Ez a következő implementáció műszaki szerződésének jelöltje és egy hozzá tartozó
 **teszt-only, soros állapotmodell**. Nem szállított SETTINGS kapcsoló, nem új
 projektformátum a jelenlegi pluginban, nem thread-safe production megvalósítás.

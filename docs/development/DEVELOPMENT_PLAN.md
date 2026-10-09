@@ -2,8 +2,70 @@
 
 Frissítve: 2026-10-09. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
-A következő kiadás verzióját és pontos funkciókörét később rögzítjük.
+A következő kiadás része a D5 Classic/Clean funkció a 2026-10-09-i tulajdonosi
+döntés szerint. A verziószám és a további funkciók pontos köre még nincs rögzítve.
 Ez a dokumentum nem új kiadás publikálási engedélye.
+
+## Következő release: Classic/Clean kötelező funkció — 2026-10-09
+
+Közvetlen tulajdonosi döntés: **„Classic/Clean funkcióval együtt kiadni.”**
+Ellenőrzött main: `000ee97b19763b23c569ff6ac68080c4b6165094` (#169 után).
+A D5 nem opcionálisan későbbre hagyott ötlet: a következő release csak a
+teljes, tesztelt motor/processor/projektmentés és SETTINGS integrációval készülhet.
+Az önálló modell, codec vagy owner elkészülte nem kész funkció, és a zöld CI
+nem helyettesíti a hangzási/host-elfogadást. Ma a production integráció NOT RUN.
+
+Megőrzendő koncepció: **SETTINGS → Sound mode → Classic / Clean**;
+Classic alapértelmezett, legacy projektben is, a korábbi hangzás megőrzésével.
+Clean opcionálisan választható, példányonként projektbe mentett mód. Native/Correct
+mono-policy független marad; 148 hostparaméter ID/sorrend és pluginazonosság
+változatlan. A döntés nem engedély új automatizálható hostparamétert vagy új
+firmware-támogatást. Kizárólag original DX7 Mk I v1.8 a támogatott tesztalap.
+
+### Végrehajtási sorrend és kiadási megállási kapuk
+
+1. **D5 processor-állapot integráció:** az elkészült codec/owner a valódi
+   save/restore/pending/ROM-admission és engine-epoch tranzakciókba illesztendő.
+   Hibás state és stale request nem mutálhat projektet; reentráns mentés,
+   példányizoláció, hiányzó/eltérő ROM és mono-policy regressziók szükségesek.
+2. **D5 motor és átmenet:** a valódi Classic/Clean út, instruction overshoot,
+   SRC/history és prepare/release/reset/reload együtt kezelendő. Bounded,
+   kattanásmentes átmenet; nincs új callback-allokáció, fájl-I/O, blokkoló lock
+   vagy indokolatlan hangerőugrás. DSP nélküli működő Clean-jelzés nem szállítható.
+3. **Privát original v1.8 műszeres elfogadás:** Classic referencia/null-difference,
+   működő és véges Clean, módváltás tartott hang/sustain/tail közben, gyors
+   ismételt váltás, lifecycle és külön példányok. Spektrum, peak/RMS, headroom,
+   CPU/latencia; az eltéréseket értékeljük, nem nevezzük automatikusan javulásnak.
+4. **SETTINGS és platformkapuk:** kapcsoló csak a működő DSP/állapot után;
+   billentyűzet, hozzáférhető név, helyes pending/BUSY/STALE kijelzés, régi
+   projektek és öt GUI-méret. Friss Windows/macOS és sanitizer, rendezett review.
+5. **Új jelölt valódi host/hallásos elfogadása:** Windows/macOS REAPER,
+   sample-rate/buffer, offline render, mentés/újranyitás, több példány, váltás
+   kitartott hang alatt, hangerőben egyeztetett Classic/Clean meghallgatás.
+   Helyi DAW nélkül e kapuk NOT RUN; külön tételes halasztás csak új, explicit
+   tulajdonosi döntéssel, nem az 1.0.1 régi halasztásaiból. Nem halasztjuk
+   automatikusan magát a D5 funkciót vagy annak helyességi bizonyítékát.
+6. **Verzió és kiadási csomagok:** a választott új verzióra a CMake/installer,
+   source packager címke/validáció, tesztek és approval összhangban frissítendők
+   (a jelen tooling 1.0.0/1.0.1 címkékre korlátozott). Négy felhasználói letöltés:
+   Windows EXE + Manual ZIP, macOS PKG + Manual ZIP; teljes megfelelő forrás,
+   hash/provenance, offline build, telepítés/upgrade/uninstall az exact jelölthöz.
+7. **HU/EN dokumentáció és publikálási döntés:** README, kézikönyv, release notes,
+   Classic/Clean különbség/default/recall/downgrade és aláírási korlátok;
+   rögzített SHA/verzió/csomagok és PASS/FAIL/NOT RUN/SKIP elfogadási jegyzék.
+   Csak ezután külön publikálási engedély; régi tag/asset nem írható felül.
+
+REAPER nélkül az 1–4. lépés automatizálható részei és a csomagoló/dokumentáció
+előkészítése végezhetők. A valódi host- és hallásos eredmény nem szimulálható
+CI-sikerrel. D4 AU/Logic, további D1 boot-diagnosztika és minden karbantartási
+ötlet nem válik automatikusan e release kötelező részévé. Nincs új verziószám,
+publikálási vagy valós gépre telepítési engedély ebből a döntésből.
+
+E döntés dokumentálási körének ellenőrzése: PASS a háromfájlos, kizárólag
+Markdown-diff és formaellenőrzése, 24 helyi fájlhivatkozás; Python 94 futott,
+93 PASS / 1 Windows symlink-jogosultsági SKIP, 0 FAIL/ERROR. Új C++/DSP build,
+privát firmware-render és REAPER ebben a dokumentációs körben NOT RUN.
+A fenti #169 adatok ellenőrzött korábbi körből valók, nem új D5 teszteredmények.
 
 ## Végleges firmware-támogatási döntés — 2026-10-08
 
@@ -678,7 +740,8 @@ Elfogadás: több bank, elutasított fájlok, gyári/USER adatmegőrzés, hossz�
 Állapot: TERVEZETT, tulajdonos által jóváhagyott irány és dokumentálási kérés
 2026-10-06. A kapcsoló helye a **SETTINGS menü**, nem a főpanel vagy UTILITY.
 Ez a bejegyzés nem implementáció, mérési PASS vagy új kiadási engedély.
-A következő kiadásba sorolás és a végleges műszaki megoldás külön rögzítendő.
+A 2026-10-09-i döntés alapján a következő release kötelező része; a fenti
+release-scope kapuk irányadók. A végleges műszaki megoldás még megvalósítandó.
 
 #### Felhasználói működés és elnevezés
 
@@ -990,8 +1053,8 @@ T1–T4 lefedettségi halasztásai a publikálási jegyzékben rögzítettek; T5
 - M3: Actions runtime/runner-image figyelmeztetések ellenőrzése a munka idején, pontos környezet/provenance és tesztelt változtatás. Régi figyelmeztetésből nem következik mai FAIL.
 - M4: aktuális útmutatók/licencközlések/elérési utak karbantartása; történeti állítások nem kerülnek friss eredményként átírásra.
 - M5: JUCE-frissítés külön, visszavonható munkacsomagban, előzetes haszon/kockázat
-  mérlegeléssel és az alábbi kompatibilitási kapukkal. Tervezett, nem végrehajtott
-  dependency update; nem automatikus kiadási blocker.
+  mérlegeléssel és az alábbi kompatibilitási kapukkal. A 9.0.3 update #169-cel
+  main-ban, automatizált kapui PASS; új bináris valódi host-elfogadása még nyitott.
 
 ### M5 JUCE-frissítés: előzetes mérlegelés és regressziós kapuk
 
@@ -1005,7 +1068,7 @@ nyitott PR-kapuja teljesült, nem új blocker.
 
 Külön jelöltben a CMake + creation packager + aktív dependency útmutató és
 THIRD_PARTY JUCE pinje 9.0.3 / `be29c81492b6151c8ea8d14c840e1311963b3a83`.
-Main/release elfogadás még nincs. Reprodukált és javított historical source
+Main-ba #169-cel bekerült; új release-elfogadás még nincs. Reprodukált és javított historical source
 verification regresszió: az új verifier olvashatja az explicit régi 9.0.1 tuple-t,
 de új creation nem használhat történeti vagy ismeretlen pint. Az approval és
 a kiadott assetek változatlanok.
@@ -1022,8 +1085,11 @@ javítottuk, production működést nem módosítottunk. A teljes source csomag
 első próbáját blokkoló két személyes dokumentációs buildútvonal javítva,
 guard változatlan. Új 5704 fájlos source-archive + bundled checker + friss
 disconnected VST3 build PASS; a valódi korábbi 5131 fájlos 1.0.1 source archive
-az új verifierrel is PASS. Friss final-head Windows/macOS/sanitizer CI és
-review még hátravan; ezek nélkül nem merge-elfogadás.
+az új verifierrel is PASS. #169 beolvadt `000ee97b19763b23c569ff6ac68080c4b6165094`
+main-nal; végleges head `cc4a0e016edeaf37e42f0587c57dbfe3edce1dc9` Windows
+`37900539006`, macOS `37900539025`, ASan/UBSan `37900539002` PASS; nincs nyitott
+review-szál. Merge utáni Windows `37902135282` és macOS `37902135295` PASS.
+Ezek lezárják e dependency-PR automatizált kapuját, nem a D5-t vagy új host-QA-t.
 [Pontos kör és eredménykövetés](../validation/JUCE_903_COMPATIBILITY_20261009.md).
 E kísérlet nem D5 DSP integráció, T1–T4 host-elfogadás vagy release approval.
 
@@ -1170,7 +1236,14 @@ Források: [rögzített 9.0.1 upstream verzió](https://github.com/juce-framewor
 
 ## Végrehajtás és kiadási kapuk
 
-Javasolt sorrend: reprodukált blocker, ha lesz → D1 → D2 → D3; D4 külön host/packaging munkacsomag, D5 külön hangzási prototípus és SETTINGS munkacsomag. A következő kiadás pontos körét és D5 prioritását fejlesztés előtt rögzítjük. A rendezés nem indítja el automatikusan ezeket az implementációkat.
+Aktuális sorrend a 2026-10-09-i döntéssel: új reprodukált blocker, ha lesz →
+D5 valódi processor/állapot integráció → motor/átmenet és privát mérések →
+SETTINGS → platform és valódi host/hallásos elfogadás → új verzió/csomagoló →
+exact jelölt csomagteszt és HU/EN dokumentáció → külön publikálási döntés.
+D1/D2/D3 már elkészült működését regresszióval megőrizzük; D4 külön jóváhagyandó
+host/packaging munkacsomag. A D5 a következő kiadás része, nem későbbi opcionális
+release-feature. A fenti részletes kiadási kapuk felülírják a korábbi nyitott
+scope/prioritás kérdést; a dokumentálás nem megvalósítás vagy publikálás.
 
 M5 JUCE-update: a folyamatban lévő D5 részlépés lezárása után önálló
 karbantartási döntési pont, lehetőleg új production D5 integráció vagy release-
@@ -1187,4 +1260,8 @@ Minden kör: friss main → minimális változtatás és regresszió → érinte
 
 [Korábbi összevont terv](../archive/EXECUTION_PLAN_1.0.md), [roadmap](../archive/ROADMAP_1.0.md), [régi kiadási checklist](../archive/RELEASE_CHECKLIST_1.0_RC.md) megőrzött döntés- és bizonyítéktörténet. Az élő feladatokat csak itt frissítjük, egyedi D/T/M azonosítóval. Megvalósításkor ide kerül státusz és PR/tesztlink; a részletes tesztjelentés külön marad. Régi checklist nem írhatja felül ezt a tervet vagy a kiadás tényét.
 
-English summary: this is the sole active post-1.0.1 ledger. Approved deferred features, unexecuted coverage and optional maintenance are separate; old release gates are history, not new blockers or PASS claims. No release version/scope or publication authority is inferred from this consolidation.
+English summary: this is the sole active post-1.0.1 ledger. The owner explicitly
+requires Classic/Clean in the next release (2026-10-09); production DSP/state/UI
+integration and its acceptance remain open. Other future features and optional
+maintenance are separate. Old release gates are history, not new blockers or
+PASS claims. No new version, host-test waiver or publication authority is inferred.

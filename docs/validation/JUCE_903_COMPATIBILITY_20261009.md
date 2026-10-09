@@ -1,8 +1,21 @@
 # M5 JUCE 9.0.3 kompatibilitási kísérlet
 
 Dátum: 2026-10-09. Baseline main: `bc8c1664ad13a11208773d5b227cb113033555ec`.
-Ág: `maintenance/juce-903-compatibility`. Státusz: FEJLESZTÉS / ELLENŐRZÉS ALATT.
+Ág: `maintenance/juce-903-compatibility`. Státusz: AUTOMATIZÁLT FEJLESZTÉSI KÖR
+LEZÁRVA (#169); valódi host-elfogadás NOT RUN.
 Nem kiadási vagy publikálási elfogadás; az 1.0.1 korábbi assetjei változatlanok.
+
+## Lezárási checkpoint — 2026-10-09
+
+A lentebbi helyi kör korábbi nyitott PR-kapuit felülírja: [#169](https://github.com/RobCZart82/VDX7-JUCE/pull/169)
+beolvadt `000ee97b19763b23c569ff6ac68080c4b6165094` main-nal. Final head
+`cc4a0e016edeaf37e42f0587c57dbfe3edce1dc9`: Windows `37900539006`, macOS
+`37900539025`, ASan/UBSan `37900539002` PASS; nincs megoldatlan review-szál.
+Merge utáni main Windows `37902135282`, macOS `37902135295` PASS.
+Ez automatizált dependency-kompatibilitási lezárás, nem új binary REAPER/
+hallásos elfogadás vagy release approval. A következő release Classic/Clean
+scope-ját az [irányadó terv](../development/DEVELOPMENT_PLAN.md) rögzíti;
+#169 nem implementálta e funkciót. Nincs régi asset/tag változtatás.
 
 ## Előfeltétel és változtatás
 
