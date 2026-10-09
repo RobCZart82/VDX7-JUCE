@@ -99,7 +99,88 @@ the corrected final-head GitHub Xcode 15.4 build remains a required independent
 confirmation before merge. This correction does not turn the earlier failed
 CI runs into PASS evidence.
 
-## Remaining gates
+## ROM admission race correction — 2026-10-09
+
+Fix starts from PR #167 head `2ebe4bed1cea3cc03b043cc24c68e3b190bb12cf`,
+current main `9ee7c9d6ff85381e853fb0fd7c2e7c13f78322d3`. Local branch
+`fix/pr167-rom-admission`; update the existing PR branch, without force push.
+The old head passed Windows `37839598022`, macOS `37839598025` and sanitizer
+`37839598014`, but the unresolved review exposed a real component admission gap.
+Old green CI is not validation of this correction.
+
+### Reproduction before the fix
+
+New real-thread rendezvous tests were built against the unchanged owner API.
+One thread computes a compatible identity, another changes the simulated ROM
+under the shared mutex, without advancing the project revision, then the first
+attempts completion/install with its cached result. Both reproduce deterministically:
+
+- `--rom-completion-repro-only`: FAIL / exit 1,
+  `ROM reload without project recall must reject stale compatible completion`.
+- `--rom-install-repro-only`: FAIL / exit 1,
+  `ROM reload before project install must keep validated project pending, not falsely ready`.
+
+No genuine firmware is loaded. The mutable identity is a synthetic integer,
+with all reads/writes under the shared mutex. This is not a released plugin bug.
+
+### Correction and regression coverage
+
+`installValidated(desired, checkReady, commit)` and
+`completePending(revision, checkCompatible, commit)` now require nonthrowing
+predicates, evaluated under the owner lock before payload commit, with no unlock
+between admission and commit. Compile-time probes reject plain bools and throwing
+queries. Caller must read current protected identity, not wrap stale results in
+a lambda; immutable synthetic fixture constants are not real ROM admission.
+Read-only checks must be bounded: no file/hash/host notification/reentry; payload
+commit may not invalidate the checked ROM compatibility. All mutable identity
+writers must use the same mutex.
+
+Stale and non-pending completion, invalid enum and revision exhaustion invoke
+neither check nor commit. Current mismatch invokes check but not completion
+commit and preserves the full snapshot. A valid project with a now mismatched
+ROM still installs as pending, preserving its desired mode, not falsely ready.
+Additional two-thread probes verify both predicate and commit retain the same
+ownership, blocking an identity-changing contender. Matching current admission
+remains a positive control, completion occurs only once, and latest desired
+edits remain preserved by the original regressions.
+
+### Local results and remaining gates
+
+Windows x64 / MSVC 17.14.60 / Release, existing ROM-free build at
+`C:/Users/gyuriczar/Documents/Codex/build-imported-ui-20261008`.
+
+| Check | Result |
+|---|---|
+| Both original repro-only commands after correction | PASS / exit 0 |
+| Complete ownership executable | PASS |
+| Ownership CTest repeated until-fail:50 | PASS, 50 consecutive runs |
+| New cached-ROM completion/install adapters | PASS control: intended FAIL / exit 1 at the original messages |
+| Existing pre-lock audio / under-lock notification adapters | PASS control: intended FAIL / exit 1 |
+| Full Windows CI-target build and ROM-free CTest | PASS, 20/20, 0 FAIL |
+| Python | PASS with coverage gap: 78 run, 77 PASS / 1 Windows symlink-permission SKIP, 0 FAIL/ERROR |
+| Inventory / registration self-test / document-link / diff checks | PASS, actual 20-test inventory and 23 local document-link targets |
+| New final-head GitHub Windows/macOS/ASan/UBSan and review | NOT RUN yet; required before merge |
+| Local ASan/UBSan/TSan, production processor/DSP/real v1.8/REAPER | NOT RUN in this correction |
+
+Rebuild `vdx7_sound_mode_ownership_tests`, run the two repro-only commands and
+the normal executable. Then run `vdx7_ci_checks`, full `ctest -L rom-free`,
+and ownership `--repeat until-fail:50`. The four opt-in negative controls must
+each exit 1, not be mistaken for failing normal CTest runs:
+
+```text
+--cached-rom-completion-negative-control
+--cached-rom-install-negative-control
+--pre-lock-audio-negative-control
+--notify-under-lock-negative-control
+```
+
+The new check/commit boundary does not implement firmware validation, later
+ready-state invalidation when a real processor reloads ROM, or epoch/mono/SRC
+lifecycle integration. Those remain production-adapter gates. The component is
+still not wired to PluginProcessor/SETTINGS/DSP. No dependency pin, real audio,
+Yamaha data, release/tag/asset or installed application changed.
+
+## Remaining production gates (unchanged)
 
 NOT RUN: actual processor ownership/epoch/mono-policy integration, production
 pending-ROM completion, engine instruction-overshoot/SRC/lifecycle integration,

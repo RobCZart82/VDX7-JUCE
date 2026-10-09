@@ -1,6 +1,6 @@
 # VDX7 egységes fejlesztési terv
 
-Frissítve: 2026-10-08. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
+Frissítve: 2026-10-09. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás verzióját és pontos funkciókörét később rögzítjük.
 Ez a dokumentum nem új kiadás publikálási engedélye.
@@ -922,6 +922,43 @@ negatív kontrollok változatlanok. A fenti helyi tesztkör a javítás után is
 PASS; az új final-head platform/sanitizer CI külön, kötelező megerősítés.
 Következő kör: a tényleges processor tranzakcióihoz illesztés és epoch/mono/
 ROM/pending regresszió, a DSP nélküli Clean-szállítás tilalmának megtartásával.
+
+#### #167 ROM-admission versenyhelyzet javítása — 2026-10-09
+
+Main baseline: `9ee7c9d6ff85381e853fb0fd7c2e7c13f78322d3`; PR kiinduló head:
+`2ebe4bed1cea3cc03b043cc24c68e3b190bb12cf`. Helyi javítóág:
+`fix/pr167-rom-admission`, a javítás a meglévő #167
+`test/classic-clean-threaded-ownership` ágára kerül, nem új competing roadmap.
+
+A kiinduló head Windows `37839598022`, macOS `37839598025` és sanitizer
+`37839598014` CI-je PASS, de a review valós komponenshibát talált: a lock előtt
+számolt `compatible`/`engineReady` bool elavulhatott egy ROM-csere miatt, miközben
+a projekt revisionje nem változott. A két új vezérelt szálas reprodukció a
+javítás előtt külön-külön FAIL/exit 1: téves completion, illetve téves ready
+project install. Ez nem kiadott pluginhibára vonatkozó állítás: nincs production
+bekötés, nincs valódi ROM a fixture-ben.
+
+Mindkét owner API most nem dobó predikátumot kér, amely a mai védett ROM/engine
+identitást **a közös mutex alatt** olvassa. Az admission és a payload commit
+között a lock nem oldódik fel. Bool és dobó predikátum fordításkor elutasított.
+Stale/non-pending/exhausted/invalid művelet nem futtathat checket vagy commitot;
+mai mismatch completion snapshot-mutation nélkül elutasított. Mismatch mellett
+egy teljesen valid új projekt installja továbbra is megengedett pendingként,
+nem tévesen readyként. A predikátum bounded, readonly; nincs file/hash/host/reentry,
+és a commit nem érvénytelenítheti a vizsgált kompatibilitást.
+
+PASS eddig helyben: mindkét eredeti repro javítás után, teljes owner teszt,
+50 egymást követő ismétlés; négy negatív kontroll elvárt FAIL/exit 1 (köztük
+a két új cached-ROM adapter); same-lock predicate/commit és guard tesztek.
+PASS: teljes Windows MSVC CI-tesztcél build és 20/20 ROM-mentes CTest; Python
+78 futott = 77 PASS / 1 Windows symlink-jogosultsági SKIP, 0 FAIL/ERROR;
+leltár/checker self-test, 23 helyi dokumentumlink és diff-ellenőrzés.
+Új final-head Windows/macOS/ASan/UBSan és review még külön merge-kapu;
+a korábbi zöld head nem az új javítás tesztje. Helyi sanitizer/TSan NOT RUN.
+[Részletes reprodukció és friss eredmények](../validation/CLASSIC_CLEAN_THREADED_OWNERSHIP_20261008.md).
+Production processor ROM-readiness érvénytelenítés egy későbbi ROM-cserénél,
+epoch/mono/DSP/SRC/REAPER továbbra is külön integrációs kapu; nincs új D5 vagy
+release elfogadás, dependency pin vagy firmware-policy változás.
 
 ## Teszt és karakterizálási backlog
 
