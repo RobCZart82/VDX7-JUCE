@@ -278,3 +278,29 @@ host-publikáció atomikus restore-ja és readiness-változtató audio-lifecycle
 külön integrációs kapu. A dokumentum 2–6. pontjának Clean/live-request/renderer
 szerződése továbbra is a végső funkció követelménye.
 [Actual processor ellenőrzések](../validation/PROCESSOR_MODE_PROJECT_OWNER_20261009.md).
+
+## 10. Natív motorátmenet részlépése 2026-10-09
+
+A `feature/engine-sound-mode-transition` ág ([PR #176](https://github.com/RobCZart82/VDX7-JUCE/pull/176)) a #175 utáni
+`edb0de367cc6b909af5f7e6f493fa8e0d005c23a` main-ra épül. A valódi
+`VDX7Engine::generateNative()` a `VDX7NativeSoundMode` adapterrel lépteti az EGS-t.
+Egy minta teljes 6×16-os, 96 órajelű kör; módváltás csak e kör **elején**
+történhet, nem az elkészült minta fogyasztásakor vagy egy félkör végén.
+A rámpa gainje az elkészülő mintára egyszer kerül rá, még a tárolás/SRC előtt.
+Az instrukció összes EGS-órája és overshoot kimenete megmarad. Új kérés nem
+változtat már tárolt mintát vagy SRC historyt, és nem reseteli a firmware-t.
+
+Az alapértelmezett Classic unity ága a korábbi EGS-hívást változatlanul végzi.
+Átmenetkor a clock csak a scan-határoknál darabolódik. A friss kívánt érték
+coalesced scalar; a ramp nem indul újra azonos kéréstől, és visszavont kérés
+nem vált régi kívánt módra. Nincs új allokáció, queue, mutex vagy I/O ebben
+az adapterben. A core EGS-fázisa CPU boot és audio-reset alatt megmarad,
+ezért az adapter fázisát/gainjét sem reseteljük önállóan.
+
+Ez még nem a 5. pont teljes lifecycle megvalósítása: a processor audio-owner
+dispatch, cold/project install unity-start, mono-policy/reset/restore közös
+integráció, Clean writer/admission és SETTINGS továbbra is nyitott.
+A natív mute-ramp nem jelent hallásos vagy kattanásmentességi elfogadást;
+Clean alatt az upstream Classic analóg szűrő nem lép, historyja megmarad.
+Az 1.0.1 csomag és telepített plugin nem változik.
+[Natív motor ellenőrzési jegyzőkönyve](../validation/NATIVE_SOUND_MODE_TRANSITION_20261009.md).

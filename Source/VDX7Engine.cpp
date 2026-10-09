@@ -194,6 +194,8 @@ void VDX7Engine::prepare(double hostSampleRate)
 
 void VDX7Engine::resetAudioState()
 {
+    // The core retains its EGS scan position. Preserve native mode/phase/ramp;
+    // discarded native/SRC history must not reset an in-flight OPS scan.
     nativePos_ = 0;
     nativeCount_ = 0;
     resampler_.reset();
@@ -552,7 +554,7 @@ int VDX7Engine::generateNative(float* out)
         stepFirmware();
         const int cycles = (dx7_.inst != nullptr && dx7_.inst->cycles > 0) ? dx7_.inst->cycles : 1;
 
-        dx7_.egs.clock(out, outCount, 4 * cycles);
+        nativeSoundMode_.clock(dx7_.egs, out, outCount, 4 * cycles);
     }
 
     return outCount;
