@@ -169,7 +169,9 @@ E részlépés lezárt, nem teljes D5 vagy release-elfogadás.
 ### D5 natív motorátmenet részlépése
 
 Baseline: `edb0de367cc6b909af5f7e6f493fa8e0d005c23a`; külön ág:
-`feature/engine-sound-mode-transition`. A valódi motor EGS-clock útján az új
+`feature/engine-sound-mode-transition`, [PR #176](https://github.com/RobCZart82/VDX7-JUCE/pull/176).
+Helyileg ellenőrzött kód: `3d26db6b45df2987c85e5fe42a9eae32fa801b7f`.
+A valódi motor EGS-clock útján az új
 `VDX7NativeSoundMode` adapter a teljes, 96 órajelű operátor–voice kör elején
 alkalmazza a következő mintához tartozó módot és gain-t. A 256+256 natív mintás
 mute-ramp nulla szintjén kapcsol; a már előállított native/SRC history nem kap

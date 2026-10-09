@@ -281,7 +281,7 @@ szerződése továbbra is a végső funkció követelménye.
 
 ## 10. Natív motorátmenet részlépése 2026-10-09
 
-A `feature/engine-sound-mode-transition` ág a #175 utáni
+A `feature/engine-sound-mode-transition` ág ([PR #176](https://github.com/RobCZart82/VDX7-JUCE/pull/176)) a #175 utáni
 `edb0de367cc6b909af5f7e6f493fa8e0d005c23a` main-ra épül. A valódi
 `VDX7Engine::generateNative()` a `VDX7NativeSoundMode` adapterrel lépteti az EGS-t.
 Egy minta teljes 6×16-os, 96 órajelű kör; módváltás csak e kör **elején**

@@ -1,7 +1,10 @@
 # Classic és Clean natív motorátmenet ellenőrzése
 
 2026-10-09. Baseline: `edb0de367cc6b909af5f7e6f493fa8e0d005c23a` (#175).
-Ág: `feature/engine-sound-mode-transition`. Ez a valódi motor native/SRC
+Ág: `feature/engine-sound-mode-transition`, [PR #176](https://github.com/RobCZart82/VDX7-JUCE/pull/176).
+Helyileg ellenőrzött kód: `3d26db6b45df2987c85e5fe42a9eae32fa801b7f`.
+Az utána következő PR-linkes dokumentációs commit nem módosít futtatott kódot.
+Ez a valódi motor native/SRC
 mintasorrendjének részlépése. A processor Clean betöltése és SETTINGS kapcsolója
 még nem aktív; a következő release csak a teljes integráció és elfogadás után kész.
 
