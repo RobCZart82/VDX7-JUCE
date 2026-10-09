@@ -3,11 +3,18 @@
 #include "VDX7Sysex.h"
 #include <juce_cryptography/juce_cryptography.h>
 #include <cmath>
+#include <chrono>
+#include <cstdlib>
 #include <functional>
+#include <future>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
+#include <tuple>
 
-static std::function<void()> scanBoundary, saveBoundary, selectionBoundary;
+static std::function<void()> scanBoundary, saveBoundary, selectionBoundary, restoreRomBoundary;
+void vdx7TestRestoreRomBoundary()
+{ auto action = std::move(restoreRomBoundary); restoreRomBoundary = {}; if (action) action(); }
 void vdx7TestImportedBankScanBoundary()
 { auto action = std::move(scanBoundary); scanBoundary = {}; if (action) action(); }
 void vdx7TestRomStateBoundary()
@@ -67,6 +74,36 @@ static void setFeedback(VDX7AudioProcessor& p, int value)
 {
     auto* parameter = p.parameters().getParameter(VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback));
     parameter->setValueNotifyingHost(parameter->convertTo0to1(float(value)));
+}
+
+// A genuine worker thread is parked after detached ROM I/O. No sleeps or
+// scheduler guesses; callback extraction precedes the rendezvous signal.
+static void runAtRomReadBoundary(const std::function<void()>& operation,
+                                 const std::function<void()>& replaceProject, bool threaded)
+{
+    if (!threaded)
+    {
+        restoreRomBoundary = replaceProject;
+        operation();
+        return;
+    }
+    std::promise<void> reached, resume;
+    auto reachedFuture = reached.get_future();
+    auto resumeFuture = resume.get_future();
+    restoreRomBoundary = [&] {
+        reached.set_value();
+        if (resumeFuture.wait_for(std::chrono::seconds(5)) != std::future_status::ready)
+            std::abort(); // Watchdog prevents a hung CI runner.
+        resumeFuture.get();
+    };
+    auto worker = std::async(std::launch::async, operation);
+    if (reachedFuture.wait_for(std::chrono::seconds(5)) != std::future_status::ready)
+        std::abort();
+    reachedFuture.get();
+    try { replaceProject(); }
+    catch (...) { resume.set_value(); worker.get(); throw; }
+    resume.set_value();
+    worker.get();
 }
 
 static void testParameterSnapshot(const juce::File& rom = {})
@@ -139,7 +176,17 @@ struct VDX7RegressionAccess
     static auto restoreGeneration(VDX7AudioProcessor& p)
     {
         std::scoped_lock lock(p.engineMutex_);
-        return std::make_pair(p.midiTimelineEpoch_.load(), p.importedBankRevision_);
+        return std::make_tuple(p.midiTimelineEpoch_.load(), p.importedBankRevision_, p.projectRevision_);
+    }
+    static uint64_t projectRevision(VDX7AudioProcessor& p)
+    {
+        std::scoped_lock lock(p.engineMutex_);
+        return p.projectRevision_;
+    }
+    static void exhaustProjectRevision(VDX7AudioProcessor& p)
+    {
+        std::scoped_lock lock(p.engineMutex_);
+        p.projectRevision_ = std::numeric_limits<uint64_t>::max();
     }
     static bool pendingOwnsCatalog(VDX7AudioProcessor& p)
     {
@@ -274,6 +321,107 @@ static void testParameterAdmission(const juce::File& rom = {})
             require(std::isfinite(audio.getSample(channel, sample)), "post-admission render stays finite");
     p->releaseResources();
     std::cout << "PASS: malformed host parameter snapshots rejected before all project mutation\n";
+}
+
+static void testStaleRomCompletion(const juce::File& rom)
+{
+    Fixtures fixtures;
+    const auto oldRom = fixtures.root.getChildFile("old-project.rom");
+    const auto newRom = fixtures.root.getChildFile("new-project.rom");
+    require(rom.copyFileTo(oldRom) && rom.copyFileTo(newRom), "isolated private firmware copies");
+    auto source = std::make_unique<VDX7AudioProcessor>(false);
+    require(source->loadRomFromFile(oldRom), "source private firmware");
+    setFeedback(*source, 2);
+    require(source->setMidiInputChannelFromUi(3), "old project routing");
+    const auto first = save(*source);
+    setFeedback(*source, 6);
+    require(source->setMidiInputChannelFromUi(9), "new project routing");
+    auto newer = tree(save(*source));
+    newer.setProperty("romPath", newRom.getFullPathName(), nullptr);
+    const auto second = binary(newer);
+    for (const bool threaded : {false, true})
+    for (const bool projectRestore : {false, true})
+    {
+        auto p = std::make_unique<VDX7AudioProcessor>(false);
+        juce::MemoryBlock installed;
+        const auto installNew = [&] {
+            restore(*p, second);
+            installed = save(*p);
+            require(p->getMidiInputChannel() == 9 && p->isProjectReady(), "new project completes at ROM admission boundary");
+        };
+        runAtRomReadBoundary([&] {
+            if (projectRestore) restore(*p, first);
+            else require(!p->loadRomFromFile(oldRom), "old direct ROM request is superseded");
+        }, installNew, threaded);
+        require(installed.getSize() != 0, "older restore reached detached ROM boundary");
+        require(save(*p) == installed, "stale ROM completion must not overwrite the newer project or firmware path");
+        require(p->parameters().getRawParameterValue(
+            VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback))->load() == 6,
+            "newer project keeps its edited patch after obsolete ROM read");
+    }
+    std::cout << "PASS: older restore ROM completion cannot overwrite a newer actual processor project\n";
+}
+
+static void testProjectGeneration()
+{
+    auto p = std::make_unique<VDX7AudioProcessor>(false);
+    auto other = std::make_unique<VDX7AudioProcessor>(false);
+    const auto initial = save(*p);
+    require(VDX7RegressionAccess::projectRevision(*p) == 0, "save does not advance project generation");
+    restore(*p, initial);
+    restore(*p, initial);
+    require(VDX7RegressionAccess::projectRevision(*p) == 2
+        && VDX7RegressionAccess::projectRevision(*other) == 0,
+        "identical accepted restores advance isolated per-instance generations");
+    for (const auto* badMode : {"1", "9"})
+    {
+        auto invalid = tree(initial);
+        invalid.setProperty("soundModeVersion", "1", nullptr);
+        invalid.setProperty("soundMode", badMode, nullptr);
+        restore(*p, binary(invalid));
+        require(VDX7RegressionAccess::projectRevision(*p) == 2,
+            "Clean and malformed mode admission do not retire current project");
+    }
+    VDX7RegressionAccess::exhaustProjectRevision(*p);
+    const auto before = save(*p);
+    const auto generation = VDX7RegressionAccess::restoreGeneration(*p);
+    auto incoming = tree(initial);
+    incoming.setProperty("midiInputChannel", 9, nullptr);
+    incoming.setProperty("monoNoteZeroCorrection", true, nullptr);
+    restore(*p, binary(incoming));
+    require(save(*p) == before && VDX7RegressionAccess::restoreGeneration(*p) == generation,
+        "generation exhaustion rejects restore before policy or payload mutation without wrapping");
+
+    Fixtures fixtures;
+    const auto invalidRom = fixtures.root.getChildFile("own-invalid-firmware.bin");
+    const std::vector<uint8_t> zeros(VDX7Engine::kFirmwareSize, 0);
+    require(invalidRom.replaceWithData(zeros.data(), zeros.size()), "own ROM-free invalid candidate");
+    for (const bool threaded : {false, true})
+    {
+        auto candidate = std::make_unique<VDX7AudioProcessor>(false);
+        auto newer = tree(save(*candidate));
+        newer.setProperty("midiInputChannel", 9, nullptr);
+        const auto newerBytes = binary(newer);
+        juce::MemoryBlock installed;
+        juce::String installedStatus;
+        std::tuple<uint64_t, uint64_t, uint64_t> installedGeneration;
+        const auto installNew = [&] {
+            restore(*candidate, newerBytes);
+            installed = save(*candidate);
+            installedStatus = candidate->getStatusText();
+            installedGeneration = VDX7RegressionAccess::restoreGeneration(*candidate);
+        };
+        juce::String error;
+        runAtRomReadBoundary([&] {
+            require(!candidate->loadRomFromFile(invalidRom, &error), "obsolete detached ROM read rejected");
+        }, installNew, threaded);
+        require(installed.getSize() != 0 && save(*candidate) == installed
+            && candidate->getStatusText() == installedStatus
+            && VDX7RegressionAccess::restoreGeneration(*candidate) == installedGeneration,
+            "obsolete ROM attempt must not replace newer pending project, status or generation");
+        require(error.contains("superseded"), "obsolete ROM attempt reports stale instead of firmware failure");
+    }
+    std::cout << "PASS: actual project generation, rejection, exhaustion and ROM-free stale admission\n";
 }
 
 static void testStartup()
@@ -663,17 +811,19 @@ int main(int argc, char** argv)
             if (argc == 3) require(juce::File(argv[2]).existsAsFile(), "explicit snapshot ROM exists");
             testParameterSnapshot(argc == 3 ? juce::File(argv[2]) : juce::File());
             testParameterAdmission(argc == 3 ? juce::File(argv[2]) : juce::File());
+            testProjectGeneration();
+            if (argc == 3) testStaleRomCompletion(juce::File(argv[2]));
             return 0;
         }
         require(argc == 1 || argc == 2, "optional local verified ROM path only");
-        if (argc == 2) { testParameterSnapshot(juce::File(argv[1])); testParameterAdmission(juce::File(argv[1])); testWithRom(juce::File(argv[1])); }
-        else { testParameterSnapshot(); testParameterAdmission(); testStartup(); testNoRom(); testBoundaries(); }
+        if (argc == 2) { testParameterSnapshot(juce::File(argv[1])); testParameterAdmission(juce::File(argv[1])); testStaleRomCompletion(juce::File(argv[1])); testWithRom(juce::File(argv[1])); }
+        else { testParameterSnapshot(); testParameterAdmission(); testProjectGeneration(); testStartup(); testNoRom(); testBoundaries(); }
         std::cout << "PASS: imported catalog processor ownership, binary state and bounded scheduling\n";
         return 0;
     }
     catch (const std::exception& error)
     {
-        scanBoundary = {}; saveBoundary = {}; selectionBoundary = {};
+        scanBoundary = {}; saveBoundary = {}; selectionBoundary = {}; restoreRomBoundary = {};
         std::cerr << "FAIL: " << error.what() << '\n';
         return 1;
     }

@@ -523,7 +523,14 @@ struct VDX7RegressionAccess
     }
     static void publishWithoutEditor(VDX7AudioProcessor& p) { p.timerCallback(); }
     static bool invalidRom(VDX7AudioProcessor& p)
-    { return p.loadRomData(juce::File(), std::vector<uint8_t>(7), nullptr); }
+    {
+        uint64_t revision = 0;
+        {
+            std::scoped_lock lock(p.engineMutex_);
+            revision = p.projectRevision_;
+        }
+        return p.loadRomData(juce::File(), std::vector<uint8_t>(7), nullptr, revision);
+    }
     static void checkControllers(VDX7Engine& e)
     {
         for (int cc : {64, 65}) for (int v : {0, 1, 63, 64, 127})

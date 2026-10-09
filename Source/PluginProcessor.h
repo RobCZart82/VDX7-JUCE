@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <mutex>
 #include <memory>
+#include <optional>
 #include "VDX7LatestDisplay.h"
 #include <vector>
 
@@ -192,6 +193,10 @@ private:
     void discardStaleCollectedInput(juce::MidiBuffer&, std::size_t& keyboardCount);
     void capturePendingRestoreEditsLocked();
     juce::ValueTree pendingRestore_;
+    // Existing engineMutex_ owns the accepted project generation. A detached
+    // ROM read may finish only for the project which requested it; never wraps.
+    // Future desired-mode ownership must share this generation, not duplicate it.
+    uint64_t projectRevision_ = 0;
     // Lock-free routing mirror only; pendingRestore_ remains engine-lock owned.
     std::atomic<bool> pendingProjectEdits_ {false};
     bool detectRom_ = true;
@@ -208,10 +213,12 @@ private:
     VDX7DeferredMidi deferredMidi_;
     bool handleMidiEventLocked(const uint8_t*, int);
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-    bool autoDetectRom();
+    bool autoDetectRom(std::optional<uint64_t> expectedProjectRevision = {});
+    bool loadRomForProject(const juce::File&, juce::String* error, uint64_t expectedProjectRevision);
     static bool readFile(const juce::File& file, std::size_t maxBytes,
                          std::vector<uint8_t>& data);
-    bool loadRomData(const juce::File& file, const std::vector<uint8_t>& rom, juce::String* error);
+    bool loadRomData(const juce::File& file, const std::vector<uint8_t>& rom, juce::String* error,
+                     uint64_t expectedProjectRevision);
     static juce::String bankName(int index);
     void applyPendingCommands();
     bool applyOperatorParameters();

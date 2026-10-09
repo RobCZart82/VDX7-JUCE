@@ -75,8 +75,8 @@ Ez a capture **utáni** keveredést javítja, nem teszi az önálló automatizá
 A valódi desired-mode/payload/pending/ROM-epoch ownership továbbra is nyitott.
 A #172 végső fejének Windows/macOS/sanitizer CI-je PASS, és a PR
 `6d66610109a867e9c1494f95081c594a2a8506ea` merge-commitként main-ba került.
-A külön main Windows-kör PASS; a macOS-kör még folyamatban van, ezért a main
-platformkapuja még nem lezárt.
+A külön main Windows/macOS kör is PASS; ez a részlépés lezárt,
+nem a teljes D5 funkció elfogadása.
 [Reprodukció és célzott ellenőrzések](../validation/PROJECT_SNAPSHOT_CAPTURE_20261009.md).
 
 ### Reprodukált projektparaméter blocker javítása
@@ -92,11 +92,40 @@ változatlan. Az audio callback, hostparaméterek és Clean admission nem válto
 
 A guard nélküli actual-processor negatív kontroll FAIL; a javítás után
 21 ROM-free CTest, 94 Python teszt, célzott no-ROM/private v1.8 ASan–UBSan,
-legacy bank round trip és macOS dev-build PASS. A végső PR-fej platform-CI-je,
-review-ja és a merge utáni main-kör még külön kapu. E javítás után a korábban
-rögzített D5 valódi állapot/renderer integráció következik; nincs új release
-vagy publikálási engedély.
+legacy bank round trip és macOS dev-build PASS. A végső PR-fej
+`5b76ac1` Windows/macOS/ASan–UBSan ellenőrzése PASS; #173 beolvadt
+`53b9589d669dd905cce4f1762421128ca397291a` main-commitként. A külön main
+[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37955955166) és
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37955955317) kör PASS.
+E javítás után a korábban rögzített D5 valódi állapot/renderer integráció
+következik; nincs új release vagy publikálási engedély.
 [Részletes ellenőrzések](../validation/PROJECT_PARAMETER_ADMISSION_20261009.md).
+
+### D5 előfeltétel: leválasztott ROM-completion projektgenerációja
+
+Baseline: `53b9589d669dd905cce4f1762421128ca397291a`; külön ág:
+`feature/processor-project-ownership`, [PR #174](https://github.com/RobCZart82/VDX7-JUCE/pull/174).
+Reprodukált actual-processor hiba:
+egy régi projekt leválasztott ROM-beolvasása az időközben teljesen visszatöltött
+új projekt hangszínét és firmware-útvonalát felülírhatta. Privát original v1.8
+baseline kontroll FAIL; generációvédett admission után PASS a kézi ROM-load és
+teljes restore reentráns/valódi kétszálas mátrixa.
+
+A meglévő engine lock alatt telepített projektgenerációt a saved-ROM restore,
+kézi load és autodetect végig megőrzi. Stale kérés még boot/RAM/epoch mutáció
+előtt elutasított; a régi restore completion sem dolgozza fel az új pending
+projektet. Elutasított state és mentés nem lépteti a számlálót; nincs wrap.
+21 ROM-free CTest, 94 Python, macOS VST3/AU/Standalone és célzott privát/ROM-free
+ASan–UBSan PASS. A teljes factory-bank/combined-ROM privát kör nem kapott
+PASS-t a 16 KB-only fixture-rel; a jelentés tételesen megőrzi a korlátot.
+
+Ez **csak előfeltétel**, nem a teljes D5 owner beillesztése. A teljes APVTS/
+payload/mód tranzakció, admission utáni publikáció és ugyanazon generáción belüli
+kézi load-ok sorrendje nincs e javítással lezárva. Clean még fail-closed;
+renderer/SETTINGS nincs bekapcsolva. Final-head platform/sanitizer CI, review és
+merge utáni main külön kapu. Ezután a valódi desired-mode/payload ownership
+integrációja következik az alábbi sorrendben; nem új release-publikálás.
+[Reprodukció, regressziók és korlátok](../validation/PROJECT_ROM_GENERATION_20261009.md).
 
 ### Végrehajtási sorrend és kiadási megállási kapuk
 
