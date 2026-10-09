@@ -1,7 +1,10 @@
 # Leválasztott ROM-betöltés projektgeneráció-védelme
 
 Dátum: 2026-10-09. Baseline: `53b9589d669dd905cce4f1762421128ca397291a`
-(#173 után). Javítási ág: `feature/processor-project-ownership`.
+(#173 után). Javítási ág: `feature/processor-project-ownership`,
+[PR #174](https://github.com/RobCZart82/VDX7-JUCE/pull/174).
+Tesztelt kódcommit: `daf8d73c0c2fad7f22adaa2b23f6ed88bcc35a4a`;
+a következő commit csak a PR-hivatkozást és e tesztazonosítást rögzíti.
 Ez a D5 Classic/Clean valódi projektállapot-integrációjának előfeltétele,
 nem a teljes ownership vagy a Clean hangút megvalósítása.
 

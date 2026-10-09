@@ -104,7 +104,8 @@ következik; nincs új release vagy publikálási engedély.
 ### D5 előfeltétel: leválasztott ROM-completion projektgenerációja
 
 Baseline: `53b9589d669dd905cce4f1762421128ca397291a`; külön ág:
-`feature/processor-project-ownership`. Reprodukált actual-processor hiba:
+`feature/processor-project-ownership`, [PR #174](https://github.com/RobCZart82/VDX7-JUCE/pull/174).
+Reprodukált actual-processor hiba:
 egy régi projekt leválasztott ROM-beolvasása az időközben teljesen visszatöltött
 új projekt hangszínét és firmware-útvonalát felülírhatta. Privát original v1.8
 baseline kontroll FAIL; generációvédett admission után PASS a kézi ROM-load és
