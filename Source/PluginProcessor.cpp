@@ -1238,9 +1238,12 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     uint32_t modified = 0, initVoices = 0;
     juce::String loadedRomPath;
     juce::String loadedRomIdentity;
+    VDX7SoundModeOwner::Snapshot projectMode;
 
     {
-        std::scoped_lock lock(engineMutex_);
+        std::unique_lock lock(engineMutex_);
+        soundModeOwner_.refreshReadinessLocked(lock, [&]() noexcept { return engine_.isLoaded(); });
+        projectMode = soundModeOwner_.snapshotLocked(lock);
         loadedRomPath = loadedRomPath_;
         loadedRomIdentity = loadedRomIdentity_;
         // A project saved while its firmware is missing must retain its sound.
@@ -1347,6 +1350,10 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     if (pendingCopy.isValid())
     {
         if (!writeImported(pendingCopy)) return;
+        // Preserve the legacy writer gate: only an already explicit Classic
+        // pending pair is written from the same captured project/mode owner.
+        if (pendingCopy.hasProperty(VDX7SoundModeState::versionProperty))
+            pendingCopy = VDX7SoundModeState::writeDetached(pendingCopy, projectMode.desired);
         if (auto xml = pendingCopy.createXml()) copyXmlToBinary(*xml, destData);
         return;
     }
@@ -1476,26 +1483,33 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
     ImportedBankSnapshot retiredImported; // Release large old data after unlocking.
     uint64_t installedRevision = 0;
     {
-        std::scoped_lock lock(engineMutex_);
-        if (projectRevision_ == std::numeric_limits<uint64_t>::max()) return;
+        std::unique_lock lock(engineMutex_);
+        if (soundModeOwner_.snapshotLocked(lock).revision == std::numeric_limits<uint64_t>::max()) return;
         if (!engine_.configureMonoCorrectionForStateRestore(static_cast<bool>(correction)))
             return;
-        installedRevision = ++projectRevision_;
-        retiredImported = std::move(importedBanks_);
-        importedBanks_ = std::move(restoredImported);
-        importedBankOrigin_ = restoredImportedOrigin;
-        ++importedBankRevision_;
-        pendingRestore_ = pendingCopy;
-        pendingProjectEdits_.store(true, std::memory_order_release);
-        // The audio callback owns deferredMidi_. Publishing an epoch lets it
-        // discard pre-restore events without racing this state-thread update.
-        midiTimelineEpoch_.fetch_add(1, std::memory_order_release);
-        const int channel = static_cast<int>(state.getProperty("midiInputChannel", 0));
-        midiInputChannel_.store(channel >= 0 && channel <= 16 ? channel : 0);
-        operatorParameterDirty_[0].store(0);
-        operatorParameterDirty_[1].store(0);
-        voiceParameterDirty_.store(0);
-        pendingPerformanceDirty_.store(0, std::memory_order_release);
+        // Full payload admission already passed. RAM is not installed yet, so
+        // this project is pending even when an unrelated old engine is loaded.
+        const bool installed = soundModeOwner_.installValidatedLocked(lock, desiredMode,
+            []() noexcept { return false; }, [&]() noexcept {
+                retiredImported = std::move(importedBanks_);
+                importedBanks_ = std::move(restoredImported);
+                importedBankOrigin_ = restoredImportedOrigin;
+                ++importedBankRevision_;
+                pendingRestore_ = pendingCopy;
+                pendingProjectEdits_.store(true, std::memory_order_release);
+                // The audio callback owns deferredMidi_. Publishing an epoch lets it
+                // discard pre-restore events without racing this state-thread update.
+                midiTimelineEpoch_.fetch_add(1, std::memory_order_release);
+                const int channel = static_cast<int>(state.getProperty("midiInputChannel", 0));
+                midiInputChannel_.store(channel >= 0 && channel <= 16 ? channel : 0);
+                operatorParameterDirty_[0].store(0);
+                operatorParameterDirty_[1].store(0);
+                voiceParameterDirty_.store(0);
+                pendingPerformanceDirty_.store(0, std::memory_order_release);
+        });
+        jassert(installed); // Valid enum/revision were checked under this same lock.
+        if (!installed) return;
+        installedRevision = soundModeOwner_.snapshotLocked(lock).revision;
     }
     const auto parameterState = state.getChildWithName(juce::Identifier(kParameterStateType));
     if (parameterState.isValid())
@@ -1515,16 +1529,11 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 
     bool pendingRomIdentityMismatch = false;
     {
-        std::scoped_lock lock(engineMutex_);
-        if (installedRevision != projectRevision_) return; // A newer project owns completion.
-        if (engine_.isLoaded() && pendingRestore_.isValid()
-            && savedStateMatchesRom(pendingRestore_, loadedRomIdentity_, loadedRomPath_))
-        {
-            restoreSavedStateLocked(pendingRestore_);
-            pendingRestore_ = {};
-            pendingProjectEdits_.store(false, std::memory_order_release);
-        }
-        else if (engine_.isLoaded() && pendingRestore_.isValid())
+        std::unique_lock lock(engineMutex_);
+        if (installedRevision != soundModeOwner_.snapshotLocked(lock).revision) return;
+        completeSavedProjectLocked(lock, installedRevision);
+        soundModeOwner_.refreshReadinessLocked(lock, [&]() noexcept { return engine_.isLoaded(); });
+        if (engine_.isLoaded() && pendingRestore_.isValid())
         {
             pendingRomIdentityMismatch = true;
         }
@@ -1540,6 +1549,27 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
         statusText_ = "Project preserved: loaded ROM differs from the saved ROM";
     }
     synchroniseOperatorParametersFromEngine();
+}
+
+VDX7SoundModeOwner::Snapshot VDX7AudioProcessor::getSoundModeProjectSnapshot()
+{
+    std::unique_lock lock(engineMutex_);
+    soundModeOwner_.refreshReadinessLocked(lock, [&]() noexcept { return engine_.isLoaded(); });
+    return soundModeOwner_.snapshotLocked(lock);
+}
+
+bool VDX7AudioProcessor::completeSavedProjectLocked(const std::unique_lock<std::mutex>& lock,
+                                                   uint64_t revision)
+{
+    return soundModeOwner_.completePendingLocked(lock, revision,
+        [&]() noexcept {
+            return engine_.isLoaded() && pendingRestore_.isValid()
+                && savedStateMatchesRom(pendingRestore_, loadedRomIdentity_, loadedRomPath_);
+        }, [&]() noexcept {
+            restoreSavedStateLocked(pendingRestore_);
+            pendingRestore_ = {};
+            pendingProjectEdits_.store(false, std::memory_order_release);
+        });
 }
 
 void VDX7AudioProcessor::capturePendingRestoreEditsLocked()
@@ -1711,8 +1741,8 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
     vdx7TestRestoreRomBoundary();
 #endif
     {
-        std::scoped_lock lock(engineMutex_);
-        if (expectedProjectRevision != projectRevision_)
+        std::unique_lock lock(engineMutex_);
+        if (expectedProjectRevision != soundModeOwner_.snapshotLocked(lock).revision)
         {
             if (error) *error = "ROM load superseded by a newer project; retry from its current state.";
             return false;
@@ -1727,6 +1757,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
                                              voices.empty() ? nullptr : voices.data(), voices.size(), &diagnostic);
         if (!ok)
         {
+            soundModeOwner_.refreshReadinessLocked(lock, [&]() noexcept { return engine_.isLoaded(); });
             std::scoped_lock metadataLock(metadataMutex_);
             const auto message = vdx7RomLoadMessage(diagnostic);
             statusText_ = message.empty() ? "ROM load failed without an engine diagnostic."
@@ -1778,13 +1809,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         lastModValue_ = -1;
         if (pendingRestore_.isValid())
         {
-            if (savedStateMatchesRom(pendingRestore_, loadedRomIdentity_, loadedRomPath_))
-            {
-                restoreSavedStateLocked(pendingRestore_);
-                pendingRestore_ = {};
-                pendingProjectEdits_.store(false, std::memory_order_release);
-            }
-            else
+            if (!completeSavedProjectLocked(lock, expectedProjectRevision))
             {
                 pendingIdentityMismatch = true;
                 updateEngineSnapshot();
@@ -1792,6 +1817,7 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         }
         else
             updateEngineSnapshot();
+        soundModeOwner_.refreshReadinessLocked(lock, [&]() noexcept { return engine_.isLoaded(); });
 
         // A successful firmware image install is a MIDI timeline boundary:
         // deferred input captured while the engine lock was unavailable must
@@ -1820,8 +1846,8 @@ bool VDX7AudioProcessor::loadRomFromFile(const juce::File& file, juce::String* e
 {
     uint64_t revision = 0;
     {
-        std::scoped_lock lock(engineMutex_);
-        revision = projectRevision_;
+        std::unique_lock lock(engineMutex_);
+        revision = soundModeOwner_.snapshotLocked(lock).revision;
     }
     return loadRomForProject(file, error, revision);
 }
@@ -2699,8 +2725,8 @@ bool VDX7AudioProcessor::autoDetectRom(std::optional<uint64_t> expectedProjectRe
 {
     if (!expectedProjectRevision)
     {
-        std::scoped_lock lock(engineMutex_);
-        expectedProjectRevision = projectRevision_;
+        std::unique_lock lock(engineMutex_);
+        expectedProjectRevision = soundModeOwner_.snapshotLocked(lock).revision;
     }
     juce::Array<juce::File> candidates;
 

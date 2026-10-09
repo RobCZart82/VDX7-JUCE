@@ -127,6 +127,38 @@ merge utáni main külön kapu. Ezután a valódi desired-mode/payload ownership
 integrációja következik az alábbi sorrendben; nem új release-publikálás.
 [Reprodukció, regressziók és korlátok](../validation/PROJECT_ROM_GENERATION_20261009.md).
 
+#174 végső `572cdd6faefc97a66ab567a1a18fa03bc244ba12` fejének mindhárom
+Windows/macOS/sanitizer ellenőrzése PASS; a PR main-ba került
+`541c39cd8ee6bba0643df52dbfd90716c3a6b268` merge-commitként. A külön main
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37971733396) PASS,
+a [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37971733041)
+is PASS. A #174 platformkapuja lezárt; ez nem teljes D5 vagy release-elfogadás.
+
+### D5 Classic-only owner valódi processor bekötése
+
+Baseline: `541c39cd8ee6bba0643df52dbfd90716c3a6b268`; ág:
+`feature/processor-mode-project-state`, [PR #175](https://github.com/RobCZart82/VDX7-JUCE/pull/175).
+A #174 külön projektgenerációját a
+`VDX7SoundModeOwner` egyetlen közös revíziója váltja fel. A már megszerzett
+engine lockból ellenőrzött `unique_lock` adapterekkel települ a pending payload
+és a Classic kívánt mód; a valódi ROM-identitás ellenőrzése és RAM-completion
+ugyanott kapcsolja ready állapotba a jelenlegi projektet. Nincs második mutex
+vagy független, egymás mellett futó projektgeneráció.
+
+Mentés ugyanabban a capture-ben rögzíti az owner skalár állapotát. Normál és
+legacy pending writer továbbra is legacy; csak már explicit Classic pending
+pár kerül a captured mód alapján a leválasztott másolatba. Érvényes Clean is
+elutasított. Nincs új hostparaméter, UI-módváltó vagy audio-dispatch.
+
+21 ROM-free CTest, 94 Python, macOS VST3/AU/Standalone, actual owner/pending/
+ROM-completion és célzott ASan–UBSan PASS. Privát original v1.8-cal a hiányzó/
+eltérő/megfelelő ROM, feedback recall, prepare/release, reload és a #174 valódi
+kétszálas stale-regresszió is PASS. Final-head platform-CI/review és main-kör
+még külön kapu. A teljes D5 **nem kész**: APVTS/host-publikáció tranzakciója,
+Clean writer/admission, audio owner/renderer/lifecycle és SETTINGS még nyitott.
+Ezek következnek az alábbi sorrendben; nincs új release-publikálás.
+[Bekötés, tesztkör és korlátok](../validation/PROCESSOR_MODE_PROJECT_OWNER_20261009.md).
+
 ### Végrehajtási sorrend és kiadási megállási kapuk
 
 1. **D5 processor-állapot integráció:** az elkészült codec/owner a valódi

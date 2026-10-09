@@ -4,7 +4,8 @@
 
 // Off-audio-thread codec. PluginProcessor uses the reader for fail-closed
 // admission; live Clean projects remain gated on renderer/lifecycle integration.
-// The writer/desired-mode ownership are still preparatory. Callers must
+// Normal writer/Clean dispatch remain gated; explicit pending Classic metadata
+// uses the processor's captured project owner. Callers must
 // capture a coherent tree + desired mode under their own ownership protection.
 namespace VDX7SoundModeState
 {

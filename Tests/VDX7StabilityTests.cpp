@@ -526,8 +526,8 @@ struct VDX7RegressionAccess
     {
         uint64_t revision = 0;
         {
-            std::scoped_lock lock(p.engineMutex_);
-            revision = p.projectRevision_;
+            std::unique_lock lock(p.engineMutex_);
+            revision = p.soundModeOwner_.snapshotLocked(lock).revision;
         }
         return p.loadRomData(juce::File(), std::vector<uint8_t>(7), nullptr, revision);
     }

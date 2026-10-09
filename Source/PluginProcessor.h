@@ -17,6 +17,7 @@
 #include "VDX7UserBank.h"
 #include "VDX7FactoryBanks.h"
 #include "VDX7ImportedBankState.h"
+#include "VDX7SoundModeOwner.h"
 
 namespace VDX7ParameterIDs
 {
@@ -181,6 +182,8 @@ public:
     uint32_t getOperatorVoiceRevision() const noexcept;
     // Non-realtime only: captures under engine lock, notifies after unlocking.
     bool synchroniseOperatorParametersFromEngine();
+    // Non-realtime diagnostic/state view only. No mode setter or Clean UI yet.
+    VDX7SoundModeOwner::Snapshot getSoundModeProjectSnapshot();
 
 private:
     bool loadPackedVoices(const std::vector<uint8_t>&, juce::String* error, int selectProgram = -1,
@@ -193,10 +196,7 @@ private:
     void discardStaleCollectedInput(juce::MidiBuffer&, std::size_t& keyboardCount);
     void capturePendingRestoreEditsLocked();
     juce::ValueTree pendingRestore_;
-    // Existing engineMutex_ owns the accepted project generation. A detached
-    // ROM read may finish only for the project which requested it; never wraps.
-    // Future desired-mode ownership must share this generation, not duplicate it.
-    uint64_t projectRevision_ = 0;
+    bool completeSavedProjectLocked(const std::unique_lock<std::mutex>&, uint64_t revision);
     // Lock-free routing mirror only; pendingRestore_ remains engine-lock owned.
     std::atomic<bool> pendingProjectEdits_ {false};
     bool detectRom_ = true;
@@ -268,6 +268,9 @@ private:
     }
 
     mutable std::mutex engineMutex_;
+    // One mode/project generation, under the existing payload/ROM lock. Never
+    // call the owner's self-locking entry points from an engine transaction.
+    VDX7SoundModeOwner soundModeOwner_ { engineMutex_ };
     // Instance-lifetime diagnostics; never persisted or reset by the GUI.
     std::atomic<uint64_t> contendedAudioBlocks_ {0}, contendedAudioSamples_ {0};
     std::atomic<uint64_t> longestContendedAudioRunSamples_ {0};

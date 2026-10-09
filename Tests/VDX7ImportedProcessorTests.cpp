@@ -175,18 +175,19 @@ struct VDX7RegressionAccess
 {
     static auto restoreGeneration(VDX7AudioProcessor& p)
     {
-        std::scoped_lock lock(p.engineMutex_);
-        return std::make_tuple(p.midiTimelineEpoch_.load(), p.importedBankRevision_, p.projectRevision_);
+        std::unique_lock lock(p.engineMutex_);
+        return std::make_tuple(p.midiTimelineEpoch_.load(), p.importedBankRevision_,
+            p.soundModeOwner_.snapshotLocked(lock).revision);
     }
     static uint64_t projectRevision(VDX7AudioProcessor& p)
     {
-        std::scoped_lock lock(p.engineMutex_);
-        return p.projectRevision_;
+        std::unique_lock lock(p.engineMutex_);
+        return p.soundModeOwner_.snapshotLocked(lock).revision;
     }
     static void exhaustProjectRevision(VDX7AudioProcessor& p)
     {
         std::scoped_lock lock(p.engineMutex_);
-        p.projectRevision_ = std::numeric_limits<uint64_t>::max();
+        p.soundModeOwner_.state_.revision = std::numeric_limits<uint64_t>::max();
     }
     static bool pendingOwnsCatalog(VDX7AudioProcessor& p)
     {
@@ -422,6 +423,93 @@ static void testProjectGeneration()
         require(error.contains("superseded"), "obsolete ROM attempt reports stale instead of firmware failure");
     }
     std::cout << "PASS: actual project generation, rejection, exhaustion and ROM-free stale admission\n";
+}
+
+static void testActualModeProjectOwner(const juce::File& rom = {})
+{
+    using Mode = VDX7SoundModeState::Mode;
+    auto p = std::make_unique<VDX7AudioProcessor>(false);
+    const auto initial = p->getSoundModeProjectSnapshot();
+    require(initial.desired == Mode::classic && initial.revision == 0
+        && !initial.pending && !initial.ready, "fresh processor has Classic owner without an engine");
+    auto candidate = tree(save(*p));
+    require(!candidate.hasProperty("soundMode") && !candidate.hasProperty("soundModeVersion"),
+        "no new writer metadata before renderer integration");
+    candidate.setProperty("soundModeVersion", 1, nullptr);
+    candidate.setProperty("soundMode", 0, nullptr);
+    candidate.setProperty("midiInputChannel", 13, nullptr);
+    restore(*p, binary(candidate));
+    const auto pending = p->getSoundModeProjectSnapshot();
+    require(pending.desired == Mode::classic && pending.revision == 1
+        && pending.pending && !pending.ready, "real pending payload shares Classic owner generation");
+    const auto before = save(*p);
+    auto bad = candidate.createCopy();
+    bad.setProperty("soundMode", 1, nullptr);
+    restore(*p, binary(bad));
+    require(p->getSoundModeProjectSnapshot() == pending && save(*p) == before,
+        "Clean rejection leaves actual mode, pending payload and revision intact");
+
+    juce::MemoryBlock detached;
+    saveBoundary = [&] {
+        auto newer = candidate.createCopy();
+        newer.setProperty("midiInputChannel", 9, nullptr);
+        newer.removeProperty("soundMode", nullptr);
+        newer.removeProperty("soundModeVersion", nullptr);
+        restore(*p, binary(newer));
+    };
+    p->getStateInformation(detached);
+    const auto captured = tree(detached);
+    require(captured.getProperty("midiInputChannel").toString() == "13"
+        && captured.getProperty("soundMode").toString() == "0"
+        && captured.getProperty("soundModeVersion").toString() == "1",
+        "explicit pending Classic pair and payload stay captured across another recall");
+    require(p->getSoundModeProjectSnapshot().revision == 2 && p->getMidiInputChannel() == 9,
+        "encoding old snapshot cannot republish the retired owner");
+    for (const auto* forbidden : { "revision", "projectRevision", "pending", "ready", "gain" })
+        require(!captured.hasProperty(forbidden), "runtime mode ownership is never serialized");
+    require(!tree(save(*p)).hasProperty("soundMode"), "legacy pending writer stays legacy");
+
+    if (rom.existsAsFile())
+    {
+        auto source = std::make_unique<VDX7AudioProcessor>(false);
+        require(source->loadRomFromFile(rom), "actual owner private boot");
+        const auto booted = source->getSoundModeProjectSnapshot();
+        require(booted.ready && !booted.pending && booted.revision == 0,
+            "first ROM boot does not invent a project recall");
+        setFeedback(*source, 6);
+        auto matching = tree(save(*source));
+        matching.setProperty("romPath", "/vdx7-own-test-missing/firmware.rom", nullptr);
+        matching.setProperty("soundModeVersion", 1, nullptr);
+        matching.setProperty("soundMode", 0, nullptr);
+        auto waiting = std::make_unique<VDX7AudioProcessor>(false);
+        restore(*waiting, binary(matching));
+        auto mismatch = matching.createCopy();
+        mismatch.setProperty("romIdentity", "own-incompatible-test-identity", nullptr);
+        restore(*waiting, binary(mismatch));
+        const auto mismatched = waiting->getSoundModeProjectSnapshot();
+        require(mismatched.revision == 2 && mismatched.pending && !mismatched.ready,
+            "missing compatible ROM leaves mode/project pending");
+        require(waiting->loadRomFromFile(rom) && waiting->isRomLoaded() && !waiting->isProjectReady(),
+            "loaded original ROM can still mismatch the saved project");
+        require(waiting->getSoundModeProjectSnapshot() == mismatched,
+            "ROM-only mismatch never completes pending mode or increments project revision");
+        restore(*waiting, binary(matching));
+        const auto completed = waiting->getSoundModeProjectSnapshot();
+        require(completed.ready && !completed.pending && completed.revision == 3
+            && completed.desired == Mode::classic && waiting->isProjectReady(),
+            "matching live ROM completes actual RAM and current mode owner together");
+        require(waiting->parameters().getRawParameterValue(
+            VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback))->load() == 6,
+            "actual owner completion retains edited voice");
+        waiting->prepareToPlay(48000, 64);
+        waiting->releaseResources();
+        require(waiting->getSoundModeProjectSnapshot() == completed,
+            "prepare/release retain Classic desired mode and project generation");
+        require(waiting->loadRomFromFile(rom)
+            && waiting->getSoundModeProjectSnapshot() == completed,
+            "nonpending ROM reload refreshes readiness without retiring project mode");
+    }
+    std::cout << "PASS: actual processor mode/project owner, pending capture and compatible completion\n";
 }
 
 static void testStartup()
@@ -812,12 +900,13 @@ int main(int argc, char** argv)
             testParameterSnapshot(argc == 3 ? juce::File(argv[2]) : juce::File());
             testParameterAdmission(argc == 3 ? juce::File(argv[2]) : juce::File());
             testProjectGeneration();
+            testActualModeProjectOwner(argc == 3 ? juce::File(argv[2]) : juce::File());
             if (argc == 3) testStaleRomCompletion(juce::File(argv[2]));
             return 0;
         }
         require(argc == 1 || argc == 2, "optional local verified ROM path only");
-        if (argc == 2) { testParameterSnapshot(juce::File(argv[1])); testParameterAdmission(juce::File(argv[1])); testStaleRomCompletion(juce::File(argv[1])); testWithRom(juce::File(argv[1])); }
-        else { testParameterSnapshot(); testParameterAdmission(); testProjectGeneration(); testStartup(); testNoRom(); testBoundaries(); }
+        if (argc == 2) { testParameterSnapshot(juce::File(argv[1])); testParameterAdmission(juce::File(argv[1])); testActualModeProjectOwner(juce::File(argv[1])); testStaleRomCompletion(juce::File(argv[1])); testWithRom(juce::File(argv[1])); }
+        else { testParameterSnapshot(); testParameterAdmission(); testProjectGeneration(); testActualModeProjectOwner(); testStartup(); testNoRom(); testBoundaries(); }
         std::cout << "PASS: imported catalog processor ownership, binary state and bounded scheduling\n";
         return 0;
     }
