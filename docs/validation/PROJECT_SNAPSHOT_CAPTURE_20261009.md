@@ -1,7 +1,9 @@
 # Projektmentés rögzített paraméterértékei
 
 Dátum: 2026-10-09. Baseline: `31d39032c4d8aa53a88a0cee1003e47b0bdbeec2`.
-Ág: `fix/coherent-project-snapshot`. Ez a Classic/Clean integráció előtt
+Ág: `fix/coherent-project-snapshot`, [PR #172](https://github.com/RobCZart82/VDX7-JUCE/pull/172).
+Tesztelt kódcommit: `cdb10ef48c3de1b747b779735c841f7160c1cfae`; az ezt
+követő PR-link frissítés csak dokumentáció. Ez a Classic/Clean integráció előtt
 szükséges mentési javítás, nem új release vagy kész Clean funkció.
 
 ## Reprodukált hiba

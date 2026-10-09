@@ -60,7 +60,8 @@ regresszióval cserélendő, a hibás séma rejection-tesztek megmaradnak.
 ### D5 előfeltétel a leválasztott projektmentéshez
 
 Baseline: `31d39032c4d8aa53a88a0cee1003e47b0bdbeec2`; külön javítási ág:
-`fix/coherent-project-snapshot`. A mentés rögzítése utáni módosítás vagy másik
+`fix/coherent-project-snapshot`, [PR #172](https://github.com/RobCZart82/VDX7-JUCE/pull/172).
+A mentés rögzítése utáni módosítás vagy másik
 projekt visszatöltése eddig új hangerő/kerék értékeket, firmware nélkül pedig
 új hangszín-paramétereket keverhetett a korábban rögzített payloadba.
 A reprodukáló actual-processor teszt a változatlan kódon FAIL, a javítás után
