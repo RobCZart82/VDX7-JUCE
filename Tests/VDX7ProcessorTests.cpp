@@ -285,6 +285,8 @@ static void testInitPreset(const juce::File& romFile)
     auto other = std::make_unique<VDX7AudioProcessor>(false);
     require(p->loadRomFromFile(romFile) && other->loadRomFromFile(romFile), "init local firmware");
     VDX7RegressionAccess::installSyntheticCatalog(*p);
+    VDX7RegressionAccess::installSyntheticCatalog(*other);
+    require(other->selectFactoryBank(0), "init identical-voice synthetic selection");
     // Identical bytes do not make a changed program selection safe to replace.
     VDX7AudioProcessor::WorkingVoiceSnapshot selection;
     juce::String selectionError;

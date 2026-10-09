@@ -1016,8 +1016,14 @@ nem néma kontrollok. Régi JUCE ismétlési kontroll PASS 5 760 512 mintára.
 Tiszta régi/új build és összevetés PASS: mind a 30 esetben nincs PCM/state/
 recall/metric eltérés. Új Windows VST3 + Standalone build, 20/20 ROM-mentes
 CTest, 50 ownership ismétlés és source configure/Git guard PASS; Python
-93 tesztből 92 PASS / 1 Windows symlink SKIP. Teljes source-archive/offline
-próba, friss final-head Windows/macOS/sanitizer CI és review még hátravan.
+94 tesztből 93 PASS / 1 Windows symlink SKIP. További 10/10 célzott privát v1.8
+CTest PASS; a régi JUCE-val is hibázó Init kontroll saját seed-fixture-jét
+javítottuk, production működést nem módosítottunk. A teljes source csomag
+első próbáját blokkoló két személyes dokumentációs buildútvonal javítva,
+guard változatlan. Új 5704 fájlos source-archive + bundled checker + friss
+disconnected VST3 build PASS; a valódi korábbi 5131 fájlos 1.0.1 source archive
+az új verifierrel is PASS. Friss final-head Windows/macOS/sanitizer CI és
+review még hátravan; ezek nélkül nem merge-elfogadás.
 [Pontos kör és eredménykövetés](../validation/JUCE_903_COMPATIBILITY_20261009.md).
 E kísérlet nem D5 DSP integráció, T1–T4 host-elfogadás vagy release approval.
 
