@@ -19,13 +19,24 @@ v1.8 támogatott; nincs más firmware-re vonatkozó cél vagy ígéret.
 
 ## 1. Meglévő kódhoz illesztés
 
+2026-10-09 admission-részlépés (#170 utáni `2e42412...` baseline): a codec
+readerének valódi processor-bekötése már megelőzi az összes restore-mutációt.
+Legacy/explicit Classic betölthető; hibás séma és **érvényes Clean** elutasított,
+amíg nincs működő Clean renderer/lifecycle. A lentebb leírt valid Clean desired-
+mode recall a végleges integráció célja, nem e részlépés mai működése.
+Nincs új writer/owner/SETTINGS/audio bekötés; normál save továbbra is legacy,
+pending explicit Classic mezőit megőrzi. A Clean negatív kontrollját a hangút
+elkészültekor helyes pozitív recall/regresszió váltsa fel, ne pusztán töröljük.
+[Processor-admission bizonyíték](../validation/CLASSIC_CLEAN_PROCESSOR_ADMISSION_20261009.md).
+
 - `Source/PluginProcessor.cpp`: `kStateType = VDX7STATE`, `kParameterStateType =
   PARAMETERS`. `getStateInformation()` az engine-mutex alatt leválasztott
   RAM/ROM/bank/paraméter pillanatképet a lockon kívül kódolja XML/binary formába.
   Érvényes `pendingRestore_` esetén megőrzött projektmásolatot ment.
 - `setStateInformation()` a root, bankok, RAM és policy ellenőrzése után,
   engine-lock alatt telepíti a pending projektet. A mono-policy konfigurálása
-  már mellékhatást okozhat: a D5 validációja **e pont elé** kell kerüljön.
+  már mellékhatást okozhat: a D5 admission-reader **e pont elé** került;
+  a teljes kívántmód-ownership még külön integrációs feladat.
 - Hiányzó/eltérő ROM mellett a saved projekt pending marad; a kompatibilitást
   a meglévő ROM-identity és `savedStateMatchesRom()` szabály igazolja, nem D5.
 - `processBlock()` már `try_to_lock`-ot használ, a state epochot a lock megszerzése

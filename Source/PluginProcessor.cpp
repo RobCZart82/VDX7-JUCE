@@ -6,6 +6,7 @@
 #include "VDX7StateBytes.h"
 #include "VDX7Sysex.h"
 #include "VDX7MidiValidation.h"
+#include "VDX7SoundModeState.h"
 #include "PluginEditor.h"
 #include <juce_cryptography/juce_cryptography.h>
 
@@ -1328,6 +1329,14 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 
     auto state = juce::ValueTree::fromXml(*xml);
     if (!state.isValid() || state.getType().toString() != kStateType)
+        return;
+
+    // Validate before mono-policy, catalog/pending, MIDI epoch or host parameter
+    // mutation. Never silently turn a newer Clean project into Classic audio:
+    // Clean admission stays closed until its renderer/lifecycle is integrated.
+    auto desiredMode = VDX7SoundModeState::Mode::classic;
+    if (!VDX7SoundModeState::read(state, desiredMode)
+        || desiredMode != VDX7SoundModeState::Mode::classic)
         return;
 
     VDX7FactoryBanks::Snapshot factoryBanks;

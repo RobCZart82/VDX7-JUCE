@@ -2,8 +2,9 @@
 
 #include <juce_data_structures/juce_data_structures.h>
 
-// Preparatory, off-audio-thread codec. Not yet used by PluginProcessor: accepting
-// live Clean projects is gated on renderer/lifecycle integration. Callers must
+// Off-audio-thread codec. PluginProcessor uses the reader for fail-closed
+// admission; live Clean projects remain gated on renderer/lifecycle integration.
+// The writer/desired-mode ownership are still preparatory. Callers must
 // capture a coherent tree + desired mode under their own ownership protection.
 namespace VDX7SoundModeState
 {

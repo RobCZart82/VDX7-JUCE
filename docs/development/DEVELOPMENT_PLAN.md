@@ -13,7 +13,9 @@ Ellenőrzött main: `000ee97b19763b23c569ff6ac68080c4b6165094` (#169 után).
 A D5 nem opcionálisan későbbre hagyott ötlet: a következő release csak a
 teljes, tesztelt motor/processor/projektmentés és SETTINGS integrációval készülhet.
 Az önálló modell, codec vagy owner elkészülte nem kész funkció, és a zöld CI
-nem helyettesíti a hangzási/host-elfogadást. Ma a production integráció NOT RUN.
+nem helyettesíti a hangzási/host-elfogadást. A production Clean renderer/mód-
+ownership/SETTINGS integráció még nyitott; az alábbi admission-részlépés nem
+jelenti a teljes funkció megvalósítását.
 
 Megőrzendő koncepció: **SETTINGS → Sound mode → Classic / Clean**;
 Classic alapértelmezett, legacy projektben is, a korábbi hangzás megőrzésével.
@@ -21,6 +23,36 @@ Clean opcionálisan választható, példányonként projektbe mentett mód. Nati
 mono-policy független marad; 148 hostparaméter ID/sorrend és pluginazonosság
 változatlan. A döntés nem engedély új automatizálható hostparamétert vagy új
 firmware-támogatást. Kizárólag original DX7 Mk I v1.8 a támogatott tesztalap.
+
+### D5 valódi processor-admission részlépés — 2026-10-09
+
+Baseline: `2e42412c7da50eea10a17f222983e959a2e76310` (#170 után), külön ág:
+`feature/classic-clean-processor-admission`,
+[PR #171](https://github.com/RobCZart82/VDX7-JUCE/pull/171).
+A valódi `setStateInformation()`
+már a mono-policy, imported/pending state, MIDI epoch és APVTS módosítása
+**előtt** használja a D5 readerét. Hiányos/hibás/újabb sémapár elutasítandó.
+Legacy és explicit Classic megmarad. **Érvényes Clean is teljes elutasítás**,
+amíg renderer/lifecycle nincs: nem telepítjük a payloadot Classic-ként, és
+nem tárolunk működő Clean kívánt módot DSP nélkül. Ez átmeneti fejlesztési kapu,
+nem a végleges Clean restore implementáció és nem downgrade-ígéret.
+Az új writer nem aktív; a normál mentés nem kezd új módmezőket létrehozni.
+Megőrzött pending explicit Classic mezőpár változatlanul továbbmenthető.
+
+Teszt először: legacy/Classic kontroll PASS, első hiányos párnál a generáció-
+megőrzés FAIL a változatlan production kódon. Javítás után 21 ROM-free CTest
+PASS, 8 célzott privát v1.8 teszt PASS, Windows VST3/Standalone és ci_checks
+build PASS; Python 94 futott, 93 PASS / 1 symlink SKIP. A 30 korábbi Classic
+kontrollhoz mért 5 760 512 float minta, projektállapot és metrika azonos: PASS.
+Új final-head platform-CI/review folyamatban, még nem elfogadott; helyi macOS/sanitizer és
+valódi REAPER/hallásos teszt NOT RUN. Teljes új release-funkció elfogadása nincs.
+
+Következő nyitott lépés: kívánt mód és payload koherens valódi save/restore/
+pending/ROM-epoch ownership, majd native/SRC renderer és átmenet közös
+integrációja. Clean admission csak e működő hangút bizonyítéka után nyitható;
+a jelen fail-closed negatív kontroll akkor pozitív Clean recall/lifecycle
+regresszióval cserélendő, a hibás séma rejection-tesztek megmaradnak.
+[Részletes reprodukció, ellenőrzések és korlátok](../validation/CLASSIC_CLEAN_PROCESSOR_ADMISSION_20261009.md).
 
 ### Végrehajtási sorrend és kiadási megállási kapuk
 
