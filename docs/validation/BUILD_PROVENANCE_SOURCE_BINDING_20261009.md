@@ -3,6 +3,8 @@
 Dátum: 2026-10-09. Baseline: `e4000390188618d63acce1301a1d13a6616ae9ed` main.
 Ág: `fix/build-provenance-source-binding`. Ez nem JUCE-verziócsere,
 hangmotor-módosítás vagy kiadási elfogadás.
+Pull request: [#168](https://github.com/RobCZart82/VDX7-JUCE/pull/168).
+Implementációs commit: `3aa0932`; final-head CI/review még szükséges.
 
 ## Előző mérföldkő lezárása
 

@@ -999,6 +999,8 @@ T1–T4 lefedettségi halasztásai a publikálási jegyzékben rögzítettek; T5
 
 Baseline `e4000390188618d63acce1301a1d13a6616ae9ed` main; ág
 `fix/build-provenance-source-binding`. A #167 önálló részlépés lezárult.
+Pull request: [#168](https://github.com/RobCZart82/VDX7-JUCE/pull/168),
+nyitott; final-head platform/sanitizer és review a merge-kapu.
 JUCE 9.0.3 jelölt teljes SHA ellenőrizve:
 `be29c81492b6151c8ea8d14c840e1311963b3a83`; **GO a külön kompatibilitási
 kísérlethez, nem pin-merge/kiadás elfogadás**. A dependency pin ma még 9.0.1.
