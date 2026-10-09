@@ -14,6 +14,9 @@ tesztkör korlátozza az állításokat. A teljes név szerinti jegyzék alább 
 
 ## Reports by filename
 
+- [Projektmentés rögzített paraméterértékei](PROJECT_SNAPSHOT_CAPTURE_20261009.md)
+- [Classic Clean processor admission](CLASSIC_CLEAN_PROCESSOR_ADMISSION_20261009.md)
+
 - [Classic Clean threaded ownership validation](CLASSIC_CLEAN_THREADED_OWNERSHIP_20261008.md)
 
 - [Init Preset development validation](VALIDATION_20261007_INIT_PRESET.md)

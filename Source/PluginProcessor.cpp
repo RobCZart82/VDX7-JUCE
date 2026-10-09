@@ -1166,6 +1166,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     juce::ValueTree state { juce::Identifier(kStateType) };
     std::array<int, VDX7VoiceData::kOperatorCount * VDX7VoiceData::kParameterCount> operatorValues {};
     std::array<int, VDX7VoiceData::kVoiceParameterCount> voiceValues {};
+    std::array<float, 3> performanceValues {};
     bool loaded = false;
     bool monoCorrection = false;
     juce::ValueTree pendingCopy;
@@ -1195,6 +1196,11 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         }
         else
         {
+            // Freeze host-only controls with the engine payload, not when the
+            // detached snapshot is encoded. Later edits/restores must remain
+            // live without being spliced into an already captured project.
+            performanceValues = { masterVolumeParameter_->load(),
+                                  pitchWheelParameter_->load(), modWheelParameter_->load() };
             // Capture even the most recent GUI/automation edits if the host asks
             // for state before another audio block has had a chance to run.
             // Before the first ROM is installed, these setters necessarily
@@ -1226,6 +1232,14 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
             }
             else
             {
+                // With no firmware, APVTS is the voice source. Capture every
+                // value now, including defaults without a dirty mailbox bit.
+                for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
+                    for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
+                        operatorValues[op * VDX7VoiceData::kParameterCount + p] =
+                            juce::roundToInt(operatorParameterValues_[op][p]->load());
+                for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
+                    voiceValues[p] = juce::roundToInt(voiceParameterValues_[p]->load());
                 // A first ROM install can consume these mailboxes as soon as
                 // the engine lock is released. Detach their values with the
                 // no-ROM generation; leave the masks pending for that install.
@@ -1298,20 +1312,22 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
         state.setProperty("romIdentity", loadedRomIdentity, nullptr);
 
     auto parameterState = parameters_.copyState();
-    // A headless/reentrant save must not serialize a half-published host view.
-    // Patch this detached copy from the same engine snapshot as the saved RAM.
-    if (loaded)
-    {
-        auto setSavedValue = [&](const juce::String& id, int value) {
-            auto child = parameterState.getChildWithProperty("id", id);
-            if (child.isValid()) child.setProperty("value", static_cast<float>(value), nullptr);
-        };
-        for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
-            for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
-                setSavedValue(operatorParameterIDs_[op][p], operatorValues[op * VDX7VoiceData::kParameterCount + p]);
-        for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
-            setSavedValue(voiceParameterIDs_[p], voiceValues[p]);
-    }
+    // Use APVTS for tree structure only. All 148 values belong to the capture
+    // above, even before the first ROM; copyState/host callbacks stay outside
+    // this normal-path engine capture. This is not an atomic transaction across
+    // independent automation writes occurring during the capture itself.
+    auto setSavedValue = [&](const juce::String& id, float value) {
+        auto child = parameterState.getChildWithProperty("id", id);
+        if (child.isValid()) child.setProperty("value", value, nullptr);
+    };
+    setSavedValue(VDX7ParameterIDs::masterVolume, performanceValues[0]);
+    setSavedValue(VDX7ParameterIDs::pitchWheel, performanceValues[1]);
+    setSavedValue(VDX7ParameterIDs::modWheel, performanceValues[2]);
+    for (int op = 0; op < VDX7VoiceData::kOperatorCount; ++op)
+        for (int p = 0; p < VDX7VoiceData::kParameterCount; ++p)
+            setSavedValue(operatorParameterIDs_[op][p], float(operatorValues[op * VDX7VoiceData::kParameterCount + p]));
+    for (int p = 0; p < VDX7VoiceData::kVoiceParameterCount; ++p)
+        setSavedValue(voiceParameterIDs_[p], float(voiceValues[p]));
     state.addChild(parameterState, -1, nullptr);
 
     if (deferredEdits.isValid()) state.addChild(deferredEdits, -1, nullptr);

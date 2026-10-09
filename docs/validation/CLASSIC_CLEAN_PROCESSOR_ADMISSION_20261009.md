@@ -93,3 +93,19 @@ native/SRC átmenet együttműködése, privát Clean/Classic mérések, majd SE
 Ezeket követi az új verzió és exact csomagfagyasztás, ugyanazon binárisok
 valódi host/hallásos tesztje és külön publikálási döntés. Nincs új release,
 tag, asset-csere, firmware-bővítés vagy rejtett Clean-elfogadás.
+
+## Utólagos CI lezárás 2026 10 09
+
+A fenti PENDING sor a helyi jelentés készítésekor fennálló állapotot őrzi.
+#171 azóta beolvadt. Végleges PR-fej:
+`159326073d31603af196fa6be39693301f04658b`.
+[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37922864874),
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37922864753) és
+[ASan–UBSan](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37922864763)
+CI: PASS. Code/security review completed a `5127f01` kódfejen; az ezt követő
+commit csak dokumentáció, a review-beszélgetések között nincs nyitott szál.
+Merge utáni main: `31d39032c4d8aa53a88a0cee1003e47b0bdbeec2`;
+[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37925629751) és
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37925629712): PASS.
+Ez a lezárás a processor-admission részlépésre érvényes, nem Clean DSP vagy új
+release/host elfogadás.

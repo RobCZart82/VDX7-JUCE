@@ -44,8 +44,11 @@ megőrzés FAIL a változatlan production kódon. Javítás után 21 ROM-free CT
 PASS, 8 célzott privát v1.8 teszt PASS, Windows VST3/Standalone és ci_checks
 build PASS; Python 94 futott, 93 PASS / 1 symlink SKIP. A 30 korábbi Classic
 kontrollhoz mért 5 760 512 float minta, projektállapot és metrika azonos: PASS.
-Új final-head platform-CI/review folyamatban, még nem elfogadott; helyi macOS/sanitizer és
-valódi REAPER/hallásos teszt NOT RUN. Teljes új release-funkció elfogadása nincs.
+#171 beolvadt; a végleges `159326073d31603af196fa6be39693301f04658b` fej
+Windows/macOS/ASan–UBSan CI-je PASS. A `31d39032c4d8aa53a88a0cee1003e47b0bdbeec2`
+merge utáni main Windows/macOS ellenőrzése is PASS. A review és a pontos futások
+a részletes jelentés utólagos lezárásában szerepelnek. Ez nem teljes D5 vagy új
+release-elfogadás; a korábbi helyi tesztkör korlátai változatlanok.
 
 Következő nyitott lépés: kívánt mód és payload koherens valódi save/restore/
 pending/ROM-epoch ownership, majd native/SRC renderer és átmenet közös
@@ -53,6 +56,25 @@ integrációja. Clean admission csak e működő hangút bizonyítéka után nyi
 a jelen fail-closed negatív kontroll akkor pozitív Clean recall/lifecycle
 regresszióval cserélendő, a hibás séma rejection-tesztek megmaradnak.
 [Részletes reprodukció, ellenőrzések és korlátok](../validation/CLASSIC_CLEAN_PROCESSOR_ADMISSION_20261009.md).
+
+### D5 előfeltétel a leválasztott projektmentéshez
+
+Baseline: `31d39032c4d8aa53a88a0cee1003e47b0bdbeec2`; külön javítási ág:
+`fix/coherent-project-snapshot`, [PR #172](https://github.com/RobCZart82/VDX7-JUCE/pull/172).
+A mentés rögzítése utáni módosítás vagy másik
+projekt visszatöltése eddig új hangerő/kerék értékeket, firmware nélkül pedig
+új hangszín-paramétereket keverhetett a korábban rögzített payloadba.
+A reprodukáló actual-processor teszt a változatlan kódon FAIL, a javítás után
+PASS. Most mind a 148 paraméter értéke a capture-ből származik; a loaded
+hangszín továbbra is a motorból, a no-ROM hangszín az APVTS atomikus értékeiből.
+A pending megőrzési út változatlan, külön kontrollal. Nincs új módmező vagy
+Clean-elfogadás, és nincs új lock vagy hosthívás az audio callbackben.
+
+Ez a capture **utáni** keveredést javítja, nem teszi az önálló automatizációs
+írásokat vagy egy capture közben zajló teljes restore-t atomikus tranzakcióvá.
+A valódi desired-mode/payload/pending/ROM-epoch ownership továbbra is nyitott.
+A PR végső fejének Windows/macOS/sanitizer CI-je és review-ja külön kapu.
+[Reprodukció és célzott ellenőrzések](../validation/PROJECT_SNAPSHOT_CAPTURE_20261009.md).
 
 ### Végrehajtási sorrend és kiadási megállási kapuk
 

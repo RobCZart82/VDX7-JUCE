@@ -2,6 +2,7 @@
 #include "VDX7InitVoice.h"
 #include "VDX7Sysex.h"
 #include <juce_cryptography/juce_cryptography.h>
+#include <cmath>
 #include <functional>
 #include <iostream>
 #include <stdexcept>
@@ -66,6 +67,71 @@ static void setFeedback(VDX7AudioProcessor& p, int value)
 {
     auto* parameter = p.parameters().getParameter(VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback));
     parameter->setValueNotifyingHost(parameter->convertTo0to1(float(value)));
+}
+
+static void testParameterSnapshot(const juce::File& rom = {})
+{
+    auto p = std::make_unique<VDX7AudioProcessor>(false);
+    if (rom.existsAsFile()) require(p->loadRomFromFile(rom), "snapshot private ROM control");
+    const auto set = [&](const char* id, float value) {
+        auto* parameter = p->parameters().getParameter(id);
+        require(parameter != nullptr, "snapshot parameter exists");
+        parameter->setValueNotifyingHost(parameter->convertTo0to1(value));
+    };
+    const auto seed = [&] {
+        set(VDX7ParameterIDs::masterVolume, -12.0f);
+        set(VDX7ParameterIDs::pitchWheel, -0.5f);
+        set(VDX7ParameterIDs::modWheel, 0.25f);
+        setFeedback(*p, 2);
+        require(p->setMidiInputChannelFromUi(3), "seed snapshot routing");
+    };
+    seed();
+    const auto before = save(*p);
+    auto incoming = tree(before);
+    incoming.setProperty("midiInputChannel", 9, nullptr);
+    auto incomingParameters = incoming.getChildWithName("PARAMETERS");
+    require(incomingParameters.getNumChildren() == 148, "snapshot retains all host parameters");
+    for (const auto& id : {VDX7ParameterIDs::masterVolume, VDX7ParameterIDs::pitchWheel,
+                          VDX7ParameterIDs::modWheel})
+        incomingParameters.getChildWithProperty("id", id).setProperty("value", 0.0f, nullptr);
+    const auto nextProject = binary(incoming);
+
+    // The final edit also covers the preserved-pending path without a ROM,
+    // after the preceding iteration installed a missing-firmware project.
+    for (const bool replaceProject : {false, true, false})
+    {
+        seed();
+        const auto expected = tree(save(*p)).getChildWithName("PARAMETERS");
+        saveBoundary = [&] {
+            if (replaceProject) restore(*p, nextProject);
+            else {
+                set(VDX7ParameterIDs::masterVolume, -3.0f);
+                set(VDX7ParameterIDs::pitchWheel, 0.5f);
+                set(VDX7ParameterIDs::modWheel, 0.75f);
+                setFeedback(*p, 6);
+                require(p->setMidiInputChannelFromUi(9), "later snapshot routing edit");
+            }
+        };
+        const auto captured = tree(save(*p));
+        const auto actual = captured.getChildWithName("PARAMETERS");
+        require(int(captured["midiInputChannel"]) == 3, "snapshot retains captured routing");
+        require(actual.getNumChildren() == expected.getNumChildren(), "snapshot parameter count unchanged");
+        for (const auto child : expected)
+            require(actual.getChildWithProperty("id", child["id"])["value"] == child["value"],
+                "save must not read parameter values from a later edit or project restore");
+        require(p->getMidiInputChannel() == 9, "detached serialization does not undo later project edits");
+        require(std::abs(p->parameters().getRawParameterValue(VDX7ParameterIDs::masterVolume)->load()
+                         - (replaceProject ? 0.0f : -3.0f)) < 0.001f,
+            "detached serialization does not undo later live volume");
+        auto reopened = std::make_unique<VDX7AudioProcessor>(false);
+        restore(*reopened, binary(captured));
+        const auto recalled = tree(save(*reopened)).getChildWithName("PARAMETERS");
+        for (const auto child : expected)
+            require(recalled.getChildWithProperty("id", child["id"])["value"] == child["value"],
+                "captured parameters survive actual processor binary recall");
+        require(reopened->getMidiInputChannel() == 3, "captured routing survives binary recall");
+    }
+    std::cout << "PASS: detached processor save retains captured host values across edits and project restore\n";
 }
 
 struct VDX7RegressionAccess
@@ -465,9 +531,16 @@ int main(int argc, char** argv)
     juce::ScopedJuceInitialiser_GUI gui;
     try
     {
+        if (argc >= 2 && juce::String(argv[1]) == "--snapshot-only")
+        {
+            require(argc == 2 || argc == 3, "snapshot-only accepts an optional private ROM");
+            if (argc == 3) require(juce::File(argv[2]).existsAsFile(), "explicit snapshot ROM exists");
+            testParameterSnapshot(argc == 3 ? juce::File(argv[2]) : juce::File());
+            return 0;
+        }
         require(argc == 1 || argc == 2, "optional local verified ROM path only");
-        if (argc == 2) testWithRom(juce::File(argv[1]));
-        else { testStartup(); testNoRom(); testBoundaries(); }
+        if (argc == 2) { testParameterSnapshot(juce::File(argv[1])); testWithRom(juce::File(argv[1])); }
+        else { testParameterSnapshot(); testStartup(); testNoRom(); testBoundaries(); }
         std::cout << "PASS: imported catalog processor ownership, binary state and bounded scheduling\n";
         return 0;
     }
