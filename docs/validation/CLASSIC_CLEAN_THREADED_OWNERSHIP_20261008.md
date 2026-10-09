@@ -147,7 +147,7 @@ edits remain preserved by the original regressions.
 ### Local results and remaining gates
 
 Windows x64 / MSVC 17.14.60 / Release, existing ROM-free build at
-`C:/Users/gyuriczar/Documents/Codex/build-imported-ui-20261008`.
+`build-imported-ui-20261008` (repo-n kívüli helyi munkamappa).
 
 | Check | Result |
 |---|---|

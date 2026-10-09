@@ -8,8 +8,12 @@ import re
 import subprocess
 import zipfile
 
-JUCE_SHA = "e18f7f506c0b96f2c738a0bcd7fe6467a5005ad8"
+JUCE_SHA = "be29c81492b6151c8ea8d14c840e1311963b3a83"
 CORE_SHA = "d5473776a0449d60a997b91bdc888598a33265ac"
+# Verification retains the exact historical dependency tuple. Creation still
+# requires the current JUCE_SHA/CORE_SHA and the guarded product/tooling pair.
+# Integrity acceptance is not publication authority or an upstream attestation.
+HISTORICAL_JUCE_SHA = "e18f7f506c0b96f2c738a0bcd7fe6467a5005ad8"
 MANIFEST = "SOURCE_MANIFEST.json"
 VERIFIER = ".vdx7-source-tools/package_source.py"
 PACKAGE_README = "SOURCE_PACKAGE_README.txt"
@@ -336,7 +340,9 @@ def verify(archive_path):
                 or (packager_commit is not None and not re.fullmatch(r"[0-9a-f]{40}", packager_commit))
                 or kind is None
                 or manifest.get("kind") != kind
-                or manifest.get("dependencies") != {"JUCE": JUCE_SHA, "Retromulator": CORE_SHA}
+                or manifest.get("dependencies") not in (
+                    {"JUCE": JUCE_SHA, "Retromulator": CORE_SHA},
+                    {"JUCE": HISTORICAL_JUCE_SHA, "Retromulator": CORE_SHA})
                 or not re.fullmatch(r"[0-9a-f]{40}", manifest.get("source_commit", ""))):
             raise ValueError("Invalid corresponding-source package identity")
         approval = manifest.get("release_approval")

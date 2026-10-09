@@ -5,8 +5,8 @@ Current automated creation, hash verification and extracted-source check:
 
 ## Current development provenance (2026-10-09)
 
-The post-1.0.1 development pin is still JUCE 9.0.1 at the revision below;
-the proposed 9.0.3 update has not been applied. The current CMake configure
+The current development candidate pins JUCE 9.0.3 at the revision below.
+This is not a published release or new host acceptance. The current CMake configure
 emits `VDX7DependencySources.cmake` in the build directory with the resolved
 wrapper/JUCE/core source paths, including FetchContent overrides and vendored
 source selection. The current `scripts/write_build_provenance.py` requires
@@ -25,15 +25,17 @@ This observes configuration, not signing or a complete fresh rebuild. The
 provenance CLI uses Git dependency checkouts; offline corresponding-source
 archives still require their separate manifest/file-hash verification.
 [Validation and JUCE update gates](../validation/BUILD_PROVENANCE_SOURCE_BINDING_20261009.md).
+The separate [9.0.3 compatibility experiment](../validation/JUCE_903_COMPATIBILITY_20261009.md)
+records the current candidate, its tests and the still-unrun host gates.
 
-## Historical release/source context
+## Current development pins and offline build
 
-The 1.0.0 development branch retains the dependency revisions below. Its wrapper
-source is the exact development commit recorded with the package, not v0.6.6.
-The remaining v0.6.6 packaging description is retained as historical context.
+The wrapper source is the exact development commit recorded with the package,
+not a historical tag. The published 1.0.1 retains JUCE 9.0.1 at
+e18f7f506c0b96f2c738a0bcd7fe6467a5005ad8; old v0.6.6 descriptions are historical.
 
 - JUCE repository: https://github.com/juce-framework/JUCE
-  Revision: e18f7f506c0b96f2c738a0bcd7fe6467a5005ad8 (local JUCE 9.0.1 checkout).
+  Revision: be29c81492b6151c8ea8d14c840e1311963b3a83 (JUCE 9.0.3).
 - dx7Lib repository: https://github.com/reales/retromulator
   Revision: d5473776a0449d60a997b91bdc888598a33265ac.
   Included source subset: source/dx7Lib, compiled HD6303R.cpp,
@@ -55,7 +57,7 @@ cmake --build build-offline --config Release --target VDX7_VST3
 ```
 
 With Ninja instead of Xcode, additionally use -DCMAKE_BUILD_TYPE=Release.
-The tested release uses the same dependency revisions. No firmware is needed
+The existing stable release does not use the new development JUCE pin. No firmware is needed
 to compile; running the instrument requires the user's external firmware.
 
 Magyar: a teljes forrás ZIP tartalmazza a rögzített JUCE- és dx7Lib-forrást,

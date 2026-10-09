@@ -17,6 +17,34 @@ spec.loader.exec_module(p)
 
 
 class SourcePackageTests(unittest.TestCase):
+    def test_new_pin_verifier_retains_historical_901_archive_integrity(self):
+        # Frozen 1.0.1 packagers must remain verifiable by newer approval tools.
+        files, manifest = self.fixture()
+        manifest["dependencies"]["JUCE"] = "e18f7f506c0b96f2c738a0bcd7fe6467a5005ad8"
+        with tempfile.TemporaryDirectory() as folder:
+            archive = Path(folder) / "historical.zip"
+            p.write_zip(archive, files, manifest)
+            with patch.object(p, "JUCE_SHA", "be29c81492b6151c8ea8d14c840e1311963b3a83"):
+                p.verify(archive)
+
+    def test_historical_verification_does_not_allow_unknown_pins_or_creation(self):
+        files, manifest = self.fixture()
+        with tempfile.TemporaryDirectory() as folder:
+            for dependency in ("JUCE", "Retromulator"):
+                changed = json.loads(json.dumps(manifest))
+                changed["dependencies"][dependency] = "f" * 40
+                archive = Path(folder) / (dependency + ".zip")
+                p.write_zip(archive, files, changed)
+                with self.assertRaisesRegex(ValueError, "package identity"):
+                    p.verify(archive)
+            output = Path(folder) / "no-output"
+            cmake = (p.HISTORICAL_JUCE_SHA + p.CORE_SHA).encode()
+            with patch.object(p, "JUCE_SHA", "be29c81492b6151c8ea8d14c840e1311963b3a83"), \
+                    patch.object(p, "snapshot", return_value={"CMakeLists.txt": (cmake, 0o644)}):
+                with self.assertRaisesRegex(ValueError, "pins changed"):
+                    p.package("repo", "juce", "core", "a" * 40, output, "1.0.0-dev")
+            self.assertFalse(output.exists())
+
     def test_reserved_tooling_and_false_packager_identity_rejected(self):
         minimal = {"CMakeLists.txt": ((p.JUCE_SHA + p.CORE_SHA).encode(), 0o644)}
         for name in (p.VERIFIER, p.PACKAGE_README, p.MANIFEST):

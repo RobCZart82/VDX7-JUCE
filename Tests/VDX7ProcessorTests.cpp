@@ -7,6 +7,8 @@
 #include <memory>
 #include <cmath>
 #include <stdexcept>
+#include <bit>
+#include <cstdint>
 
 // Processor fixtures are heap-owned: several live instances (including nested
 // helpers) exceed the default Windows stack. References keep assertions intact.
@@ -109,6 +111,12 @@ static juce::MemoryBlock ram(const juce::MemoryBlock& state)
 
 struct VDX7RegressionAccess
 {
+    static bool knownFirmware(const juce::MemoryBlock& image)
+    {
+        return image.getSize() == VDX7Engine::kFirmwareSize
+            && VDX7Engine::isReleaseRetirementFirmware(
+                static_cast<const uint8_t*>(image.getData()), image.getSize());
+    }
     static void showInit(VDX7AudioProcessorEditor& editor) { editor.showInitPresetConfirmation(); }
     static void installSyntheticCatalog(VDX7AudioProcessor& p)
     {
@@ -121,6 +129,121 @@ struct VDX7RegressionAccess
         p.updateEngineSnapshot();
     }
 };
+
+// Opt-in dependency comparison: writes only to the explicitly supplied private
+// output folder, never runs on public CI and never opens an audio device.
+static void compatibilityFingerprint(const juce::File& rom, const juce::File& output)
+{
+    juce::MemoryBlock firmware;
+    require(rom.loadFileAsData(firmware) && VDX7RegressionAccess::knownFirmware(firmware),
+        "comparison requires the verified original v1.8 firmware-only fixture");
+    require(!output.exists() && output.createDirectory().wasOk(), "fresh private output directory required");
+    const auto emptyBanks = output.getChildFile("empty-banks");
+    require(emptyBanks.createDirectory().wasOk(), "isolated empty bank folder");
+    juce::Array<juce::var> cases;
+    for (bool corrected : {false, true})
+        for (int rate : {44100, 48000, 96000})
+            for (int size : {64, 128, 256, 512, 1024})
+            {
+                auto p = std::make_unique<VDX7AudioProcessor>(false, emptyBanks, emptyBanks);
+                require(p->loadRomFromFile(rom), "comparison firmware load");
+                VDX7RegressionAccess::installSyntheticCatalog(*p);
+                require(p->selectFactoryBank(0), "comparison synthetic factory selection");
+                require(p->setMonoCorrectionFromUi(corrected), "comparison mono policy");
+                require(p->setPlaySettingFromUi(0, 1), "comparison MONO setting");
+                p->prepareToPlay(rate, size);
+                juce::AudioBuffer<float> audio(2, size);
+                juce::MidiBuffer midi;
+                std::vector<uint8_t> bytes;
+                double squared = 0.0, peak = 0.0;
+                int silentBlocks = 0;
+                const auto render = [&](VDX7AudioProcessor& current, double seconds)
+                {
+                    double stagePeak = 0.0;
+                    for (int b = 0; b < int(std::ceil(seconds * rate / size)); ++b)
+                    {
+                        current.processBlock(audio, midi);
+                        midi.clear();
+                        bool silent = true;
+                        for (int sample = 0; sample < size; ++sample)
+                            for (int ch = 0; ch < 2; ++ch)
+                            {
+                                const float f = audio.getSample(ch, sample);
+                                require(std::isfinite(f), "comparison nonfinite output");
+                                const auto bits = std::bit_cast<uint32_t>(f);
+                                for (int shift : {0, 8, 16, 24}) bytes.push_back(uint8_t(bits >> shift));
+                                squared += double(f) * f;
+                                peak = std::max(peak, std::abs(double(f)));
+                                stagePeak = std::max(stagePeak, std::abs(double(f)));
+                                silent &= f == 0.0f;
+                            }
+                        silentBlocks += silent ? 1 : 0;
+                    }
+                    return stagePeak;
+                };
+                render(*p, 0.10);
+                midi.addEvent(juce::MidiMessage::noteOn(1, 60, uint8_t(100)), size / 2);
+                require(render(*p, 0.20) > 0.0001, "comparison has non-silent first note");
+                midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
+                midi.addEvent(juce::MidiMessage::noteOn(1, 67, uint8_t(90)), size - 1);
+                render(*p, 0.10);
+                midi.addEvent(juce::MidiMessage::noteOff(1, 60), 0);
+                midi.addEvent(juce::MidiMessage::noteOff(1, 67), size / 2);
+                render(*p, 0.10);
+                p->reset();
+                render(*p, 0.10);
+                midi.addEvent(juce::MidiMessage::noteOn(1, 72, uint8_t(105)), 0);
+                require(render(*p, 0.20) > 0.0001, "comparison recovers after host reset");
+                midi.addEvent(juce::MidiMessage::allNotesOff(1), 0);
+                midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), 0);
+                render(*p, 0.10);
+                const auto state = save(*p);
+                auto savedXml = juce::AudioProcessor::getXmlFromBinary(state.getData(), int(state.getSize()));
+                require(savedXml != nullptr, "comparison project XML");
+                auto missingRomState = juce::ValueTree::fromXml(*savedXml);
+                missingRomState.setProperty("romPath", "", nullptr); // Keep identity, remove automatic file reload.
+                juce::MemoryBlock missingRomData;
+                juce::AudioProcessor::copyXmlToBinary(*missingRomState.createXml(), missingRomData);
+                auto pending = std::make_unique<VDX7AudioProcessor>(false, emptyBanks, emptyBanks);
+                pending->setStateInformation(missingRomData.getData(), int(missingRomData.getSize()));
+                require(!pending->isProjectReady(), "comparison recall is pending without firmware");
+                set(*pending, VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback), 3);
+                require(pending->loadRomFromFile(rom) && pending->isProjectReady(), "comparison pending completion");
+                const auto recalled = save(*pending);
+                pending->prepareToPlay(rate, size);
+                render(*pending, 0.10);
+                midi.addEvent(juce::MidiMessage::noteOn(1, 64, uint8_t(100)), size / 2);
+                require(render(*pending, 0.20) > 0.0001, "comparison recalled project has non-silent output");
+                require(pending->loadRomFromFile(rom), "comparison direct reload");
+                // A firmware-only file contains no voices. Reinstall the
+                // owned synthetic seed; don't assert factory-data preservation.
+                VDX7RegressionAccess::installSyntheticCatalog(*pending);
+                require(pending->selectFactoryBank(0) && pending->setPlaySettingFromUi(0, 1),
+                    "comparison reselection after firmware-only reload");
+                render(*pending, 0.10);
+                midi.addEvent(juce::MidiMessage::noteOn(1, 69, uint8_t(90)), 0);
+                require(render(*pending, 0.20) > 0.0001, "comparison recovers after direct reload");
+                const auto name = juce::String(rate) + "-" + juce::String(size)
+                    + (corrected ? "-corrected" : "-native") + ".f32";
+                require(output.getChildFile(name).replaceWithData(bytes.data(), bytes.size()), "private PCM output");
+                auto row = std::make_unique<juce::DynamicObject>();
+                row->setProperty("file", name);
+                row->setProperty("rate", rate);
+                row->setProperty("block", size);
+                row->setProperty("corrected", corrected);
+                row->setProperty("samples", int(bytes.size() / 4));
+                row->setProperty("sha256", juce::SHA256(bytes.data(), bytes.size()).toHexString());
+                row->setProperty("stateSha256", juce::SHA256(state).toHexString());
+                row->setProperty("recallSha256", juce::SHA256(recalled).toHexString());
+                row->setProperty("peak", peak);
+                row->setProperty("rms", std::sqrt(squared / double(bytes.size() / 4)));
+                row->setProperty("silentBlocks", silentBlocks);
+                cases.add(juce::var(row.release()));
+            }
+    require(output.getChildFile("fingerprint.json").replaceWithText(juce::JSON::toString(juce::var(cases))),
+        "private fingerprint output");
+    std::cout << "PASS: 30 private dependency comparison cases; finite non-silent controls, reset/reload/pending and both mono policies\n";
+}
 
 static VDX7FactoryBanks::Snapshot catalog(const juce::MemoryBlock& state)
 {
@@ -162,6 +285,8 @@ static void testInitPreset(const juce::File& romFile)
     auto other = std::make_unique<VDX7AudioProcessor>(false);
     require(p->loadRomFromFile(romFile) && other->loadRomFromFile(romFile), "init local firmware");
     VDX7RegressionAccess::installSyntheticCatalog(*p);
+    VDX7RegressionAccess::installSyntheticCatalog(*other);
+    require(other->selectFactoryBank(0), "init identical-voice synthetic selection");
     // Identical bytes do not make a changed program selection safe to replace.
     VDX7AudioProcessor::WorkingVoiceSnapshot selection;
     juce::String selectionError;
@@ -1235,6 +1360,11 @@ int main(int argc, char** argv)
     juce::ScopedJuceInitialiser_GUI gui;
     try
     {
+        if (argc == 4 && juce::String(argv[1]) == "--compatibility-fingerprint")
+        {
+            compatibilityFingerprint(juce::File(argv[2]), juce::File(argv[3]));
+            return 0;
+        }
         if (argc == 3 && juce::String(argv[1]) == "--export-acknowledgement")
         {
             testReservedExportAcknowledgement(juce::File(argv[2]));

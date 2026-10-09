@@ -48,7 +48,7 @@ hibás test-only adapterek, nem az aktuális plugin hibareprodukciói.
 
 Környezet: Windows x64, MSVC 17.14.60, Release konfiguráció; a repository
 rögzített JUCE `e18f7f506c0b96f2c738a0bcd7fe6467a5005ad8` függősége.
-Buildkönyvtár: `C:/Users/gyuriczar/Documents/Codex/build-imported-ui-20261008`.
+Helyi build azonosítója: `build-imported-ui-20261008` (repo-n kívüli munkamappa).
 
 | Ellenőrzés | Státusz | Megjegyzés |
 |---|---|---|
