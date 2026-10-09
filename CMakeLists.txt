@@ -281,6 +281,9 @@ target_compile_definitions(vdx7_processor_tests PRIVATE
 add_test(NAME vdx7_pre_rom_state
     COMMAND vdx7_processor_tests --pre-rom-state-state-only)
 set_tests_properties(vdx7_pre_rom_state PROPERTIES TIMEOUT 30 LABELS "rom-free")
+add_test(NAME vdx7_sound_mode_admission
+    COMMAND vdx7_processor_tests --sound-mode-admission)
+set_tests_properties(vdx7_sound_mode_admission PROPERTIES TIMEOUT 30 LABELS "rom-free;state-boundary")
 
 # Preparatory JUCE codec only; not activated in the plugin before D5 DSP admission.
 add_executable(vdx7_sound_mode_state_tests Tests/VDX7SoundModeStateTests.cpp)
@@ -351,6 +354,10 @@ if(VDX7_ENABLE_ROM_TESTS)
     # The profile fixture checks content at runtime; configuration-only CI uses
     # a placeholder and never executes firmware tests.
     # Core integration runners.
+    add_test(NAME vdx7_sound_mode_admission_integration
+        COMMAND vdx7_processor_tests --sound-mode-admission "${VDX7_TEST_ROM_FILE}")
+    set_tests_properties(vdx7_sound_mode_admission_integration PROPERTIES
+        TIMEOUT 60 LABELS "local-rom;firmware-v1_8;state-boundary" FIXTURES_REQUIRED vdx7_v18_rom)
     add_test(NAME vdx7_stability COMMAND vdx7_stability_tests "${VDX7_TEST_ROM_FILE}")
     add_test(NAME vdx7_midi_range COMMAND vdx7_midi_range_tests "${VDX7_TEST_ROM_FILE}")
     add_test(NAME vdx7_timing COMMAND vdx7_timing_tests "${VDX7_TEST_ROM_FILE}")

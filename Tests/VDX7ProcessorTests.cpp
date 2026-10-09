@@ -111,6 +111,13 @@ static juce::MemoryBlock ram(const juce::MemoryBlock& state)
 
 struct VDX7RegressionAccess
 {
+    static auto restoreGeneration(VDX7AudioProcessor& p)
+    {
+        std::scoped_lock lock(p.engineMutex_);
+        return std::array<uint64_t, 6> {p.midiTimelineEpoch_.load(), p.importedBankRevision_,
+            p.operatorParameterDirty_[0].load(), p.operatorParameterDirty_[1].load(),
+            p.voiceParameterDirty_.load(), uint64_t(p.pendingProjectEdits_.load())};
+    }
     static bool knownFirmware(const juce::MemoryBlock& image)
     {
         return image.getSize() == VDX7Engine::kFirmwareSize
@@ -129,6 +136,117 @@ struct VDX7RegressionAccess
         p.updateEngineSnapshot();
     }
 };
+
+// Actual public XML/binary restore boundary, not the standalone codec/owner.
+// Until a Clean renderer exists, valid Clean is also a transactional rejection.
+static void testSoundModeAdmission(const juce::File& rom = {})
+{
+    const auto feedback = VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback);
+    const auto decode = [](const juce::MemoryBlock& bytes) {
+        const auto xml = juce::AudioProcessor::getXmlFromBinary(bytes.getData(), int(bytes.getSize()));
+        require(xml != nullptr, "sound-mode state XML");
+        return juce::ValueTree::fromXml(*xml);
+    };
+    const auto encode = [](const juce::ValueTree& tree) {
+        juce::MemoryBlock bytes;
+        juce::AudioProcessor::copyXmlToBinary(*tree.createXml(), bytes);
+        return bytes;
+    };
+    const auto restore = [&](VDX7AudioProcessor& p, const juce::ValueTree& tree) {
+        const auto bytes = encode(tree);
+        p.setStateInformation(bytes.getData(), int(bytes.getSize()));
+    };
+    auto source = std::make_unique<VDX7AudioProcessor>(false);
+    require(source->setMidiInputChannelFromUi(13), "distinct incoming channel");
+    set(*source, feedback, 2);
+    auto incoming = decode(save(*source));
+    require(!incoming.hasProperty("soundModeVersion") && !incoming.hasProperty("soundMode"),
+        "pre-renderer saves retain legacy format (no advertised Clean support)");
+
+    // Positive controls: legacy and explicit Classic both reach the real restore.
+    for (bool explicitClassic : {false, true})
+    {
+        auto control = std::make_unique<VDX7AudioProcessor>(false);
+        auto tree = incoming.createCopy();
+        if (explicitClassic)
+        {
+            tree.setProperty("soundModeVersion", 1, nullptr);
+            tree.setProperty("soundMode", 0, nullptr);
+        }
+        restore(*control, tree);
+        require(control->getMidiInputChannel() == 13 && value(*control, feedback) == 2,
+            "legacy/explicit Classic positive control restores payload");
+    }
+    std::cout << "PASS: legacy and explicit Classic restore positive controls\n";
+
+    // ROM-free: first-load deferred edits and preserved pending project.
+    // Optional private run adds a fully loaded original-v1.8 instance.
+    for (int context = 0; context < (rom == juce::File() ? 2 : 3); ++context)
+    {
+        auto p = std::make_unique<VDX7AudioProcessor>(false);
+        if (context == 1)
+        {
+            auto pending = incoming.createCopy();
+            juce::MemoryBlock memory(VDX7Engine::kRamStateSize, true);
+            const auto seed = vdx7InitVoice();
+            VDX7FactoryBanks::Snapshot banks;
+            banks.mask = 255;
+            for (int i = 0; i < 256; ++i) banks.image.insert(banks.image.end(), seed.begin(), seed.end());
+            for (int i = 0; i < 32; ++i)
+                std::memcpy(static_cast<uint8_t*>(memory.getData()) + i * 128, seed.data(), seed.size());
+            pending.setProperty("ram", memory.toBase64Encoding(), nullptr);
+            pending.setProperty("romIdentity", "synthetic-missing-rom-identity", nullptr);
+            VDX7FactoryBanks::writeState(pending, banks);
+            restore(*p, pending);
+            require(!p->isProjectReady() && ram(save(*p)) == memory,
+                "pending control retains a real packed RAM/catalog snapshot without firmware");
+        }
+        if (context == 2) require(p->loadRomFromFile(rom), "private loaded admission fixture");
+        require(p->setMidiInputChannelFromUi(3), "preserved channel");
+        require(p->setMonoCorrectionFromUi(true), "preserved mono policy");
+        set(*p, feedback, 6);
+        const auto before = save(*p);
+        const auto generation = VDX7RegressionAccess::restoreGeneration(*p);
+        const auto mono = p->getMonoCorrectionStatus();
+        std::vector<float> parameters;
+        for (auto* parameter : p->getParameters()) parameters.push_back(parameter->getValue());
+        require(parameters.size() == 148, "admission does not add host parameters");
+
+        const std::array<std::pair<const char*, const char*>, 13> rejected {{
+            {"1", nullptr}, {nullptr, "0"}, {"0", "0"}, {"2", "0"}, {"01", "0"},
+            {"1", "2"}, {"1", "-1"}, {"1", "01"}, {"1", "+1"}, {"1", "1x"},
+            {"1", "true"}, {"1", "1.0"}, {"1", "1"}
+        }};
+        for (const auto& [version, mode] : rejected)
+        {
+            auto candidate = incoming.createCopy();
+            if (version != nullptr) candidate.setProperty("soundModeVersion", version, nullptr);
+            if (mode != nullptr) candidate.setProperty("soundMode", mode, nullptr);
+            // Otherwise valid, distinctly different payload must never get installed.
+            candidate.setProperty("monoNoteZeroCorrection", false, nullptr);
+            restore(*p, candidate);
+            require(VDX7RegressionAccess::restoreGeneration(*p) == generation,
+                "rejected sound-mode restore preserves MIDI/catalog/dirty/pending generations");
+            require(p->getMidiInputChannel() == 3 && p->isRomLoaded() == (context == 2),
+                "rejected sound-mode restore preserves routing and firmware readiness");
+            const auto afterMono = p->getMonoCorrectionStatus();
+            require(afterMono.requested == mono.requested && afterMono.active == mono.active
+                && afterMono.loaded == mono.loaded, "rejection precedes mono-policy mutation");
+            for (int i = 0; i < p->getParameters().size(); ++i)
+                require(p->getParameters()[i]->getValue() == parameters[static_cast<size_t>(i)],
+                    "rejected sound-mode restore preserves every host parameter");
+            require(save(*p) == before, "rejected sound-mode restore preserves complete saved payload");
+        }
+        // Preserve pending data on subsequent source-free recall as well.
+        auto reopened = std::make_unique<VDX7AudioProcessor>(false);
+        auto preserved = decode(before);
+        preserved.setProperty("romPath", "", nullptr);
+        restore(*reopened, preserved);
+        require(reopened->getMidiInputChannel() == 3 && reopened->getMonoCorrectionStatus().requested,
+            "rejected candidate did not poison the next saved project");
+        std::cout << "PASS: sound-mode admission context " << context << " (13 rejections)\n";
+    }
+}
 
 // Opt-in dependency comparison: writes only to the explicitly supplied private
 // output folder, never runs on public CI and never opens an audio device.
@@ -1360,6 +1478,11 @@ int main(int argc, char** argv)
     juce::ScopedJuceInitialiser_GUI gui;
     try
     {
+        if ((argc == 2 || argc == 3) && juce::String(argv[1]) == "--sound-mode-admission")
+        {
+            testSoundModeAdmission(argc == 3 ? juce::File(argv[2]) : juce::File());
+            return 0;
+        }
         if (argc == 4 && juce::String(argv[1]) == "--compatibility-fingerprint")
         {
             compatibilityFingerprint(juce::File(argv[2]), juce::File(argv[3]));

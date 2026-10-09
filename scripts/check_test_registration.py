@@ -14,6 +14,7 @@ ROM_FREE.add("cc120_timeline_unit")
 ROM_FREE.add("sound_mode_prototype")
 ROM_FREE.add("sound_mode_state")
 ROM_FREE.add("sound_mode_ownership")
+ROM_FREE.add("sound_mode_admission")
 LOCAL_ROM = set("""stability midi_range timing processor stress v18_profile host_reset
 reactivation reset_history_pair firmware_ownership history_retirement overlap_retirement
 reset_gate_overflow expanded_lifecycle mono_boundary_characterization
@@ -23,6 +24,7 @@ state_rom_identity pending_rom_content_identity mono_corrected_processor mono_so
 LOCAL_ROM.update({"pre_rom_state_integration", "midi_reset"})
 LOCAL_ROM.update({"state_transitions", "cc120_timeline", "controller_reset"})
 LOCAL_ROM.add("export_acknowledgement")
+LOCAL_ROM.add("sound_mode_admission_integration")
 LOCAL_ROM.add("imported_bank_recall")
 LOCAL_ROM.update({"init_preset", "init_preset_gui", "init_preset_audio_matrix"})
 
