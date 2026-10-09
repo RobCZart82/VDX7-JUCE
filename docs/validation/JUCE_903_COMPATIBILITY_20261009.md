@@ -41,6 +41,13 @@ kontrollként elutasított. Inventory/hash/mode/approval/source/packager védele
 nem kerül ki. Archívumintegritás nem firmware-támogatás, upstream hitelesítés
 vagy új publikálási engedély. A committed release approval JSON változatlan.
 
+A valódi teljes forráscsomag első creation próbája FAIL: két korábbi D5
+validációs dokumentumban személyes Windows build-útvonal maradt, a payload guard
+helyesen elutasította. A teljes committed wrapper scan pontosan ezt a két
+blockert találta. Gépfüggetlen, repo-n kívüli buildazonosítókra cseréltük őket,
+a történeti eredmények változatlanok; nincs guard-kivétel vagy gyengítés.
+Új ROM-mentes teszt minden repository Markdown-dokumentációra futtatja a guardot.
+
 ## Privát processor-összehasonlítás
 
 Új opt-in mód: `vdx7_processor_tests --compatibility-fingerprint <v1.8.bin> <fresh-private-dir>`.

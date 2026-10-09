@@ -1,12 +1,20 @@
 """Keep active dependency creation and public build instructions coherent."""
 from pathlib import Path
 import re
+import sys
 import unittest
 
 ROOT = Path(__file__).parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+import package_source
 
 
 class DependencyPinTests(unittest.TestCase):
+    def test_repository_documentation_passes_source_payload_guard(self):
+        for path in (ROOT / "docs").rglob("*.md"):
+            with self.subTest(path=path.relative_to(ROOT)):
+                package_source.inspect_payload(path.relative_to(ROOT).as_posix(), path.read_bytes())
+
     def test_current_creation_pin_matches_cmake_and_active_guides(self):
         cmake = (ROOT / "CMakeLists.txt").read_text()
         declaration = re.search(r"FetchContent_Declare\(\s*JUCE\b(.*?)\)", cmake, re.S).group(1)
