@@ -960,6 +960,17 @@ Production processor ROM-readiness érvénytelenítés egy későbbi ROM-cserén
 epoch/mono/DSP/SRC/REAPER továbbra is külön integrációs kapu; nincs új D5 vagy
 release elfogadás, dependency pin vagy firmware-policy változás.
 
+### D5 #167 lezárási checkpoint — 2026-10-09
+
+A fenti #167-kör korábbi nyitott PR/CI státuszait felülírja: a végleges
+`4239959d18dfcbf60ee339f723c10e70647ab830` head Windows `37886851289`, macOS
+`37886851290`, ASan/UBSan `37886851376` ellenőrzése PASS, review rendezett;
+#167 beolvadt `e4000390188618d63acce1301a1d13a6616ae9ed` main-ba.
+A merge-t a mai folytatás indulásakor már készen találtuk. Merge utáni main
+Windows `37888604500` és macOS `37888604585` PASS. A production D5 integráció,
+Classic null-difference, SETTINGS és valódi host/hallásos kapuk változatlanul
+nyitottak; az önálló owner nem kész Clean funkció.
+
 ## Teszt és karakterizálási backlog
 
 Az alábbiak nem bizonyított hibák. Az 1.0.1-nél elfogadott halasztás nem PASS, és nem automatikus felmentés minden jövőbeli jelöltre.
@@ -983,6 +994,31 @@ T1–T4 lefedettségi halasztásai a publikálási jegyzékben rögzítettek; T5
   dependency update; nem automatikus kiadási blocker.
 
 ### M5 JUCE-frissítés: előzetes mérlegelés és regressziós kapuk
+
+#### Aktuális M5 előkészítő checkpoint — 2026-10-09
+
+Baseline `e4000390188618d63acce1301a1d13a6616ae9ed` main; ág
+`fix/build-provenance-source-binding`. A #167 önálló részlépés lezárult.
+JUCE 9.0.3 jelölt teljes SHA ellenőrizve:
+`be29c81492b6151c8ea8d14c840e1311963b3a83`; **GO a külön kompatibilitási
+kísérlethez, nem pin-merge/kiadás elfogadás**. A dependency pin ma még 9.0.1.
+
+Előbb reprodukált provenance-rés javítása: a jelentéshez megadott helyes
+Git-másolat eddig nem volt a CMake által ténylegesen kiválasztott source-hoz
+kötve. Három mismatch-repro javítás előtt FAIL, utána PASS. Új configure
+megfigyelési rekord, path/cache kötés és változatlan Git SHA/tisztaság guard;
+régi projecthez az exact approval/workflow checkoutból származó CMake hook.
+Ez nem írja át a régi product/packager/approval azonosságot vagy release assetet.
+
+Helyi PASS: provenance 15/15, tényleges CMake kombinációk, valódi pinelt Git
+dependency konfiguráció és mismatch-kontroll, Windows CI-tesztbuild, 20/20
+ROM-mentes CTest; Python 85 futott = 84 PASS / 1 Windows symlink SKIP.
+Új PR CI/review és installer dispatch még külön kapu; új JUCE build/audio/
+host elfogadás NOT RUN. [Bizonyíték, hatókör és következő lépések](../validation/BUILD_PROVENANCE_SOURCE_BINDING_20261009.md).
+E guard lezárása után külön pin/csomagolás frissítési kísérlet következik az
+alábbi M5 kapukkal; nincs Classic/Clean production változtatással összevonás.
+
+#### Eredeti M5 specifikáció és kapuk — 2026-10-08
 
 Felhasználói kérés és tervezési checkpoint: 2026-10-08. Ellenőrzött main:
 `0dafa214d75d6882939b51148d9ec46ec6734710` (a #166 main-frissítése után).
