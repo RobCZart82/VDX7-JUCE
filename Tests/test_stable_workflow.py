@@ -126,6 +126,12 @@ class StableWorkflowTests(unittest.TestCase):
 
     def test_packaging_records_observed_toolchain_and_checks_pinned_inno(self):
         package = self.jobs["package"]
+        hook = '-DCMAKE_PROJECT_VDX7_JUCE_INCLUDE="${{ github.workspace }}/approval-tools/cmake/VDX7DependencySources.cmake"'
+        self.assertEqual(package.count(hook), 2)
+        # Exact workflow/approval checkout, not the old product or old frozen
+        # packager (which predates this hook), and not a moving branch fetch.
+        # Both platforms configure it before build.
+        self.assertLess(package.rindex(hook), package.index("--target VDX7_VST3 vdx7_ci_checks"))
         for token in ('INNO_SETUP_VERSION: "6.7.1"',
                       'choco install innosetup --version=$env:INNO_SETUP_VERSION --yes --no-progress',
                       'Inno Setup installation failed', 'Inno Setup version verification failed',

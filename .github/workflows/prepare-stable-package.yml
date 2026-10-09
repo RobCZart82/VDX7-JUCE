@@ -128,6 +128,7 @@ jobs:
         if: runner.os == 'macOS'
         run: >-
           cmake -S . -B build -G Xcode -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_PROJECT_VDX7_JUCE_INCLUDE="${{ github.workspace }}/approval-tools/cmake/VDX7DependencySources.cmake"
           -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
           -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
           -DVDX7_RELEASE_BUILD=ON -DVDX7_RELEASE_CANDIDATE=
@@ -138,6 +139,7 @@ jobs:
         run: >
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64
           -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_PROJECT_VDX7_JUCE_INCLUDE="${{ github.workspace }}/approval-tools/cmake/VDX7DependencySources.cmake"
           -DVDX7_RELEASE_BUILD=ON -DVDX7_RELEASE_CANDIDATE=
 
       - uses: actions/setup-python@v5

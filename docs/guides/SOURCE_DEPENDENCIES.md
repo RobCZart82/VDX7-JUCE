@@ -3,6 +3,31 @@
 Current automated creation, hash verification and extracted-source check:
 [reproducible source packaging](../release/SOURCE_PACKAGING_1.0.md).
 
+## Current development provenance (2026-10-09)
+
+The post-1.0.1 development pin is still JUCE 9.0.1 at the revision below;
+the proposed 9.0.3 update has not been applied. The current CMake configure
+emits `VDX7DependencySources.cmake` in the build directory with the resolved
+wrapper/JUCE/core source paths, including FetchContent overrides and vendored
+source selection. The current `scripts/write_build_provenance.py` requires
+those paths (and the cache's source directory) to match its supplied checkouts
+before the existing pinned Git identity/cleanliness checks. Missing evidence
+requires reconfiguration, not assuming that a default `_deps` path was used.
+
+For an older product checkout with the newer tooling, configure with
+`-DCMAKE_PROJECT_VDX7_JUCE_INCLUDE=/absolute/path/to/approval-tools/cmake/VDX7DependencySources.cmake`
+from the exact reviewed workflow/approval checkout. The packaging workflow
+passes this on both platforms, without changing the historical product or
+its frozen packager. An older packager's own checker remains historical;
+its output does not become retroactively verified by the new guard.
+
+This observes configuration, not signing or a complete fresh rebuild. The
+provenance CLI uses Git dependency checkouts; offline corresponding-source
+archives still require their separate manifest/file-hash verification.
+[Validation and JUCE update gates](../validation/BUILD_PROVENANCE_SOURCE_BINDING_20261009.md).
+
+## Historical release/source context
+
 The 1.0.0 development branch retains the dependency revisions below. Its wrapper
 source is the exact development commit recorded with the package, not v0.6.6.
 The remaining v0.6.6 packaging description is retained as historical context.
