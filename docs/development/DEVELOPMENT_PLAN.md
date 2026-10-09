@@ -137,7 +137,8 @@ is PASS. A #174 platformkapuja lezárt; ez nem teljes D5 vagy release-elfogadás
 ### D5 Classic-only owner valódi processor bekötése
 
 Baseline: `541c39cd8ee6bba0643df52dbfd90716c3a6b268`; ág:
-`feature/processor-mode-project-state`. A #174 külön projektgenerációját a
+`feature/processor-mode-project-state`, [PR #175](https://github.com/RobCZart82/VDX7-JUCE/pull/175).
+A #174 külön projektgenerációját a
 `VDX7SoundModeOwner` egyetlen közös revíziója váltja fel. A már megszerzett
 engine lockból ellenőrzött `unique_lock` adapterekkel települ a pending payload
 és a Classic kívánt mód; a valódi ROM-identitás ellenőrzése és RAM-completion

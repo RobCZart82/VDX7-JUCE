@@ -1,7 +1,10 @@
 # Hangmód és projekt közös állapotkezelőjének processor bekötése
 
 Dátum: 2026-10-09. Baseline: `541c39cd8ee6bba0643df52dbfd90716c3a6b268`
-(#174 után). Ág: `feature/processor-mode-project-state`.
+(#174 után). Ág: `feature/processor-mode-project-state`,
+[PR #175](https://github.com/RobCZart82/VDX7-JUCE/pull/175).
+Tesztelt kódcommit: `2b7b7481b0fda707c195354b1bfafa982981d0cf`;
+a következő commit csak e tesztazonosítást és a PR-hivatkozásokat rögzíti.
 A D5 részlépés a valódi processor pending állapotát, projektgenerációját és
 Classic kívánt módját egy ownerhez rendeli a meglévő engine lock alatt.
 Clean renderer, hangmódváltás és SETTINGS még nincs bekapcsolva.

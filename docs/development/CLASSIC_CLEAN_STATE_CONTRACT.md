@@ -251,7 +251,8 @@ hangzási módot vagy új kiadás elfogadását.
 ## 9. Processor project owner részintegráció 2026-10-09
 
 Baseline: `541c39cd8ee6bba0643df52dbfd90716c3a6b268` (#174 után),
-`feature/processor-mode-project-state` ág. E checkpoint az előző, önálló
+`feature/processor-mode-project-state` ág,
+[PR #175](https://github.com/RobCZart82/VDX7-JUCE/pull/175). E checkpoint az előző, önálló
 komponensre vonatkozó „nincs bekötve” állapotot részben felváltja: az owner
 most a valódi processor Classic kívánt módját, projektgenerációját és pending
 completion állapotát kezeli. Nem fut mellette második projekt-revízió.
