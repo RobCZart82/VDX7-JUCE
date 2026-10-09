@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstring>
 #include <optional>
+#include <limits>
 #include <set>
 
 namespace
@@ -1473,10 +1474,13 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
         restoredImported = std::make_shared<const VDX7ImportedBanks::Snapshot>(std::move(imported));
     }
     ImportedBankSnapshot retiredImported; // Release large old data after unlocking.
+    uint64_t installedRevision = 0;
     {
         std::scoped_lock lock(engineMutex_);
+        if (projectRevision_ == std::numeric_limits<uint64_t>::max()) return;
         if (!engine_.configureMonoCorrectionForStateRestore(static_cast<bool>(correction)))
             return;
+        installedRevision = ++projectRevision_;
         retiredImported = std::move(importedBanks_);
         importedBanks_ = std::move(restoredImported);
         importedBankOrigin_ = restoredImportedOrigin;
@@ -1505,13 +1509,14 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 
     const juce::File savedRom(state.getProperty("romPath").toString());
     if (savedRom.existsAsFile())
-        loadRomFromFile(savedRom, nullptr);
+        loadRomForProject(savedRom, nullptr, installedRevision);
     else if (!isRomLoaded() && detectRom_)
-        autoDetectRom();
+        autoDetectRom(installedRevision);
 
     bool pendingRomIdentityMismatch = false;
     {
         std::scoped_lock lock(engineMutex_);
+        if (installedRevision != projectRevision_) return; // A newer project owns completion.
         if (engine_.isLoaded() && pendingRestore_.isValid()
             && savedStateMatchesRom(pendingRestore_, loadedRomIdentity_, loadedRomPath_))
         {
@@ -1650,7 +1655,8 @@ bool VDX7AudioProcessor::readFile(const juce::File& file, std::size_t maxBytes,
     return VDX7BoundedFile::read(file, maxBytes, data);
 }
 
-bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<uint8_t>& rom, juce::String* error)
+bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<uint8_t>& rom,
+                                    juce::String* error, uint64_t expectedProjectRevision)
 {
     std::vector<uint8_t> voices;
     bool ignoredCompanion = false;
@@ -1699,8 +1705,18 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         }
     }
 
+#if defined(VDX7_TEST_IMPORTED_BANK_BOUNDARY)
+    // Test-only rendezvous after detached I/O, before actual ROM admission.
+    extern void vdx7TestRestoreRomBoundary();
+    vdx7TestRestoreRomBoundary();
+#endif
     {
         std::scoped_lock lock(engineMutex_);
+        if (expectedProjectRevision != projectRevision_)
+        {
+            if (error) *error = "ROM load superseded by a newer project; retry from its current state.";
+            return false;
+        }
         capturePendingRestoreEditsLocked();
 #if defined(VDX7_TEST_STATE_TRANSITIONS)
         extern void vdx7TestRomTransitionBoundary(int);
@@ -1802,6 +1818,17 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
 
 bool VDX7AudioProcessor::loadRomFromFile(const juce::File& file, juce::String* error)
 {
+    uint64_t revision = 0;
+    {
+        std::scoped_lock lock(engineMutex_);
+        revision = projectRevision_;
+    }
+    return loadRomForProject(file, error, revision);
+}
+
+bool VDX7AudioProcessor::loadRomForProject(const juce::File& file, juce::String* error,
+                                         uint64_t expectedProjectRevision)
+{
     std::vector<uint8_t> data;
     if (!readFile(file, VDX7Engine::kCombinedRomSize, data))
     {
@@ -1811,7 +1838,7 @@ bool VDX7AudioProcessor::loadRomFromFile(const juce::File& file, juce::String* e
             : "Could not read ROM file (missing, unreadable or changed during reading).";
         return false;
     }
-    return loadRomData(file, data, error);
+    return loadRomData(file, data, error, expectedProjectRevision);
 }
 
 bool VDX7AudioProcessor::loadSyxFromFile(const juce::File& file, juce::String* error)
@@ -2668,8 +2695,13 @@ juce::File VDX7AudioProcessor::getSuggestedRomFolder() const
 #endif
 }
 
-bool VDX7AudioProcessor::autoDetectRom()
+bool VDX7AudioProcessor::autoDetectRom(std::optional<uint64_t> expectedProjectRevision)
 {
+    if (!expectedProjectRevision)
+    {
+        std::scoped_lock lock(engineMutex_);
+        expectedProjectRevision = projectRevision_;
+    }
     juce::Array<juce::File> candidates;
 
 #if JUCE_MAC
@@ -2696,7 +2728,7 @@ bool VDX7AudioProcessor::autoDetectRom()
 #endif
 
     for (const auto& f : candidates)
-        if (f.existsAsFile() && loadRomFromFile(f, nullptr))
+        if (f.existsAsFile() && loadRomForProject(f, nullptr, *expectedProjectRevision))
             return true;
 
     return false;
