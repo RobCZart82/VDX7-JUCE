@@ -13,7 +13,7 @@ public:
     static constexpr int clocksPerSample = 96;
     struct Snapshot
     {
-        bool desiredClean, activeClean;
+        bool desiredClean, activeClean, quiescentInstall;
         unsigned level;
         int phase;
         float frameGain;
@@ -21,8 +21,18 @@ public:
     };
 
     void request(bool clean) noexcept { desiredClean_ = clean; }
+    // Only after the owner has discarded native/SRC history while inaudible.
+    // Finish (but do not publish) any old partial scan; the first NEW complete
+    // scan uses the latest desired mode at unity. No extra clocks or reboot.
+    void installWhileQuiescent(bool clean) noexcept
+    {
+        desiredClean_ = clean;
+        quiescentInstall_ = true;
+        level_ = rampSamples;
+        frameGain_ = 1.0f;
+    }
     Snapshot snapshot() const noexcept
-    { return { desiredClean_, activeClean_, level_, phase_, frameGain_ }; }
+    { return { desiredClean_, activeClean_, quiescentInstall_, level_, phase_, frameGain_ }; }
 
     // EGS phase persists through the core's CPU boot and the wrapper's SRC
     // reset. Do not reset this adapter independently of the EGS itself.
@@ -31,7 +41,7 @@ public:
     {
         if (cycles <= 0) return;
         // Preserve the exact previous call shape for steady Classic/Clean.
-        if (desiredClean_ == activeClean_ && level_ == rampSamples && frameGain_ == 1.0f)
+        if (!quiescentInstall_ && desiredClean_ == activeClean_ && level_ == rampSamples && frameGain_ == 1.0f)
         {
             egs.clock(out, count, cycles);
             phase_ = (phase_ + cycles % clocksPerSample) % clocksPerSample;
@@ -41,7 +51,13 @@ public:
         {
             if (phase_ == 0)
             {
-                if (desiredClean_ != activeClean_)
+                if (quiescentInstall_)
+                {
+                    activeClean_ = desiredClean_;
+                    egs.clean(activeClean_);
+                    quiescentInstall_ = false;
+                }
+                else if (desiredClean_ != activeClean_)
                 {
                     if (level_ > 0) --level_;
                     if (level_ == 0)
@@ -58,7 +74,11 @@ public:
             egs.clock(out, count, chunk);
             // A chunk never spans more than one complete scan. Gain belongs
             // to that generated sample, not to its later buffer consumption.
-            if (count > before) out[before] *= frameGain_;
+            if (count > before)
+            {
+                if (quiescentInstall_) count = before; // Old interrupted scan, not new project audio.
+                else out[before] *= frameGain_;
+            }
             phase_ = (phase_ + chunk) % clocksPerSample;
             cycles -= chunk; // Retain all instruction-boundary overshoot.
         }
@@ -66,6 +86,7 @@ public:
 
 private:
     bool desiredClean_ = false, activeClean_ = false;
+    bool quiescentInstall_ = false;
     unsigned level_ = rampSamples;
     int phase_ = 0;
     float frameGain_ = 1.0f;

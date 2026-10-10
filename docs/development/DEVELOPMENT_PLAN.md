@@ -205,6 +205,15 @@ kiolvasott desired újrapublikálása. Clean reader/writer és SETTINGS továbbr
 zárt: cold install unity-start és az összes reset/restore/mono lifecycle még
 nem teljes. [Részlépés ellenőrzése](../validation/PROCESSOR_AUDIO_MODE_DISPATCH_20261010.md).
 
+#177 végső feje `63e16086a11293486d75117d1141a60600bb7b3c`; main merge
+`2d4b49c7fee2d734c9390506fd3a1d4897ca4de8`. Külön main
+[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38047556085) és
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38047556048) PASS.
+Következő engine-részlépés: explicit, inaudible/quiescent install első új teljes
+mintakörtől unity gainnel; a korábbi félkör nem címkézhető új projekt-hangként.
+Az API még nem automatikus processor recall vagy általános reset-policy.
+[Quiescent install bizonyíték](../validation/QUIESCENT_SOUND_MODE_INSTALL_20261010.md).
+
 1. **D5 processor-állapot integráció:** az elkészült codec/owner a valódi
    save/restore/pending/ROM-admission és engine-epoch tranzakciókba illesztendő.
    Hibás state és stale request nem mutálhat projektet; reentráns mentés,

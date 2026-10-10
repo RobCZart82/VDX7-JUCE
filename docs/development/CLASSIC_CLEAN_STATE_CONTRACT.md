@@ -315,3 +315,17 @@ Ez nem nyitja meg a Clean projekt-admissiont vagy UI-t; cold install és
 teljes lifecycle még szükséges. A teszt-only Clean owner injekció nem pozitív
 Clean project-recall bizonyíték.
 [Processor audio-dispatch ellenőrzése](../validation/PROCESSOR_AUDIO_MODE_DISPATCH_20261010.md).
+
+## 12. Explicit inaudible/quiescent motor-install — 2026-10-10
+
+Az engine-owner új API-ja csak cold/project telepítéshez használható, amikor
+nincs megőrzendő hallható régi jel. A native/SRC history törlődik a meglévő
+resetAudioState útján; a tényleges EGS-fázis nem resetelődik önállóan.
+Egy régi félkör rendes firmware-órákkal befejeződik, de kimenete nem kerül az
+új tárolóba. A következő teljes kör első OPS-órája előtt a legutolsó desired
+mód települ unity gainnel, rámpa nélkül. Nincs plusz firmware clock vagy reboot.
+Live request és normál prepare/reset nem hívja automatikusan ezt az API-t.
+A régi, megszakított mintakör elhagyása kizárólag e explicit history-discard
+tranzakció része; az élő #176 váltás megőrzi az overshoot mintáit.
+A processor quiescence/reset/restore bekötése és Clean admission még nyitott.
+[Tesztkör és korlátok](../validation/QUIESCENT_SOUND_MODE_INSTALL_20261010.md).
