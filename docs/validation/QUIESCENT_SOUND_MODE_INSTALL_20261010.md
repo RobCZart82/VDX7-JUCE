@@ -1,7 +1,9 @@
 # Quiescent Classic/Clean motor-install — 2026-10-10
 
 Baseline: `2d4b49c7fee2d734c9390506fd3a1d4897ca4de8` (#177 után).
-Ág: `feature/quiescent-sound-mode-install`. Engine-only D5 részlépés.
+Ág: `feature/quiescent-sound-mode-install`, [PR #178](https://github.com/RobCZart82/VDX7-JUCE/pull/178).
+Tesztelt kód: `de03905718d33d5c23aa37cfdd6a489a97113ad0`; az utána következő
+PR-linkes dokumentációs commit nem módosít futtatott kódot. Engine-only D5 részlépés.
 
 ## Szűk szerződés
 
@@ -45,6 +47,8 @@ Az új privát engine-mátrix és a korábbi live/sustain/partition regresszió 
 Célzott RelWithDebInfo ASan/UBSan ugyanezzel a privát firmware-rel PASS;
 `detect_leaks=0:halt_on_error=1`, `halt_on_error=1:print_stacktrace=1`.
 Ez nem TSAN vagy LeakSanitizer eredmény. Whitespace diff PASS.
+A privát actual processor snapshot/admission/owner/stale-ROM regresszió PASS.
+A szándékosan hibás mid-scan negative control továbbra is várt exit 1 FAIL.
 
 ## Nyitott kapuk
 

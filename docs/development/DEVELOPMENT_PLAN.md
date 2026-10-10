@@ -212,6 +212,8 @@ nem teljes. [Részlépés ellenőrzése](../validation/PROCESSOR_AUDIO_MODE_DISP
 Következő engine-részlépés: explicit, inaudible/quiescent install első új teljes
 mintakörtől unity gainnel; a korábbi félkör nem címkézhető új projekt-hangként.
 Az API még nem automatikus processor recall vagy általános reset-policy.
+[PR #178](https://github.com/RobCZart82/VDX7-JUCE/pull/178), tesztelt kód:
+`de03905718d33d5c23aa37cfdd6a489a97113ad0`.
 [Quiescent install bizonyíték](../validation/QUIESCENT_SOUND_MODE_INSTALL_20261010.md).
 
 1. **D5 processor-állapot integráció:** az elkészült codec/owner a valódi
