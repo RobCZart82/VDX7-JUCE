@@ -173,6 +173,13 @@ static void testParameterSnapshot(const juce::File& rom = {})
 
 struct VDX7RegressionAccess
 {
+    static void requireColdClassic(VDX7AudioProcessor& p)
+    {
+        std::unique_lock lock(p.engineMutex_);
+        const auto native = p.engine_.soundModeSnapshot();
+        require(native.quiescentInstall && !native.desiredClean,
+            "compatible project completion installs Classic before rendering resumes");
+    }
     static void audioDispatch(VDX7AudioProcessor& p, bool loaded)
     {
         using Mode = VDX7SoundModeState::Mode;
@@ -539,6 +546,7 @@ static void testActualModeProjectOwner(const juce::File& rom = {})
         require(completed.ready && !completed.pending && completed.revision == 3
             && completed.desired == Mode::classic && waiting->isProjectReady(),
             "matching live ROM completes actual RAM and current mode owner together");
+        VDX7RegressionAccess::requireColdClassic(*waiting);
         require(waiting->parameters().getRawParameterValue(
             VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback))->load() == 6,
             "actual owner completion retains edited voice");

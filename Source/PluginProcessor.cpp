@@ -1574,6 +1574,11 @@ bool VDX7AudioProcessor::completeSavedProjectLocked(const std::unique_lock<std::
                 && savedStateMatchesRom(pendingRestore_, loadedRomIdentity_, loadedRomPath_);
         }, [&]() noexcept {
             restoreSavedStateLocked(pendingRestore_);
+            // The same engine ownership excludes rendering throughout RAM and
+            // mode installation. Use current owner intent, never stale tree
+            // metadata; discard old output history before publishing readiness.
+            engine_.installSoundModeWhileQuiescent(
+                soundModeOwner_.snapshotLocked(lock).desired == VDX7SoundModeState::Mode::clean);
             pendingRestore_ = {};
             pendingProjectEdits_.store(false, std::memory_order_release);
         });
