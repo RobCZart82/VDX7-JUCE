@@ -547,6 +547,13 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     }
     else
         audioContendedRunSamples_ = 0;
+    // Reuse the existing audio try-lock: inspect today's desired mode only
+    // after state/reset observations. Pending projects cannot target old ROMs.
+    // Clean admission and UI remain gated until cold-install/lifecycle support.
+    (void)soundModeOwner_.withAudioOwnerLocked(lock,
+        [&](VDX7SoundModeState::Mode mode) noexcept {
+            engine_.requestSoundMode(mode == VDX7SoundModeState::Mode::clean);
+        });
     const bool useDeferred = deferredMidi_.active() || !lock.owns_lock()
         || hostResetPending_
         || (lock.owns_lock() && (engine_.isHostResetInProgress()
