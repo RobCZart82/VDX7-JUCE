@@ -336,6 +336,60 @@ A plugin továbbra is támogatja a 16 384 bájtos firmware-t opcionális
 `dx7_factory_voices_32KB.bin` mellett; ez nem jelenti ugyanennek a formának
 a támogatását a teljes tesztkörben. A privát fixture nem kerül nyilvános CI-be.
 
+A host-reset/ownership tesztek az ellenőrzött v1.8 firmware memóriatérképét
+vizsgálják. Címkéjük `local-rom;firmware-v1_8`, előfeltételük a
+`vdx7_v18_profile` CTest fixture. Ez futtatás előtt ellenőrzi a firmware
+azonosságát; eltérő kép esetén az előfeltétel hibás, nem keletkezik hamis PASS
+vagy ismeretlen ROM-ra vonatkozó hibamegállapítás. Más firmware nem hivatalosan
+támogatott és nem jövőbeli elfogadási mérföldkő. E tesztek kiválasztása:
+`ctest --test-dir build-local -C Release -L firmware-v1_8 --output-on-failure`.
+
+A `vdx7_mono_boundary_characterization` a nyers emulátor és processor
+összevetésével jellemzi a natív MONO Note 0 problémáját. A plugin mindkét MONO
+módban kiszűri a 0–11 és 121–127 hangokat, így ez támogatott MIDI-ből nem érhető
+el. A `vdx7_supported_note_range_acceptance` mindkét mód 12–120 határait
+ellenőrzi. A valódi REAPER-próba külön kiadási kapu; a régi jelentések történeti
+bizonyítékok, korábbi tesztnevekkel.
+
+A `vdx7_mono_trace_characterization` (`--mono-trace-only`) ellenőrzi a firmware
+érintett utasításait és hibás ágait, majd helyreállítás nélkül tesztel további
+hangokat. A megmaradó kimenetet és az elutasított natív hangkiosztást jellemzi,
+nem javításként állítja be. [Utasításnyomkövetés](../validation/VALIDATION_MONO_INSTRUCTION_TRACE.md).
+A `vdx7_mono_candidate_experiment` külön nyers-core tesztgépben vizsgál módosított
+ágdöntéseket, Note 0 hangot, lookupot, cleanupot és legatót; **nincs a pluginba
+linkelve**, PASS-a nem zár le termékelfogadást.
+[Kísérlet és korlátai](../validation/VALIDATION_MONO_CANDIDATE.md).
+
+A pitch-oracle negatív kontrollban a helyes Note 0 megfelel, míg a szándékosan
+beadott Note 1 a Note 0 frekvenciaelvárás mellett hibázik.
+A `--pitch-oracle-only` mindkettőt futtatja; a
+`--pitch-oracle-note-one-mutant` közvetlenül várt exit 1 hibát ad.
+Ez nem fordítja meg a valódi plugin elfogadási feltételét.
+A kísérlet és a ROM-free, hat döntési helyet ellenőrző `vdx7_mono_correction`
+közös `VDX7MonoCorrection.h` szabályt használ. A SETTINGS-ben választható,
+projektbe mentett korrekció haladó kompatibilitási opció; ajánlott alapérték
+a Native, rutinszerű használatnál változatlanul hagyva. Mindkét mód csak
+12–120-at fogad, az opció nem engedélyezi a kizárt alsó oktávot.
+[Motorintegráció](../validation/VALIDATION_MONO_ENGINE_OPTIN.md),
+[hangtartomány-szabály](../design/MIDI_RANGE_v0.7.0.md).
+
+A `vdx7_deferred_partition` (`--deferred-partition-only`) valódi processor
+hangindítást/elengedést vizsgál kis és túlméretes blokkokkal, továbbá contention
+és reset mellett a valódi késleltetés lejáratát. Queue-only része a nyilvános
+ROM-free CI-ben is fut. [Q1 ellenőrzés](../validation/VALIDATION_DEFERRED_PARTITION.md).
+A natív MONO kompatibilitása külön [tervezési döntés](../design/DESIGN_MONO_NOTE_ZERO_POLICY.md),
+nem zöld CI-ből következő javítás.
+A `vdx7_portamento` (`vdx7_stress_tests <privát-ROM> --portamento-only`) hat
+rate/block konfigurációban vizsgál időbeállítást, helyreállítás alatti azonnali
+mentést, visszatöltést, fizikai CC5 elsőbbségét és tényleges natív időt/rate-et.
+Ellenőrzött v1.8 fixture szükséges.
+[Portamento ellenőrzés](../validation/VALIDATION_PORTAMENTO_INTENT.md).
+
+A ROM-free `vdx7_latest_display` és a helyi stress runner `--publication-only`
+tesztje régi PERFORMANCE/tuning publikálást vet össze újabb UI-módosítással,
+azonos értékű/ABA versenyhelyzetekkel is.
+[Q2 ellenőrzés és korlátai](../validation/VALIDATION_PERFORMANCE_PUBLICATION.md).
+
 ## 12. Licenc és kiadási állapot
 
 Ez a projekt [GNU AGPLv3](../../LICENSE.txt) szerint érhető el. A wrapper és az eredeti GUI-erőforrások AGPL-3.0-only licencűek; a DX7-mag megőrzi GPL-3.0-or-later licencét és eredeti közléseit. A JUCE-ot AGPLv3 alatt használjuk. Az egyesített mű és a komponensek közlései: [NOTICE.md](../../NOTICE.md).

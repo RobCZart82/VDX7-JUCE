@@ -65,6 +65,7 @@ the public workflows currently distribute VST3.
 - PERFORMANCE page with POLY/MONO, pitch-bend range/step and portamento.
 - Mod wheel, foot controller, breath controller and aftertouch assignments.
 - DX7 single-voice/bank SysEx import/export and a persistent 32-slot USER bank.
+- User-supplied factory bank folder with content-based ROM1A–ROM4B recognition.
 - 148 host automation parameters and DAW project-state recall.
 - EDIT/PERFORMANCE views, on-screen keyboard, pitch/mod wheels, output meters
   and audio-callback CPU display.
@@ -134,7 +135,7 @@ See the [bank-folder instructions](docs/guides/GUIDE_EN.md#factory-bank-folder).
 
 - [Detailed English guide](docs/guides/GUIDE_EN.md)
 - [Magyar útmutató](docs/guides/GUIDE_HU.md)
-- [1.0 release checklist and remaining acceptance work](docs/release/ROADMAP_1.0.md)
+- [Active development plan and next-release gates](docs/development/DEVELOPMENT_PLAN.md)
 - [Source dependencies](docs/guides/SOURCE_DEPENDENCIES.md)
 - [License and third-party notices](NOTICE.md)
 

@@ -1,6 +1,6 @@
 # VDX7 egységes fejlesztési terv
 
-Frissítve: 2026-10-09. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
+Frissítve: 2026-10-10. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás része a D5 Classic/Clean funkció a 2026-10-09-i tulajdonosi
 döntés szerint. A verziószám és a további funkciók pontos köre még nincs rögzítve.
@@ -215,6 +215,21 @@ Az API még nem automatikus processor recall vagy általános reset-policy.
 [PR #178](https://github.com/RobCZart82/VDX7-JUCE/pull/178), tesztelt kód:
 `de03905718d33d5c23aa37cfdd6a489a97113ad0`.
 [Quiescent install bizonyíték](../validation/QUIESCENT_SOUND_MODE_INSTALL_20261010.md).
+
+#178 beolvadt a `69c56fe7707558feef685c9cef8dbfc97932f35b` main-ba;
+külön [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38080120213) és
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38080120227) main-kör PASS.
+Az engine-részlépés lezárt, nem újra elvégzendő feladat.
+
+Következő, **csak helyi** processor-részlépés: `8848bdd`,
+`feature/processor-project-mode-install`. A kompatibilis pending projekt RAM-ja
+és aktuális owner-módja az existing engine lock alatt, readiness közzététele
+előtt települ. Célzott privát original v1.8 processor snapshot teszt PASS,
+22 regisztrált ROM-free CTest PASS; utóbbi nem teljes friss rebuild.
+[Helyi checkpoint](../validation/PROCESSOR_PROJECT_MODE_INSTALL_20261010.md).
+Nincs PR/merge vagy Clean admission/writer/SETTINGS elfogadás ebből.
+Következő kapu: megszakított Clean→Classic recall regresszió, teljes rebuild,
+sanitizer és final-head platform CI/review; az összes lifecycle út továbbra is nyitott.
 
 1. **D5 processor-állapot integráció:** az elkészült codec/owner a valódi
    save/restore/pending/ROM-admission és engine-epoch tranzakciókba illesztendő.
