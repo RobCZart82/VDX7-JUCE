@@ -198,6 +198,8 @@ nem bizonyítottan kattanásmentes UX. Final-head CI/review és main-kör még s
 külön [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37998632905) és
 [macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/37998632946) main-kör PASS.
 A következő szűk részlépés az existing audio try-lock alatti owner→engine átadás.
+[PR #177](https://github.com/RobCZart82/VDX7-JUCE/pull/177), tesztelt kód:
+`5ba7c9cc2cc9c6607f66bf5975507c30d2b41e04`.
 A pending/not-ready projekt kizárt; nincs második audio-lock vagy korábban
 kiolvasott desired újrapublikálása. Clean reader/writer és SETTINGS továbbra is
 zárt: cold install unity-start és az összes reset/restore/mono lifecycle még

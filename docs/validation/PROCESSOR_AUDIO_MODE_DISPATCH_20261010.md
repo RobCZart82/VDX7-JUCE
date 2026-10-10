@@ -1,7 +1,10 @@
 # Processor audio-owner és natív módkérés — 2026-10-10
 
 Baseline: `12fdc07b807f0196ac80b671c8b96d0a9c9f94b5`, #176 után.
-Ág: `feature/processor-audio-mode-dispatch`. Szűk D5 részlépés, nem release.
+Ág: `feature/processor-audio-mode-dispatch`, [PR #177](https://github.com/RobCZart82/VDX7-JUCE/pull/177).
+Helyileg tesztelt kód: `5ba7c9cc2cc9c6607f66bf5975507c30d2b41e04`.
+A következő PR-linkes dokumentációs commit nem változtat futtatott kódot.
+Szűk D5 részlépés, nem release.
 
 ## Változás
 
