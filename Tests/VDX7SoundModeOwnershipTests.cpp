@@ -543,6 +543,41 @@ static void testAlreadyOwnedAdapter()
         "fresh nonpending readiness preserves desired and revision");
 }
 
+static void testLockedAudioDispatch()
+{
+    std::mutex mutex, other;
+    Owner owner(mutex);
+    int calls = 0;
+    Mode received = Mode::classic;
+    const auto visit = [&](Mode mode) noexcept { ++calls; received = mode; };
+    std::unique_lock wrong(other);
+    require(owner.withAudioOwnerLocked(wrong, visit) == Owner::Audio::busy && calls == 0,
+        "different owned mutex cannot dispatch audio");
+    std::unique_lock lock(mutex, std::defer_lock);
+    require(owner.withAudioOwnerLocked(lock, visit) == Owner::Audio::busy && calls == 0,
+        "unowned correct mutex cannot dispatch audio");
+    lock.lock();
+    require(owner.withAudioOwnerLocked(lock, visit) == Owner::Audio::unavailable && calls == 0,
+        "unloaded project cannot dispatch audio");
+    require(owner.installValidatedLocked(lock, Mode::clean, []() noexcept { return false; }, NoopCommit{}),
+        "install pending Clean model");
+    require(owner.withAudioOwnerLocked(lock, visit) == Owner::Audio::unavailable && calls == 0,
+        "pending project never dispatches onto an unrelated old engine");
+    require(owner.completePendingLocked(lock, 1, []() noexcept { return true; }, NoopCommit{}),
+        "complete matching pending model");
+    require(owner.withAudioOwnerLocked(lock, visit) == Owner::Audio::visited
+        && calls == 1 && received == Mode::clean && lock.owns_lock(),
+        "current desired dispatches without relocking or releasing caller ownership");
+    require(owner.installValidatedLocked(lock, Mode::classic, []() noexcept { return true; }, NoopCommit{}),
+        "install later Classic recall under same ownership");
+    require(owner.withAudioOwnerLocked(lock, visit) == Owner::Audio::visited
+        && calls == 2 && received == Mode::classic,
+        "audio dispatch sees later recall, never an earlier desired snapshot");
+    require(owner.refreshReadinessLocked(lock, []() noexcept { return false; })
+        && owner.withAudioOwnerLocked(lock, visit) == Owner::Audio::unavailable && calls == 2,
+        "retired engine readiness prevents dispatch");
+}
+
 int main(int argc, char** argv)
 {
     try
@@ -560,6 +595,7 @@ int main(int argc, char** argv)
         else require(argc == 1, "unknown ownership test argument");
         testJoiningLifetime();
         testAlreadyOwnedAdapter();
+        testLockedAudioDispatch();
         testAdmissionAndRevision();
         testBusyAndIsolation();
         testAudioPostLockAndProtectedPayload();

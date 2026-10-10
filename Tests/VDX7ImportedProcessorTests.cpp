@@ -173,6 +173,47 @@ static void testParameterSnapshot(const juce::File& rom = {})
 
 struct VDX7RegressionAccess
 {
+    static void audioDispatch(VDX7AudioProcessor& p, bool loaded)
+    {
+        using Mode = VDX7SoundModeState::Mode;
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        const auto install = [&](Mode mode, bool ready) {
+            std::unique_lock lock(p.engineMutex_);
+            require(p.soundModeOwner_.installValidatedLocked(lock, mode,
+                [ready]() noexcept { return ready; }, []() noexcept {}), "test-only owner injection");
+        };
+        // Injection exercises real processBlock dispatch, NOT Clean project admission.
+        install(Mode::clean, false);
+        p.processBlock(audio, midi);
+        require(!p.engine_.soundModeSnapshot().desiredClean,
+            "actual audio never dispatches a pending Clean model");
+        if (!loaded) return;
+        install(Mode::clean, true);
+        p.processBlock(audio, midi);
+        require(p.engine_.soundModeSnapshot().desiredClean,
+            "actual audio sends today's ready desired value to native adapter");
+        install(Mode::classic, true);
+        const auto before = p.engine_.soundModeSnapshot();
+        std::promise<void> entered, release;
+        auto enteredFuture = entered.get_future();
+        auto releaseFuture = release.get_future();
+        auto holder = std::async(std::launch::async, [&] {
+            std::unique_lock lock(p.engineMutex_);
+            entered.set_value();
+            releaseFuture.wait();
+        });
+        enteredFuture.wait();
+        try { p.processBlock(audio, midi); }
+        catch (...) { release.set_value(); holder.get(); throw; }
+        release.set_value();
+        holder.get();
+        require(p.engine_.soundModeSnapshot() == before,
+            "contended actual audio never waits or dispatches outside ownership");
+        p.processBlock(audio, midi);
+        require(!p.engine_.soundModeSnapshot().desiredClean,
+            "next acquired audio block dispatches latest Classic");
+    }
     static auto restoreGeneration(VDX7AudioProcessor& p)
     {
         std::unique_lock lock(p.engineMutex_);
@@ -901,6 +942,13 @@ int main(int argc, char** argv)
             testParameterAdmission(argc == 3 ? juce::File(argv[2]) : juce::File());
             testProjectGeneration();
             testActualModeProjectOwner(argc == 3 ? juce::File(argv[2]) : juce::File());
+            {
+                VDX7AudioProcessor dispatch(false);
+                const bool loaded = argc == 3;
+                if (loaded) require(dispatch.loadRomFromFile(juce::File(argv[2])), "dispatch private ROM");
+                dispatch.prepareToPlay(48000, 64);
+                VDX7RegressionAccess::audioDispatch(dispatch, loaded);
+            }
             if (argc == 3) testStaleRomCompletion(juce::File(argv[2]));
             return 0;
         }

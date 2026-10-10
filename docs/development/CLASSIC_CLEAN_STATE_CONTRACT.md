@@ -304,3 +304,14 @@ A natív mute-ramp nem jelent hallásos vagy kattanásmentességi elfogadást;
 Clean alatt az upstream Classic analóg szűrő nem lép, historyja megmarad.
 Az 1.0.1 csomag és telepített plugin nem változik.
 [Natív motor ellenőrzési jegyzőkönyve](../validation/NATIVE_SOUND_MODE_TRANSITION_20261009.md).
+
+## 11. Meglévő audio-owner alatti kérésátadás — 2026-10-10
+
+A processBlock meglévő try-lockja alatt, a projekt-/host-reset megfigyelés
+után a `withAudioOwnerLocked` a jelenlegi kívánt módot adja át a motornak.
+Hibás vagy nem birtokolt lock token, pending vagy nem ready állapot nem hívja
+a renderert. Nincs második mutex, új queue, XML/hash vagy host notification.
+Ez nem nyitja meg a Clean projekt-admissiont vagy UI-t; cold install és
+teljes lifecycle még szükséges. A teszt-only Clean owner injekció nem pozitív
+Clean project-recall bizonyíték.
+[Processor audio-dispatch ellenőrzése](../validation/PROCESSOR_AUDIO_MODE_DISPATCH_20261010.md).

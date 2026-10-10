@@ -6,9 +6,10 @@
 #include <mutex>
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 
 // Project-state owner; PluginProcessor uses the externally locked entry points.
-// Clean requests/audio dispatch remain gated on renderer integration. The caller's
+// Clean admission/UI requests remain gated on full lifecycle integration. The caller's
 // existing engine mutex must outlive this owner and protect the payload too.
 // Self-locking entry points require an unlocked caller; *Locked entry points
 // require a currently owned unique_lock for this exact mutex. Readiness and
@@ -149,14 +150,22 @@ public:
     // The caller's nonthrowing renderer callback remains under ownership.
     // Pending must not dispatch a request onto an unrelated old engine.
     template<class Visit>
+    Audio withAudioOwnerLocked(const std::unique_lock<std::mutex>& lock, Visit&& visit)
+    {
+        static_assert(std::is_nothrow_invocable_v<Visit, Mode>);
+        if (!owns(lock)) return Audio::busy;
+        if (!state_.ready || state_.pending) return Audio::unavailable;
+        visit(state_.desired);
+        return Audio::visited;
+    }
+
+    template<class Visit>
     Audio tryWithAudioOwner(Visit&& visit)
     {
         static_assert(std::is_nothrow_invocable_v<Visit, Mode>);
         const std::unique_lock lock(mutex_, std::try_to_lock);
         if (!lock.owns_lock()) return Audio::busy;
-        if (!state_.ready || state_.pending) return Audio::unavailable;
-        visit(state_.desired);
-        return Audio::visited;
+        return withAudioOwnerLocked(lock, std::forward<Visit>(visit));
     }
 
 private:
