@@ -57,6 +57,46 @@ static void ordering(bool negative)
         "cancellation does not change gain halfway through an existing scan");
 }
 
+static void quiescentOrdering()
+{
+    for (int phase = 0; phase < 96; ++phase)
+    {
+        VDX7NativeSoundMode adapter;
+        ScanProbe egs;
+        std::array<float, 8> out {};
+        int count = 0;
+        adapter.clock(egs, out.data(), count, phase);
+        adapter.installWhileQuiescent(true);
+        const auto pending = adapter.snapshot();
+        require(pending.quiescentInstall && pending.phase == phase && pending.level == 256,
+            "cold install preserves real scan phase and arms unity without clocks");
+        adapter.clock(egs, out.data(), count, 96 - phase);
+        if (phase != 0)
+        {
+            require(count == 0 && egs.switches == 0 && !egs.partialSwitch,
+                "cold install discards only interrupted old scan, without mid-scan switch");
+            adapter.clock(egs, out.data(), count, 96);
+        }
+        require(count == 1 && out[0] == 2 && egs.switches == 1 && !egs.partialSwitch
+            && !adapter.snapshot().quiescentInstall && adapter.snapshot().level == 256,
+            "first published complete cold scan is Clean at unity at every phase");
+    }
+    VDX7NativeSoundMode adapter;
+    ScanProbe egs;
+    std::array<float, 600> out {};
+    int count = 0;
+    adapter.request(true);
+    adapter.clock(egs, out.data(), count, 128 * 96 + 11);
+    adapter.installWhileQuiescent(false);
+    adapter.request(true); // Latest owner intent before the new scan.
+    count = 0; // Owner discarded old native/SRC history.
+    adapter.clock(egs, out.data(), count, 85 + 3 * 96 + 7);
+    require(count == 3 && out[0] == 2 && out[1] == 2 && out[2] == 2
+        && egs.clocks == 132 * 96 + 7 && egs.switches == 1 && !egs.partialSwitch
+        && adapter.snapshot().phase == 7 && adapter.snapshot().frameGain == 1,
+        "cold install retires old ramp, coalesces latest intent and retains all overshoot clocks");
+}
+
 struct EgsFixture
 {
     std::array<uint8_t, 256> memory {};
@@ -118,6 +158,8 @@ static std::vector<float> trace(int partition, bool requests, bool direct)
 // Actual engine lifecycle and native storage, without running fake firmware.
 struct VDX7RegressionAccess
 {
+    static void stableReference(VDX7Engine& engine, bool clean)
+    { engine.dx7_.egs.clean(clean); }
     static void lifecycle()
     {
         VDX7Engine engine;
@@ -138,6 +180,12 @@ struct VDX7RegressionAccess
         const float result = engine.nextNativeSample();
         require(std::isfinite(result) && engine.soundModeSnapshot() == before,
             "consuming old native storage never advances mode or ramp");
+        engine.nativePos_ = 0; engine.nativeCount_ = 1;
+        engine.installSoundModeWhileQuiescent(true);
+        require(engine.nativeCount_ == 0 && engine.nativePos_ == 0
+            && engine.soundModeSnapshot().quiescentInstall
+            && engine.soundModeSnapshot().phase == before.phase,
+            "quiescent engine install discards old buffer but not actual scan phase");
     }
 };
 
@@ -211,6 +259,34 @@ static void privateEngine(const char* path)
     require(rom.size() == VDX7Engine::kFirmwareSize, "private firmware-only fixture");
     for (int rate : {44100, 48000, 96000})
     {
+        for (bool clean : {false, true})
+        for (bool beforeBoot : {false, true})
+        {
+            VDX7Engine installed, reference;
+            if (beforeBoot) installed.installSoundModeWhileQuiescent(clean);
+            for (auto* engine : {&installed, &reference})
+            {
+                require(engine->loadRomImage(rom.data(), rom.size()), "cold private boot");
+                engine->prepare(rate);
+                ownStimulus(*engine);
+                const uint8_t note[] {0x90, 60, 100};
+                engine->handleMidi(note, 3);
+            }
+            if (!beforeBoot) installed.installSoundModeWhileQuiescent(clean);
+            VDX7RegressionAccess::stableReference(reference, clean);
+            // Include firmware MIDI admission/envelope onset even at 96 kHz.
+            // Still compare from the very first sample, not after a warm-up.
+            std::vector<float> cold(32768), direct(32768);
+            installed.render(cold.data(), nullptr, int(cold.size()));
+            reference.render(direct.data(), nullptr, int(direct.size()));
+            require(cold == direct && !installed.soundModeSnapshot().quiescentInstall
+                && installed.soundModeSnapshot().activeClean == clean
+                && installed.soundModeSnapshot().level == 256,
+                "private cold first output matches stable direct EGS mode without startup ramp");
+            double peak = 0;
+            for (float sample : cold) { require(std::isfinite(sample), "finite cold audio"); peak = std::max(peak, double(std::abs(sample))); }
+            require(peak > 0, "cold comparison exercises nonzero own carrier");
+        }
         VDX7Engine a, peer, control;
         for (auto* engine : {&a, &peer, &control})
         {
@@ -282,6 +358,7 @@ int main(int argc, char** argv)
         require(argc <= 2, "optional private ROM or negative control only");
         const bool negative = argc == 2 && std::string_view(argv[1]) == "--mid-scan-negative-control";
         ordering(negative);
+        quiescentOrdering();
         const auto classic = trace(28, false, false);
         require(classic == trace(28, false, true), "adapter is bit-identical to old EGS clock path");
         const auto switched = trace(28, true, false);

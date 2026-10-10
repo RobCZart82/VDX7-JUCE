@@ -74,6 +74,9 @@ public:
     // Engine-owner only. Internal renderer integration; no processor/UI Clean
     // admission yet. Latest intent is applied at a complete native scan boundary.
     void requestSoundMode(bool clean) noexcept { nativeSoundMode_.request(clean); }
+    // Owner-only, inaudible cold/project installation. NOT a live UI request.
+    // Discard old native/SRC history, then install at the next full scan start.
+    void installSoundModeWhileQuiescent(bool clean);
     VDX7NativeSoundMode::Snapshot soundModeSnapshot() const noexcept
     { return nativeSoundMode_.snapshot(); }
 

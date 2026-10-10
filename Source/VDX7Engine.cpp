@@ -202,6 +202,12 @@ void VDX7Engine::resetAudioState()
     dx7_.midiFilter.reset();
 }
 
+void VDX7Engine::installSoundModeWhileQuiescent(bool clean)
+{
+    resetAudioState();
+    nativeSoundMode_.installWhileQuiescent(clean);
+}
+
 void VDX7Engine::beginHostReset()
 {
     beginMidiReset(false);
