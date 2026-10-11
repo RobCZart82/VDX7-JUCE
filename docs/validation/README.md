@@ -14,6 +14,10 @@ tesztkör korlátozza az állításokat. A teljes név szerinti jegyzék alább 
 
 ## Reports by filename
 
+- [PROCESSOR_AUDIO_MODE_DISPATCH_20261010.md](PROCESSOR_AUDIO_MODE_DISPATCH_20261010.md)
+- [QUIESCENT_SOUND_MODE_INSTALL_20261010.md](QUIESCENT_SOUND_MODE_INSTALL_20261010.md)
+- [PROCESSOR_PROJECT_MODE_INSTALL_20261010.md](PROCESSOR_PROJECT_MODE_INSTALL_20261010.md) — local checkpoint, not merged acceptance.
+
 - [Projektmentés rögzített paraméterértékei](PROJECT_SNAPSHOT_CAPTURE_20261009.md)
 - [Classic Clean processor admission](CLASSIC_CLEAN_PROCESSOR_ADMISSION_20261009.md)
 

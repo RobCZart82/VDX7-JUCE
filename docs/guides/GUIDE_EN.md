@@ -323,8 +323,8 @@ The host-reset/ownership groups inspect the validated v1.8 firmware memory map.
 They are labelled `local-rom;firmware-v1_8` and require the `vdx7_v18_profile`
 CTest fixture. It verifies the firmware identity before running those groups;
 an incompatible image fails the prerequisite, rather than silently passing or
-being interpreted as a broken unknown-ROM fallback. Other-ROM runtime coverage
-remains separate acceptance work. Select these groups with
+being interpreted as a broken unknown-ROM fallback. Other firmware is outside
+official support and is not a future acceptance milestone. Select these groups with
 `ctest --test-dir build-local -C Release -L firmware-v1_8 --output-on-failure`.
 
 `vdx7_mono_boundary_characterization` documents a known native MONO pitch-zero

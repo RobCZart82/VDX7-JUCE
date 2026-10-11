@@ -1,7 +1,7 @@
 # Observed installer build toolchain
 
 This describes A6's packaging evidence, not a second development plan.
-Use the [single execution plan](EXECUTION_PLAN_1.0.md) for completion status.
+Use the [single active development plan](../development/DEVELOPMENT_PLAN.md) for current completion status.
 
 The stable packaging workflow selects Chocolatey Inno Setup **6.7.1** explicitly
 and verifies the loaded compiler engine with a no-output stdin probe before

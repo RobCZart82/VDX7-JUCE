@@ -173,6 +173,30 @@ static void testParameterSnapshot(const juce::File& rom = {})
 
 struct VDX7RegressionAccess
 {
+    static void beginInterruptedCleanReturn(VDX7AudioProcessor& p)
+    {
+        std::unique_lock lock(p.engineMutex_);
+        // Test-only renderer setup, not permission to admit Clean projects.
+        p.engine_.prepare(48000);
+        p.engine_.installSoundModeWhileQuiescent(true);
+        std::array<float, 2048> left{}, right{};
+        p.engine_.render(left.data(), right.data(), int(left.size()));
+        require(p.engine_.soundModeSnapshot().activeClean,
+            "recall regression starts from an actually active Clean renderer");
+        p.engine_.requestSoundMode(false);
+        p.engine_.resetAudioState();
+        p.engine_.render(left.data(), right.data(), 1);
+        const auto native = p.engine_.soundModeSnapshot();
+        require(native.activeClean && !native.desiredClean && native.level < 256,
+            "recall regression interrupts a real Clean-to-Classic down ramp");
+    }
+    static void requireColdClassic(VDX7AudioProcessor& p)
+    {
+        std::unique_lock lock(p.engineMutex_);
+        const auto native = p.engine_.soundModeSnapshot();
+        require(native.quiescentInstall && !native.desiredClean,
+            "compatible project completion installs Classic before rendering resumes");
+    }
     static void audioDispatch(VDX7AudioProcessor& p, bool loaded)
     {
         using Mode = VDX7SoundModeState::Mode;
@@ -534,11 +558,13 @@ static void testActualModeProjectOwner(const juce::File& rom = {})
             "loaded original ROM can still mismatch the saved project");
         require(waiting->getSoundModeProjectSnapshot() == mismatched,
             "ROM-only mismatch never completes pending mode or increments project revision");
+        VDX7RegressionAccess::beginInterruptedCleanReturn(*waiting);
         restore(*waiting, binary(matching));
         const auto completed = waiting->getSoundModeProjectSnapshot();
         require(completed.ready && !completed.pending && completed.revision == 3
             && completed.desired == Mode::classic && waiting->isProjectReady(),
             "matching live ROM completes actual RAM and current mode owner together");
+        VDX7RegressionAccess::requireColdClassic(*waiting);
         require(waiting->parameters().getRawParameterValue(
             VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback))->load() == 6,
             "actual owner completion retains edited voice");

@@ -89,6 +89,8 @@ használatról számolt be; ezek nem azonosak a végleges RC teljes tesztmátrix
 A fizikai Intel Mac elfogadása és a pontos RC-n végzett tesztek külön ellenőrzendők.
 A helyben fordított Standalone DAW nélkül fut.
 
+A macOS 11 fordítási cél, nem minden rendszer/host kombináció tesztelésének ígérete.
+
 **Az egyetlen hivatalosan támogatott firmware az eredeti Yamaha DX7 Mk I v1.8 (IG11469).**
 A megszólaláshoz saját, jogszerűen használható ROM szükséges.
 **Minden más firmware-verzió, köztük a Special Edition / SER-7 és a módosított
@@ -137,7 +139,7 @@ Archivált DX7-bankokban előfordulhat 127-es operátor-burkológörbeérték é
 
 - [Részletes magyar útmutató](docs/guides/GUIDE_HU.md)
 - [Detailed English guide](docs/guides/GUIDE_EN.md)
-- [1.0 kiadási ellenőrzőlista](docs/release/ROADMAP_1.0.md)
+- [Aktív fejlesztési terv és a következő kiadás kapui](docs/development/DEVELOPMENT_PLAN.md)
 - [Forrásfüggőségek](docs/guides/SOURCE_DEPENDENCIES.md)
 - [Licenc- és komponensközlések](NOTICE.md)
 
