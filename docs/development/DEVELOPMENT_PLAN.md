@@ -1,6 +1,6 @@
 # VDX7 egységes fejlesztési terv
 
-Frissítve: 2026-10-10. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
+Frissítve: 2026-10-11. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás része a D5 Classic/Clean funkció a 2026-10-09-i tulajdonosi
 döntés szerint. A verziószám és a további funkciók pontos köre még nincs rögzítve.
@@ -230,6 +230,13 @@ előtt települ. Célzott privát original v1.8 processor snapshot teszt PASS,
 Nincs PR/merge vagy Clean admission/writer/SETTINGS elfogadás ebből.
 Következő kapu: megszakított Clean→Classic recall regresszió, teljes rebuild,
 sanitizer és final-head platform CI/review; az összes lifecycle út továbbra is nyitott.
+
+2026-10-11: a valódi motor aktív Clean állapotából indított, megszakított
+Classic down-ramp melletti kompatibilis projekt-recall regresszió PASS.
+Friss ci_checks build, 22/22 ROM-free CTest, 94/94 Python és célzott privát
+original v1.8 processor ASan/UBSan snapshot-kör PASS. A helyi kapuk e része
+lezárt; final-head Windows/macOS/sanitizer CI és review továbbra is szükséges.
+Nem Clean állapot-admission vagy teljes lifecycle/host elfogadás.
 
 1. **D5 processor-állapot integráció:** az elkészült codec/owner a valódi
    save/restore/pending/ROM-admission és engine-epoch tranzakciókba illesztendő.
