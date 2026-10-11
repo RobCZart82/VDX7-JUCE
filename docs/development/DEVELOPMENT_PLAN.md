@@ -248,6 +248,11 @@ projektre nem küld intentet, a projekt-revízió változatlan.
 Privát original v1.8 célzott Release és ASan/UBSan processor snapshot PASS;
 full ci_checks fordítás PASS. Final-head CI/review és main-kör még kapu.
 Release/reset/reload út, Clean reader/writer és SETTINGS továbbra is nyitott.
+P1 review-fix a reset közbeni EGS-újraépítés után visszaállítja az adapter
+legutóbbi módját és az új EGS 0. fázisához igazítja a scan-fázist. Célzott
+natív módteszt, 22/22 ROM-free CTest, célzott ASan/UBSan teszt és VDX7
+shared-code Release build PASS. Kód és bizonyíték: ugyanabban a validation
+riportban; final-head CI/review és main ellenőrzés továbbra is szükséges.
 
 1. **D5 processor-állapot integráció:** az elkészült codec/owner a valódi
    save/restore/pending/ROM-admission és engine-epoch tranzakciókba illesztendő.

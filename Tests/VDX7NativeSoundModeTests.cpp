@@ -97,6 +97,36 @@ static void quiescentOrdering()
         "cold install retires old ramp, coalesces latest intent and retains all overshoot clocks");
 }
 
+static void egsReconstructionOrdering()
+{
+    for (const bool requestedClean : {false, true})
+    {
+        VDX7NativeSoundMode adapter;
+        ScanProbe oldEgs;
+        std::array<float, 8> out {};
+        int count = 0;
+        adapter.clock(oldEgs, out.data(), count, 37); // Leave the old EGS mid-scan.
+        adapter.request(requestedClean);
+
+        // Host reset reconstructs EGS, resetting its own phase to zero. The
+        // adapter must restore both the latest mode and matching scan phase.
+        ScanProbe newEgs;
+        adapter.restoreAfterEgsReconstruction(newEgs);
+        const auto restored = adapter.snapshot();
+        require(restored.desiredClean == requestedClean
+            && restored.activeClean == requestedClean && !restored.quiescentInstall
+            && restored.phase == 0 && restored.level == VDX7NativeSoundMode::rampSamples
+            && restored.frameGain == 1.0f && newEgs.cleanMode == requestedClean
+            && newEgs.switches == 1,
+            "EGS reconstruction restores latest mode and resets adapter phase at muted boundary");
+
+        adapter.clock(newEgs, out.data(), count, 96);
+        require(count == 1 && out[0] == (requestedClean ? 2.0f : 1.0f)
+            && !newEgs.partialSwitch && adapter.snapshot().phase == 0,
+            "first post-reset scan uses restored mode without phase mismatch");
+    }
+}
+
 struct EgsFixture
 {
     std::array<uint8_t, 256> memory {};
@@ -359,6 +389,7 @@ int main(int argc, char** argv)
         const bool negative = argc == 2 && std::string_view(argv[1]) == "--mid-scan-negative-control";
         ordering(negative);
         quiescentOrdering();
+        egsReconstructionOrdering();
         const auto classic = trace(28, false, false);
         require(classic == trace(28, false, true), "adapter is bit-identical to old EGS clock path");
         const auto switched = trace(28, true, false);

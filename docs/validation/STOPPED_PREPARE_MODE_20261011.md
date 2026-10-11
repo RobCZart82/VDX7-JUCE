@@ -30,3 +30,19 @@ sanitizer status. Final-head public CI/review and main checks remain required.
 
 Final local Release private snapshot suite, 22/22 ROM-free CTest and 94/94
 Python tests PASS. Whitespace check PASS. No real host or new package tested.
+
+## Review follow-up — EGS reset reconstruction
+
+The P1 review identified that a stopped prepare may leave a bounded host-reset
+drain pending. If that drain later reconstructs EGS, the adapter must restore
+its latest requested Clean/Classic mode and reset its scan phase to match the
+new EGS instance. `advanceHostReset()` now performs this synchronization at
+the muted reconstruction boundary. A ROM-free regression covers both requested
+modes, a pre-reset partial scan, the reconstructed phase, and the first full
+post-reset scan.
+
+PASS: targeted native sound-mode CTest; all 22 ROM-free CTests; targeted
+ASan/UBSan native sound-mode CTest; VDX7 shared-code Release build; `git diff
+--check`. This test validates adapter/EGS reconstruction ordering, not a
+private-ROM delayed-drain processor scenario or real DAW host. Final-head CI,
+review resolution, and post-merge main checks remain release gates.

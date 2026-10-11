@@ -386,6 +386,7 @@ void VDX7Engine::advanceHostReset(int sampleBudget)
         activeMidiNotes_.fill(0);
         std::destroy_at(&dx7_.egs);
         std::construct_at(&dx7_.egs, dx7_.memory + 0x3000);
+        nativeSoundMode_.restoreAfterEgsReconstruction(dx7_.egs);
         resetAudioState();
         controllerRefreshMessages_ = 2;
         pitchBendRefresh_ = true;
