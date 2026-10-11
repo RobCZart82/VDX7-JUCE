@@ -400,6 +400,13 @@ void VDX7AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     clearKeyboardSnapshot();
     engine_.resetMidiLifecycle();
     engine_.prepare(sampleRate);
+    // Host-stopped preparation is an inaudible history boundary. Only a ready
+    // current project can install intent; pending recall must not relabel the
+    // unrelated old engine. Reuse ownership without a second mutex acquisition.
+    (void)soundModeOwner_.withAudioOwnerLocked(lock,
+        [&](VDX7SoundModeState::Mode mode) noexcept {
+            engine_.installSoundModeWhileQuiescent(mode == VDX7SoundModeState::Mode::clean);
+        });
     // This stopped-device reset supersedes timeline boundaries which predate
     // preparation (for example, the initial ROM load). Consume those epochs
     // now so a fresh keyboard note queued after prepare is not mistaken for
