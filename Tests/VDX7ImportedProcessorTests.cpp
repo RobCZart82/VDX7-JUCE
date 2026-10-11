@@ -209,11 +209,23 @@ struct VDX7RegressionAccess
         };
         // Injection exercises real processBlock dispatch, NOT Clean project admission.
         install(Mode::clean, false);
+        const auto pendingBefore = p.engine_.soundModeSnapshot();
+        p.prepareToPlay(48000, 64);
+        const auto pendingAfter = p.engine_.soundModeSnapshot();
+        require(pendingAfter.desiredClean == pendingBefore.desiredClean
+            && !pendingAfter.desiredClean && !pendingAfter.activeClean,
+            "stopped prepare cannot install a pending project's intent");
         p.processBlock(audio, midi);
         require(!p.engine_.soundModeSnapshot().desiredClean,
             "actual audio never dispatches a pending Clean model");
         if (!loaded) return;
         install(Mode::clean, true);
+        const auto ownerBeforePrepare = p.getSoundModeProjectSnapshot();
+        p.prepareToPlay(48000, 64);
+        require(p.engine_.soundModeSnapshot().quiescentInstall
+            && p.engine_.soundModeSnapshot().desiredClean
+            && p.getSoundModeProjectSnapshot() == ownerBeforePrepare,
+            "stopped ready prepare cold-installs current mode without a new project revision");
         p.processBlock(audio, midi);
         require(p.engine_.soundModeSnapshot().desiredClean,
             "actual audio sends today's ready desired value to native adapter");

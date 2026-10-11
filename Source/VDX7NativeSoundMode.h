@@ -31,6 +31,19 @@ public:
         level_ = rampSamples;
         frameGain_ = 1.0f;
     }
+    // The owner has reconstructed EGS itself at a muted reset boundary. Its
+    // scan phase is now zero, so restore the latest requested mode and bring
+    // this adapter's phase back into alignment with the new instance.
+    template<class Egs>
+    void restoreAfterEgsReconstruction(Egs& egs) noexcept
+    {
+        phase_ = 0;
+        activeClean_ = desiredClean_;
+        egs.clean(activeClean_);
+        quiescentInstall_ = false;
+        level_ = rampSamples;
+        frameGain_ = 1.0f;
+    }
     Snapshot snapshot() const noexcept
     { return { desiredClean_, activeClean_, quiescentInstall_, level_, phase_, frameGain_ }; }
 

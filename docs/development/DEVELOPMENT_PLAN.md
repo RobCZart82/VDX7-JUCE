@@ -238,6 +238,22 @@ original v1.8 processor ASan/UBSan snapshot-kör PASS. A helyi kapuk e része
 lezárt; final-head Windows/macOS/sanitizer CI és review továbbra is szükséges.
 Nem Clean állapot-admission vagy teljes lifecycle/host elfogadás.
 
+#179 beolvadt `9c0174cb08fcd051f273b79872e74a7bb8b0552f` main-nal;
+külön Windows/macOS main-kör PASS. A kompatibilis projekt cold-mode install
+részlépés lezárt, nem teljes Clean admission.
+Következő ág: `feature/sound-mode-stopped-prepare`, kód `e37147d`.
+Host-stopped prepare a ready owner aktuális módját cold telepíti; pending
+projektre nem küld intentet, a projekt-revízió változatlan.
+[Státusz és tesztbizonyíték](../validation/STOPPED_PREPARE_MODE_20261011.md).
+Privát original v1.8 célzott Release és ASan/UBSan processor snapshot PASS;
+full ci_checks fordítás PASS. Final-head CI/review és main-kör még kapu.
+Release/reset/reload út, Clean reader/writer és SETTINGS továbbra is nyitott.
+P1 review-fix a reset közbeni EGS-újraépítés után visszaállítja az adapter
+legutóbbi módját és az új EGS 0. fázisához igazítja a scan-fázist. Célzott
+natív módteszt, 22/22 ROM-free CTest, célzott ASan/UBSan teszt és VDX7
+shared-code Release build PASS. Kód és bizonyíték: ugyanabban a validation
+riportban; final-head CI/review és main ellenőrzés továbbra is szükséges.
+
 1. **D5 processor-állapot integráció:** az elkészült codec/owner a valódi
    save/restore/pending/ROM-admission és engine-epoch tranzakciókba illesztendő.
    Hibás state és stale request nem mutálhat projektet; reentráns mentés,
