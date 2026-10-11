@@ -6,6 +6,21 @@ A következő kiadás része a D5 Classic/Clean funkció a 2026-10-09-i tulajdon
 döntés szerint. A verziószám és a további funkciók pontos köre még nincs rögzítve.
 Ez a dokumentum nem új kiadás publikálási engedélye.
 
+## Aktuális kiadási állapot — 2026-10-11
+
+A legutóbbi ellenőrzött GitHub `main` SHA: `a3051a050e3800173df2e7972a331ff6d3ff94de`,
+a #180 merge-commitje. A #180 a host által leállított prepare során a kész
+projekt aktuális módjának cold installját, valamint a reset közbeni EGS-
+újraépítés utáni mód- és scan-fázis-visszaállítást fedi le. Ez két konkrét
+életciklus-határt zár le, nem a teljes D5 funkciót.
+
+A Clean projekt-visszaállítás továbbra is fail-closed; a teljes Clean
+reader/writer/admission, a további release/reload/mono életciklus,
+a működő hangút és a SETTINGS-választó még nyitott. A #180-hoz kapcsolt
+[validációs jelentés](../validation/STOPPED_PREPARE_MODE_20261011.md)
+pre-merge checkpointként készült; a végső PR- és merge utáni main-eredmények
+rögzítését külön kapuként kell kezelni. A verziószám továbbra sincs eldöntve.
+
 ## Következő release: Classic/Clean kötelező funkció — 2026-10-09
 
 Közvetlen tulajdonosi döntés: **„Classic/Clean funkcióval együtt kiadni.”**
@@ -13,9 +28,11 @@ Ellenőrzött main: `000ee97b19763b23c569ff6ac68080c4b6165094` (#169 után).
 A D5 nem opcionálisan későbbre hagyott ötlet: a következő release csak a
 teljes, tesztelt motor/processor/projektmentés és SETTINGS integrációval készülhet.
 Az önálló modell, codec vagy owner elkészülte nem kész funkció, és a zöld CI
-nem helyettesíti a hangzási/host-elfogadást. A production Clean renderer/mód-
-ownership/SETTINGS integráció még nyitott; az alábbi admission-részlépés nem
-jelenti a teljes funkció megvalósítását.
+nem helyettesíti a hangzási/host-elfogadást. A #175/#179/#180 részlépések a
+Classic-only owner-bekötés, a projektmód-install és két cold lifecycle-határ
+alapját beolvasztották. A teljes Clean reader/writer/admission, a maradék
+renderer/lifecycle és a SETTINGS integráció még nyitott; az alábbi admission-
+részlépés nem jelenti a teljes funkció megvalósítását.
 
 Megőrzendő koncepció: **SETTINGS → Sound mode → Classic / Clean**;
 Classic alapértelmezett, legacy projektben is, a korábbi hangzás megőrzésével.
@@ -50,11 +67,13 @@ merge utáni main Windows/macOS ellenőrzése is PASS. A review és a pontos fut
 a részletes jelentés utólagos lezárásában szerepelnek. Ez nem teljes D5 vagy új
 release-elfogadás; a korábbi helyi tesztkör korlátai változatlanok.
 
-Következő nyitott lépés: kívánt mód és payload koherens valódi save/restore/
-pending/ROM-epoch ownership, majd native/SRC renderer és átmenet közös
-integrációja. Clean admission csak e működő hangút bizonyítéka után nyitható;
-a jelen fail-closed negatív kontroll akkor pozitív Clean recall/lifecycle
-regresszióval cserélendő, a hibás séma rejection-tesztek megmaradnak.
+A #171 utáni akkori következő lépés a kívánt mód és payload koherens valódi
+save/restore/pending/ROM-epoch ownership, majd a native/SRC renderer és átmenet
+integrációja volt. A #172–#180 az owner- és cold-install út részlépéseit
+beolvasztotta; a jelenlegi, megmaradt feladatokat a fenti aktuális státusz és a
+lenti kiadási sorrend rögzíti. Clean admission csak a működő hangút igazolása
+után nyitható; a fail-closed negatív kontroll akkor pozitív Clean recall/
+lifecycle regresszióval cserélendő, a hibás séma rejection-tesztek megmaradnak.
 [Részletes reprodukció, ellenőrzések és korlátok](../validation/CLASSIC_CLEAN_PROCESSOR_ADMISSION_20261009.md).
 
 ### D5 előfeltétel a leválasztott projektmentéshez
@@ -1487,15 +1506,21 @@ Források: [rögzített 9.0.1 upstream verzió](https://github.com/juce-framewor
 
 ## Végrehajtás és kiadási kapuk
 
-Aktuális sorrend a 2026-10-09-i döntéssel: új reprodukált blocker, ha lesz →
-D5 valódi processor/állapot integráció → motor/átmenet és privát mérések →
-SETTINGS → platformkapuk → új verzió/csomagoló és csomagba kerülő HU/EN útmutató →
-exact jelölt build/csomagteszt/fagyasztás → ugyanazon csomagból valódi
-host/hallásos elfogadás → elfogadási jegyzék és külön publikálási döntés.
+Aktuális sorrend 2026-10-11-én, a `a3051a050e3800173df2e7972a331ff6d3ff94de`
+main alapján: #180 beolvadt; a következő fejlesztési munka a D5 még nyitott
+processor-állapot és Clean reader/writer/admission útjának befejezése, a
+release/reload/mono és további reset-életciklusok regresszióival. Ezt követi a
+teljes motor/átmenet és privát eredeti v1.8-as műszeres elfogadás, majd a
+SETTINGS-választó és az integrált Windows/macOS/sanitizer kapuk. Ezután
+verzióválasztás, installer/source-csomagolás és a csomagba kerülő HU/EN
+útmutatók; az exact jelöltet fagyasztani és ellenőrizni kell. A befagyasztott
+csomagokkal jön a valódi host- és hallásos elfogadás, végül az elfogadási
+jegyzék és külön publikálási döntés.
+
 D1/D2/D3 már elkészült működését regresszióval megőrizzük; D4 külön jóváhagyandó
-host/packaging munkacsomag. A D5 a következő kiadás része, nem későbbi opcionális
-release-feature. A fenti részletes kiadási kapuk felülírják a korábbi nyitott
-scope/prioritás kérdést; a dokumentálás nem megvalósítás vagy publikálás.
+host/packaging munkacsomag, nem automatikusan e kiadás része. A D5 a következő
+kiadás kötelező része, nem későbbi opcionális release-feature. A fenti részletes
+kiadási kapuk irányadók; a dokumentálás nem megvalósítás vagy publikálás.
 
 M5 JUCE 9.0.3 dependency-update: **#169-cel már main-ban, automatizált kapui
 lezártak**; nem ütemezünk új pin-cserét vagy GO/NO-GO kísérletet a D5 után,
