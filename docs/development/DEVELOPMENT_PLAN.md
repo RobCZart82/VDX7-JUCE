@@ -72,6 +72,12 @@ No-ROM módválasztás, példányizoláció, save/reopen, stale választás és 
 Clean Native/Correct rebuild regresszió bekerült. Az 1. munkacsomag teljes
 concurrency/hangút/host elfogadása megmarad; a 2. kódja Draftban bekötött.
 
+SETTINGS negatív Apply: hét invalid/unavailable kontroll (tuning/channel
+határok, invalid mód, hiányzó owner-token, tuning ready firmware nélkül)
+ellenőrzi az exact mentett payload és owner megőrzését. Friss macOS processor
+build és ROM-free snapshot PASS. `520c848` Windows/macOS/sanitizer PASS;
+az új tesztcommit és a valódi GUI/host elfogadása külön nyitott kapu.
+
 SETTINGS/capture folytatás: reentráns és valódi külön szálas Apply a detached
 save határán, mindkét módirányban PASS. A régi mentés captured módja megmarad,
 a live intent revision-növelés nélkül változik, a következő mentés új módot ír.

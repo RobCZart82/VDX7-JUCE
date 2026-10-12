@@ -32,6 +32,13 @@ and listening tests. Earlier reader-closed paragraphs below are historical.
 
 ## SETTINGS and policy integration (2026-10-12)
 
+Negative Apply follow-up on `520c848cdd068b6e0b586b680f83cd3e64504a18`
+(Windows/macOS/sanitizer PASS): seven invalid/unavailable controls cover tuning
+limits, MIDI-channel limits, invalid mode, missing ownership token and tuning
+without ready firmware. Every rejection checks exact saved payload and owner
+preservation. Fresh macOS processor build and ROM-free snapshot run PASS.
+No runtime behavior changed; final-head CI and real GUI/host acceptance remain.
+
 Owner screenshot follow-up: information row height reduced 24→20 logical pixels;
 64 logical pixels of explicit footer space added after Sound mode, before the
 button row. With 11 information lines this adds about 30 logical pixels to the

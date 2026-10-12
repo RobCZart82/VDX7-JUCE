@@ -776,6 +776,25 @@ static void testActualModeProjectOwner(const juce::File& rom = {})
             == VDX7AudioProcessor::SettingsApplyResult::staleSoundMode && save(*ui) == preserved,
             "stale SETTINGS mode rejects all selections without partial mutation");
         const auto current = ui->getSoundModeProjectSnapshot();
+        using Apply = VDX7AudioProcessor::SettingsApplyResult;
+        const auto rejectedState = save(*ui);
+        const auto checkRejected = [&](Apply result, Apply expected) {
+            require(result == expected && save(*ui) == rejectedState
+                && ui->getSoundModeProjectSnapshot() == current,
+                "invalid SETTINGS Apply preserves payload and mode owner");
+        };
+        checkRejected(ui->applySettingsFromUi(-257, 9, true, Mode::classic, current), Apply::invalidTuning);
+        checkRejected(ui->applySettingsFromUi(256, 9, true, Mode::classic, current), Apply::invalidTuning);
+        checkRejected(ui->applySettingsFromUi(ui->getMasterTune(), -1, true, Mode::classic, current),
+            Apply::invalidChannel);
+        checkRejected(ui->applySettingsFromUi(ui->getMasterTune(), 17, true, Mode::classic, current),
+            Apply::invalidChannel);
+        checkRejected(ui->applySettingsFromUi(ui->getMasterTune(), 9, true,
+            static_cast<Mode>(9), current), Apply::staleSoundMode);
+        checkRejected(ui->applySettingsFromUi(ui->getMasterTune(), 9, true, Mode::classic),
+            Apply::staleSoundMode);
+        checkRejected(ui->applySettingsFromUi(1, 9, true, Mode::classic, current),
+            Apply::tuningUnavailable);
         require(ui->applySettingsFromUi(ui->getMasterTune(), 3, false, Mode::classic, current)
             == VDX7AudioProcessor::SettingsApplyResult::applied
             && tree(save(*ui)).getProperty("soundMode").toString() == "0",
