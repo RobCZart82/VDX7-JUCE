@@ -85,6 +85,13 @@ processor futás PASS. Ez nem ready-ROM, hangzási vagy teljes lifecycle elfogad
 az új commit Windows/macOS/sanitizer CI-je külön kapu.
 
 **Draft feloldás előtt:** review rendezés és exact final-head platform kapuk;
+
+2026-10-12 ready recall részlépés: privát original v1.8 mellett public
+Clean→Classic→Clean restore, revision és cold-install kontroll, majd reset /
+repeated release / prepare / audio 44.1/48/96 kHz-en PASS. Friss macOS célzott
+processor build és private snapshot-only futás PASS. Ez a következő lista
+egy része; nem teljes hangzási, lifecycle vagy SETTINGS elfogadás.
+
 Clean→Classic és Classic→Clean public recall, hiányzó/eltérő/megfelelő ROM,
 no-ROM edits, reset/release/prepare/reload és Native/Correct policy, stale és
 reentráns restore/host publication, több példány és kapcsolódó privát

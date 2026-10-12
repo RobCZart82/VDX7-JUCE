@@ -808,6 +808,26 @@ static void testActualModeProjectOwner(const juce::File& rom = {})
             reopenedClean->prepareToPlay(rate, 64);
             for (int block = 0; block < 32; ++block) reopenedClean->processBlock(audio, midi);
             VDX7RegressionAccess::requireSettledClean(*reopenedClean);
+            const auto recalledOwner = reopenedClean->getSoundModeProjectSnapshot();
+            restore(*reopenedClean, binary(matching));
+            const auto classicOwner = reopenedClean->getSoundModeProjectSnapshot();
+            require(classicOwner.ready && classicOwner.desired == Mode::classic
+                && classicOwner.revision == recalledOwner.revision + 1,
+                "ready public Classic recall replaces Clean owner once");
+            VDX7RegressionAccess::requireColdClassic(*reopenedClean);
+            restore(*reopenedClean, binary(cleanState));
+            const auto restoredOwner = reopenedClean->getSoundModeProjectSnapshot();
+            require(restoredOwner.ready && restoredOwner.desired == Mode::clean
+                && restoredOwner.revision == classicOwner.revision + 1,
+                "ready public Clean recall replaces Classic owner once");
+            reopenedClean->reset();
+            reopenedClean->releaseResources();
+            reopenedClean->releaseResources();
+            reopenedClean->prepareToPlay(rate, 64);
+            for (int block = 0; block < 32; ++block) reopenedClean->processBlock(audio, midi);
+            require(reopenedClean->getSoundModeProjectSnapshot() == restoredOwner,
+                "ready public Clean owner survives reset/repeated release/reprepare");
+            VDX7RegressionAccess::requireSettledClean(*reopenedClean);
             cleanWaiting.releaseResources();
             require(cleanWaiting.getSoundModeProjectSnapshot() == readyClean,
                 "stopped release preserves completed internal Clean owner");

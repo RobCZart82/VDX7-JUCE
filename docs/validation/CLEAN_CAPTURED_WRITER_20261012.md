@@ -1,5 +1,18 @@
 # Internal Clean captured writer checkpoint
 
+## Ready public recall lifecycle — 2026-10-12
+
+Follow-up baseline: `639d0da8434bea77e90444c2cadc7bf6fdb24828`.
+Original private v1.8 firmware: ready Clean→Classic→Clean public binary recall
+increments the project revision once per restore and cold-installs Classic.
+The returned Clean owner survives reset, repeated release, prepare and audio
+at 44.1/48/96 kHz; the native renderer settles in Clean at unity.
+PASS: rebuilt macOS imported processor target and private `--snapshot-only`
+run, including existing stale ROM-completion and ownership controls.
+This verifies ownership and native mode, not audible output or listening quality.
+Windows/sanitizer CI and the complete lifecycle/audio/SETTINGS gates remain.
+Firmware is outside Git and is not included in the change.
+
 ## Public pending lifecycle follow-up — 2026-10-12
 
 Baseline Draft head: `890f58379833dab513fe8f899fa113d0c8956595`.
