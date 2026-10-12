@@ -3,6 +3,7 @@
 Dátum: 2026-10-12. Baseline main:
 `de318935efae0da5b0fa182a2582526230cfed83` (#181 után).
 Ág: `fix/sound-mode-rom-reload-lifecycle`.
+PR: [#182](https://github.com/RobCZart82/VDX7-JUCE/pull/182); final-head CI és review még függőben, nincs beolvasztva.
 Motor/teszt commit: `6b602612e54724eb0b32da1fdfef101f674a444a`;
 Windows reference-tool commit: `8f2e6b74999205569690c5e870c49fffcb32a9e0`.
 Irányadó: [egységes fejlesztési terv](../development/DEVELOPMENT_PLAN.md).

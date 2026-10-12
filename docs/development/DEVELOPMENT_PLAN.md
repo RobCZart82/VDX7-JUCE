@@ -8,6 +8,8 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ## D5 ROM-reload lifecycle részlépés — 2026-10-12
 
+PR: [#182](https://github.com/RobCZart82/VDX7-JUCE/pull/182); final-head CI és review még függőben, nincs beolvasztva.
+
 Friss baseline: `de318935efae0da5b0fa182a2582526230cfed83` (#181 után).
 Ág: `fix/sound-mode-rom-reload-lifecycle`. Új belső D5 regresszió reprodukálva:
 sikeres firmware-újratöltés a megszakított régi live rampát továbbvitte.
