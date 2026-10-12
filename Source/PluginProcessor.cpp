@@ -556,7 +556,7 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         audioContendedRunSamples_ = 0;
     // Reuse the existing audio try-lock: inspect today's desired mode only
     // after state/reset observations. Pending projects cannot target old ROMs.
-    // Clean admission and UI remain gated until cold-install/lifecycle support.
+    // Public recall and SETTINGS provide intent; renderer changes stay audio-owned.
     (void)soundModeOwner_.withAudioOwnerLocked(lock,
         [&](VDX7SoundModeState::Mode mode) noexcept {
             engine_.requestSoundMode(mode == VDX7SoundModeState::Mode::clean);
@@ -1184,16 +1184,25 @@ VDX7AudioProcessor::MonoCorrectionStatus VDX7AudioProcessor::getMonoCorrectionSt
 
 bool VDX7AudioProcessor::setMonoCorrectionFromUi(bool enabled)
 {
+    std::unique_lock lock(engineMutex_);
+    if (enabled == engine_.isMonoCorrectionRequested()) return true;
+    if (!setMonoCorrectionLocked(enabled, lock)) return false;
+    lock.unlock();
+    synchroniseOperatorParametersFromEngine();
+    updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
+    return true;
+}
+
+bool VDX7AudioProcessor::setMonoCorrectionLocked(bool enabled, std::unique_lock<std::mutex>& lock)
+{
+    jassert(lock.owns_lock() && lock.mutex() == &engineMutex_);
     {
-        std::unique_lock lock(engineMutex_);
         if (enabled == engine_.isMonoCorrectionRequested()) return true;
         if (!engine_.isLoaded())
         {
             if (!engine_.configureMonoCorrectionBeforeLoad(enabled)) return false;
             if (pendingRestore_.isValid())
                 pendingRestore_.setProperty("monoNoteZeroCorrection", enabled, nullptr);
-            lock.unlock();
-            updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
             return true;
         }
         if (pendingRestore_.isValid()) return false; // Do not interrupt a project restore.
@@ -1228,8 +1237,6 @@ bool VDX7AudioProcessor::setMonoCorrectionFromUi(bool enabled)
         lastModValue_ = -1;
         updateEngineSnapshot();
     }
-    synchroniseOperatorParametersFromEngine();
-    updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
     return true;
 }
 
@@ -1364,9 +1371,10 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     if (pendingCopy.isValid())
     {
         if (!writeImported(pendingCopy)) return;
-        // Preserve the legacy writer gate: only an already explicit Classic
-        // pending pair is written from the same captured project/mode owner.
-        if (pendingCopy.hasProperty(VDX7SoundModeState::versionProperty))
+        // Preserve legacy Classic absence; Clean intent or an existing explicit
+        // pair must be written from the same captured project/mode owner.
+        if (projectMode.desired == VDX7SoundModeState::Mode::clean
+            || pendingCopy.hasProperty(VDX7SoundModeState::versionProperty))
             pendingCopy = VDX7SoundModeState::writeDetached(pendingCopy, projectMode.desired);
         if (auto xml = pendingCopy.createXml()) copyXmlToBinary(*xml, destData);
         return;
@@ -1412,6 +1420,12 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 
     if (deferredEdits.isValid()) state.addChild(deferredEdits, -1, nullptr);
 
+    // Preserve legacy Classic output. Internal Clean intent must travel with
+    // this detached payload, never with a newer owner read during encoding.
+    // Validated Clean recall and SETTINGS selection share this project owner.
+    if (projectMode.desired == VDX7SoundModeState::Mode::clean)
+        state = VDX7SoundModeState::writeDetached(state, projectMode.desired);
+
     if (auto xml = state.createXml())
         copyXmlToBinary(*xml, destData);
 }
@@ -1433,10 +1447,9 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 
     // Validate before mono-policy, catalog/pending, MIDI epoch or host parameter
     // mutation. Never silently turn a newer Clean project into Classic audio:
-    // Clean admission stays closed until its renderer/lifecycle is integrated.
+    // Both validated modes share the same payload/ROM ownership transaction.
     auto desiredMode = VDX7SoundModeState::Mode::classic;
-    if (!VDX7SoundModeState::read(state, desiredMode)
-        || desiredMode != VDX7SoundModeState::Mode::classic)
+    if (!VDX7SoundModeState::read(state, desiredMode))
         return;
 
     VDX7FactoryBanks::Snapshot factoryBanks;
@@ -1837,6 +1850,14 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
         else
             updateEngineSnapshot();
         soundModeOwner_.refreshReadinessLocked(lock, [&]() noexcept { return engine_.isLoaded(); });
+
+        // Firmware installation is quiescent under this lock. A pre-ROM UI
+        // choice must target the new engine before its first emitted sample;
+        // pending incompatible projects must still leave that engine untouched.
+        (void)soundModeOwner_.withAudioOwnerLocked(lock,
+            [&](VDX7SoundModeState::Mode mode) noexcept {
+                engine_.installSoundModeWhileQuiescent(mode == VDX7SoundModeState::Mode::clean);
+            });
 
         // A successful firmware image install is a MIDI timeline boundary:
         // deferred input captured while the engine lock was unavailable must
@@ -2422,29 +2443,44 @@ bool VDX7AudioProcessor::setMasterTuneFromUi(int value)
 }
 
 VDX7AudioProcessor::SettingsApplyResult VDX7AudioProcessor::applySettingsFromUi(
-    int tuning, int midiInputChannel, bool monoCorrection)
+    int tuning, int midiInputChannel, bool monoCorrection,
+    std::optional<VDX7SoundModeState::Mode> soundMode,
+    std::optional<VDX7SoundModeOwner::Snapshot> expectedMode)
 {
     if (tuning < -256 || tuning > 255)
         return SettingsApplyResult::invalidTuning;
     if (midiInputChannel < 0 || midiInputChannel > 16)
         return SettingsApplyResult::invalidChannel;
 
+    std::unique_lock lock(engineMutex_);
+    const auto currentMode = soundModeOwner_.snapshotLocked(lock);
+    if (soundMode && (!expectedMode || !VDX7SoundModeState::isValid(*soundMode)
+        || *expectedMode != currentMode))
+        return SettingsApplyResult::staleSoundMode;
+
     const bool tuningChanged = tuning != getMasterTune();
     // Validate this before the MONO operation: when no ROM is loaded, changing
     // MONO policy is allowed but master tuning is not.
-    if (tuningChanged && !isProjectReady())
+    if (tuningChanged && (!engine_.isLoaded() || pendingRestore_.isValid()))
         return SettingsApplyResult::tuningUnavailable;
 
     // MONO correction can fail while a project restore is pending. Run this
     // potentially failing operation first so a failed Apply cannot leave the
     // dialog's earlier tuning/channel selections partially committed.
-    if (!setMonoCorrectionFromUi(monoCorrection))
+    if (!setMonoCorrectionLocked(monoCorrection, lock))
         return SettingsApplyResult::monoCorrectionUnavailable;
 
-    if (tuningChanged && !setMasterTuneFromUi(tuning))
-        return SettingsApplyResult::tuningUnavailable;
-    if (!setMidiInputChannelFromUi(midiInputChannel))
-        return SettingsApplyResult::invalidChannel;
+    if (tuningChanged)
+    {
+        pendingMasterTune_.store(tuning, std::memory_order_relaxed);
+        pendingPerformanceDirty_.fetch_or(kMasterTunePerformanceMask, std::memory_order_release);
+        masterTuneSnapshot_.update(0x1ff, uint64_t(tuning + 256));
+    }
+    midiInputChannel_.store(midiInputChannel);
+    if (soundMode) (void)soundModeOwner_.requestLocked(lock, *soundMode, currentMode);
+    lock.unlock();
+    synchroniseOperatorParametersFromEngine();
+    updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));
     return SettingsApplyResult::applied;
 }
 

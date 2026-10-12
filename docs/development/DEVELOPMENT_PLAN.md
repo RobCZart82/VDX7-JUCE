@@ -8,10 +8,10 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ## Aktuális kiadási állapot és sorrend — 2026-10-12
 
-Ellenőrzött main: `45a52e8a8750e5d2d32be47dc364396b368df0c3` (#185 merge).
+Ellenőrzött main: `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187 merge).
 Ehhez a pontos SHA-hoz a main
-[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38223807745) és
-[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38223807781) CI PASS.
+[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38237322273) és
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38237322229) CI PASS.
 Ez dátumozott ellenőrzési baseline, nem ígéret a későbbi commitok eredményére.
 Az alábbi státusz és sorrend az irányadó. A későbbi dátumozott checkpointok
 történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott” vagy
@@ -34,31 +34,187 @@ történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott
   [macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38220249781) CI PASS.
   [Részletes bizonyíték](../validation/STOPPED_RELEASE_OWNER_20261012.md).
 - [#185](https://github.com/RobCZart82/VDX7-JUCE/pull/185): a fejlesztési terv
-  egységesítése beolvadt; merge utáni main Windows/macOS PASS a fenti SHA-n.
+  egységesítése beolvadt; az akkori main Windows/macOS PASS.
   Dokumentációs változás, nem teljes D5 vagy új csomag-/host-elfogadás.
 
 ### Hátralévő kiadási munkacsomagok
 
-2026-10-12 új részlépés, baseline `524b75b1aa83c3ea422b18fb8ccd3fdf3999ae88`
-(#186 után), ág `test/clean-owner-save-capture`: actual processor pending
-Clean owner test-only injection, leválasztott save közben új Classic restore,
-reentráns és valódi kétszálas kontroll. A captured mód/payload együtt marad,
-régi encoding nem írja felül az új ownert. Nyilvános Clean admission zárt.
-Windows tesztbuild és snapshot kontroll PASS; nem új firmware/DAW-elfogadás.
-E részlépés nem teljesíti önmagában az alábbi 1. munkacsomagot.
+### D5 Classic/Clean részletes aktuális státusz
+
+**2026-10-12 integrációs/review folytatás — HU:** a teljes privát original 1.8
+regressziós kör újrafutott; a nyilvános SETTINGS hangút 3 rate × 4 buffer
+mátrixa hozzáadva. Két review-P2 javítva: a pending→ready változás érvényteleníti
+a régi SETTINGS tokent, és az első ROM-load cold-installálja a korábban választott
+Clean módot. A javítás utáni teljes helyi kör 59/59 PASS (238,14 s), a 12-es
+nyilvános hangút-mátrix és a 94 Python-regresszió PASS; macOS VST3/AU/standalone
+build PASS, telepítés nélkül. Az új végső fej CI/review eredményét külön kell
+lezárni. A korábbi `4df15a4` fej mindhárom
+CI-je PASS, de ez nem az új javító commit eredménye. Beolvasztás/publikálás nincs
+ebből automatikusan következtetve.
+
+**EN:** Added a public SETTINGS audio regression at three rates/four buffer
+sizes and reran private original-v1.8 regressions. Two review P2s addressed:
+pending→ready invalidates old SETTINGS tokens; first ROM load cold-installs
+pre-ROM Clean intent. Post-fix local suite 59/59 PASS (238.14 s), public audio
+matrix 12 combinations PASS, Python regressions 94/94 PASS, macOS VST3/AU/
+Standalone builds PASS without installation. New final-head CI/review gates
+remain separate; previous `4df15a4` CI PASS does not
+certify the new commit or publication.
+
+[Aktuális integrációs/review jegyzőkönyv / Current evidence](../validation/CLASSIC_CLEAN_INTEGRATION_REVIEW_20261012.md).
+
+2026-10-12 tulajdonosi visszajelzés: a javított SETTINGS képen nincs átfedés;
+a kipróbált funkciók jól működnek, Classic/Clean hallhatóan kedvező különbséget
+ad, ismételt SETTINGS állítgatás során nem volt fagyás. Ez felhasználói,
+nem teljes kontrollált mátrixeredmény; exact binary/host/buffer/testcase adatok
+nélkül nem zárja le a teljes kiadási elfogadást. Részletek a writer/reader
+tesztjegyzőkönyv Owner feedback részében.
+
+Fejlesztési baseline: `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187 merge).
+Ág: `feature/clean-captured-state-writer`, [#188 Draft](https://github.com/RobCZart82/VDX7-JUCE/pull/188).
+Legutóbbi feltöltött kód-/tesztfej: `b299f325eec4309c1cf4724a71ddec2ce52e0dd3`.
+Ellenőrzött dokumentációs fej: `1fc4cbbd3b3543cd92a4a38d4ab65a5d34369acf`;
+[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38300063319),
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38300063322) és
+[sanitizer](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38300063535) PASS.
+Ez az ellenőrzött fej eredménye, nem a következő dokumentációs commité.
+Korábbi `520c848` kódfej mindhárom platformellenőrzése PASS. Ez nem az új
+dokumentációs commit vagy következő kiadási jelölt automatikus PASS-a.
+Ez a rész nem jelenti a Draft main-ba kerülését vagy a kiadás elfogadását.
+
+| Komponens | Hol tart | Hátralévő kapu |
+|---|---|---|
+| Owner, renderer, audio dispatch, cold install | Main-ban meglévő alapok | Teljes integrált életciklus- és hangzáselfogadás |
+| Koherens pending capture (#187) | Main-ban; régi encoding nem írja felül az új projektet | Új funkció teljes mentés/visszaállítási köre |
+| Normál Clean writer | #188 Draft: capture-ből ír mód/sémapárt | Final-head CI/review, további recall/lifecycle kontrollok |
+| Clean reader/admission | #188 Draft: érvényes Clean bekerül a közös payload/owner/ROM tranzakcióba | Main-ban még a korábbi kapu; Draft elfogadása külön |
+| Classic kompatibilitás | Legacy writer és hiányzó mód → Classic megmarad | Teljes új jelölt regressziós/hang kontroll |
+| SETTINGS választó | #188 Draft: Apply → Classic/Clean, projektbe mentett, nem hostparaméter | Final-head CI/review, vizuális és valódi host-elfogadás |
+| Kiadási csomag/DAW elfogadás | Telepített fejlesztési VST3 macOS REAPER részteszt PASS; végleges csomag NOT RUN | Exact új csomagok és teljes hostmátrix elfogadása, publikálási engedély |
+
+### REAPER ellenőrzés / REAPER verification — 2026-10-12
+
+**HU:** A felhasználó által telepített VST3-at REAPER 7.82 macOS alatt,
+44,1 kHz / 512 samples mellett, külön tesztprojektben ellenőriztük.
+Bináris SHA-256: `c40cb0d9731b36cb691811977bdb73acd5b108fb18da188a257d90d66cce69d3`.
+PASS: original v1.8 ROM/bank betöltés; SETTINGS 100% átfedésmentes;
+Classic→Clean→Classic→Clean Apply; Cancel megőrzi a korábbi választást;
+Clean és tuning=12 projektmentés/újranyitás után megmarad; MIDI hangok,
+akkord és sustain-felengedés; két példány rövid párhuzamos lejátszása.
+Mindkét mód 44,1/48/96 kHz offline WAV exportja nem néma, nincs clipping,
+az utolsó 0,5 s teljes csend. Nem tapasztaltunk fagyást/összeomlást ebben a körben.
+Ez nem hosszú stresszteszt, hallásos/spektrális minősítés vagy teljes release PASS.
+A source SHA / végleges csomaghoz való azonosság nincs igazolva.
+
+**EN:** User-installed development VST3 tested in a separate project with
+REAPER 7.82 macOS, real-time 44.1 kHz / 512 samples. PASS: original v1.8
+ROM/bank load, non-overlapping SETTINGS at 100%, both mode directions,
+Apply/Cancel, Clean and tuning=12 save/reopen, MIDI notes/chord/sustain release,
+and short simultaneous playback of two instances. Both modes rendered non-silent
+24-bit stereo WAV at 44.1/48/96 kHz without clipping; final 0.5 s was exact
+silence. No observed hang/crash in this round. This is scoped smoke evidence,
+not prolonged stress, spectral/listening acceptance or final release PASS;
+source-commit/final-package provenance remains unverified.
+
+[Részletes HU/EN eredményjegyzék / Detailed results](../validation/REAPER_SMOKE_20261012.md).
+Végleges jelöltön hátra: Windows/standalone és releváns hostok, valósidejű
+rate/buffer mátrix, további GUI-skálák, független példánymódok és recall,
+automation/channel/MONO/ROM-recovery regressziók, freeze/unfreeze, tartós
+terhelés és kontrollált hangzási mérések; tételes PASS vagy indokolt halasztás.
+
+**A Draftban megvalósított viselkedés:** a mentett mód a payload ugyanazon
+engine-lock alatti pillanatképéből származik, nem későbbi owner-readből.
+Clean sémapár a normal save-ben is megjelenik; Classic továbbra is legacy.
+Érvényes Clean binary restore ugyanazt a validált pending/ROM completion
+utat használja, mint Classic. A 12 malformed-schema rejection kontroll
+megmarad; paraméter- és firmware/payload validation nincs megkerülve.
+Runtime revision/pending/gain nem új hostparaméter; a 148 ID/sorrend változatlan.
+
+2026-10-12 SETTINGS integráció: Classic alapértelmezés, Cancel nem alkalmaz
+változást. Apply engine-lock alatt ellenőrzi a mód/revisiont, alkalmazza a
+Native/Correct policyt, tuning/channel és mód választását; host notification
+lockon kívül. Stale projekt/mód elutasítás minden választás előtt történik.
+No-ROM módválasztás, példányizoláció, save/reopen, stale választás és ready
+Clean Native/Correct rebuild regresszió bekerült. Az 1. munkacsomag teljes
+concurrency/hangút/host elfogadása megmarad; a 2. kódja Draftban bekötött.
+
+SETTINGS negatív Apply: hét invalid/unavailable kontroll (tuning/channel
+határok, invalid mód, hiányzó owner-token, tuning ready firmware nélkül)
+ellenőrzi az exact mentett payload és owner megőrzését. Friss macOS processor
+build és ROM-free snapshot PASS. `520c848` Windows/macOS/sanitizer PASS;
+az új tesztcommit és a valódi GUI/host elfogadása külön nyitott kapu.
+
+SETTINGS/capture folytatás: reentráns és valódi külön szálas Apply a detached
+save határán, mindkét módirányban PASS. A régi mentés captured módja megmarad,
+a live intent revision-növelés nélkül változik, a következő mentés új módot ír.
+Friss macOS processor build és ROM-free snapshot PASS. `71b4dbc` mindhárom
+platform CI-je PASS; az új tesztcommit final-head kapuja külön ellenőrzendő.
+
+**Helyi bizonyíték a fenti kódfejre:** Windows shared-code és két processor
+tesztbuild PASS; ROM-free CTest 22/22 PASS, doc guard 3/3 PASS. No-ROM Clean
+pending binary recall és reentráns/kétszálas captured-mode kontroll PASS.
+Privát original v1.8 ready save/reopen, matching ROM identity, feedback=6,
+prepare és native settled Clean/unity 44.1/48/96 kHz-en PASS. A finite output
+ellenőrzése nem bizonyít nem néma hangot, hangminőséget vagy kattanásmentességet.
+Ez nem minden exe teljes új buildje vagy minden lifecycle teszt futtatása.
+
+**Platform CI:** a `890f58379833dab513fe8f899fa113d0c8956595` Draft fej
+Windows, macOS és sanitizer ellenőrzése PASS. A további commitok eredménye
+külön ellenőrzendő; ez nem teljes lifecycle vagy host-elfogadás.
+Részletes bizonyíték: [writer/reader checkpoint](../validation/CLEAN_CAPTURED_WRITER_20261012.md).
+
+2026-10-12 folytatás: public pending Clean recall → reset → repeated release →
+prepare → audio kontroll 44.1/48/96 kHz-en; owner/revision és mentett mód/routing
+megőrzése, majd Clean→legacy Classic→Clean recall ellenőrzése. Friss macOS
+Release shared-code/processor build, snapshot-only és teljes ROM-free imported
+processor futás PASS. Ez nem ready-ROM, hangzási vagy teljes lifecycle elfogadás;
+az új commit Windows/macOS/sanitizer CI-je külön kapu.
+
+**Draft feloldás előtt:** review rendezés és exact final-head platform kapuk;
+
+2026-10-12 ready recall részlépés: privát original v1.8 mellett public
+Clean→Classic→Clean restore, revision és cold-install kontroll, majd reset /
+repeated release / prepare / audio 44.1/48/96 kHz-en PASS. Friss macOS célzott
+processor build és private snapshot-only futás PASS. Ez a következő lista
+egy része; nem teljes hangzási, lifecycle vagy SETTINGS elfogadás.
+
+2026-10-12 firmware-identity részlépés: public Clean restore eltérő mentett
+ROM identity mellett pending marad a valid original v1.8 betöltése után is;
+owner/revision és új mentésben a mód/identity megőrzött. Kompatibilis Clean
+restore a már betöltött firmware mellett ready, pontosan egy új revisionnel.
+Friss macOS processor build és privát snapshot-only teszt 44.1/48/96 kHz-en
+PASS. Ez célzott tesztbővítés, nem runtime javítás vagy teljes release-elfogadás.
+
+2026-10-12 stopped ready Clean ROM reload részlépés: original v1.8 újratöltés
+megőrzi a módot/readiness/revisiont; reprepare és 32 audio callback után az
+owner változatlan, Clean settled. Friss macOS processor build és privát
+snapshot-only 44.1/48/96 kHz-en PASS. Az előző `9b05fb1` fej Windows/macOS/
+sanitizer CI-je PASS; az új tesztcommit saját CI-je külön kapu.
+
+Clean→Classic és Classic→Clean public recall, hiányzó/eltérő/megfelelő ROM,
+no-ROM edits, reset/release/prepare/reload és Native/Correct policy, stale és
+reentráns restore/host publication, több példány és kapcsolódó privát
+regressziók. A mostani három-rate pozitív recall nem zárja le ezt a teljes listát.
+Ezután SETTINGS, műszeres/hallásos és új csomag/host kapuk következnek.
+Public reader tehát a #188 Draftban már nem zárt; main és korábbi checkpointok
+reader-closed mondatai más commitokra vonatkoznak, nem új aktuális állítások.
 
 1. **D5 integráció:** fennmaradó lifecycle/mono/pending és reentráns restore/
    publikáció kontrollok; teljes Clean capture/writer/reader/admission az owner
    és aktuális ROM-generáció mellett. Hibás séma továbbra is mutáció nélkül
-   elutasítandó. Legacy projekt Classic. A public Clean restore jelenleg zárt;
-   csak pozitív teljes recall/lifecycle bizonyítékkal nyitható meg.
+   elutasítandó. Legacy projekt Classic. A public Clean restore #188 Draftban
+   bekötött, de a teljes recall/lifecycle és final-head elfogadás még nyitott.
 2. **D5 hangút elfogadás:** privát original v1.8, mindkét irányú váltás,
    sustain/tail/gyors request, példányizoláció, Classic null-kontroll,
    spektrum/peak/RMS/headroom/CPU/latencia. Meglévő részteszteket felhasználjuk,
    de nem jelöljük teljes hangszín- vagy hallásos elfogadásnak.
-3. **SETTINGS integráció:** Sound mode → Classic / Clean, Classic default,
-   példányonként projektbe mentve. GUI, save/reopen és host-state regresszió;
-   nincs új automatizálható hostparaméter vagy Native/Correct összekapcsolás.
+3. **SETTINGS elfogadás:** a választó #188 Draftban megvalósított, nem újra
+   implementálandó. Classic default, példányonként projektmentés, stale Apply,
+   invalid választások és detached capture kontrollok megvannak. A javított
+   elrendezés 100%-on és Clean/tuning save-reopen macOS REAPER részteszt PASS;
+   további skálák és végleges jelölt teljes host-state elfogadása nyitott.
+   Nincs új automatizálható hostparaméter vagy
+   Native/Correct összekapcsolás.
 4. **Release candidate:** verzióválasztás; Windows EXE + Manual Install ZIP,
    macOS PKG + Manual Install ZIP, megfelelő corresponding source/notices.
    HU/EN README/kézikönyv frissítése, unsigned/notarizáció nélküli státusz
@@ -67,7 +223,8 @@ E részlépés nem teljesíti önmagában az alábbi 1. munkacsomagot.
 5. **Valódi host-elfogadás:** ugyanazon új csomagok Windows/macOS standalone
    és REAPER tesztje; load/MIDI/hang, save/reopen, GUI, 44.1/48/96 kHz és
    64/128/256/512/1024 buffer, több példány, offline render és hallásos váltás.
-   Új jelöltre NOT RUN; régi 1.0.1 tulajdonosi PASS nem helyettesíti. T1–T5
+   A fenti fejlesztési VST3 REAPER részteszt PASS; végleges csomagra NOT RUN.
+   Régi 1.0.1 tulajdonosi PASS nem helyettesíti. T1–T5
    backlog releváns tételeihez eredmény vagy külön tételes halasztás szükséges.
 6. **Publikálási döntés:** blockers rendezve, final-head és main kapuk,
    csomag-/host-eredményjegyzék, maradó korlátok és külön tulajdonosi engedély.

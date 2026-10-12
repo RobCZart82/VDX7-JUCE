@@ -1,5 +1,11 @@
 # VDX7 Mk1. — User Guide
 
+Development branch only (not published 1.0.1): SETTINGS → Sound mode offers
+Classic (default) and Clean. Apply saves the choice per plugin instance in the
+DAW project, not SysEx; Cancel preserves the current choice. MONO Native/Correct
+is independent. If a project or mode changes while SETTINGS is open, reopen
+the dialog. Final visual/audio/host acceptance is still pending.
+
 [Back to overview](../../README.md) · [Magyar útmutató](GUIDE_HU.md)
 
 The [published 1.0.1 release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1)

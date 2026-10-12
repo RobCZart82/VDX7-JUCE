@@ -3,9 +3,8 @@
 #include <juce_data_structures/juce_data_structures.h>
 
 // Off-audio-thread codec. PluginProcessor uses the reader for fail-closed
-// admission; live Clean projects remain gated on renderer/lifecycle integration.
-// Normal writer/Clean dispatch remain gated; explicit pending Classic metadata
-// uses the processor's captured project owner. Callers must
+// admission; normal/pending writers use the processor's captured project owner.
+// Runtime DSP dispatch is separate from this metadata codec. Callers must
 // capture a coherent tree + desired mode under their own ownership protection.
 namespace VDX7SoundModeState
 {
