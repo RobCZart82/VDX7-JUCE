@@ -32,6 +32,19 @@ and listening tests. Earlier reader-closed paragraphs below are historical.
 
 ## SETTINGS and policy integration (2026-10-12)
 
+### Owner feedback — 2026-10-12
+
+The owner supplied a screenshot of the revised SETTINGS layout: Sound mode and
+buttons are visibly separated at the shown size. The owner reports the tried
+functions work well, Classic/Clean has a clearly audible, musically favourable
+cleaner/crystalline contrast, and repeated SETTINGS adjustments did not freeze
+the application. These are owner-reported visual/listening/stability observations,
+not a controlled full acceptance matrix. Exact binary hash, host/platform/version,
+sample rates, buffers, patch inventory and save/reopen cases were not supplied
+with this feedback. Do not infer Windows PASS, complete concurrency coverage,
+all-scale layout acceptance or permission to publish. Keep remaining exact
+candidate/host and measurement gates open.
+
 Negative Apply follow-up on `520c848cdd068b6e0b586b680f83cd3e64504a18`
 (Windows/macOS/sanitizer PASS): seven invalid/unavailable controls cover tuning
 limits, MIDI-channel limits, invalid mode, missing ownership token and tuning

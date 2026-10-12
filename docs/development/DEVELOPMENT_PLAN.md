@@ -41,6 +41,13 @@ történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott
 
 ### D5 Classic/Clean részletes aktuális státusz
 
+2026-10-12 tulajdonosi visszajelzés: a javított SETTINGS képen nincs átfedés;
+a kipróbált funkciók jól működnek, Classic/Clean hallhatóan kedvező különbséget
+ad, ismételt SETTINGS állítgatás során nem volt fagyás. Ez felhasználói,
+nem teljes kontrollált mátrixeredmény; exact binary/host/buffer/testcase adatok
+nélkül nem zárja le a teljes kiadási elfogadást. Részletek a writer/reader
+tesztjegyzőkönyv Owner feedback részében.
+
 Fejlesztési baseline: `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187 merge).
 Ág: `feature/clean-captured-state-writer`, [#188 Draft](https://github.com/RobCZart82/VDX7-JUCE/pull/188).
 Ellenőrzött kódfej: `e65c834576af35a0aa1062c017122f88129f2172`.
