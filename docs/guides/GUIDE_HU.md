@@ -1,5 +1,11 @@
 # VDX7 Mk1. — Használati útmutató
 
+Csak a fejlesztési ágban (nem a publikált 1.0.1-ben): SETTINGS → Sound mode:
+Classic (alapértelmezett) és Clean. Apply példányonként a DAW-projektbe menti
+a választást, nem SysEx-be; Cancel megőrzi a jelenlegi módot. A MONO
+Native/Correct független ettől. Ha közben projekt vagy mód változik, nyisd újra
+az ablakot. A végleges vizuális/hangzási/host-elfogadás még hátravan.
+
 [Vissza az áttekintéshez](../../README_HU.md) · [English guide](GUIDE_EN.md)
 
 A [publikált 1.0.1 kiadás](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1)

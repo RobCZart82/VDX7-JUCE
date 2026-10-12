@@ -1734,6 +1734,7 @@ void VDX7AudioProcessorEditor::showSettings()
     const int initial = processor_.getMasterTune();
     const int initialChannel = processor_.getMidiInputChannel();
     const auto initialCorrection = processor_.getMonoCorrectionStatus();
+    const auto initialMode = processor_.getSoundModeProjectSnapshot();
     const auto initialScaleIndex = VDX7GuiScale::indexForWidth(getWidth());
     const juce::String correctionStatus = initialCorrection.active ? "Active (verified firmware)"
         : initialCorrection.requested ? (initialCorrection.loaded ? "Unavailable for this firmware: native behavior"
@@ -1745,6 +1746,7 @@ void VDX7AudioProcessorEditor::showSettings()
     {
         "Master tuning: -256 to +255 firmware units (not cents). 0 = default tuning.",
         "Saved in the DAW project, not voice/bank SysEx.",
+        "Sound mode: Classic (default) / Clean; independent of MONO correction.",
         "Channel changes release held notes/sustain on the next audio block.",
         "On-screen keyboard and bank SysEx import are not channel-filtered.",
         "Advanced MONO compatibility is normally best left at Native firmware.",
@@ -1778,13 +1780,18 @@ void VDX7AudioProcessorEditor::showSettings()
     correctionCombo->getProperties().set("vdx7SettingsCombo", true);
     correctionCombo->setLookAndFeel(&settingsLookAndFeel);
     correctionCombo->setSelectedItemIndex(initialCorrection.requested ? 1 : 0);
+    dialog->addComboBox("soundMode", {"Classic (default)", "Clean"}, "Sound mode:");
+    auto* modeCombo = dialog->getComboBoxComponent("soundMode");
+    modeCombo->getProperties().set("vdx7SettingsCombo", true);
+    modeCombo->setLookAndFeel(&settingsLookAndFeel);
+    modeCombo->setSelectedItemIndex(initialMode.desired == VDX7SoundModeState::Mode::clean ? 1 : 0);
     dialog->addButton("Apply", 1, juce::KeyPress(juce::KeyPress::returnKey));
     dialog->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
     dialog->addButton("Bank folder", 2);
     dialog->addButton("Refresh banks", 3);
     juce::Component::SafePointer<VDX7AudioProcessorEditor> safe(this);
     dialog->enterModalState(true, juce::ModalCallbackFunction::create(
-            [safe, dialog, initial, initialChannel, initialCorrection](int result)
+            [safe, dialog, initial, initialChannel, initialCorrection, initialMode](int result)
         {
             if (dialog->getNumCustomComponents() > 0)
                 delete dialog->removeCustomComponent(0);
@@ -1820,7 +1827,12 @@ void VDX7AudioProcessorEditor::showSettings()
             const auto applied = safe->processor_.applySettingsFromUi(
                 text.getIntValue(),
                 dialog->getComboBoxComponent("channel")->getSelectedItemIndex(),
-                dialog->getComboBoxComponent("monoCorrection")->getSelectedItemIndex() == 1);
+                dialog->getComboBoxComponent("monoCorrection")->getSelectedItemIndex() == 1,
+                dialog->getComboBoxComponent("soundMode")->getSelectedItemIndex() == 1
+                    ? VDX7SoundModeState::Mode::clean : VDX7SoundModeState::Mode::classic,
+                initialMode);
+            if (applied == VDX7AudioProcessor::SettingsApplyResult::staleSoundMode)
+            { safe->showError("Project changed", "Project or sound mode changed. Reopen SETTINGS."); return; }
             if (applied == VDX7AudioProcessor::SettingsApplyResult::tuningUnavailable)
             { safe->showError("Tuning unavailable", "Load compatible firmware before applying settings."); return; }
             if (applied == VDX7AudioProcessor::SettingsApplyResult::monoCorrectionUnavailable)

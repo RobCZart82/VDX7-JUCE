@@ -53,7 +53,7 @@ Ez a rész nem jelenti a Draft main-ba kerülését vagy a kiadás elfogadását
 | Normál Clean writer | #188 Draft: capture-ből ír mód/sémapárt | Final-head CI/review, további recall/lifecycle kontrollok |
 | Clean reader/admission | #188 Draft: érvényes Clean bekerül a közös payload/owner/ROM tranzakcióba | Main-ban még a korábbi kapu; Draft elfogadása külön |
 | Classic kompatibilitás | Legacy writer és hiányzó mód → Classic megmarad | Teljes új jelölt regressziós/hang kontroll |
-| SETTINGS választó | Nincs kész felhasználói kapcsoló | UI request/notification, példány- és project recall tesztek |
+| SETTINGS választó | #188 Draft: Apply → Classic/Clean, projektbe mentett, nem hostparaméter | Final-head CI/review, vizuális és valódi host-elfogadás |
 | Kiadási csomag/DAW elfogadás | Új Classic/Clean jelöltre NOT RUN | Exact új binárisok elfogadása és publikálási engedély |
 
 **A Draftban megvalósított viselkedés:** a mentett mód a payload ugyanazon
@@ -63,6 +63,14 @@ Clean sémapár a normal save-ben is megjelenik; Classic továbbra is legacy.
 utat használja, mint Classic. A 12 malformed-schema rejection kontroll
 megmarad; paraméter- és firmware/payload validation nincs megkerülve.
 Runtime revision/pending/gain nem új hostparaméter; a 148 ID/sorrend változatlan.
+
+2026-10-12 SETTINGS integráció: Classic alapértelmezés, Cancel nem alkalmaz
+változást. Apply engine-lock alatt ellenőrzi a mód/revisiont, alkalmazza a
+Native/Correct policyt, tuning/channel és mód választását; host notification
+lockon kívül. Stale projekt/mód elutasítás minden választás előtt történik.
+No-ROM módválasztás, példányizoláció, save/reopen, stale választás és ready
+Clean Native/Correct rebuild regresszió bekerült. Az 1. munkacsomag teljes
+concurrency/hangút/host elfogadása megmarad; a 2. kódja Draftban bekötött.
 
 **Helyi bizonyíték a fenti kódfejre:** Windows shared-code és két processor
 tesztbuild PASS; ROM-free CTest 22/22 PASS, doc guard 3/3 PASS. No-ROM Clean

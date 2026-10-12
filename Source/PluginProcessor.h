@@ -124,11 +124,13 @@ public:
     bool setMonoCorrectionFromUi(bool enabled);
     bool setMasterTuneFromUi(int value);
     enum class SettingsApplyResult { applied, invalidTuning, tuningUnavailable, invalidChannel,
-                                     monoCorrectionUnavailable };
+                                     monoCorrectionUnavailable, staleSoundMode };
     // Apply one validated Settings dialog selection. Operations which can fail
     // are attempted before committing the simple channel/tuning changes.
     SettingsApplyResult applySettingsFromUi(int tuning, int midiInputChannel,
-                                            bool monoCorrection);
+                                            bool monoCorrection,
+                                            std::optional<VDX7SoundModeState::Mode> soundMode = {},
+                                            std::optional<VDX7SoundModeOwner::Snapshot> expectedMode = {});
     bool setPlaySettingFromUi(int field, int value);
     bool setPitchBendSettingFromUi(int field, int value);
     bool setControllerSettingFromUi(int controller, int field, int value);
@@ -227,6 +229,7 @@ private:
     // retains its firmware reset transaction; portamento time is a bounded
     // three-byte serial update and is safe to commit here.
     void applyPendingPerformanceSettings() noexcept;
+    bool setMonoCorrectionLocked(bool enabled, std::unique_lock<std::mutex>& lock);
     void applyPerformanceControls();
     void updateEngineSnapshot() noexcept;
     void publishPerformanceDisplay() noexcept; // Caller owns engineMutex_.

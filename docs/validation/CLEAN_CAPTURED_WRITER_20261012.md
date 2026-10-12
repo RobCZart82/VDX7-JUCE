@@ -30,6 +30,26 @@ head platform CI passed; this follow-up needs its own CI. NOT RUN this round:
 private ROM, ready/mismatched-ROM lifecycle, Windows/sanitizers, installed DAW
 and listening tests. Earlier reader-closed paragraphs below are historical.
 
+## SETTINGS and policy integration (2026-10-12)
+
+Classic/Clean selector added to SETTINGS with Classic default and Apply/Cancel
+semantics. No new host parameter. Apply validates captured mode/revision under
+the existing engine mutex before settings mutation. MONO policy, tuning/channel
+and mode selection share this transaction; notification occurs after unlocking.
+Tests cover no-ROM selection, instance isolation, save/reopen, legacy Classic,
+stale mode and newer same-mode project rejection, and ready Clean Native/Correct
+rebuild at 44.1/48/96 kHz. Not complete concurrency/audio/visual/DAW acceptance.
+
+PASS: fresh macOS shared-code/CI-test/VST3/Standalone builds; ROM-free CTest
+22/22; private original-v1.8 snapshot-only processor run; diff check. Pending
+legacy → UI Clean required writer to add the schema even when the old pending
+tree had no mode properties; covered by the no-ROM SETTINGS test. A pending
+Classic tree with a schema correctly encodes mode 0 (not legacy absence).
+Full private stability run was attempted with the raw 16 KiB ROM and rejected
+its fixture at "pending fixture: combined ROM"; that run is NOT PASS and needs
+the combined fixture. Final-head Windows/macOS/sanitizer CI, visual dialog and
+real host/listening acceptance NOT RUN locally. No installed binaries changed.
+
 ## Stopped Clean firmware reload follow-up (2026-10-12)
 
 Baseline: `9b05fb1a4b9872150127455fac2314c9066a5562`; its Windows/macOS/

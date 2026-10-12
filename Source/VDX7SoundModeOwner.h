@@ -9,7 +9,7 @@
 #include <utility>
 
 // Project-state owner; PluginProcessor uses the externally locked entry points.
-// Clean admission/UI requests remain gated on full lifecycle integration. The caller's
+// Validated project recall and SETTINGS requests share this owner. The caller's
 // existing engine mutex must outlive this owner and protect the payload too.
 // Self-locking entry points require an unlocked caller; *Locked entry points
 // require a currently owned unique_lock for this exact mutex. Readiness and
@@ -34,6 +34,18 @@ public:
     struct Capture { juce::ValueTree payload; Snapshot mode; };
     enum class Request { accepted, unchanged, busy, stale, invalid };
     enum class Audio { visited, busy, unavailable };
+
+    Request requestLocked(const std::unique_lock<std::mutex>& lock, Mode desired,
+                          const Snapshot& expected)
+    {
+        if (!owns(lock)) return Request::busy;
+        if (!VDX7SoundModeState::isValid(desired)) return Request::invalid;
+        if (state_.revision != expected.revision || state_.desired != expected.desired)
+            return Request::stale;
+        if (desired == state_.desired) return Request::unchanged;
+        state_.desired = desired;
+        return Request::accepted;
+    }
 
     explicit VDX7SoundModeOwner(std::mutex& engineMutex, uint64_t initialRevision = 0)
         : mutex_(engineMutex) { state_.revision = initialRevision; }

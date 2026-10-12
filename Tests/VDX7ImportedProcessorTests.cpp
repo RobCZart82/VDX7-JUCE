@@ -719,6 +719,42 @@ static void testActualModeProjectOwner(const juce::File& rom = {})
     }
     std::cout << "PASS: retired pending Clean capture preserves owner/payload in reentrant and threaded controls\n";
 
+    {
+        auto ui = std::make_unique<VDX7AudioProcessor>(false);
+        auto other = std::make_unique<VDX7AudioProcessor>(false);
+        const auto initial = ui->getSoundModeProjectSnapshot();
+        require(initial.desired == Mode::classic, "SETTINGS defaults to Classic");
+        auto legacyPending = tree(save(*ui));
+        legacyPending.setProperty("romPath", "/vdx7-own-test-missing/firmware.rom", nullptr);
+        legacyPending.setProperty("romIdentity", "missing-ui-fixture", nullptr);
+        restore(*ui, binary(legacyPending));
+        const auto legacyOwner = ui->getSoundModeProjectSnapshot();
+        require(legacyOwner.pending, "SETTINGS pending legacy precondition");
+        require(ui->applySettingsFromUi(ui->getMasterTune(), 3, false, Mode::clean, legacyOwner)
+            == VDX7AudioProcessor::SettingsApplyResult::applied, "no-ROM SETTINGS selects Clean");
+        require(other->getSoundModeProjectSnapshot().desired == Mode::classic,
+            "SETTINGS selection is per instance");
+        const auto clean = save(*ui);
+        restore(*other, clean);
+        require(other->getSoundModeProjectSnapshot().desired == Mode::clean
+            && other->getMidiInputChannel() == 3, "SETTINGS Clean and routing survive project recall");
+        const auto preserved = save(*ui);
+        const auto beforeRecall = ui->getSoundModeProjectSnapshot();
+        restore(*ui, clean);
+        const auto afterRecall = save(*ui);
+        require(ui->applySettingsFromUi(ui->getMasterTune(), 9, false, Mode::classic, beforeRecall)
+            == VDX7AudioProcessor::SettingsApplyResult::staleSoundMode && save(*ui) == afterRecall,
+            "same-mode project recall retires an open SETTINGS selection");
+        require(ui->applySettingsFromUi(ui->getMasterTune(), 9, true, Mode::classic, initial)
+            == VDX7AudioProcessor::SettingsApplyResult::staleSoundMode && save(*ui) == preserved,
+            "stale SETTINGS mode rejects all selections without partial mutation");
+        const auto current = ui->getSoundModeProjectSnapshot();
+        require(ui->applySettingsFromUi(ui->getMasterTune(), 3, false, Mode::classic, current)
+            == VDX7AudioProcessor::SettingsApplyResult::applied
+            && tree(save(*ui)).getProperty("soundMode").toString() == "0",
+            "pending SETTINGS Classic replaces saved Clean intent");
+    }
+
     if (rom.existsAsFile())
     {
         auto source = std::make_unique<VDX7AudioProcessor>(false);
@@ -859,6 +895,19 @@ static void testActualModeProjectOwner(const juce::File& rom = {})
                 "reloaded Clean audio retains project ownership");
             VDX7RegressionAccess::requireSettledClean(*reopenedClean);
             cleanWaiting.releaseResources();
+            for (const bool correction : {true, false})
+            {
+                const auto beforePolicy = reopenedClean->getSoundModeProjectSnapshot();
+                require(reopenedClean->applySettingsFromUi(reopenedClean->getMasterTune(),
+                    reopenedClean->getMidiInputChannel(), correction, Mode::clean, beforePolicy)
+                    == VDX7AudioProcessor::SettingsApplyResult::applied,
+                    "ready Clean SETTINGS accepts independent MONO policy");
+                for (int block = 0; block < 32; ++block) reopenedClean->processBlock(audio, midi);
+                require(reopenedClean->getSoundModeProjectSnapshot() == beforePolicy
+                    && reopenedClean->getMonoCorrectionStatus().requested == correction,
+                    "Native/Correct rebuild preserves Clean owner and revision");
+                VDX7RegressionAccess::requireSettledClean(*reopenedClean);
+            }
             require(cleanWaiting.getSoundModeProjectSnapshot() == readyClean,
                 "stopped release preserves completed internal Clean owner");
         }
