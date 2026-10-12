@@ -24,3 +24,17 @@ Nincs firmware, csomag, release/tag/asset változtatás.
 
 Következő: teljes validated Clean admission/ready és pending recall pozitív
 integráció, életciklus/mérések, majd SETTINGS. Addig a public gate zárt.
+
+## Draft folytatás: actual internal Clean completion
+
+Privát original-v1.8 firmware, saját valid bank test-copy: hiányzó ROM mellett
+Classic payload restore, test-only Clean owner injection, majd valódi ROM/RAM
+completion. Három rate (44.1/48/96 kHz), prepare és 32 audio callback után
+ready/revision preservation, native settled Clean/unity és finite output;
+normal writer Clean sémapár + matching ROM identity + feedback=6, release
+után változatlan owner. A finite output nem bizonyít nem néma hangot vagy
+hallásos minőséget. Public reader továbbra is Clean rejection.
+Ez pozitív completion/writer részteszt, nem public binary Clean round trip.
+PASS: final Windows processor-test build, privát snapshot-only kontroll a
+fenti három rate-tel, dokumentáció guard 3/3 és diff check. NOT RUN ebben a
+folytatásban: teljes új CTest/plugin rebuild, macOS/sanitizer és REAPER.

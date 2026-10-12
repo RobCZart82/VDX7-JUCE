@@ -202,6 +202,14 @@ struct VDX7RegressionAccess
         require(p.soundModeOwner_.installValidatedLocked(lock, VDX7SoundModeState::Mode::clean,
             []() noexcept { return false; }, []() noexcept {}), "internal Clean capture injection");
     }
+    static void requireSettledClean(VDX7AudioProcessor& p)
+    {
+        std::unique_lock lock(p.engineMutex_);
+        const auto mode = p.engine_.soundModeSnapshot();
+        require(mode.desiredClean && mode.activeClean && !mode.quiescentInstall
+            && mode.level == 256 && mode.frameGain == 1.0f,
+            "actual processor completion renders settled native Clean at unity");
+    }
     static void injectPendingMode(VDX7AudioProcessor& p, VDX7SoundModeState::Mode mode)
     {
         std::unique_lock lock(p.engineMutex_);
@@ -712,6 +720,51 @@ static void testActualModeProjectOwner(const juce::File& rom = {})
         require(waiting->loadRomFromFile(rom)
             && waiting->getSoundModeProjectSnapshot() == completed,
             "nonpending ROM reload refreshes readiness without retiring project mode");
+
+        // Positive internal Clean completion through actual ROM/RAM admission.
+        // Public reader remains closed on this draft; only intent injection is
+        // test-only, not the completion, prepare, audio or writer being tested.
+        for (const double rate : {44100.0, 48000.0, 96000.0})
+        {
+            VDX7AudioProcessor cleanWaiting(false);
+            auto missing = matching.createCopy();
+            missing.setProperty("romPath", "", nullptr);
+            restore(cleanWaiting, binary(missing));
+            VDX7RegressionAccess::injectPendingMode(cleanWaiting, Mode::clean);
+            const auto pendingClean = cleanWaiting.getSoundModeProjectSnapshot();
+            require(pendingClean.pending && !pendingClean.ready, "internal Clean starts pending ROM admission");
+            require(cleanWaiting.loadRomFromFile(rom) && cleanWaiting.isProjectReady(),
+                "matching private firmware completes actual internal Clean project");
+            const auto readyClean = cleanWaiting.getSoundModeProjectSnapshot();
+            require(readyClean.desired == Mode::clean && readyClean.ready && !readyClean.pending
+                && readyClean.revision == pendingClean.revision,
+                "ROM completion preserves Clean intent and current project revision");
+            cleanWaiting.prepareToPlay(rate, 64);
+            juce::AudioBuffer<float> audio(2, 64);
+            juce::MidiBuffer midi;
+            for (int block = 0; block < 32; ++block)
+            {
+                cleanWaiting.processBlock(audio, midi);
+                for (int channel = 0; channel < audio.getNumChannels(); ++channel)
+                    for (int sample = 0; sample < audio.getNumSamples(); ++sample)
+                        require(std::isfinite(audio.getSample(channel, sample)), "finite internal Clean completion output");
+            }
+            require(cleanWaiting.getSoundModeProjectSnapshot() == readyClean,
+                "audio dispatch cannot change ready project ownership");
+            VDX7RegressionAccess::requireSettledClean(cleanWaiting);
+            const auto cleanState = tree(save(cleanWaiting));
+            require(cleanState.getProperty("soundMode").toString() == "1"
+                && cleanState.getProperty("soundModeVersion").toString() == "1"
+                && cleanState.getProperty("romIdentity") == matching.getProperty("romIdentity")
+                && static_cast<float>(cleanState.getChildWithName("PARAMETERS").getChildWithProperty("id",
+                    VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback))
+                    .getProperty("value")) == 6.0f,
+                "ready normal writer captures Clean mode with matching ROM and recalled voice");
+            cleanWaiting.releaseResources();
+            require(cleanWaiting.getSoundModeProjectSnapshot() == readyClean,
+                "stopped release preserves completed internal Clean owner");
+        }
+        std::cout << "PASS: private internal Clean pending/ROM completion and normal writer at three rates\n";
     }
     std::cout << "PASS: actual processor mode/project owner, pending capture and compatible completion\n";
 }

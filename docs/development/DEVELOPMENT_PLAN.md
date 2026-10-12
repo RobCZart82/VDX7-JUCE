@@ -39,6 +39,11 @@ történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott
 
 ### Hátralévő kiadási munkacsomagok
 
+#188 Draft folytatás: actual internal Clean pending→ROM/RAM completion→prepare/
+audio→normal writer kontroll privát original v1.8-cal három rate-en. Public
+Clean reader és SETTINGS továbbra is zárt; a Draft nem beolvasztási engedély.
+Részletes kör: [writer checkpoint](../validation/CLEAN_CAPTURED_WRITER_20261012.md).
+
 2026-10-12 writer részlépés: baseline `2d6c837247cfb013ee8ce83b58154bf3ff52c304`
 (#187 után), ág `feature/clean-captured-state-writer`. A normál detached writer
 internal Clean intent esetén a capture módját kódolja, nem egy későbbi ownerét.
