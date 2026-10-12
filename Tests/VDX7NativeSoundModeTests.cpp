@@ -189,7 +189,13 @@ static std::vector<float> trace(int partition, bool requests, bool direct)
 struct VDX7RegressionAccess
 {
     static void stableReference(VDX7Engine& engine, bool clean)
-    { engine.dx7_.egs.clean(clean); }
+    {
+        // Fresh control has never clocked EGS: directly set a steady renderer,
+        // without exercising the cold-install path being compared against it.
+        require(engine.soundModeSnapshot().phase == 0, "fresh direct reference EGS phase");
+        engine.nativeSoundMode_.request(clean);
+        engine.nativeSoundMode_.restoreAfterEgsReconstruction(engine.dx7_.egs);
+    }
     static void lifecycle()
     {
         VDX7Engine engine;
@@ -289,6 +295,59 @@ static void privateEngine(const char* path)
     require(rom.size() == VDX7Engine::kFirmwareSize, "private firmware-only fixture");
     for (int rate : {44100, 48000, 96000})
     {
+        // Successful firmware reload is an inaudible native/SRC boundary, not
+        // continuation of the previous project's live fade. Test both directions.
+        for (bool startCorrected : {false, true})
+        for (bool monoReboot : {false, true})
+        for (bool desiredClean : {false, true})
+        {
+            VDX7Engine engine;
+            require(engine.loadRomImage(rom.data(), rom.size()), "reload trajectory initial boot");
+            if (startCorrected)
+                require(engine.configureMonoCorrectionForStateRestore(true)
+                    && engine.isMonoCorrectionActive(), "reload control starts in Correct policy");
+            engine.prepare(rate);
+            engine.installSoundModeWhileQuiescent(!desiredClean);
+            std::array<float, 1024> settling {};
+            engine.render(settling.data(), nullptr, int(settling.size()));
+            engine.requestSoundMode(desiredClean);
+            std::array<float, 32> interrupted {};
+            engine.render(interrupted.data(), nullptr, int(interrupted.size()));
+            const auto before = engine.soundModeSnapshot();
+            require(before.desiredClean == desiredClean && before.activeClean != desiredClean
+                && before.level > 0 && before.level < 256, "reload control interrupts a real live fade");
+            const std::vector<uint8_t> rejected(VDX7Engine::kFirmwareSize, 0);
+            require(!engine.loadRomImage(rejected.data(), rejected.size()) && engine.soundModeSnapshot() == before,
+                "valid-sized rejected firmware preserves the interrupted trajectory exactly");
+            if (monoReboot)
+                require(engine.configureMonoCorrectionForStateRestore(!startCorrected)
+                    && engine.isMonoCorrectionRequested() == !startCorrected
+                    && engine.isMonoCorrectionActive() == !startCorrected,
+                    "original v1.8 mono-policy rebuild reloads firmware");
+            else
+                require(engine.loadRomImage(rom.data(), rom.size()), "reload interrupted trajectory");
+            const auto installed = engine.soundModeSnapshot();
+            require(installed.desiredClean == desiredClean && installed.quiescentInstall
+                && installed.level == 256 && installed.frameGain == 1.0f
+                && installed.phase == before.phase,
+                "successful ROM reload cold-installs latest intent at unity without resetting EGS phase");
+            ownStimulus(engine);
+            const uint8_t note[] {0x90, 60, 100};
+            engine.handleMidi(note, 3);
+            std::vector<float> recalled(32768);
+            engine.render(recalled.data(), nullptr, int(recalled.size()));
+            require(engine.soundModeSnapshot().activeClean == desiredClean
+                && !engine.soundModeSnapshot().quiescentInstall && engine.soundModeSnapshot().level == 256,
+                "reloaded engine reaches intended stable mode without a stale fade");
+            double recalledPeak = 0;
+            for (float sample : recalled)
+            {
+                require(std::isfinite(sample), "finite reload output");
+                recalledPeak = std::max(recalledPeak, double(std::abs(sample)));
+            }
+            require(recalledPeak > 0, "reloaded original-v1.8 own carrier remains audible");
+        }
+        std::cout << "PASS: 8 private cold reload/mono-rebuild trajectories rate=" << rate << '\n';
         for (bool clean : {false, true})
         for (bool beforeBoot : {false, true})
         {

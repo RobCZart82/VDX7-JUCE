@@ -4,10 +4,19 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#if defined(_WIN32)
+#include <fcntl.h>
+#include <io.h>
+#endif
 
 int main(int argc, char** argv)
 {
     if (argc != 2) return 2;
+#if defined(_WIN32)
+    // Windows text stdout translates LF bytes inside float payloads to CRLF.
+    // The comparison stream must remain raw IEEE-754 bytes on every platform.
+    if (_setmode(_fileno(stdout), _O_BINARY) == -1) return 5;
+#endif
     std::ifstream file(argv[1], std::ios::binary);
     std::vector<uint8_t> rom((std::istreambuf_iterator<char>(file)), {});
     if (rom.size() != 16384) return 3;

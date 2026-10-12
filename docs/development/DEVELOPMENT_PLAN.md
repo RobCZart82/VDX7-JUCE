@@ -1,12 +1,58 @@
 # VDX7 egységes fejlesztési terv
 
-Frissítve: 2026-10-11. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
+Frissítve: 2026-10-12. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás része a D5 Classic/Clean funkció a 2026-10-09-i tulajdonosi
 döntés szerint. A verziószám és a további funkciók pontos köre még nincs rögzítve.
 Ez a dokumentum nem új kiadás publikálási engedélye.
 
-## Aktuális kiadási állapot — 2026-10-11
+## D5 ROM-reload lifecycle részlépés — 2026-10-12
+
+PR: [#182](https://github.com/RobCZart82/VDX7-JUCE/pull/182); final-head CI és review még függőben, nincs beolvasztva.
+
+Friss baseline: `de318935efae0da5b0fa182a2582526230cfed83` (#181 után).
+Ág: `fix/sound-mode-rom-reload-lifecycle`. Új belső D5 regresszió reprodukálva:
+sikeres firmware-újratöltés a megszakított régi live rampát továbbvitte.
+Az engine most successful boot után az explicit quiescent installt használja:
+native/SRC history discard, legutóbbi intent unity gainnel az első teljes új
+scan előtt, a valódi EGS scan-fázis megőrzésével. Elutasított ROM nem módosítja
+a trajektóriát. Ez az engine-reload és az azt használó Native/Correct rebuild
+részlépése; nem új Clean reader/writer vagy SETTINGS, és nem 1.0.1 patch release.
+
+Privát original v1.8: 24 megszakított reload/mono-policy pálya 44.1/48/96 kHz-en
+PASS, nem néma és véges saját hangszínnel. A régi steady Classic friss boot
+18 algoritmus/feedback/rate kontrolljában 589 824 float minta bitazonos: PASS.
+A régi interrupted reload-transient szándékosan változik; a fenti null-kontroll
+nem általános, minden újratöltésre vagy hangszínre vonatkozó azonossági ígéret.
+Windows ci_checks/VST3/Standalone build és ROM-free CTest 22/22 PASS;
+Python 94 futott, 93 PASS / 1 Windows symlink SKIP. A Windows Classic referencia-
+tool text stdout hibája is javítva: a nyers float bájtokat nem írja át CRLF-re.
+További célzott privát v1.8 CTest 9/9 PASS (benne host-reset és direct reload);
+actual-processor snapshot/restore kontrollok PASS. Final-head platform/review
+kapuk még ellenőrzendők.
+REAPER/hallásos/new release package elfogadás NOT RUN.
+[Reprodukció és pontos tesztkör](../validation/ROM_RELOAD_SOUND_MODE_20261012.md).
+
+### Egységes következő végrehajtási sorrend
+
+1. E rész-PR final-head Windows/macOS/sanitizer és review; csak utána merge,
+   majd külön main CI. A korábbi #180/#181 PASS nem az új javítás eredménye.
+2. Maradék release/reset/reload/pending és mono-policy lifecycle ellenőrzések,
+   reentráns restore/publikáció: bizonyított regresszió előbb, javítás külön.
+3. Teljes valódi Clean desired-mode capture/writer/reader/admission és
+   current-owner/ROM-generation együtt; a fail-closed kontroll csak működő
+   renderer/lifecycle pozitív recall-bizonyítékkal váltható ki.
+4. Privát v1.8 Classic/Clean átmenet, sustain/tail/gyors request/példányizoláció,
+   spektrum/peak/RMS/headroom/CPU/latencia; majd SETTINGS és GUI/host-state tesztek.
+5. Verzióválasztás, négy letöltés és corresponding source, dokumentáció,
+   exact csomagbuild/hash/fagyasztás. Utána ugyanazon binárisok valódi host/
+   hallásos elfogadása, eredményjegyzék és külön publikálási engedély.
+
+JUCE 9.0.3 update már kész; nem ütemezzük újra. Csak original DX7 Mk I v1.8
+támogatott. Nincs telepített plugin/REAPER módosítás, ROM-terjesztés vagy
+release/tag/asset-írás. Az alábbi 2026-10-11 checkpoint történeti baseline.
+
+## Korábbi kiadási checkpoint — 2026-10-11
 
 A legutóbbi ellenőrzött GitHub `main` SHA: `a3051a050e3800173df2e7972a331ff6d3ff94de`,
 a #180 merge-commitje. A #180 a host által leállított prepare során a kész
@@ -1506,8 +1552,10 @@ Források: [rögzített 9.0.1 upstream verzió](https://github.com/juce-framewor
 
 ## Végrehajtás és kiadási kapuk
 
-Aktuális sorrend 2026-10-11-én, a `a3051a050e3800173df2e7972a331ff6d3ff94de`
-main alapján: #180 beolvadt; a következő fejlesztési munka a D5 még nyitott
+Aktuális sorrend 2026-10-12-én, a `de318935efae0da5b0fa182a2582526230cfed83`
+main alapján: #180/#181 beolvadt. A fenti ROM-reload lifecycle részlépés
+külön ágon ellenőrzött, final-head CI/review és merge még kapu; nem jelöljük
+main-ba kerültnek. Utána a következő fejlesztési munka a D5 még nyitott
 processor-állapot és Clean reader/writer/admission útjának befejezése, a
 release/reload/mono és további reset-életciklusok regresszióival. Ezt követi a
 teljes motor/átmenet és privát eredeti v1.8-as műszeres elfogadás, majd a
