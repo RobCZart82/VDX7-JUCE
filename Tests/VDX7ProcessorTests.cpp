@@ -138,7 +138,7 @@ struct VDX7RegressionAccess
 };
 
 // Actual public XML/binary restore boundary, not the standalone codec/owner.
-// Until a Clean renderer exists, valid Clean is also a transactional rejection.
+// Valid Clean is covered by the processor owner/ROM recall integration tests.
 static void testSoundModeAdmission(const juce::File& rom = {})
 {
     const auto feedback = VDX7ParameterIDs::voiceParameter(VDX7VoiceData::VoiceParameter::feedback);
@@ -212,10 +212,10 @@ static void testSoundModeAdmission(const juce::File& rom = {})
         for (auto* parameter : p->getParameters()) parameters.push_back(parameter->getValue());
         require(parameters.size() == 148, "admission does not add host parameters");
 
-        const std::array<std::pair<const char*, const char*>, 13> rejected {{
+        const std::array<std::pair<const char*, const char*>, 12> rejected {{
             {"1", nullptr}, {nullptr, "0"}, {"0", "0"}, {"2", "0"}, {"01", "0"},
             {"1", "2"}, {"1", "-1"}, {"1", "01"}, {"1", "+1"}, {"1", "1x"},
-            {"1", "true"}, {"1", "1.0"}, {"1", "1"}
+            {"1", "true"}, {"1", "1.0"}
         }};
         for (const auto& [version, mode] : rejected)
         {
@@ -244,7 +244,7 @@ static void testSoundModeAdmission(const juce::File& rom = {})
         restore(*reopened, preserved);
         require(reopened->getMidiInputChannel() == 3 && reopened->getMonoCorrectionStatus().requested,
             "rejected candidate did not poison the next saved project");
-        std::cout << "PASS: sound-mode admission context " << context << " (13 rejections)\n";
+        std::cout << "PASS: sound-mode admission context " << context << " (12 malformed-schema rejections)\n";
     }
 }
 

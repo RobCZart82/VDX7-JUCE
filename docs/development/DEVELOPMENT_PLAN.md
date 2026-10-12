@@ -39,6 +39,14 @@ történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott
 
 ### Hátralévő kiadási munkacsomagok
 
+#188 Draft új reader/round-trip checkpoint: az érvényes Clean séma a közös
+validated payload/owner/ROM tranzakcióba kerül; malformed séma rejection
+megmarad, Classic legacy writer változatlan. ROM-free pending és privát v1.8
+ready Clean save/reopen/prepare/native settled-mode kontroll 44.1/48/96 kHz-en
+PASS. Ez csak a Draft ág állapota, nem main vagy teljes release-elfogadás.
+Az e checkpoint előtti „reader zárt” megállapítások történeti állapotok.
+SETTINGS, teljes lifecycle/platform/mérési és host kapuk még nyitottak.
+
 #188 Draft folytatás: actual internal Clean pending→ROM/RAM completion→prepare/
 audio→normal writer kontroll privát original v1.8-cal három rate-en. Public
 Clean reader és SETTINGS továbbra is zárt; a Draft nem beolvasztási engedély.

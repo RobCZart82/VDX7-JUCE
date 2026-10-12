@@ -1,5 +1,21 @@
 # Internal Clean captured writer checkpoint
 
+## Legújabb Draft checkpoint: validated Clean reader és round trip
+
+Az érvényes Clean read a közös payload admissionbe kerül; a korábbi valid
+Clean rejection helyett pozitív pending/ready tesztek. Mind a 12 malformed
+schema kontroll megmarad. No-ROM binary recall mód/payload preservation;
+privát v1.8 ready save/reopen, matching ROM identity és feedback, prepare,
+native settled Clean/unity három rate-en PASS. Classic writer legacy marad.
+Az alábbi korábbi reader-closed megállapítások történeti checkpointok.
+
+PASS: final Windows shared-code és két processor test build, no-ROM admission
+és snapshot-only, private snapshot-only pozitív round trip. Első private run
+exit 1 diagnosztika nélkül; a nagy új reopen test-példány heapre helyezése után
+final build/run PASS. Nem production crash bizonyíték. NOT RUN: teljes új
+plugin rebuild, final-head macOS/sanitizer, teljes privát lifecycle, hallásos
+vagy telepített host acceptance. Draft marad; nincs release/jóváhagyás.
+
 Baseline: `2d6c837247cfb013ee8ce83b58154bf3ff52c304`, 2026-10-12.
 Ág: `feature/clean-captured-state-writer`.
 

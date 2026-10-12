@@ -1439,10 +1439,9 @@ void VDX7AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 
     // Validate before mono-policy, catalog/pending, MIDI epoch or host parameter
     // mutation. Never silently turn a newer Clean project into Classic audio:
-    // Clean admission stays closed until its renderer/lifecycle is integrated.
+    // Both validated modes share the same payload/ROM ownership transaction.
     auto desiredMode = VDX7SoundModeState::Mode::classic;
-    if (!VDX7SoundModeState::read(state, desiredMode)
-        || desiredMode != VDX7SoundModeState::Mode::classic)
+    if (!VDX7SoundModeState::read(state, desiredMode))
         return;
 
     VDX7FactoryBanks::Snapshot factoryBanks;
