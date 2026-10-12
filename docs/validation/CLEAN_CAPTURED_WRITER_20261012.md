@@ -1,5 +1,19 @@
 # Internal Clean captured writer checkpoint
 
+## Current status index — 2026-10-12
+
+This report preserves dated evidence, not one cumulative final-head PASS.
+Main baseline is `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187).
+Draft #188 now includes validated Clean writer/reader, SETTINGS selection,
+policy/ownership tests, revised spacing and negative Apply controls.
+Code/test checkpoint: `b299f325eec4309c1cf4724a71ddec2ce52e0dd3`; owner-feedback
+documentation checkpoint: `ba49ecff4ab31b675c8f448d5702beac76eaea6a` (platform
+checks in progress at this inspection). Earlier `520c848` platform checks PASS.
+Remaining gates: final-head review/platform checks, full integrated coverage,
+measurements and exact-candidate host/package acceptance. Historical "reader
+closed"/"SETTINGS missing" passages below describe earlier commits only.
+The sole active execution order is in DEVELOPMENT_PLAN.md, not this report.
+
 ## Ready public recall lifecycle — 2026-10-12
 
 Follow-up baseline: `639d0da8434bea77e90444c2cadc7bf6fdb24828`.

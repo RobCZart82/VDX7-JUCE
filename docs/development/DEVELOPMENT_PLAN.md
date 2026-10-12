@@ -8,10 +8,10 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ## Aktuális kiadási állapot és sorrend — 2026-10-12
 
-Ellenőrzött main: `45a52e8a8750e5d2d32be47dc364396b368df0c3` (#185 merge).
+Ellenőrzött main: `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187 merge).
 Ehhez a pontos SHA-hoz a main
-[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38223807745) és
-[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38223807781) CI PASS.
+[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38237322229) és
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38237322273) CI PASS.
 Ez dátumozott ellenőrzési baseline, nem ígéret a későbbi commitok eredményére.
 Az alábbi státusz és sorrend az irányadó. A későbbi dátumozott checkpointok
 történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott” vagy
@@ -34,7 +34,7 @@ történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott
   [macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38220249781) CI PASS.
   [Részletes bizonyíték](../validation/STOPPED_RELEASE_OWNER_20261012.md).
 - [#185](https://github.com/RobCZart82/VDX7-JUCE/pull/185): a fejlesztési terv
-  egységesítése beolvadt; merge utáni main Windows/macOS PASS a fenti SHA-n.
+  egységesítése beolvadt; az akkori main Windows/macOS PASS.
   Dokumentációs változás, nem teljes D5 vagy új csomag-/host-elfogadás.
 
 ### Hátralévő kiadási munkacsomagok
@@ -50,7 +50,11 @@ tesztjegyzőkönyv Owner feedback részében.
 
 Fejlesztési baseline: `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187 merge).
 Ág: `feature/clean-captured-state-writer`, [#188 Draft](https://github.com/RobCZart82/VDX7-JUCE/pull/188).
-Ellenőrzött kódfej: `e65c834576af35a0aa1062c017122f88129f2172`.
+Legutóbbi feltöltött kód-/tesztfej: `b299f325eec4309c1cf4724a71ddec2ce52e0dd3`.
+Dokumentációs checkpoint: `ba49ecff4ab31b675c8f448d5702beac76eaea6a`;
+ennek Windows/macOS/sanitizer ellenőrzése a friss lekérdezéskor folyamatban.
+Korábbi `520c848` kódfej mindhárom platformellenőrzése PASS. Ez nem az új
+dokumentációs commit vagy következő kiadási jelölt automatikus PASS-a.
 Ez a rész nem jelenti a Draft main-ba kerülését vagy a kiadás elfogadását.
 
 | Komponens | Hol tart | Hátralévő kapu |
@@ -149,9 +153,12 @@ reader-closed mondatai más commitokra vonatkoznak, nem új aktuális állítás
    sustain/tail/gyors request, példányizoláció, Classic null-kontroll,
    spektrum/peak/RMS/headroom/CPU/latencia. Meglévő részteszteket felhasználjuk,
    de nem jelöljük teljes hangszín- vagy hallásos elfogadásnak.
-3. **SETTINGS integráció:** Sound mode → Classic / Clean, Classic default,
-   példányonként projektbe mentve. GUI, save/reopen és host-state regresszió;
-   nincs új automatizálható hostparaméter vagy Native/Correct összekapcsolás.
+3. **SETTINGS elfogadás:** a választó #188 Draftban megvalósított, nem újra
+   implementálandó. Classic default, példányonként projektmentés, stale Apply,
+   invalid választások és detached capture kontrollok megvannak. A javított
+   elrendezés a tulajdonos képén rendben; további skálák és exact host-state/
+   save-reopen elfogadás nyitott. Nincs új automatizálható hostparaméter vagy
+   Native/Correct összekapcsolás.
 4. **Release candidate:** verzióválasztás; Windows EXE + Manual Install ZIP,
    macOS PKG + Manual Install ZIP, megfelelő corresponding source/notices.
    HU/EN README/kézikönyv frissítése, unsigned/notarizáció nélküli státusz
