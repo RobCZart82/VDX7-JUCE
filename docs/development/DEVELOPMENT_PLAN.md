@@ -6,11 +6,67 @@ A következő kiadás része a D5 Classic/Clean funkció a 2026-10-09-i tulajdon
 döntés szerint. A verziószám és a további funkciók pontos köre még nincs rögzítve.
 Ez a dokumentum nem új kiadás publikálási engedélye.
 
-## D5 ROM-reload lifecycle részlépés — 2026-10-12
+## Aktuális kiadási állapot és sorrend — 2026-10-12
+
+Ellenőrzött main: `f1ee1fbaf99e0da2de279702d3c1084a20f3b29f` (#184 merge).
+Az alábbi státusz és sorrend az irányadó. A későbbi dátumozott checkpointok
+történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott” vagy
+„NOT RUN” nem írja felül ezt a friss státuszt. Régi PASS nem új release PASS.
+
+### Elkészült, nem újraütemezendő
+
+- M5 JUCE 9.0.3 frissítés (#169): main-ban; automatizált kompatibilitási kapuk PASS.
+- D5 owner, natív átmenet, audio dispatch és cold-install alapok (#175–#180):
+  main-ban, de önmagukban nem teljes felhasználói Classic/Clean funkció.
+- [#182](https://github.com/RobCZart82/VDX7-JUCE/pull/182): ROM-reload cold-install;
+  final-head Windows/macOS/sanitizer és merge utáni Windows/macOS PASS.
+- [#183](https://github.com/RobCZart82/VDX7-JUCE/pull/183): 768 megszakított reset
+  adapter-kontroll; final-head Windows/macOS/sanitizer és main Windows/macOS PASS.
+- [#184](https://github.com/RobCZart82/VDX7-JUCE/pull/184): repeated stopped release
+  owner/intent megőrzés, valóban pending reset preconditionnel; beolvadt.
+  Final-head `79a4d36c5acc0a5928482689f578c9915fa4469b` Windows/macOS/sanitizer
+  PASS, review lezárt. Merge utáni main Windows/macOS **PENDING** az ellenőrzéskor.
+  [Részletes bizonyíték](../validation/STOPPED_RELEASE_OWNER_20261012.md).
+
+### Hátralévő kiadási munkacsomagok
+
+1. **D5 integráció:** fennmaradó lifecycle/mono/pending és reentráns restore/
+   publikáció kontrollok; teljes Clean capture/writer/reader/admission az owner
+   és aktuális ROM-generáció mellett. Hibás séma továbbra is mutáció nélkül
+   elutasítandó. Legacy projekt Classic. A public Clean restore jelenleg zárt;
+   csak pozitív teljes recall/lifecycle bizonyítékkal nyitható meg.
+2. **D5 hangút elfogadás:** privát original v1.8, mindkét irányú váltás,
+   sustain/tail/gyors request, példányizoláció, Classic null-kontroll,
+   spektrum/peak/RMS/headroom/CPU/latencia. Meglévő részteszteket felhasználjuk,
+   de nem jelöljük teljes hangszín- vagy hallásos elfogadásnak.
+3. **SETTINGS integráció:** Sound mode → Classic / Clean, Classic default,
+   példányonként projektbe mentve. GUI, save/reopen és host-state regresszió;
+   nincs új automatizálható hostparaméter vagy Native/Correct összekapcsolás.
+4. **Release candidate:** verzióválasztás; Windows EXE + Manual Install ZIP,
+   macOS PKG + Manual Install ZIP, megfelelő corresponding source/notices.
+   HU/EN README/kézikönyv frissítése, unsigned/notarizáció nélküli státusz
+   közlése; installer/upgrade/uninstall és payload/hash/provenance ellenőrzés.
+   Pontos SHA és csomaghash alapján befagyasztott jelölt, nem publikált release.
+5. **Valódi host-elfogadás:** ugyanazon új csomagok Windows/macOS standalone
+   és REAPER tesztje; load/MIDI/hang, save/reopen, GUI, 44.1/48/96 kHz és
+   64/128/256/512/1024 buffer, több példány, offline render és hallásos váltás.
+   Új jelöltre NOT RUN; régi 1.0.1 tulajdonosi PASS nem helyettesíti. T1–T5
+   backlog releváns tételeihez eredmény vagy külön tételes halasztás szükséges.
+6. **Publikálási döntés:** blockers rendezve, final-head és main kapuk,
+   csomag-/host-eredményjegyzék, maradó korlátok és külön tulajdonosi engedély.
+   Merge nem publikálás; régi release/tag/asset nem írható felül.
+
+Az 1–4. munkacsomag jelentős része valós REAPER nélkül végezhető; az 5. nem
+igazolható pusztán CI-vel. D1/D2/D3 meglévő funkciók regresszióval megőrzendők.
+D4 AU/Logic bővítés és M1–M4 mérlegelhető karbantartás külön scope, nem új
+automatikus release-blocker. Csak original DX7 Mk I v1.8 támogatott; SER7 és
+más firmware támogatása nincs tervben. Yamaha-adat nem terjeszthető.
+
+## Történeti D5 ROM-reload checkpoint — 2026-10-12
 
 Legújabb baseline: `b9b2da8aab716748322d5203ef6de87ade5cf7a7` (#183 merge).
 #183 final-head Windows/macOS/sanitizer és main Windows/macOS PASS.
-Következő tesztág: `test/stopped-release-mode-owner`: actual processor repeated
+Az akkori tesztág: `test/stopped-release-mode-owner`: actual processor repeated
 release/reset/prepare owner preservation. Pending ROM-free kontroll a normál
 CTest útvonalban is fut; ready kontroll kizárólag privát v1.8 integrációban.
 Ez tesztbővítés, nem Clean UI/admission megnyitás.
@@ -43,7 +99,7 @@ kapuk a #182 final-head esetén teljesültek; main Windows/macOS CI is PASS.
 REAPER/hallásos/new release package elfogadás NOT RUN.
 [Reprodukció és pontos tesztkör](../validation/ROM_RELOAD_SOUND_MODE_20261012.md).
 
-### Egységes következő végrehajtási sorrend
+### Korábbi végrehajtási checkpoint (nem aktív feladatlista)
 
 1. #182 beolvadt, final-head Windows/macOS/sanitizer és main Windows/macOS PASS.
    Új tesztág: `test/sound-mode-release-lifecycle`, baseline a
@@ -1564,18 +1620,10 @@ Források: [rögzített 9.0.1 upstream verzió](https://github.com/juce-framewor
 
 ## Végrehajtás és kiadási kapuk
 
-Aktuális sorrend 2026-10-12-én, a `de318935efae0da5b0fa182a2582526230cfed83`
-main alapján: #180/#181 beolvadt. A fenti ROM-reload lifecycle részlépés
-külön ágon ellenőrzött, final-head CI/review és merge még kapu; nem jelöljük
-main-ba kerültnek. Utána a következő fejlesztési munka a D5 még nyitott
-processor-állapot és Clean reader/writer/admission útjának befejezése, a
-release/reload/mono és további reset-életciklusok regresszióival. Ezt követi a
-teljes motor/átmenet és privát eredeti v1.8-as műszeres elfogadás, majd a
-SETTINGS-választó és az integrált Windows/macOS/sanitizer kapuk. Ezután
-verzióválasztás, installer/source-csomagolás és a csomagba kerülő HU/EN
-útmutatók; az exact jelöltet fagyasztani és ellenőrizni kell. A befagyasztott
-csomagokkal jön a valódi host- és hallásos elfogadás, végül az elfogadási
-jegyzék és külön publikálási döntés.
+Az egyetlen aktuális végrehajtási sorrend a dokumentum elején, az
+„Aktuális kiadási állapot és sorrend” részben található. #182/#183/#184
+beolvadt, ezért nem szerepelnek új fejlesztési vagy merge-feladatként.
+A fenti dátumozott részletek megőrzött specifikációk és bizonyítékok.
 
 D1/D2/D3 már elkészült működését regresszióval megőrizzük; D4 külön jóváhagyandó
 host/packaging munkacsomag, nem automatikusan e kiadás része. A D5 a következő
