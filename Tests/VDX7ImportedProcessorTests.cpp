@@ -202,6 +202,24 @@ struct VDX7RegressionAccess
         using Mode = VDX7SoundModeState::Mode;
         juce::AudioBuffer<float> audio(2, 64);
         juce::MidiBuffer midi;
+        const auto deferResetUnderContention = [&] {
+            std::promise<void> entered, release;
+            auto enteredFuture = entered.get_future();
+            auto releaseFuture = release.get_future();
+            auto holder = std::async(std::launch::async, [&] {
+                std::unique_lock lock(p.engineMutex_);
+                entered.set_value();
+                releaseFuture.wait();
+            });
+            enteredFuture.wait();
+            p.reset();
+            try { p.processBlock(audio, midi); }
+            catch (...) { release.set_value(); holder.get(); throw; }
+            release.set_value();
+            holder.get();
+            require(p.hostResetPending_ && !p.hostResetRequested_.load(),
+                "contended audio consumes reset request and genuinely leaves cleanup pending");
+        };
         const auto install = [&](Mode mode, bool ready) {
             std::unique_lock lock(p.engineMutex_);
             require(p.soundModeOwner_.installValidatedLocked(lock, mode,
@@ -211,7 +229,7 @@ struct VDX7RegressionAccess
         install(Mode::clean, false);
         const auto pendingBefore = p.engine_.soundModeSnapshot();
         const auto pendingOwner = p.getSoundModeProjectSnapshot();
-        p.reset(); // A stopped release retires the old reset request.
+        deferResetUnderContention();
         p.releaseResources();
         p.releaseResources(); // Repeated host shutdown is permitted.
         require(p.engine_.soundModeSnapshot().desiredClean == pendingBefore.desiredClean
@@ -232,7 +250,7 @@ struct VDX7RegressionAccess
         install(Mode::clean, true);
         const auto ownerBeforePrepare = p.getSoundModeProjectSnapshot();
         const auto modeBeforeRelease = p.engine_.soundModeSnapshot();
-        p.reset();
+        deferResetUnderContention();
         p.releaseResources();
         p.releaseResources();
         require(p.engine_.soundModeSnapshot().desiredClean == modeBeforeRelease.desiredClean

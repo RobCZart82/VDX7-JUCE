@@ -3,7 +3,11 @@
 2026-10-12; baseline `b9b2da8aab716748322d5203ef6de87ade5cf7a7`.
 Ág: `test/stopped-release-mode-owner`. Csak teszt és dokumentáció módosítás.
 
-Actual processor: reset request, kétszeri releaseResources, majd prepare/audio.
+Actual processor: reset request, zárolással contended audio callback,
+kétszeri releaseResources, majd prepare/audio. #184 review után explicit
+precondition: hostResetRequested false és hostResetPending true a release előtt.
+Így a pending flag törlésének kihagyását a release utáni assertion elkapja;
+a korábbi teszt ezt a jelzőt csak kezdeti false állapotban vizsgálta.
 Pending Clean owner nem válik admitted rendererré. Ready owner kívánt módja
 és projekt-revíziója megmarad; prepare cold-installja változatlanul ellenőrzött.
 A korábbi reset request/pending flag megszűnik. Nem teszteli a cleanup alatt
