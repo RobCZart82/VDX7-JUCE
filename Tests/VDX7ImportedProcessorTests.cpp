@@ -196,6 +196,12 @@ static void testParameterSnapshot(const juce::File& rom = {})
 
 struct VDX7RegressionAccess
 {
+    static void injectCleanIntent(VDX7AudioProcessor& p)
+    {
+        std::unique_lock lock(p.engineMutex_);
+        require(p.soundModeOwner_.installValidatedLocked(lock, VDX7SoundModeState::Mode::clean,
+            []() noexcept { return false; }, []() noexcept {}), "internal Clean capture injection");
+    }
     static void injectPendingMode(VDX7AudioProcessor& p, VDX7SoundModeState::Mode mode)
     {
         std::unique_lock lock(p.engineMutex_);
@@ -573,6 +579,25 @@ static void testProjectGeneration()
 static void testActualModeProjectOwner(const juce::File& rom = {})
 {
     using Mode = VDX7SoundModeState::Mode;
+    for (bool threaded : {false, true})
+    {
+        VDX7AudioProcessor source(false);
+        auto classic = save(source);
+        VDX7RegressionAccess::injectCleanIntent(source);
+        juce::MemoryBlock capturedClean;
+        runAtSaveBoundary([&] { source.getStateInformation(capturedClean); },
+            [&] { restore(source, classic); }, threaded);
+        const auto captured = tree(capturedClean);
+        require(captured.getProperty("soundMode").toString() == "1"
+            && captured.getProperty("soundModeVersion").toString() == "1",
+            "normal detached writer retains captured Clean intent across newer Classic recall");
+        require(source.getSoundModeProjectSnapshot().desired == Mode::classic
+            && !tree(save(source)).hasProperty("soundMode"),
+            "Clean encoding does not republish intent or change legacy Classic writer");
+        const auto before = save(source);
+        restore(source, capturedClean);
+        require(save(source) == before, "public Clean admission stays gated after writer preparation");
+    }
     auto p = std::make_unique<VDX7AudioProcessor>(false);
     const auto initial = p->getSoundModeProjectSnapshot();
     require(initial.desired == Mode::classic && initial.revision == 0

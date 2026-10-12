@@ -39,6 +39,15 @@ történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott
 
 ### Hátralévő kiadási munkacsomagok
 
+2026-10-12 writer részlépés: baseline `2d6c837247cfb013ee8ce83b58154bf3ff52c304`
+(#187 után), ág `feature/clean-captured-state-writer`. A normál detached writer
+internal Clean intent esetén a capture módját kódolja, nem egy későbbi ownerét.
+Classic továbbra is legacy formátumú. Reentráns/kétszálas actual processor
+kontrollok készülnek. Ez nem public Clean admission, SETTINGS vagy teljes
+Clean recall-elfogadás; a reader fail-closed kapuja változatlan.
+Korábbi „normál writer nem aktív” checkpointok történeti állapotot írnak le;
+az új writer csak e részlépés merge után tekinthető main-ban lévőnek.
+
 2026-10-12 új részlépés, baseline `524b75b1aa83c3ea422b18fb8ccd3fdf3999ae88`
 (#186 után), ág `test/clean-owner-save-capture`: actual processor pending
 Clean owner test-only injection, leválasztott save közben új Classic restore,
