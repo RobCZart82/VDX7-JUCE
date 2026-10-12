@@ -39,41 +39,58 @@ történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott
 
 ### Hátralévő kiadási munkacsomagok
 
-#188 Draft új reader/round-trip checkpoint: az érvényes Clean séma a közös
-validated payload/owner/ROM tranzakcióba kerül; malformed séma rejection
-megmarad, Classic legacy writer változatlan. ROM-free pending és privát v1.8
-ready Clean save/reopen/prepare/native settled-mode kontroll 44.1/48/96 kHz-en
-PASS. Ez csak a Draft ág állapota, nem main vagy teljes release-elfogadás.
-Az e checkpoint előtti „reader zárt” megállapítások történeti állapotok.
-SETTINGS, teljes lifecycle/platform/mérési és host kapuk még nyitottak.
+### D5 Classic/Clean részletes aktuális státusz
 
-#188 Draft folytatás: actual internal Clean pending→ROM/RAM completion→prepare/
-audio→normal writer kontroll privát original v1.8-cal három rate-en. Public
-Clean reader és SETTINGS továbbra is zárt; a Draft nem beolvasztási engedély.
-Részletes kör: [writer checkpoint](../validation/CLEAN_CAPTURED_WRITER_20261012.md).
+Fejlesztési baseline: `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187 merge).
+Ág: `feature/clean-captured-state-writer`, [#188 Draft](https://github.com/RobCZart82/VDX7-JUCE/pull/188).
+Ellenőrzött kódfej: `e65c834576af35a0aa1062c017122f88129f2172`.
+Ez a rész nem jelenti a Draft main-ba kerülését vagy a kiadás elfogadását.
 
-2026-10-12 writer részlépés: baseline `2d6c837247cfb013ee8ce83b58154bf3ff52c304`
-(#187 után), ág `feature/clean-captured-state-writer`. A normál detached writer
-internal Clean intent esetén a capture módját kódolja, nem egy későbbi ownerét.
-Classic továbbra is legacy formátumú. Reentráns/kétszálas actual processor
-kontrollok készülnek. Ez nem public Clean admission, SETTINGS vagy teljes
-Clean recall-elfogadás; a reader fail-closed kapuja változatlan.
-Korábbi „normál writer nem aktív” checkpointok történeti állapotot írnak le;
-az új writer csak e részlépés merge után tekinthető main-ban lévőnek.
+| Komponens | Hol tart | Hátralévő kapu |
+|---|---|---|
+| Owner, renderer, audio dispatch, cold install | Main-ban meglévő alapok | Teljes integrált életciklus- és hangzáselfogadás |
+| Koherens pending capture (#187) | Main-ban; régi encoding nem írja felül az új projektet | Új funkció teljes mentés/visszaállítási köre |
+| Normál Clean writer | #188 Draft: capture-ből ír mód/sémapárt | Final-head CI/review, további recall/lifecycle kontrollok |
+| Clean reader/admission | #188 Draft: érvényes Clean bekerül a közös payload/owner/ROM tranzakcióba | Main-ban még a korábbi kapu; Draft elfogadása külön |
+| Classic kompatibilitás | Legacy writer és hiányzó mód → Classic megmarad | Teljes új jelölt regressziós/hang kontroll |
+| SETTINGS választó | Nincs kész felhasználói kapcsoló | UI request/notification, példány- és project recall tesztek |
+| Kiadási csomag/DAW elfogadás | Új Classic/Clean jelöltre NOT RUN | Exact új binárisok elfogadása és publikálási engedély |
 
-2026-10-12 új részlépés, baseline `524b75b1aa83c3ea422b18fb8ccd3fdf3999ae88`
-(#186 után), ág `test/clean-owner-save-capture`: actual processor pending
-Clean owner test-only injection, leválasztott save közben új Classic restore,
-reentráns és valódi kétszálas kontroll. A captured mód/payload együtt marad,
-régi encoding nem írja felül az új ownert. Nyilvános Clean admission zárt.
-Windows tesztbuild és snapshot kontroll PASS; nem új firmware/DAW-elfogadás.
-E részlépés nem teljesíti önmagában az alábbi 1. munkacsomagot.
+**A Draftban megvalósított viselkedés:** a mentett mód a payload ugyanazon
+engine-lock alatti pillanatképéből származik, nem későbbi owner-readből.
+Clean sémapár a normal save-ben is megjelenik; Classic továbbra is legacy.
+Érvényes Clean binary restore ugyanazt a validált pending/ROM completion
+utat használja, mint Classic. A 12 malformed-schema rejection kontroll
+megmarad; paraméter- és firmware/payload validation nincs megkerülve.
+Runtime revision/pending/gain nem új hostparaméter; a 148 ID/sorrend változatlan.
+
+**Helyi bizonyíték a fenti kódfejre:** Windows shared-code és két processor
+tesztbuild PASS; ROM-free CTest 22/22 PASS, doc guard 3/3 PASS. No-ROM Clean
+pending binary recall és reentráns/kétszálas captured-mode kontroll PASS.
+Privát original v1.8 ready save/reopen, matching ROM identity, feedback=6,
+prepare és native settled Clean/unity 44.1/48/96 kHz-en PASS. A finite output
+ellenőrzése nem bizonyít nem néma hangot, hangminőséget vagy kattanásmentességet.
+Ez nem minden exe teljes új buildje vagy minden lifecycle teszt futtatása.
+
+**Platform CI a kódfejre:** Windows, macOS és sanitizer IN PROGRESS az
+ellenőrzéskor; nem jelöljük PASS-nak. A következő dokumentációs commit új fej,
+annak eredménye külön ellenőrzendő. Régi #187 CI nem az új reader eredménye.
+Részletes bizonyíték: [writer/reader checkpoint](../validation/CLEAN_CAPTURED_WRITER_20261012.md).
+
+**Draft feloldás előtt:** review rendezés és exact final-head platform kapuk;
+Clean→Classic és Classic→Clean public recall, hiányzó/eltérő/megfelelő ROM,
+no-ROM edits, reset/release/prepare/reload és Native/Correct policy, stale és
+reentráns restore/host publication, több példány és kapcsolódó privát
+regressziók. A mostani három-rate pozitív recall nem zárja le ezt a teljes listát.
+Ezután SETTINGS, műszeres/hallásos és új csomag/host kapuk következnek.
+Public reader tehát a #188 Draftban már nem zárt; main és korábbi checkpointok
+reader-closed mondatai más commitokra vonatkoznak, nem új aktuális állítások.
 
 1. **D5 integráció:** fennmaradó lifecycle/mono/pending és reentráns restore/
    publikáció kontrollok; teljes Clean capture/writer/reader/admission az owner
    és aktuális ROM-generáció mellett. Hibás séma továbbra is mutáció nélkül
-   elutasítandó. Legacy projekt Classic. A public Clean restore jelenleg zárt;
-   csak pozitív teljes recall/lifecycle bizonyítékkal nyitható meg.
+   elutasítandó. Legacy projekt Classic. A public Clean restore #188 Draftban
+   bekötött, de a teljes recall/lifecycle és final-head elfogadás még nyitott.
 2. **D5 hangút elfogadás:** privát original v1.8, mindkét irányú váltás,
    sustain/tail/gyors request, példányizoláció, Classic null-kontroll,
    spektrum/peak/RMS/headroom/CPU/latencia. Meglévő részteszteket felhasználjuk,
