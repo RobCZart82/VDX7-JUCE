@@ -14,6 +14,8 @@ tesztkör korlátozza az állításokat. A teljes név szerinti jegyzék alább 
 
 ## Reports by filename
 
+- [STOPPED_RELEASE_OWNER_20261012.md](STOPPED_RELEASE_OWNER_20261012.md)
+
 - [INTERRUPTED_RESET_MATRIX_20261012.md](INTERRUPTED_RESET_MATRIX_20261012.md)
 
 - [ROM_RELOAD_SOUND_MODE_20261012.md](ROM_RELOAD_SOUND_MODE_20261012.md)

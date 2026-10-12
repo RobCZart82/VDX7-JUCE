@@ -210,6 +210,15 @@ struct VDX7RegressionAccess
         // Injection exercises real processBlock dispatch, NOT Clean project admission.
         install(Mode::clean, false);
         const auto pendingBefore = p.engine_.soundModeSnapshot();
+        const auto pendingOwner = p.getSoundModeProjectSnapshot();
+        p.reset(); // A stopped release retires the old reset request.
+        p.releaseResources();
+        p.releaseResources(); // Repeated host shutdown is permitted.
+        require(p.engine_.soundModeSnapshot().desiredClean == pendingBefore.desiredClean
+            && !p.engine_.soundModeSnapshot().activeClean
+            && p.getSoundModeProjectSnapshot() == pendingOwner
+            && !p.hostResetRequested_.load() && !p.hostResetPending_,
+            "repeated stopped release preserves pending mode and retires old reset without admission");
         p.prepareToPlay(48000, 64);
         const auto pendingAfter = p.engine_.soundModeSnapshot();
         require(pendingAfter.desiredClean == pendingBefore.desiredClean
@@ -218,9 +227,18 @@ struct VDX7RegressionAccess
         p.processBlock(audio, midi);
         require(!p.engine_.soundModeSnapshot().desiredClean,
             "actual audio never dispatches a pending Clean model");
+        std::cout << "PASS: repeated stopped release preserves pending owner without Clean admission\n";
         if (!loaded) return;
         install(Mode::clean, true);
         const auto ownerBeforePrepare = p.getSoundModeProjectSnapshot();
+        const auto modeBeforeRelease = p.engine_.soundModeSnapshot();
+        p.reset();
+        p.releaseResources();
+        p.releaseResources();
+        require(p.engine_.soundModeSnapshot().desiredClean == modeBeforeRelease.desiredClean
+            && p.getSoundModeProjectSnapshot() == ownerBeforePrepare
+            && !p.hostResetRequested_.load() && !p.hostResetPending_,
+            "ready stopped release preserves latest owner intent without a new revision");
         p.prepareToPlay(48000, 64);
         require(p.engine_.soundModeSnapshot().quiescentInstall
             && p.engine_.soundModeSnapshot().desiredClean
@@ -249,6 +267,7 @@ struct VDX7RegressionAccess
         p.processBlock(audio, midi);
         require(!p.engine_.soundModeSnapshot().desiredClean,
             "next acquired audio block dispatches latest Classic");
+        std::cout << "PASS: ready release/prepare preserves owner and reinstalls latest mode\n";
     }
     static auto restoreGeneration(VDX7AudioProcessor& p)
     {
@@ -992,7 +1011,11 @@ int main(int argc, char** argv)
         }
         require(argc == 1 || argc == 2, "optional local verified ROM path only");
         if (argc == 2) { testParameterSnapshot(juce::File(argv[1])); testParameterAdmission(juce::File(argv[1])); testActualModeProjectOwner(juce::File(argv[1])); testStaleRomCompletion(juce::File(argv[1])); testWithRom(juce::File(argv[1])); }
-        else { testParameterSnapshot(); testParameterAdmission(); testProjectGeneration(); testActualModeProjectOwner(); testStartup(); testNoRom(); testBoundaries(); }
+        else { testParameterSnapshot(); testParameterAdmission(); testProjectGeneration(); testActualModeProjectOwner(); testStartup(); testNoRom(); testBoundaries();
+            VDX7AudioProcessor dispatch(false);
+            dispatch.prepareToPlay(48000, 64);
+            VDX7RegressionAccess::audioDispatch(dispatch, false);
+        }
         std::cout << "PASS: imported catalog processor ownership, binary state and bounded scheduling\n";
         return 0;
     }
