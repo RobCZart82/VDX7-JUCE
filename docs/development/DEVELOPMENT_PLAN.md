@@ -8,6 +8,14 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ## D5 ROM-reload lifecycle részlépés — 2026-10-12
 
+Legújabb baseline: `b9b2da8aab716748322d5203ef6de87ade5cf7a7` (#183 merge).
+#183 final-head Windows/macOS/sanitizer és main Windows/macOS PASS.
+Következő tesztág: `test/stopped-release-mode-owner`: actual processor repeated
+release/reset/prepare owner preservation. Pending ROM-free kontroll a normál
+CTest útvonalban is fut; ready kontroll kizárólag privát v1.8 integrációban.
+Ez tesztbővítés, nem Clean UI/admission megnyitás.
+[Ellenőrzési jelentés](../validation/STOPPED_RELEASE_OWNER_20261012.md).
+
 PR: [#182](https://github.com/RobCZart82/VDX7-JUCE/pull/182) beolvadt;
 merge SHA: `58cebee45c6e22452131d74ecbea568c6b950549`.
 Final-head Windows/macOS/sanitizer CI PASS. Merge utáni main Windows/macOS CI PASS.
