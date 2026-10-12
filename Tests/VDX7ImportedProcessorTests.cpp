@@ -587,6 +587,43 @@ static void testProjectGeneration()
 static void testActualModeProjectOwner(const juce::File& rom = {})
 {
     using Mode = VDX7SoundModeState::Mode;
+    // Exercise public pending recall without test-only mode injection. A host
+    // may repeatedly stop/reconfigure the instance before firmware is supplied.
+    for (const double rate : {44100.0, 48000.0, 96000.0})
+    {
+        auto waiting = std::make_unique<VDX7AudioProcessor>(false);
+        auto classic = tree(save(*waiting));
+        auto clean = classic.createCopy();
+        clean.setProperty("soundModeVersion", 1, nullptr);
+        clean.setProperty("soundMode", 1, nullptr);
+        clean.setProperty("midiInputChannel", 13, nullptr);
+        restore(*waiting, binary(clean));
+        const auto owner = waiting->getSoundModeProjectSnapshot();
+        require(owner.desired == Mode::clean && owner.pending && !owner.ready,
+            "public Clean recall waits for firmware without activating audio");
+        waiting->prepareToPlay(rate, 64);
+        waiting->reset();
+        waiting->releaseResources();
+        waiting->releaseResources();
+        waiting->prepareToPlay(rate, 64);
+        juce::AudioBuffer<float> audio(2, 64);
+        juce::MidiBuffer midi;
+        waiting->processBlock(audio, midi);
+        require(waiting->getSoundModeProjectSnapshot() == owner,
+            "pending public Clean survives reset/repeated release/prepare/audio");
+        const auto preserved = save(*waiting);
+        require(tree(preserved).getProperty("soundMode").toString() == "1"
+            && tree(preserved).getProperty("midiInputChannel").toString() == "13",
+            "pending Clean mode and routing remain serializable after lifecycle");
+        restore(*waiting, binary(classic));
+        require(waiting->getSoundModeProjectSnapshot().desired == Mode::classic
+            && waiting->getSoundModeProjectSnapshot().revision == owner.revision + 1,
+            "public legacy recall replaces pending Clean with a newer Classic owner");
+        restore(*waiting, preserved);
+        require(waiting->getSoundModeProjectSnapshot().desired == Mode::clean
+            && waiting->getSoundModeProjectSnapshot().revision == owner.revision + 2,
+            "public Clean recall replaces Classic with the preserved pending owner");
+    }
     for (bool threaded : {false, true})
     {
         VDX7AudioProcessor source(false);
@@ -725,8 +762,8 @@ static void testActualModeProjectOwner(const juce::File& rom = {})
             "nonpending ROM reload refreshes readiness without retiring project mode");
 
         // Positive internal Clean completion through actual ROM/RAM admission.
-        // Public reader remains closed on this draft; only intent injection is
-        // test-only, not the completion, prepare, audio or writer being tested.
+        // Public validated recall supplies intent; ROM completion, prepare,
+        // audio and the writer all use the production paths.
         for (const double rate : {44100.0, 48000.0, 96000.0})
         {
             VDX7AudioProcessor cleanWaiting(false);

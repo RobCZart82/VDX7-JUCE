@@ -1,5 +1,22 @@
 # Internal Clean captured writer checkpoint
 
+## Public pending lifecycle follow-up — 2026-10-12
+
+Baseline Draft head: `890f58379833dab513fe8f899fa113d0c8956595`.
+Public binary Clean recall (no test-only intent injection) now has explicit
+ROM-free coverage for reset, repeated release, prepare and audio at
+44.1/48/96 kHz. Desired mode, pending/readiness and revision are preserved;
+the saved mode/routing pair survives. Public legacy Classic recall replaces
+the owner, and recalling the saved Clean state replaces it again, with one
+revision per accepted restore.
+
+PASS: fresh macOS Release shared code and imported processor test build;
+`--snapshot-only` and default ROM-free imported processor run; diff check.
+Dependencies match the pinned JUCE and Retromulator sources. Existing Draft
+head platform CI passed; this follow-up needs its own CI. NOT RUN this round:
+private ROM, ready/mismatched-ROM lifecycle, Windows/sanitizers, installed DAW
+and listening tests. Earlier reader-closed paragraphs below are historical.
+
 ## Legújabb Draft checkpoint: validated Clean reader és round trip
 
 Az érvényes Clean read a közös payload admissionbe kerül; a korábbi valid

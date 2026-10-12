@@ -1414,7 +1414,7 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 
     // Preserve legacy Classic output. Internal Clean intent must travel with
     // this detached payload, never with a newer owner read during encoding.
-    // Public Clean admission/UI remains gated until complete recall coverage.
+    // Validated Clean recall is supported; the SETTINGS selector is still gated.
     if (projectMode.desired == VDX7SoundModeState::Mode::clean)
         state = VDX7SoundModeState::writeDetached(state, projectMode.desired);
 

@@ -72,10 +72,17 @@ prepare és native settled Clean/unity 44.1/48/96 kHz-en PASS. A finite output
 ellenőrzése nem bizonyít nem néma hangot, hangminőséget vagy kattanásmentességet.
 Ez nem minden exe teljes új buildje vagy minden lifecycle teszt futtatása.
 
-**Platform CI a kódfejre:** Windows, macOS és sanitizer IN PROGRESS az
-ellenőrzéskor; nem jelöljük PASS-nak. A következő dokumentációs commit új fej,
-annak eredménye külön ellenőrzendő. Régi #187 CI nem az új reader eredménye.
+**Platform CI:** a `890f58379833dab513fe8f899fa113d0c8956595` Draft fej
+Windows, macOS és sanitizer ellenőrzése PASS. A további commitok eredménye
+külön ellenőrzendő; ez nem teljes lifecycle vagy host-elfogadás.
 Részletes bizonyíték: [writer/reader checkpoint](../validation/CLEAN_CAPTURED_WRITER_20261012.md).
+
+2026-10-12 folytatás: public pending Clean recall → reset → repeated release →
+prepare → audio kontroll 44.1/48/96 kHz-en; owner/revision és mentett mód/routing
+megőrzése, majd Clean→legacy Classic→Clean recall ellenőrzése. Friss macOS
+Release shared-code/processor build, snapshot-only és teljes ROM-free imported
+processor futás PASS. Ez nem ready-ROM, hangzási vagy teljes lifecycle elfogadás;
+az új commit Windows/macOS/sanitizer CI-je külön kapu.
 
 **Draft feloldás előtt:** review rendezés és exact final-head platform kapuk;
 Clean→Classic és Classic→Clean public recall, hiányzó/eltérő/megfelelő ROM,
