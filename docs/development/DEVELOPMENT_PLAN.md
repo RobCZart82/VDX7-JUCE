@@ -92,6 +92,13 @@ repeated release / prepare / audio 44.1/48/96 kHz-en PASS. Friss macOS célzott
 processor build és private snapshot-only futás PASS. Ez a következő lista
 egy része; nem teljes hangzási, lifecycle vagy SETTINGS elfogadás.
 
+2026-10-12 firmware-identity részlépés: public Clean restore eltérő mentett
+ROM identity mellett pending marad a valid original v1.8 betöltése után is;
+owner/revision és új mentésben a mód/identity megőrzött. Kompatibilis Clean
+restore a már betöltött firmware mellett ready, pontosan egy új revisionnel.
+Friss macOS processor build és privát snapshot-only teszt 44.1/48/96 kHz-en
+PASS. Ez célzott tesztbővítés, nem runtime javítás vagy teljes release-elfogadás.
+
 Clean→Classic és Classic→Clean public recall, hiányzó/eltérő/megfelelő ROM,
 no-ROM edits, reset/release/prepare/reload és Native/Correct policy, stale és
 reentráns restore/host publication, több példány és kapcsolódó privát

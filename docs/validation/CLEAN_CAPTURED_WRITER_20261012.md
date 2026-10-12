@@ -30,7 +30,22 @@ head platform CI passed; this follow-up needs its own CI. NOT RUN this round:
 private ROM, ready/mismatched-ROM lifecycle, Windows/sanitizers, installed DAW
 and listening tests. Earlier reader-closed paragraphs below are historical.
 
-## Legújabb Draft checkpoint: validated Clean reader és round trip
+## Firmware-identity follow-up (2026-10-12)
+
+Baseline: `dcad45d8bb2615a332b3094540d941284fd4cd14`. Public Clean binary
+restore with a deliberately incompatible saved ROM identity remains pending
+after loading valid private original v1.8 firmware; owner/revision remain
+unchanged, and normal save preserves Clean mode and the incompatible identity.
+A subsequent compatible Clean restore becomes ready against the loaded ROM,
+with exactly one new project revision. Independent processor instances retain
+the existing missing-ROM completion coverage.
+
+PASS: fresh macOS Release imported-processor build and private snapshot-only
+run at 44.1/48/96 kHz. Only tests/documentation changed. NOT RUN this follow-up:
+full plugin/CTest rebuild, Windows/sanitizer CI, installed DAW or listening.
+Draft and final-head review/platform gates remain open; no release assets changed.
+
+## Earlier Draft checkpoint: validated Clean reader és round trip
 
 Az érvényes Clean read a közös payload admissionbe kerül; a korábbi valid
 Clean rejection helyett pozitív pending/ready tesztek. Mind a 12 malformed

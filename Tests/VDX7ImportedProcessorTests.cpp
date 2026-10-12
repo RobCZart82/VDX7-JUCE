@@ -770,6 +770,26 @@ static void testActualModeProjectOwner(const juce::File& rom = {})
             auto missing = matching.createCopy();
             missing.setProperty("romPath", "", nullptr);
             missing.setProperty("soundMode", 1, nullptr);
+            auto incompatible = missing.createCopy();
+            auto mismatchedClean = std::make_unique<VDX7AudioProcessor>(false);
+            incompatible.setProperty("romIdentity", "own-incompatible-clean-identity", nullptr);
+            restore(*mismatchedClean, binary(incompatible));
+            const auto incompatibleOwner = mismatchedClean->getSoundModeProjectSnapshot();
+            require(incompatibleOwner.desired == Mode::clean && incompatibleOwner.pending
+                && !incompatibleOwner.ready, "public mismatched Clean starts preserved and pending");
+            require(mismatchedClean->loadRomFromFile(rom) && !mismatchedClean->isProjectReady()
+                && mismatchedClean->getSoundModeProjectSnapshot() == incompatibleOwner,
+                "valid firmware cannot complete a Clean project with another identity");
+            const auto preservedMismatch = tree(save(*mismatchedClean));
+            require(preservedMismatch.getProperty("soundMode").toString() == "1"
+                && preservedMismatch.getProperty("romIdentity").toString()
+                    == "own-incompatible-clean-identity",
+                "pending Clean save preserves requested mode and incompatible identity");
+            restore(*mismatchedClean, binary(missing));
+            const auto recovered = mismatchedClean->getSoundModeProjectSnapshot();
+            require(recovered.ready && !recovered.pending && recovered.desired == Mode::clean
+                && recovered.revision == incompatibleOwner.revision + 1,
+                "matching Clean recall completes against already loaded compatible firmware");
             restore(cleanWaiting, binary(missing));
             const auto pendingClean = cleanWaiting.getSoundModeProjectSnapshot();
             require(pendingClean.pending && !pendingClean.ready, "internal Clean starts pending ROM admission");
