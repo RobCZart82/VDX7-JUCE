@@ -39,6 +39,14 @@ történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott
 
 ### Hátralévő kiadási munkacsomagok
 
+2026-10-12 új részlépés, baseline `524b75b1aa83c3ea422b18fb8ccd3fdf3999ae88`
+(#186 után), ág `test/clean-owner-save-capture`: actual processor pending
+Clean owner test-only injection, leválasztott save közben új Classic restore,
+reentráns és valódi kétszálas kontroll. A captured mód/payload együtt marad,
+régi encoding nem írja felül az új ownert. Nyilvános Clean admission zárt.
+Windows tesztbuild és snapshot kontroll PASS; nem új firmware/DAW-elfogadás.
+E részlépés nem teljesíti önmagában az alábbi 1. munkacsomagot.
+
 1. **D5 integráció:** fennmaradó lifecycle/mono/pending és reentráns restore/
    publikáció kontrollok; teljes Clean capture/writer/reader/admission az owner
    és aktuális ROM-generáció mellett. Hibás séma továbbra is mutáció nélkül
