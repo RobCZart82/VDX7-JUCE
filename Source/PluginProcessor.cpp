@@ -1371,8 +1371,8 @@ void VDX7AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     if (pendingCopy.isValid())
     {
         if (!writeImported(pendingCopy)) return;
-        // Preserve the legacy writer gate: only an already explicit Classic
-        // pending pair is written from the same captured project/mode owner.
+        // Preserve legacy Classic absence; Clean intent or an existing explicit
+        // pair must be written from the same captured project/mode owner.
         if (projectMode.desired == VDX7SoundModeState::Mode::clean
             || pendingCopy.hasProperty(VDX7SoundModeState::versionProperty))
             pendingCopy = VDX7SoundModeState::writeDetached(pendingCopy, projectMode.desired);

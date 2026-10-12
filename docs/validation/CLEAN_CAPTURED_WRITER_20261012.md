@@ -32,6 +32,13 @@ and listening tests. Earlier reader-closed paragraphs below are historical.
 
 ## SETTINGS and policy integration (2026-10-12)
 
+Follow-up on `71b4dbc48b5e61bde9aa879092a29274437c2853` (all three platform
+checks PASS): deterministic reentrant and real-thread SETTINGS requests at the
+detached save boundary, Classic→Clean and Clean→Classic. Old save retains its
+captured mode, live intent changes without a new project revision, next save
+contains the new mode. Fresh macOS processor build and ROM-free snapshot run
+PASS. New-head CI remains a separate gate; no complete concurrency claim.
+
 Classic/Clean selector added to SETTINGS with Classic default and Apply/Cancel
 semantics. No new host parameter. Apply validates captured mode/revision under
 the existing engine mutex before settings mutation. MONO policy, tuning/channel

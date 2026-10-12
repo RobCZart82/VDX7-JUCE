@@ -719,6 +719,33 @@ static void testActualModeProjectOwner(const juce::File& rom = {})
     }
     std::cout << "PASS: retired pending Clean capture preserves owner/payload in reentrant and threaded controls\n";
 
+    // A SETTINGS request during detached encoding must not retag the old save.
+    for (const bool threaded : {false, true})
+    {
+        auto ui = std::make_unique<VDX7AudioProcessor>(false);
+        for (const auto desired : {Mode::clean, Mode::classic})
+        {
+            const auto oldOwner = ui->getSoundModeProjectSnapshot();
+            juce::MemoryBlock captured;
+            runAtSaveBoundary([&] { ui->getStateInformation(captured); }, [&] {
+                require(ui->applySettingsFromUi(ui->getMasterTune(), 7, false, desired, oldOwner)
+                    == VDX7AudioProcessor::SettingsApplyResult::applied,
+                    "SETTINGS request at detached encoding boundary succeeds");
+            }, threaded);
+            Mode savedMode = Mode::classic;
+            require(VDX7SoundModeState::read(tree(captured), savedMode)
+                && savedMode == oldOwner.desired,
+                "detached encoding retains pre-SETTINGS captured mode");
+            const auto live = ui->getSoundModeProjectSnapshot();
+            require(live.desired == desired && live.revision == oldOwner.revision,
+                "SETTINGS changes live intent without inventing a project recall");
+            Mode nextMode = Mode::classic;
+            require(VDX7SoundModeState::read(tree(save(*ui)), nextMode) && nextMode == desired,
+                "next save observes the committed SETTINGS choice");
+        }
+    }
+    std::cout << "PASS: reentrant/threaded SETTINGS preserves detached capture ownership\n";
+
     {
         auto ui = std::make_unique<VDX7AudioProcessor>(false);
         auto other = std::make_unique<VDX7AudioProcessor>(false);

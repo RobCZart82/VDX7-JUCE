@@ -72,6 +72,12 @@ No-ROM módválasztás, példányizoláció, save/reopen, stale választás és 
 Clean Native/Correct rebuild regresszió bekerült. Az 1. munkacsomag teljes
 concurrency/hangút/host elfogadása megmarad; a 2. kódja Draftban bekötött.
 
+SETTINGS/capture folytatás: reentráns és valódi külön szálas Apply a detached
+save határán, mindkét módirányban PASS. A régi mentés captured módja megmarad,
+a live intent revision-növelés nélkül változik, a következő mentés új módot ír.
+Friss macOS processor build és ROM-free snapshot PASS. `71b4dbc` mindhárom
+platform CI-je PASS; az új tesztcommit final-head kapuja külön ellenőrzendő.
+
 **Helyi bizonyíték a fenti kódfejre:** Windows shared-code és két processor
 tesztbuild PASS; ROM-free CTest 22/22 PASS, doc guard 3/3 PASS. No-ROM Clean
 pending binary recall és reentráns/kétszálas captured-mode kontroll PASS.
