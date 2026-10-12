@@ -2,6 +2,7 @@
 #include "VDX7InitVoice.h"
 #include "VDX7Sysex.h"
 #include <juce_cryptography/juce_cryptography.h>
+#include <bit>
 #include <cmath>
 #include <chrono>
 #include <cstdlib>
@@ -241,6 +242,13 @@ struct VDX7RegressionAccess
         const auto native = p.engine_.soundModeSnapshot();
         require(native.quiescentInstall && !native.desiredClean,
             "compatible project completion installs Classic before rendering resumes");
+    }
+    static void requireColdClean(VDX7AudioProcessor& p)
+    {
+        std::unique_lock lock(p.engineMutex_);
+        const auto native = p.engine_.soundModeSnapshot();
+        require(native.quiescentInstall && native.desiredClean && native.level == 256,
+            "pre-ROM SETTINGS Clean cold-installs before first audio callback");
     }
     static void audioDispatch(VDX7AudioProcessor& p, bool loaded)
     {
@@ -808,6 +816,43 @@ static void testActualModeProjectOwner(const juce::File& rom = {})
         const auto booted = source->getSoundModeProjectSnapshot();
         require(booted.ready && !booted.pending && booted.revision == 0,
             "first ROM boot does not invent a project recall");
+        {
+            auto fresh = std::make_unique<VDX7AudioProcessor>(false);
+            const auto absent = fresh->getSoundModeProjectSnapshot();
+            require(fresh->applySettingsFromUi(0, 0, false, Mode::clean, absent)
+                == VDX7AudioProcessor::SettingsApplyResult::applied,
+                "fresh no-ROM SETTINGS accepts Clean without a pending project");
+            require(fresh->loadRomFromFile(rom), "pre-ROM Clean live firmware completion");
+            VDX7RegressionAccess::requireColdClean(*fresh);
+            const auto ready = fresh->getSoundModeProjectSnapshot();
+            const auto preservedReady = save(*fresh);
+            require(ready.revision == absent.revision && ready.ready
+                && fresh->applySettingsFromUi(0, 9, true, Mode::classic,
+                    VDX7SoundModeOwner::Snapshot{Mode::clean, absent.revision, absent.pending, absent.ready})
+                    == VDX7AudioProcessor::SettingsApplyResult::staleSoundMode
+                && save(*fresh) == preservedReady,
+                "same-generation first ROM readiness invalidates old SETTINGS without mutation");
+        }
+        {
+            require(source->setMasterTuneFromUi(12), "pending completion tune fixture");
+            auto tuned = tree(save(*source));
+            tuned.setProperty("romPath", "/vdx7-own-test-missing/firmware.rom", nullptr);
+            auto completing = std::make_unique<VDX7AudioProcessor>(false);
+            restore(*completing, binary(tuned));
+            const auto pendingToken = completing->getSoundModeProjectSnapshot();
+            const int oldTuning = completing->getMasterTune();
+            require(pendingToken.pending && !pendingToken.ready && oldTuning != 12,
+                "open SETTINGS genuinely precedes restored tuning publication");
+            require(completing->loadRomFromFile(rom) && completing->getMasterTune() == 12,
+                "compatible completion publishes restored tuning");
+            const auto preserved = save(*completing);
+            require(completing->getSoundModeProjectSnapshot().revision == pendingToken.revision
+                && completing->applySettingsFromUi(oldTuning, 9, true, Mode::clean, pendingToken)
+                    == VDX7AudioProcessor::SettingsApplyResult::staleSoundMode
+                && save(*completing) == preserved && completing->getMasterTune() == 12,
+                "pending-to-ready SETTINGS rejection preserves recalled tune and complete payload");
+            require(source->setMasterTuneFromUi(0), "restore source fixture default tuning");
+        }
         setFeedback(*source, 6);
         auto matching = tree(save(*source));
         matching.setProperty("romPath", "/vdx7-own-test-missing/firmware.rom", nullptr);
@@ -1338,6 +1383,78 @@ static void testWithRom(const juce::File& rom)
         "confirmed Init creates new CUSTOM working patch without deleting imported bank library");
 }
 
+// Exercise the public SETTINGS path while real processor callbacks emit audio,
+// not just the standalone renderer or silent owner-lifecycle fixtures.
+static void testLiveSettingsAudio(const juce::File& rom)
+{
+    using Mode = VDX7SoundModeState::Mode;
+    for (const double rate : {44100.0, 48000.0, 96000.0})
+    for (const int size : {32, 64, 257, 512})
+    {
+        auto changed = std::make_unique<VDX7AudioProcessor>(false);
+        auto peer = std::make_unique<VDX7AudioProcessor>(false);
+        auto reference = std::make_unique<VDX7AudioProcessor>(false);
+        for (auto* p : {changed.get(), peer.get(), reference.get()})
+        {
+            require(p->loadRomFromFile(rom), "live SETTINGS private boot");
+            p->prepareToPlay(rate, size);
+        }
+        const auto generation = changed->getSoundModeProjectSnapshot().revision;
+        const auto latency = changed->getLatencySamples();
+        juce::AudioBuffer<float> a(2, size), b(2, size), c(2, size);
+        double peak = 0;
+        unsigned cleanDifferences = 0;
+        const int interval = std::max(1, int(std::ceil(rate * 0.003 / size)));
+        for (int callback = 0; callback < 160 * interval; ++callback)
+        {
+            const int block = callback / interval;
+            const bool boundary = callback % interval == 0;
+            if (boundary && (block == 8 || block == 32 || (block >= 40 && block <= 48)))
+            {
+                const auto desired = block == 32 || (block >= 40 && block < 48 && block % 2 == 0)
+                    ? Mode::classic : Mode::clean;
+                require(changed->applySettingsFromUi(changed->getMasterTune(), 0, false,
+                    desired, changed->getSoundModeProjectSnapshot())
+                    == VDX7AudioProcessor::SettingsApplyResult::applied,
+                    "public mode requests succeed during held/sustained audio");
+            }
+            juce::MidiBuffer midi;
+            if (boundary && block == 0) midi.addEvent(juce::MidiMessage::noteOn(1, 60, juce::uint8(100)), 0);
+            if (boundary && block == 4) midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 127), 0);
+            if (boundary && block == 20) midi.addEvent(juce::MidiMessage::noteOff(1, 60), 0);
+            if (boundary && block == 80) midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), 0);
+            auto peerMidi = midi, referenceMidi = midi;
+            changed->processBlock(a, midi);
+            peer->processBlock(b, peerMidi);
+            reference->processBlock(c, referenceMidi);
+            for (int channel = 0; channel < 2; ++channel)
+            for (int sample = 0; sample < size; ++sample)
+            {
+                require(std::isfinite(a.getSample(channel, sample)), "finite public transition/tail audio");
+                peak = std::max(peak, double(std::abs(a.getSample(channel, sample))));
+                if (block >= 60 && block < 80)
+                    cleanDifferences += std::bit_cast<uint32_t>(a.getSample(channel, sample))
+                        != std::bit_cast<uint32_t>(b.getSample(channel, sample));
+                require(std::bit_cast<uint32_t>(b.getSample(channel, sample))
+                    == std::bit_cast<uint32_t>(c.getSample(channel, sample)),
+                    "changing one instance leaves Classic peer bit-exact with its control");
+                if (block < 8) require(std::bit_cast<uint32_t>(a.getSample(channel, sample))
+                    == std::bit_cast<uint32_t>(b.getSample(channel, sample)),
+                    "default Classic public processor matches unchanged reference");
+            }
+        }
+        require(peak > 0 && cleanDifferences > 0 && changed->getLatencySamples() == latency
+            && changed->getSoundModeProjectSnapshot().revision == generation
+            && peer->getSoundModeProjectSnapshot().desired == Mode::classic,
+            "live SETTINGS retains latency/project generation and independent peer intent");
+        VDX7RegressionAccess::requireSettledClean(*changed);
+        require(tree(save(*changed)).getProperty("soundMode").toString() == "1",
+            "live latest Clean request persists through normal writer");
+        for (auto* p : {changed.get(), peer.get(), reference.get()}) p->releaseResources();
+    }
+    std::cout << "PASS: public SETTINGS live held/sustain/rapid/tail, Classic null and peer isolation; 3 rates x 4 buffers\n";
+}
+
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -1362,7 +1479,7 @@ int main(int argc, char** argv)
             return 0;
         }
         require(argc == 1 || argc == 2, "optional local verified ROM path only");
-        if (argc == 2) { testParameterSnapshot(juce::File(argv[1])); testParameterAdmission(juce::File(argv[1])); testActualModeProjectOwner(juce::File(argv[1])); testStaleRomCompletion(juce::File(argv[1])); testWithRom(juce::File(argv[1])); }
+        if (argc == 2) { testParameterSnapshot(juce::File(argv[1])); testParameterAdmission(juce::File(argv[1])); testActualModeProjectOwner(juce::File(argv[1])); testStaleRomCompletion(juce::File(argv[1])); testWithRom(juce::File(argv[1])); testLiveSettingsAudio(juce::File(argv[1])); }
         else { testParameterSnapshot(); testParameterAdmission(); testProjectGeneration(); testActualModeProjectOwner(); testStartup(); testNoRom(); testBoundaries();
             VDX7AudioProcessor dispatch(false);
             dispatch.prepareToPlay(48000, 64);

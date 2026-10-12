@@ -40,7 +40,7 @@ public:
     {
         if (!owns(lock)) return Request::busy;
         if (!VDX7SoundModeState::isValid(desired)) return Request::invalid;
-        if (state_.revision != expected.revision || state_.desired != expected.desired)
+        if (state_ != expected)
             return Request::stale;
         if (desired == state_.desired) return Request::unchanged;
         state_.desired = desired;

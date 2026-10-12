@@ -2,6 +2,10 @@
 
 ## Current status index — 2026-10-12
 
+Latest integrated follow-up: [full regression/review report](CLASSIC_CLEAN_INTEGRATION_REVIEW_20261012.md).
+It records the public audio matrix and two review fixes; final-head CI/merge
+status must not be inferred from historical checkpoints below.
+
 This report preserves dated evidence, not one cumulative final-head PASS.
 Main baseline is `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187).
 Draft #188 now includes validated Clean writer/reader, SETTINGS selection,

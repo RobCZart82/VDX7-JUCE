@@ -556,7 +556,7 @@ void VDX7AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         audioContendedRunSamples_ = 0;
     // Reuse the existing audio try-lock: inspect today's desired mode only
     // after state/reset observations. Pending projects cannot target old ROMs.
-    // Clean admission and UI remain gated until cold-install/lifecycle support.
+    // Public recall and SETTINGS provide intent; renderer changes stay audio-owned.
     (void)soundModeOwner_.withAudioOwnerLocked(lock,
         [&](VDX7SoundModeState::Mode mode) noexcept {
             engine_.requestSoundMode(mode == VDX7SoundModeState::Mode::clean);
@@ -1851,6 +1851,14 @@ bool VDX7AudioProcessor::loadRomData(const juce::File& file, const std::vector<u
             updateEngineSnapshot();
         soundModeOwner_.refreshReadinessLocked(lock, [&]() noexcept { return engine_.isLoaded(); });
 
+        // Firmware installation is quiescent under this lock. A pre-ROM UI
+        // choice must target the new engine before its first emitted sample;
+        // pending incompatible projects must still leave that engine untouched.
+        (void)soundModeOwner_.withAudioOwnerLocked(lock,
+            [&](VDX7SoundModeState::Mode mode) noexcept {
+                engine_.installSoundModeWhileQuiescent(mode == VDX7SoundModeState::Mode::clean);
+            });
+
         // A successful firmware image install is a MIDI timeline boundary:
         // deferred input captured while the engine lock was unavailable must
         // not be delivered to the newly installed image on a later callback.
@@ -2447,8 +2455,7 @@ VDX7AudioProcessor::SettingsApplyResult VDX7AudioProcessor::applySettingsFromUi(
     std::unique_lock lock(engineMutex_);
     const auto currentMode = soundModeOwner_.snapshotLocked(lock);
     if (soundMode && (!expectedMode || !VDX7SoundModeState::isValid(*soundMode)
-        || expectedMode->revision != currentMode.revision
-        || expectedMode->desired != currentMode.desired))
+        || *expectedMode != currentMode))
         return SettingsApplyResult::staleSoundMode;
 
     const bool tuningChanged = tuning != getMasterTune();

@@ -578,6 +578,23 @@ static void testLockedAudioDispatch()
         "retired engine readiness prevents dispatch");
 }
 
+static void testLockedRequestReadinessToken()
+{
+    std::mutex mutex;
+    Owner owner(mutex);
+    std::unique_lock lock(mutex);
+    const auto absent = owner.snapshotLocked(lock);
+    require(owner.refreshReadinessLocked(lock, ReadyQuery{}), "readiness token fixture");
+    const auto ready = owner.snapshotLocked(lock);
+    require(ready.revision == absent.revision && ready.desired == absent.desired && ready.ready,
+        "readiness changes without a new project generation or mode");
+    require(owner.requestLocked(lock, Mode::clean, absent) == Owner::Request::stale
+        && owner.snapshotLocked(lock) == ready,
+        "locked UI request rejects a readiness-stale token without mutation");
+    require(owner.requestLocked(lock, Mode::clean, ready) == Owner::Request::accepted,
+        "fresh readiness token accepts desired mode");
+}
+
 int main(int argc, char** argv)
 {
     try
@@ -594,6 +611,7 @@ int main(int argc, char** argv)
         { cachedRomAdmission = true; testRomInstallAdmission(); return 0; }
         else require(argc == 1, "unknown ownership test argument");
         testJoiningLifetime();
+        testLockedRequestReadinessToken();
         testAlreadyOwnedAdapter();
         testLockedAudioDispatch();
         testAdmissionAndRevision();

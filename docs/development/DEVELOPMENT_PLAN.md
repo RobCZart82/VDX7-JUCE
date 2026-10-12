@@ -41,6 +41,28 @@ történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott
 
 ### D5 Classic/Clean részletes aktuális státusz
 
+**2026-10-12 integrációs/review folytatás — HU:** a teljes privát original 1.8
+regressziós kör újrafutott; a nyilvános SETTINGS hangút 3 rate × 4 buffer
+mátrixa hozzáadva. Két review-P2 javítva: a pending→ready változás érvényteleníti
+a régi SETTINGS tokent, és az első ROM-load cold-installálja a korábban választott
+Clean módot. A javítás utáni teljes helyi kör 59/59 PASS (238,14 s), a 12-es
+nyilvános hangút-mátrix és a 94 Python-regresszió PASS; macOS VST3/AU/standalone
+build PASS, telepítés nélkül. Az új végső fej CI/review eredményét külön kell
+lezárni. A korábbi `4df15a4` fej mindhárom
+CI-je PASS, de ez nem az új javító commit eredménye. Beolvasztás/publikálás nincs
+ebből automatikusan következtetve.
+
+**EN:** Added a public SETTINGS audio regression at three rates/four buffer
+sizes and reran private original-v1.8 regressions. Two review P2s addressed:
+pending→ready invalidates old SETTINGS tokens; first ROM load cold-installs
+pre-ROM Clean intent. Post-fix local suite 59/59 PASS (238.14 s), public audio
+matrix 12 combinations PASS, Python regressions 94/94 PASS, macOS VST3/AU/
+Standalone builds PASS without installation. New final-head CI/review gates
+remain separate; previous `4df15a4` CI PASS does not
+certify the new commit or publication.
+
+[Aktuális integrációs/review jegyzőkönyv / Current evidence](../validation/CLASSIC_CLEAN_INTEGRATION_REVIEW_20261012.md).
+
 2026-10-12 tulajdonosi visszajelzés: a javított SETTINGS képen nincs átfedés;
 a kipróbált funkciók jól működnek, Classic/Clean hallhatóan kedvező különbséget
 ad, ismételt SETTINGS állítgatás során nem volt fagyás. Ez felhasználói,
