@@ -97,8 +97,48 @@ static void quiescentOrdering()
         "cold install retires old ramp, coalesces latest intent and retains all overshoot clocks");
 }
 
-static void egsReconstructionOrdering()
+static void egsReconstructionOrdering(bool negative = false)
 {
+    // Reset can interrupt either half of a live transition, at any actual
+    // scan phase. Exercise latest-intent cancellation as a separate control.
+    for (bool targetClean : {false, true})
+    for (int elapsedScans : {128, 384})
+    for (bool cancel : {false, true})
+    for (int phase = 0; phase < 96; ++phase)
+    {
+        VDX7NativeSoundMode adapter;
+        ScanProbe oldEgs;
+        adapter.request(!targetClean);
+        adapter.restoreAfterEgsReconstruction(oldEgs);
+        adapter.request(targetClean);
+        std::array<float, 600> oldOutput {};
+        int oldCount = 0;
+        adapter.clock(oldEgs, oldOutput.data(), oldCount, elapsedScans * 96 + phase);
+        const auto interrupted = adapter.snapshot();
+        require(interrupted.phase == phase && interrupted.level > 0
+            && interrupted.level < VDX7NativeSoundMode::rampSamples
+            && interrupted.activeClean == (elapsedScans < 256 ? !targetClean : targetClean),
+            "reset matrix genuinely interrupts fade-out or fade-in at the requested phase");
+        if (cancel) adapter.request(!targetClean);
+        const bool latestClean = cancel ? !targetClean : targetClean;
+        ScanProbe newEgs;
+        if (!negative) adapter.restoreAfterEgsReconstruction(newEgs);
+        const auto restored = adapter.snapshot();
+        require(restored.desiredClean == latestClean && restored.activeClean == latestClean
+            && !restored.quiescentInstall && restored.phase == 0
+            && restored.level == VDX7NativeSoundMode::rampSamples && restored.frameGain == 1,
+            "interrupted reset installs latest intent at unity and matches reconstructed phase");
+        std::array<float, 8> resumed {};
+        int resumedCount = 0;
+        // Instruction overshoot remains ordinary clocks on the new EGS.
+        adapter.clock(newEgs, resumed.data(), resumedCount, 3 * 96 + 17);
+        require(resumedCount == 3 && resumed[0] == (latestClean ? 2.0f : 1.0f)
+            && resumed[1] == resumed[0] && resumed[2] == resumed[0]
+            && newEgs.clocks == 3 * 96 + 17 && !newEgs.partialSwitch
+            && newEgs.switches == 1 && adapter.snapshot().phase == 17,
+            "reset publishes unity scans immediately without stale fade or lost overshoot");
+    }
+    std::cout << "PASS: 768 interrupted reset phase/direction/fade/cancellation controls\n";
     for (const bool requestedClean : {false, true})
     {
         VDX7NativeSoundMode adapter;
@@ -446,9 +486,10 @@ int main(int argc, char** argv)
     {
         require(argc <= 2, "optional private ROM or negative control only");
         const bool negative = argc == 2 && std::string_view(argv[1]) == "--mid-scan-negative-control";
+        const bool resetNegative = argc == 2 && std::string_view(argv[1]) == "--reset-negative-control";
         ordering(negative);
         quiescentOrdering();
-        egsReconstructionOrdering();
+        egsReconstructionOrdering(resetNegative);
         const auto classic = trace(28, false, false);
         require(classic == trace(28, false, true), "adapter is bit-identical to old EGS clock path");
         const auto switched = trace(28, true, false);
@@ -456,7 +497,7 @@ int main(int argc, char** argv)
         for (int partition : {1, 4, 37, 196, 511})
             require(switched == trace(partition, true, false), "absolute-clock requests partition invariant");
         VDX7RegressionAccess::lifecycle();
-        if (argc == 2) privateEngine(argv[1]);
+        if (argc == 2 && !resetNegative) privateEngine(argv[1]);
         std::cout << "PASS: native scan ordering, muted switch, cancellation, overshoot and lifecycle\n";
     }
     catch (const std::exception& e) { std::cerr << "FAIL: " << e.what() << '\n'; return 1; }

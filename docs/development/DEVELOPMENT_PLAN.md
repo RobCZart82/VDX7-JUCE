@@ -8,7 +8,9 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ## D5 ROM-reload lifecycle részlépés — 2026-10-12
 
-PR: [#182](https://github.com/RobCZart82/VDX7-JUCE/pull/182); final-head CI és review még függőben, nincs beolvasztva.
+PR: [#182](https://github.com/RobCZart82/VDX7-JUCE/pull/182) beolvadt;
+merge SHA: `58cebee45c6e22452131d74ecbea568c6b950549`.
+Final-head Windows/macOS/sanitizer CI PASS. Merge utáni main Windows/macOS CI PASS.
 
 Friss baseline: `de318935efae0da5b0fa182a2582526230cfed83` (#181 után).
 Ág: `fix/sound-mode-rom-reload-lifecycle`. Új belső D5 regresszió reprodukálva:
@@ -29,14 +31,16 @@ Python 94 futott, 93 PASS / 1 Windows symlink SKIP. A Windows Classic referencia
 tool text stdout hibája is javítva: a nyers float bájtokat nem írja át CRLF-re.
 További célzott privát v1.8 CTest 9/9 PASS (benne host-reset és direct reload);
 actual-processor snapshot/restore kontrollok PASS. Final-head platform/review
-kapuk még ellenőrzendők.
+kapuk a #182 final-head esetén teljesültek; main Windows/macOS CI is PASS.
 REAPER/hallásos/new release package elfogadás NOT RUN.
 [Reprodukció és pontos tesztkör](../validation/ROM_RELOAD_SOUND_MODE_20261012.md).
 
 ### Egységes következő végrehajtási sorrend
 
-1. E rész-PR final-head Windows/macOS/sanitizer és review; csak utána merge,
-   majd külön main CI. A korábbi #180/#181 PASS nem az új javítás eredménye.
+1. #182 beolvadt, final-head Windows/macOS/sanitizer és main Windows/macOS PASS.
+   Új tesztág: `test/sound-mode-release-lifecycle`, baseline a
+   fenti merge SHA. A ROM-free reset-mátrix 768 megszakított fade/phase/irány/
+   cancellation esetet ellenőriz; ez adapter-bizonyíték, nem új DAW-elfogadás.
 2. Maradék release/reset/reload/pending és mono-policy lifecycle ellenőrzések,
    reentráns restore/publikáció: bizonyított regresszió előbb, javítás külön.
 3. Teljes valódi Clean desired-mode capture/writer/reader/admission és
