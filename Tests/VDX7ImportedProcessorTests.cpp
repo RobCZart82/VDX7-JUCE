@@ -106,6 +106,29 @@ static void runAtRomReadBoundary(const std::function<void()>& operation,
     worker.get();
 }
 
+static void runAtSaveBoundary(const std::function<void()>& operation,
+                              const std::function<void()>& replaceProject, bool threaded)
+{
+    if (!threaded) { saveBoundary = replaceProject; operation(); return; }
+    std::promise<void> reached, resume;
+    auto reachedFuture = reached.get_future();
+    auto resumeFuture = resume.get_future();
+    saveBoundary = [&] {
+        reached.set_value();
+        if (resumeFuture.wait_for(std::chrono::seconds(5)) != std::future_status::ready)
+            std::abort();
+        resumeFuture.get();
+    };
+    auto worker = std::async(std::launch::async, operation);
+    if (reachedFuture.wait_for(std::chrono::seconds(5)) != std::future_status::ready)
+        std::abort();
+    reachedFuture.get();
+    try { replaceProject(); }
+    catch (...) { resume.set_value(); worker.get(); throw; }
+    resume.set_value();
+    worker.get();
+}
+
 static void testParameterSnapshot(const juce::File& rom = {})
 {
     auto p = std::make_unique<VDX7AudioProcessor>(false);
@@ -173,6 +196,14 @@ static void testParameterSnapshot(const juce::File& rom = {})
 
 struct VDX7RegressionAccess
 {
+    static void injectPendingMode(VDX7AudioProcessor& p, VDX7SoundModeState::Mode mode)
+    {
+        std::unique_lock lock(p.engineMutex_);
+        require(p.pendingRestore_.isValid(), "mode capture requires an existing pending payload");
+        require(p.soundModeOwner_.installValidatedLocked(lock, mode,
+            []() noexcept { return false; }, []() noexcept {}),
+            "test-only pending desired mode injection");
+    }
     static void beginInterruptedCleanReturn(VDX7AudioProcessor& p)
     {
         std::unique_lock lock(p.engineMutex_);
@@ -582,6 +613,38 @@ static void testActualModeProjectOwner(const juce::File& rom = {})
     for (const auto* forbidden : { "revision", "projectRevision", "pending", "ready", "gain" })
         require(!captured.hasProperty(forbidden), "runtime mode ownership is never serialized");
     require(!tree(save(*p)).hasProperty("soundMode"), "legacy pending writer stays legacy");
+
+    // Internal Clean intent capture is an ownership prerequisite, not public
+    // Clean admission. Encode detached A while a newer Classic B replaces it.
+    for (bool threaded : {false, true})
+    {
+        auto waiting = std::make_unique<VDX7AudioProcessor>(false);
+        restore(*waiting, binary(candidate));
+        VDX7RegressionAccess::injectPendingMode(*waiting, Mode::clean);
+        const auto cleanOwner = waiting->getSoundModeProjectSnapshot();
+        juce::MemoryBlock cleanCapture;
+        juce::MemoryBlock newerCapture;
+        runAtSaveBoundary([&] { waiting->getStateInformation(cleanCapture); }, [&] {
+            auto newer = candidate.createCopy();
+            newer.setProperty("midiInputChannel", 9, nullptr);
+            restore(*waiting, binary(newer));
+            newerCapture = save(*waiting);
+        }, threaded);
+        const auto savedClean = tree(cleanCapture);
+        require(savedClean.getProperty("soundMode").toString() == "1"
+            && savedClean.getProperty("midiInputChannel").toString() == "13",
+            "detached pending Clean intent and payload belong to the same retired capture");
+        const auto newerOwner = waiting->getSoundModeProjectSnapshot();
+        require(newerOwner.desired == Mode::classic && newerOwner.pending
+            && newerOwner.revision == cleanOwner.revision + 1
+            && save(*waiting) == newerCapture,
+            "old Clean encoding cannot overwrite newer Classic owner or payload");
+        restore(*waiting, cleanCapture);
+        require(waiting->getSoundModeProjectSnapshot() == newerOwner
+            && save(*waiting) == newerCapture,
+            "internal Clean capture is still rejected by public admission without mutation");
+    }
+    std::cout << "PASS: retired pending Clean capture preserves owner/payload in reentrant and threaded controls\n";
 
     if (rom.existsAsFile())
     {
