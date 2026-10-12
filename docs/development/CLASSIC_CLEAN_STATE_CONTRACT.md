@@ -329,3 +329,16 @@ A régi, megszakított mintakör elhagyása kizárólag e explicit history-disca
 tranzakció része; az élő #176 váltás megőrzi az overshoot mintáit.
 A processor quiescence/reset/restore bekötése és Clean admission még nyitott.
 [Tesztkör és korlátok](../validation/QUIESCENT_SOUND_MODE_INSTALL_20261010.md).
+
+## 13. Sikeres firmware-reload cold install — 2026-10-12
+
+A successful `loadRomImage()` boot/program installation után is explicit
+inaudible boundary. A régi félbemaradt live ramp nem az új firmware induló
+trajektóriája: native/SRC history discard és aktuális intent unity install
+az első teljes új scan előtt. Az EGS-t boot nem rekonstruálja, így tényleges
+fázisát nem reseteljük. Reject előtt nincs mód/rampa/history mutáció.
+Az e load-utat használó Native/Correct policy rebuildre ugyanez érvényes;
+nem általános live váltási API vagy hangszín-/firmware-támogatási bővítés.
+Clean public state/UI még fail-closed; processor/pending további integráció
+és valós host/hallásos elfogadás külön kapu marad.
+[ROM reload bizonyíték](../validation/ROM_RELOAD_SOUND_MODE_20261012.md).
