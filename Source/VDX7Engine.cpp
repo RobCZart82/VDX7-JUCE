@@ -149,7 +149,13 @@ bool VDX7Engine::loadRomImage(const uint8_t* data, std::size_t size,
         selectProgram(0);
     }
 
-    resetAudioState();
+    // Firmware installation is inaudible and retires the previous render
+    // trajectory. Preserve the EGS scan phase (boot does not reconstruct EGS),
+    // but install current intent on the first complete new scan at unity.
+    if (loaded_)
+        installSoundModeWhileQuiescent(nativeSoundMode_.snapshot().desiredClean);
+    else
+        resetAudioState();
     return loaded_;
 }
 
