@@ -848,6 +848,16 @@ static void testActualModeProjectOwner(const juce::File& rom = {})
             require(reopenedClean->getSoundModeProjectSnapshot() == restoredOwner,
                 "ready public Clean owner survives reset/repeated release/reprepare");
             VDX7RegressionAccess::requireSettledClean(*reopenedClean);
+            reopenedClean->releaseResources();
+            const auto beforeReload = reopenedClean->getSoundModeProjectSnapshot();
+            require(reopenedClean->loadRomFromFile(rom)
+                && reopenedClean->getSoundModeProjectSnapshot() == beforeReload,
+                "stopped ready Clean firmware reload preserves mode and project revision");
+            reopenedClean->prepareToPlay(rate, 64);
+            for (int block = 0; block < 32; ++block) reopenedClean->processBlock(audio, midi);
+            require(reopenedClean->getSoundModeProjectSnapshot() == beforeReload,
+                "reloaded Clean audio retains project ownership");
+            VDX7RegressionAccess::requireSettledClean(*reopenedClean);
             cleanWaiting.releaseResources();
             require(cleanWaiting.getSoundModeProjectSnapshot() == readyClean,
                 "stopped release preserves completed internal Clean owner");

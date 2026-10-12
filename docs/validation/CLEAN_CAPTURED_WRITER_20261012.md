@@ -30,6 +30,16 @@ head platform CI passed; this follow-up needs its own CI. NOT RUN this round:
 private ROM, ready/mismatched-ROM lifecycle, Windows/sanitizers, installed DAW
 and listening tests. Earlier reader-closed paragraphs below are historical.
 
+## Stopped Clean firmware reload follow-up (2026-10-12)
+
+Baseline: `9b05fb1a4b9872150127455fac2314c9066a5562`; its Windows/macOS/
+address-undefined CI passed. Added a stopped ready Clean original-v1.8 ROM
+reload control: successful reload preserves desired mode, readiness and project
+revision; reprepare and 32 audio callbacks retain ownership and settle Clean.
+PASS: fresh macOS processor-test build and private snapshot-only run at
+44.1/48/96 kHz. No runtime code change. New-head CI, full lifecycle/policy,
+SETTINGS, listening and release acceptance remain outstanding.
+
 ## Firmware-identity follow-up (2026-10-12)
 
 Baseline: `dcad45d8bb2615a332b3094540d941284fd4cd14`. Public Clean binary

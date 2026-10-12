@@ -99,6 +99,12 @@ restore a már betöltött firmware mellett ready, pontosan egy új revisionnel.
 Friss macOS processor build és privát snapshot-only teszt 44.1/48/96 kHz-en
 PASS. Ez célzott tesztbővítés, nem runtime javítás vagy teljes release-elfogadás.
 
+2026-10-12 stopped ready Clean ROM reload részlépés: original v1.8 újratöltés
+megőrzi a módot/readiness/revisiont; reprepare és 32 audio callback után az
+owner változatlan, Clean settled. Friss macOS processor build és privát
+snapshot-only 44.1/48/96 kHz-en PASS. Az előző `9b05fb1` fej Windows/macOS/
+sanitizer CI-je PASS; az új tesztcommit saját CI-je külön kapu.
+
 Clean→Classic és Classic→Clean public recall, hiányzó/eltérő/megfelelő ROM,
 no-ROM edits, reset/release/prepare/reload és Native/Correct policy, stale és
 reentráns restore/host publication, több példány és kapcsolódó privát
