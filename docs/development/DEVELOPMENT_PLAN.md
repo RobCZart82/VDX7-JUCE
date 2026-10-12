@@ -8,7 +8,11 @@ Ez a dokumentum nem új kiadás publikálási engedélye.
 
 ## Aktuális kiadási állapot és sorrend — 2026-10-12
 
-Ellenőrzött main: `f1ee1fbaf99e0da2de279702d3c1084a20f3b29f` (#184 merge).
+Ellenőrzött main: `45a52e8a8750e5d2d32be47dc364396b368df0c3` (#185 merge).
+Ehhez a pontos SHA-hoz a main
+[Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38223807745) és
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38223807781) CI PASS.
+Ez dátumozott ellenőrzési baseline, nem ígéret a későbbi commitok eredményére.
 Az alábbi státusz és sorrend az irányadó. A későbbi dátumozott checkpointok
 történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott” vagy
 „NOT RUN” nem írja felül ezt a friss státuszt. Régi PASS nem új release PASS.
@@ -25,8 +29,13 @@ történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott
 - [#184](https://github.com/RobCZart82/VDX7-JUCE/pull/184): repeated stopped release
   owner/intent megőrzés, valóban pending reset preconditionnel; beolvadt.
   Final-head `79a4d36c5acc0a5928482689f578c9915fa4469b` Windows/macOS/sanitizer
-  PASS, review lezárt. Merge utáni main Windows/macOS **PENDING** az ellenőrzéskor.
+  PASS, review lezárt. Merge utáni `f1ee1fbaf99e0da2de279702d3c1084a20f3b29f`
+  main [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38220249770) és
+  [macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38220249781) CI PASS.
   [Részletes bizonyíték](../validation/STOPPED_RELEASE_OWNER_20261012.md).
+- [#185](https://github.com/RobCZart82/VDX7-JUCE/pull/185): a fejlesztési terv
+  egységesítése beolvadt; merge utáni main Windows/macOS PASS a fenti SHA-n.
+  Dokumentációs változás, nem teljes D5 vagy új csomag-/host-elfogadás.
 
 ### Hátralévő kiadási munkacsomagok
 
