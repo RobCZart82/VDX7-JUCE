@@ -32,6 +32,13 @@ and listening tests. Earlier reader-closed paragraphs below are historical.
 
 ## SETTINGS and policy integration (2026-10-12)
 
+Owner screenshot follow-up: information row height reduced 24→20 logical pixels;
+64 logical pixels of explicit footer space added after Sound mode, before the
+button row. With 11 information lines this adds about 30 logical pixels to the
+natural dialog height while keeping extra separation below the final combo.
+All custom components are removed/deleted on modal completion. This fixes the
+layout budget, not an assertion of visual acceptance on every display/scale.
+
 Follow-up on `71b4dbc48b5e61bde9aa879092a29274437c2853` (all three platform
 checks PASS): deterministic reentrant and real-thread SETTINGS requests at the
 detached save boundary, Classic→Clean and Clean→Classic. Old save retains its

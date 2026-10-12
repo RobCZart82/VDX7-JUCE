@@ -47,7 +47,7 @@ public:
     }
 
 private:
-    static constexpr int rowHeight = 24;
+    static constexpr int rowHeight = 20;
     juce::StringArray rows_;
 };
 
@@ -1785,6 +1785,12 @@ void VDX7AudioProcessorEditor::showSettings()
     modeCombo->getProperties().set("vdx7SettingsCombo", true);
     modeCombo->setLookAndFeel(&settingsLookAndFeel);
     modeCombo->setSelectedItemIndex(initialMode.desired == VDX7SoundModeState::Mode::clean ? 1 : 0);
+    // AlertWindow anchors buttons at 95% of its height. Reserve explicit footer
+    // space after the final field so buttons cannot touch the Sound mode combo.
+    auto* footerSpace = new juce::Component();
+    footerSpace->setSize(1, 64);
+    footerSpace->setInterceptsMouseClicks(false, false);
+    dialog->addCustomComponent(footerSpace);
     dialog->addButton("Apply", 1, juce::KeyPress(juce::KeyPress::returnKey));
     dialog->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
     dialog->addButton("Bank folder", 2);
@@ -1793,7 +1799,7 @@ void VDX7AudioProcessorEditor::showSettings()
     dialog->enterModalState(true, juce::ModalCallbackFunction::create(
             [safe, dialog, initial, initialChannel, initialCorrection, initialMode](int result)
         {
-            if (dialog->getNumCustomComponents() > 0)
+            while (dialog->getNumCustomComponents() > 0)
                 delete dialog->removeCustomComponent(0);
             if (safe == nullptr) return;
             if (result == 2)
