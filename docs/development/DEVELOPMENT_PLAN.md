@@ -2,15 +2,17 @@
 
 Frissítve: 2026-10-13. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
-A következő kiadás része a D5 Classic/Clean funkció a 2026-10-09-i tulajdonosi
-döntés szerint. A verziószám és a további funkciók pontos köre még nincs rögzítve.
-Ez a dokumentum nem új kiadás publikálási engedélye.
+A következő kiadás tervezett verziócélja v1.2.0 a tulajdonosi kiadási kérés
+szerint; a D5 Classic/Clean funkció kötelező része a 2026-10-09-i tulajdonosi
+döntés szerint. A pontos candidate SHA és a fennmaradó kiadási scope még nincs
+befagyasztva. Ez a terv nem új kiadás publikálási engedélye.
 
 ## Aktuális kiadási állapot és sorrend — 2026-10-13
 
 ### Irányadó lezárási frissítés — 2026-10-13
 
-Ellenőrzött main: `624f68ca01cfa8c6c63c66c650c11c2505e4c99f`.
+Kiinduló ellenőrzött main: `624f68ca01cfa8c6c63c66c650c11c2505e4c99f`
+(#188 merge).
 [#188](https://github.com/RobCZart82/VDX7-JUCE/pull/188) **beolvadt**, nem Draft.
 Final-head `349111fe38acec0bf82ff400c38bf0bb6b9226c7` Windows/macOS/sanitizer
 PASS; merge utáni main Windows/macOS PASS. Ezek automatizált kapuk,
@@ -20,6 +22,19 @@ Final-head futások: [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/r
 [sanitizer](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38306113318).
 Main: [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38307688206),
 [macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38307688230).
+
+**Friss main checkpoint — 2026-10-13:** a #190 audit-backlog dokumentációs PR
+és utána a #189 státuszfrissítő dokumentációs PR beolvadt; a jelenlegi main SHA
+`6280a3ca1ef6ba8e3f193393a12fb3bc3f489651`. A #189 végső PR-fej
+`03c077502e2c558a2c982d091b15493dfa57529f`; Windows
+[#536](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38349856990), macOS
+[#541](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38349856982) és
+sanitizer [#192](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38349857023)
+PASS. A merge utáni main Windows
+[#537](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38354036297) és macOS
+[#542](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38354036221) PASS.
+Ezek a docs-only frissítések nem változtattak runtime-kódon, nem zártak le új
+host- vagy végleges csomagelfogadást, és nem adnak publikálási engedélyt.
 
 **Main-ban elkészült:** validated Clean reader és normal/pending writer;
 legacy Classic formátum és alapértelmezés; közös payload/mode/ROM owner;
@@ -47,10 +62,15 @@ rögzítése, nem bizonyított funkcionális hiba.
 2. Integrációs/mérési lefedettség felülvizsgálata: meglévő PASS nem új feladat;
    csak a ténylegesen hiányzó lifecycle, hosszú stressz, spektrum/headroom/CPU/
    latencia, GUI/host/instance mátrix lezárása. Reprodukált hiba külön javítás.
-3. Verzió és befagyasztott candidate SHA; Windows EXE + Manual Install ZIP,
-   macOS PKG + Manual Install ZIP, megfelelő forrás/notices/manifest/hashes.
-   Installer upgrade/uninstall/payload ellenőrzés, HU/EN README/kézikönyv,
-   unsigned/notarizáció nélküli státusz egyértelmű közlése.
+3. A tervezett v1.2.0 célhoz verzió és befagyasztott candidate SHA; Windows EXE
+   + Manual Install ZIP, macOS PKG + Manual Install ZIP, megfelelő
+   forrás/notices/manifest/hashes. A jelenlegi nem publikáló candidate workflow
+   csak VST3-at és forráscsomagot állít elő, 1.0.1 címkével; a stable előkészítő
+   workflow is 1.0.1-re rögzített. Külön, v1.2.0-s nem publikáló csomagjelölt-
+   út kell, a már kiadott 1.0.1 workflow/approval/asset történetének
+   változatlanul hagyásával. Installer upgrade/uninstall/payload ellenőrzés,
+   HU/EN README/kézikönyv és az unsigned/notarizáció nélküli státusz világos
+   közlése is szükséges.
 4. Exact végleges csomagok és a tesztelt pluginek azonosságának bizonyítása.
    Ha eltérnek, érintett hostteszt újrafuttatás vagy dokumentált döntés.
 5. Acceptance jegyzék, maradó korlátok és külön publikálási engedély.
