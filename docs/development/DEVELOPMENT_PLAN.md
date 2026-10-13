@@ -4,8 +4,9 @@ Frissítve: 2026-10-13. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákh
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás tervezett verziócélja v1.2.0 a tulajdonosi kiadási kérés
 szerint; a D5 Classic/Clean funkció kötelező része a 2026-10-09-i tulajdonosi
-döntés szerint. A pontos candidate SHA és a fennmaradó kiadási scope még nincs
-befagyasztva. Ez a terv nem új kiadás publikálási engedélye.
+döntés szerint. Az első `rc1` csomag-előkészítés pontos forrása a
+`dd8c3633724d0d277e2bd9775e41f60790bb22ce` main commit; ez még nem a stabil
+kiadás elfogadott binárisazonosítója, és nem publikálási engedély.
 
 ## Aktuális kiadási állapot és sorrend — 2026-10-13
 
@@ -23,9 +24,10 @@ Final-head futások: [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/r
 Main: [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38307688206),
 [macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38307688230).
 
-**Friss main checkpoint — 2026-10-13:** a #190 audit-backlog docs PR, a #189
-státuszfrissítés és a #191 release-tervfrissítés beolvadt. A jelenlegi main SHA
-`a7b5a2301bc3a0e668a2e50a21485526a8c6c17b` (#191 merge). A #191 PR végső fején
+**Main checkpoint a #191 után — 2026-10-13 (történeti):** a #190 audit-backlog
+docs PR, a #189 státuszfrissítés és a #191 release-tervfrissítés beolvadt. Az
+akkori main SHA `a7b5a2301bc3a0e668a2e50a21485526a8c6c17b` (#191 merge). A #191
+PR végső fején
 Windows [#539](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38356739680),
 macOS [#544](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38356739891) és
 sanitizer [#194](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38356739756)
@@ -34,24 +36,33 @@ PASS; a merge utáni main Windows
 [#545](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38358212525) is PASS.
 Ezek a PR-ben végzett docs-only változtatás és a main build automatizált kapui;
 nem zárnak le végleges csomag- vagy hostelfogadást, és nem adnak publikálási
-engedélyt.
+engedélyt. Ezt a checkpointot a következő, alább rögzített #192 merge váltotta
+fel.
 
-**v1.2.0 csomag-előkészítő PR #192 — 2026-10-13:**
-[#192](https://github.com/RobCZart82/VDX7-JUCE/pull/192) nyitott, a
-`release/v1.2.0-candidate-packages-20261013` ágról a fenti main SHA-ra céloz.
-Az első PR-fej Windows
-[#541](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38361224446), macOS
-[#542](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38361224438) és
-sanitizer
-[#195](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38361224502)
-ellenőrzése PASS. Az automatikus review egy P2 dokumentációs hibát talált:
-az új 1.2.0 forrásarchívum a régi `NOTICE.md` miatt 1.0.1 fejlesztési címkéket
-közölt volna. A NOTICE most az 1.2.0-dev/rcN címkéket és a még nem engedélyezett
-stabil 1.2.0 publikálást írja le, miközben az 1.0.1 publikációs tényeket
-megőrzi; a csomagoló és verifier is elutasítja a régi azonosságú 1.2.0 NOTICE-t.
-Ehhez a PR-hez új commit és friss CI szükséges. Az első fej zöld eredményei nem
-helyettesítik az új fej ellenőrzéseit. A futások nem blokkoló Node 20 deprecation
-figyelmeztetést is jeleztek a checkout@v4 és upload-artifact@v4 actionökre.
+**v1.2.0 csomag-előkészítő PR #192 — beolvadva, 2026-10-13:**
+[#192](https://github.com/RobCZart82/VDX7-JUCE/pull/192) zöld, friss végső PR-CI
+és feloldott review után beolvadt. A javított végső PR-fej
+[#541](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38363441949) Windows,
+[#542](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38363441948) macOS és
+[#195](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38363441935) sanitizer
+ellenőrzése PASS. A PR a NOTICE kiadási címkéjét 1.2.0-dev/rcN-re igazította,
+megőrizve az 1.0.1 publikációs tényeket; a csomagoló és verifier az elavult
+azonosságot elutasítja. A merge commit és az aktuális main SHA:
+`dd8c3633724d0d277e2bd9775e41f60790bb22ce`.
+
+Az új, csak előkészítő
+[v1.2.0 rc workflow](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38365163349)
+2026-10-13-án `rc1` címkével, a fenti pontos main SHA-n kézzel elindult. Az
+első futás **FAIL** lett: a macOS Universal csomag-job
+[PASS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38365163349/job/115188439327)
+és feltöltött egy platform-előkészítő artifactot; a Windows x64 job
+[FAIL](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38365163349/job/115188439106)
+eredménnyel leállt, mert az Inno Setup a jelölt AppVersion-ből interpolált
+`OutputBaseFileName` értéket érvénytelennek találta. Emiatt az összeállító job
+SKIPPED, nincs teljes négyes csomag-artifact vagy checksum-jegyzék. A futás nem
+kiadási elfogadás. A javítóág az ISCC `/F` kimenetifájlnév-opcióval választja
+szét a termékverziót (`1.2.0`) és a csomag jelölését (`1.2.0-rcN`); ezt friss
+Windows CI-vel és új, pontos main SHA-ról futó jelölttel kell igazolni.
 
 **Main-ban elkészült:** validated Clean reader és normal/pending writer;
 legacy Classic formátum és alapértelmezés; közös payload/mode/ROM owner;
@@ -88,10 +99,15 @@ rögzítése, nem bizonyított funkcionális hiba.
    `contents: read`, nem készít taget vagy GitHub Release-t. A 1.0.1-es
    candidate/stable workflow és jóváhagyási történet külön, változatlan marad.
    A 1.2.0 stable elfogadás/publikálás nincs engedélyezve ebben az útban.
-   A workflow tényleges platformos futása és telepítő artifactja még **NOT RUN**;
-   ezt PR-CI, majd a mainről indított jelöltfuttatás után kell artifact- és
-   telepítő/payload-vizsgálattal lezárni. HU/EN kézikönyv, üzembe helyezési
-   útmutató és az aláírás/notarizáció nélküli státusz világos közlése is kell.
+   Az első `rc1` run FAIL: macOS csomagolás PASS, Windows Inno Setup névképzés
+   FAIL, összesítő job SKIPPED; ezért a négyes artifact NOT AVAILABLE. A javítás
+   után újra kell futtatni a teljes csomagolást az új main SHA-n, új `rcN`
+   címkével. Csak sikeres összesítés után lehet a négy csomagot (Windows Setup
+   EXE + Manual ZIP, macOS Universal PKG + Manual ZIP), a source archive-ot,
+   payloadot, verziót, checksumokat és build/provenance adatokat külön
+   ellenőrizni. A workflow előkészítő artifactokat ad, nem taget vagy GitHub
+   Release-t. HU/EN kézikönyv, üzembe helyezési útmutató és az
+   aláírás/notarizáció nélküli státusz világos közlése is kell.
 4. Exact végleges csomagok és a tesztelt pluginek azonosságának bizonyítása.
    Ha eltérnek, érintett hostteszt újrafuttatás vagy dokumentált döntés.
 5. Acceptance jegyzék, maradó korlátok és külön publikálási engedély.
