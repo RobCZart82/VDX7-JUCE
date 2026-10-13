@@ -5,9 +5,10 @@ Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás tervezett verziócélja v1.2.0; a Classic/Clean funkció
 kötelező része a tulajdonosi döntés szerint.
 
-Legfrissebb ellenőrzött `main`: `df43d0b7da7ec331682691437c661ce7f5f07629` (#195 merge, 2026-10-13 11:06 UTC).
-A következő v1.2.0 csomag-előkészítő futás célja `rc3`, kizárólag ehhez a
-pontos, teljes `main` SHA-hoz kötve. A GitHub Actions utoljára ellenőrzött
+Ellenőrzött történeti baseline: `df43d0b7da7ec331682691437c661ce7f5f07629` (#195 merge, 2026-10-13 11:06 UTC).
+A következő v1.2.0 csomag-előkészítő futás célja `rc3`, a tervfrissítés
+beolvasztása után frissen lekért, zöld `main` teljes SHA-jához kötve.
+A fenti baseline nem újra felhasználandó indítási paraméter. A GitHub Actions utoljára ellenőrzött
 listájában 2026-10-13 11:41 UTC-kor még nem szerepelt `rc3` futás.
 Ez dátumozott állapotkép, nem publikálási engedély; a stable kiadás
 elfogadása és publikálása továbbra is külön döntés.
@@ -41,15 +42,22 @@ SKIPPED, teljes négyes artifact nem keletkezett. Ezt a hibát a #195 javította
 **Következő csomagolási futás.** Az ellenőrzött Actions-listában még nincs
 `rc3` futás (2026-10-13 11:41 UTC állapot). A következő művelet a
 `Prepare v1.2.0 release-candidate packages (no publication)` workflow
-kézi indítása a `main` ágon az alábbi bemenetekkel:
-`source_commit = df43d0b7da7ec331682691437c661ce7f5f07629` és `candidate_label = rc3`.
+kézi indítása a `main` ágon, de csak a tervfrissítés beolvasztása és az
+annak eredményeként létrejött main Windows/macOS ellenőrzéseinek PASS
+eredménye után. Közvetlenül indítás előtt kérd le újra a távoli `main`
+teljes, 40 karakteres SHA-ját: ez legyen a `source_commit`; a
+`candidate_label = rc3`. A konkrét SHA-t és futásazonosítót a futás
+bizonyítékában rögzítsd, ne előre találj ki egy jövőbeli merge SHA-t.
+Ha közben a main változik, az új SHA ellenőrzéseit ismét igazolni kell;
+az exact-source guard elutasítását nem szabad megkerülni.
 A workflow ellenőrzi, hogy a forrás-SHA azonos a futás SHA-jával, és csak
 előkészítő artifactokat gyárt; nem készít taget, GitHub Release-t vagy
 publikus assetet.
 
 ### Aktív teendők a v1.2.0 publikálásáig
 
-1. **RC3 előállítása:** a fenti pontos main SHA-ról indítsd el a workflow-t;
+1. **RC3 előállítása:** a fenti eljárással frissen ellenőrzött, merge utáni
+   main SHA-ról indítsd el a workflow-t;
    várd meg a Windows x64, macOS Universal és összesítő job sikerét.
    Bármely FAIL/SKIPPED esetén nincs elfogadható teljes jelölt: javítsd külön
    ágon, zöld PR-rel integráld, majd új candidate labellel és az új main SHA-val
