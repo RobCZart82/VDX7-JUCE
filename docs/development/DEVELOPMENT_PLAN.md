@@ -60,16 +60,20 @@ Az alábbi október 12-i Draft/kapu státuszok történeti checkpointok; a fenti
 október 13-i lezárás az irányadó, nem párhuzamos fejlesztési feladatlista.
 Csak original DX7 Mk I v1.8 támogatott, firmware nem terjeszthető.
 
-### Történeti konszolidációs baseline — 2026-10-12
+## Történeti konszolidáció és korábbi munkaterv — 2026-10-12
+
+Az e szakasz alatti korábbi státuszok és sorrendek archivált checkpointok,
+nem végrehajtandó feladatlista. Különösen a #188 Draft, a reader/SETTINGS
+hiánya és a régi merge-kapuk már nem aktuálisak. Az egyetlen aktív sorrend
+a fenti „Irányadó lezárási frissítés — 2026-10-13” öt pontja.
 
 Ellenőrzött main: `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187 merge).
 Ehhez a pontos SHA-hoz a main
 [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38237322273) és
 [macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38237322229) CI PASS.
 Ez dátumozott ellenőrzési baseline, nem ígéret a későbbi commitok eredményére.
-Az alábbi státusz és sorrend az irányadó. A későbbi dátumozott checkpointok
-történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott” vagy
-„NOT RUN” nem írja felül ezt a friss státuszt. Régi PASS nem új release PASS.
+A következő státusz és sorrend a 2026-10-12-i történeti állapotot rögzíti,
+nem irányadó mai munkaterv. Régi PASS nem új release PASS.
 
 ### Elkészült, nem újraütemezendő
 
@@ -91,7 +95,7 @@ történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott
   egységesítése beolvadt; az akkori main Windows/macOS PASS.
   Dokumentációs változás, nem teljes D5 vagy új csomag-/host-elfogadás.
 
-### Hátralévő kiadási munkacsomagok
+### Akkori hátralévő kiadási munkacsomagok (történeti)
 
 ### D5 Classic/Clean történeti részletes checkpoint — 2026-10-12
 
