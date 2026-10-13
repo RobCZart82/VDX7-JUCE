@@ -6,11 +6,10 @@ A következő kiadás tervezett verziócélja v1.2.0; a Classic/Clean funkció
 kötelező része a tulajdonosi döntés szerint.
 
 Ellenőrzött történeti baseline: `df43d0b7da7ec331682691437c661ce7f5f07629` (#195 merge, 2026-10-13 11:06 UTC).
-A következő v1.2.0 csomag-előkészítő futás célja `rc3`, a tervfrissítés
-beolvasztása után frissen lekért, zöld `main` teljes SHA-jához kötve.
-A fenti baseline nem újra felhasználandó indítási paraméter. A GitHub Actions utoljára ellenőrzött
-listájában 2026-10-13 11:41 UTC-kor még nem szerepelt `rc3` futás.
-Ez dátumozott állapotkép, nem publikálási engedély; a stable kiadás
+Az `1.2.0-rc3` már elkészült a #196 merge pontos forrásából; a következő
+feladat az alábbi RC3 állapotban rögzített hostelfogadás és dokumentációs kapu,
+nem újabb RC3 indítása. A fenti történeti baseline nem indítási paraméter.
+Ez nem publikálási engedély; a stable kiadás
 elfogadása és publikálása továbbra is külön döntés.
 
 ## Aktuális kiadási állapot és sorrend — 2026-10-13
