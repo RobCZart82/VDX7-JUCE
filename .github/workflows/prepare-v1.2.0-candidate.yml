@@ -165,8 +165,8 @@ jobs:
           if (-not $vst3) { throw "VDX7.vst3 was not found" }
           New-Item -ItemType Directory -Path release-assets | Out-Null
           Compress-Archive -Path $vst3.FullName -DestinationPath "release-assets\VDX7-$env:PACKAGE_LABEL-Windows-x64-Manual.zip"
-          $appVersionMacro = "/DAppVersion=`"$env:PACKAGE_LABEL`""
-          & $env:ISCC "/DPluginBundle=$($vst3.FullName)" $appVersionMacro "/O$((Get-Location).Path)\release-assets" "installer\windows\VDX7.iss"
+          $setupBaseName = "VDX7-$env:PACKAGE_LABEL-Windows-x64-Setup"
+          & $env:ISCC "/DPluginBundle=$($vst3.FullName)" "/O$((Get-Location).Path)\release-assets" "/F$setupBaseName" "installer\windows\VDX7.iss"
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
 
           $setup = Join-Path (Get-Location) "release-assets\VDX7-$env:PACKAGE_LABEL-Windows-x64-Setup.exe"

@@ -32,6 +32,11 @@ class V120CandidateWorkflowTests(unittest.TestCase):
             self.assertIn(token, self.text)
         self.assertIn("VDX7-${{ env.PACKAGE_LABEL }}-Four-Downloads-${{ env.SOURCE_COMMIT }}-PREPARATION", self.text)
 
+    def test_windows_installer_output_name_uses_iscc_filename_override(self):
+        self.assertIn('$setupBaseName = "VDX7-$env:PACKAGE_LABEL-Windows-x64-Setup"', self.text)
+        self.assertIn('"/F$setupBaseName"', self.text)
+        self.assertNotIn("/DAppVersion=", self.text)
+
     def test_both_platforms_build_verify_and_record_unsigned_scope(self):
         for token in ("macos-14", "windows-2022", "-DCMAKE_OSX_ARCHITECTURES=\"arm64;x86_64\"",
                       "-A x64", 'unittest discover -s Tests -p "test_*.py"',
