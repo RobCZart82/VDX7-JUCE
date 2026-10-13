@@ -26,8 +26,8 @@ class StableWorkflowTests(unittest.TestCase):
         cmake = (root / "CMakeLists.txt").read_text()
         installer = (root / "installer/windows/VDX7.iss").read_text()
         candidate = (root / ".github/workflows/release-candidate.yml").read_text()
-        self.assertRegex(cmake, r"project\(VDX7_JUCE\s+VERSION\s+1\.0\.1\s")
-        self.assertIn('#define AppVersion "1.0.1"', installer)
+        self.assertRegex(cmake, r"project\(VDX7_JUCE\s+VERSION\s+1\.2\.0\s")
+        self.assertIn('#define AppVersion "1.2.0"', installer)
         self.assertIn('OutputBaseFilename=VDX7-{#AppVersion}-Windows-x64-Setup', installer)
         self.assertIn('AppId={{9F5E28E9-1D9A-4B25-99CA-1F0B08C6C087}', installer)
         self.assertIn('--version 1.0.1', self.text)
@@ -35,15 +35,19 @@ class StableWorkflowTests(unittest.TestCase):
         self.assertNotIn("1.0.0", self.text)
         self.assertNotIn("1.0.0", candidate)
 
-    def test_active_candidate_and_source_instructions_match_101(self):
+    def test_101_candidate_docs_and_current_notice_identity_stay_distinct(self):
         root = WORKFLOW.parents[2]
         guide = (root / "docs/release/CANDIDATE_README_HU_EN.md").read_text()
         notice = (root / "NOTICE.md").read_text()
         source = (root / "docs/release/SOURCE_PACKAGING_1.0.md").read_text()
-        for text in (guide, notice, source):
+        for text in (guide, source):
             self.assertIn("1.0.1-dev", text)
             self.assertNotIn("1.0.0-dev", text)
             self.assertNotIn("1.0.0-rcN", text)
+        self.assertIn("published 1.0.1 release", notice)
+        self.assertIn("1.2.0-dev", notice)
+        self.assertIn("1.2.0-rcN", notice)
+        self.assertIn("not yet approved or authorized", notice)
         self.assertIn("--package-label 1.0.1-dev", source)
         self.assertEqual(guide.count("1.0.1-rcN"), 2)
 

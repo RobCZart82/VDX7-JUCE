@@ -1,0 +1,267 @@
+name: Prepare v1.2.0 release-candidate packages (no publication)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Full 40-character current main commit SHA (must equal this workflow run's SHA)
+        required: true
+        type: string
+      candidate_label:
+        description: Release-candidate label (rc1, rc2, ...); this only creates validation artifacts
+        required: true
+        type: string
+
+# Candidate packaging only. No tags, GitHub Releases, or asset replacement.
+permissions:
+  contents: read
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            platform: macOS-universal
+          - os: windows-2022
+            platform: Windows-x64
+    runs-on: ${{ matrix.os }}
+    env:
+      SOURCE_COMMIT: ${{ inputs.source_commit }}
+      CANDIDATE_LABEL: ${{ inputs.candidate_label }}
+      PACKAGE_LABEL: 1.2.0-${{ inputs.candidate_label }}
+      INNO_SETUP_VERSION: "6.7.1"
+    steps:
+      - name: Checkout exact candidate source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify main ref, exact source and candidate label
+        shell: bash
+        env:
+          WORKFLOW_COMMIT: ${{ github.sha }}
+          WORKFLOW_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          [[ "$WORKFLOW_REF" == "refs/heads/main" ]]
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$SOURCE_COMMIT" == "$WORKFLOW_COMMIT" ]]
+          [[ "$CANDIDATE_LABEL" =~ ^rc[1-9][0-9]*$ ]]
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$SOURCE_COMMIT"
+          test -z "$(git --no-replace-objects status --porcelain --untracked-files=no)"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test packaging and release guards
+        run: python -m unittest discover -s Tests -p "test_*.py" -v
+
+      - name: Configure macOS Universal candidate
+        if: runner.os == 'macOS'
+        run: >-
+          cmake -S . -B build -G Xcode -DCMAKE_BUILD_TYPE=Release
+          "-DCMAKE_PROJECT_VDX7_JUCE_INCLUDE=${GITHUB_WORKSPACE}/cmake/VDX7DependencySources.cmake"
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          -DVDX7_RELEASE_BUILD=OFF
+          "-DVDX7_RELEASE_CANDIDATE=${CANDIDATE_LABEL}"
+
+      - name: Configure Windows x64 candidate
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+            "-DCMAKE_PROJECT_VDX7_JUCE_INCLUDE=$env:GITHUB_WORKSPACE\cmake\VDX7DependencySources.cmake" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DVDX7_RELEASE_BUILD=OFF `
+            "-DVDX7_RELEASE_CANDIDATE=$env:CANDIDATE_LABEL"
+          if ($LASTEXITCODE -ne 0) { throw "CMake configure failed: $LASTEXITCODE" }
+
+      - name: Build VST3 and ROM-free test targets
+        run: cmake --build build --config Release --parallel 4 --target VDX7_VST3 vdx7_ci_checks
+
+      - name: Run ROM-free tests
+        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error
+
+      - name: Verify macOS Universal binary and prepare PKG plus Manual ZIP
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          vst3="build/VDX7_artefacts/Release/VST3/VDX7.vst3"
+          test -d "$vst3"
+          lipo "$vst3/Contents/MacOS/VDX7" -verify_arch arm64 x86_64
+          codesign --force --deep --sign - "$vst3"
+          codesign --verify --deep --strict "$vst3"
+
+          mkdir -p release-assets "$RUNNER_TEMP/vdx7-pkg-root/Library/Audio/Plug-Ins/VST3"
+          ditto "$vst3" "$RUNNER_TEMP/vdx7-pkg-root/Library/Audio/Plug-Ins/VST3/VDX7.vst3"
+          ditto -c -k --sequesterRsrc --keepParent "$vst3" \
+            "release-assets/VDX7-${PACKAGE_LABEL}-macOS-universal-Manual.zip"
+          pkgbuild \
+            --root "$RUNNER_TEMP/vdx7-pkg-root" \
+            --identifier com.robczart82.vdx7.vst3 \
+            --version 1.2.0 \
+            --install-location / \
+            --ownership recommended \
+            "release-assets/VDX7-${PACKAGE_LABEL}-macOS-universal.pkg"
+
+          pkgutil --payload-files "release-assets/VDX7-${PACKAGE_LABEL}-macOS-universal.pkg" > "$RUNNER_TEMP/vdx7-pkg-payload.txt"
+          grep -Fq "Library/Audio/Plug-Ins/VST3/VDX7.vst3/Contents/Info.plist" "$RUNNER_TEMP/vdx7-pkg-payload.txt"
+          grep -Fq "Library/Audio/Plug-Ins/VST3/VDX7.vst3/Contents/MacOS/VDX7" "$RUNNER_TEMP/vdx7-pkg-payload.txt"
+
+          cat > "release-assets/BUILD-INFO-${{ matrix.platform }}.txt" <<EOF
+          Product: VDX7 Mk1.
+          Candidate: ${PACKAGE_LABEL}
+          Status: PREPARATION ONLY; not accepted or approved for publication.
+          Source commit: ${SOURCE_COMMIT}
+          Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          Platform: macOS Universal (arm64 + x86_64), deployment target macOS 11.0
+          Included format: VST3 only.
+          Installer: unsigned PKG; plugin bundle has an ad-hoc signature only.
+          Not Developer ID signed or notarized; macOS may show a security warning.
+          Firmware: no Yamaha ROM or firmware included.
+          EOF
+          python scripts/write_build_provenance.py \
+            --build build --source . \
+            --juce build/_deps/juce-src --core build/_deps/retromulator-src \
+            --platform macOS-universal --output "$RUNNER_TEMP/vdx7-toolchain.txt"
+          cat "$RUNNER_TEMP/vdx7-toolchain.txt" >> "release-assets/BUILD-INFO-${{ matrix.platform }}.txt"
+
+      - name: Prepare corresponding source archive
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/package_source.py create \
+            --repo . --juce build/_deps/juce-src --core build/_deps/retromulator-src \
+            --commit "$SOURCE_COMMIT" --package-label "$PACKAGE_LABEL" \
+            --output candidate-source
+
+      - name: Install Inno Setup and verify its version
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install innosetup --version=$env:INNO_SETUP_VERSION --yes --no-progress --allow-downgrade
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup installation failed: $LASTEXITCODE" }
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found at $iscc" }
+          $version = python scripts/verify_inno_version.py --inno "$iscc" --expected "$env:INNO_SETUP_VERSION"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup version verification failed: $LASTEXITCODE" }
+          "ISCC=$iscc" >> $env:GITHUB_ENV
+          "ISCC_VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Verify Windows VST3 and prepare Setup EXE plus Manual ZIP
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $vst3 = Get-ChildItem -Path build -Recurse -Directory -Filter "VDX7.vst3" | Select-Object -First 1
+          if (-not $vst3) { throw "VDX7.vst3 was not found" }
+          New-Item -ItemType Directory -Path release-assets | Out-Null
+          Compress-Archive -Path $vst3.FullName -DestinationPath "release-assets\VDX7-$env:PACKAGE_LABEL-Windows-x64-Manual.zip"
+          $appVersionMacro = "/DAppVersion=`"$env:PACKAGE_LABEL`""
+          & $env:ISCC "/DPluginBundle=$($vst3.FullName)" $appVersionMacro "/O$((Get-Location).Path)\release-assets" "installer\windows\VDX7.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
+
+          $setup = Join-Path (Get-Location) "release-assets\VDX7-$env:PACKAGE_LABEL-Windows-x64-Setup.exe"
+          if (-not (Test-Path $setup)) { throw "Setup.exe was not produced" }
+          $installDir = Join-Path $env:ProgramFiles "Common Files\VST3\VDX7.vst3"
+          $install = Start-Process -FilePath $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Installer smoke test failed: $($install.ExitCode)" }
+          if (-not (Test-Path (Join-Path $installDir "Contents\Info.plist"))) {
+            throw "Installed VST3 bundle marker not found at $installDir"
+          }
+          $uninstaller = Join-Path $installDir "unins000.exe"
+          if (-not (Test-Path $uninstaller)) { throw "Installer uninstall executable not found" }
+          $uninstall = Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstaller smoke test failed: $($uninstall.ExitCode)" }
+          if (Test-Path $installDir) { throw "Uninstaller left the VST3 bundle behind" }
+
+          @"
+          Product: VDX7 Mk1.
+          Candidate: $env:PACKAGE_LABEL
+          Status: PREPARATION ONLY; not accepted or approved for publication.
+          Source commit: $env:SOURCE_COMMIT
+          Workflow run: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID
+          Platform: Windows x64
+          Included format: VST3 only.
+          Installer: unsigned Setup.exe; Windows may show an unknown-publisher warning.
+          Firmware: no Yamaha ROM or firmware included.
+          Inno Setup: $env:ISCC_VERSION
+          "@ | Set-Content -Encoding utf8 "release-assets\BUILD-INFO-Windows-x64.txt"
+          $provenance = Join-Path $env:RUNNER_TEMP "vdx7-toolchain.txt"
+          python scripts/write_build_provenance.py `
+            --build build --source . `
+            --juce build/_deps/juce-src --core build/_deps/retromulator-src `
+            --platform Windows-x64 --inno $env:ISCC --inno-version $env:ISCC_VERSION --output $provenance
+          if ($LASTEXITCODE -ne 0) { throw "Build provenance capture failed: $LASTEXITCODE" }
+          Get-Content -LiteralPath $provenance | Add-Content -Encoding utf8 "release-assets\BUILD-INFO-Windows-x64.txt"
+          Copy-Item "candidate-source\*.zip" release-assets
+          Copy-Item "candidate-source\SHA256SUMS.txt" "release-assets\SOURCE-SHA256SUMS.txt"
+
+      - name: Upload platform validation artifact (not a release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: VDX7-${{ env.PACKAGE_LABEL }}-${{ matrix.platform }}-${{ env.SOURCE_COMMIT }}-PREPARATION
+          path: release-assets/*
+          if-no-files-found: error
+
+  assemble-candidate-downloads:
+    needs: package
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_COMMIT: ${{ inputs.source_commit }}
+      PACKAGE_LABEL: 1.2.0-${{ inputs.candidate_label }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Download both platform preparation artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: VDX7-${{ env.PACKAGE_LABEL }}-*-${{ env.SOURCE_COMMIT }}-PREPARATION
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify exact four candidate downloads and source evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in \
+            "VDX7-${PACKAGE_LABEL}-Windows-x64-Setup.exe" \
+            "VDX7-${PACKAGE_LABEL}-Windows-x64-Manual.zip" \
+            "VDX7-${PACKAGE_LABEL}-macOS-universal.pkg" \
+            "VDX7-${PACKAGE_LABEL}-macOS-universal-Manual.zip" \
+            "VDX7-${PACKAGE_LABEL}-${SOURCE_COMMIT}-corresponding-source.zip" \
+            "SOURCE-SHA256SUMS.txt" \
+            "BUILD-INFO-Windows-x64.txt" \
+            "BUILD-INFO-macOS-universal.txt"; do
+            test -f "release-assets/$name"
+          done
+          (cd release-assets && sha256sum -c SOURCE-SHA256SUMS.txt)
+          python scripts/write_sha256_manifest.py \
+            --output release-assets/SHA256SUMS.txt \
+            "release-assets/VDX7-${PACKAGE_LABEL}-Windows-x64-Setup.exe" \
+            "release-assets/VDX7-${PACKAGE_LABEL}-Windows-x64-Manual.zip" \
+            "release-assets/VDX7-${PACKAGE_LABEL}-macOS-universal.pkg" \
+            "release-assets/VDX7-${PACKAGE_LABEL}-macOS-universal-Manual.zip" \
+            "release-assets/VDX7-${PACKAGE_LABEL}-${SOURCE_COMMIT}-corresponding-source.zip" \
+            release-assets/SOURCE-SHA256SUMS.txt \
+            release-assets/BUILD-INFO-Windows-x64.txt \
+            release-assets/BUILD-INFO-macOS-universal.txt
+          (cd release-assets && sha256sum -c SHA256SUMS.txt)
+
+      - name: Upload combined candidate artifact (not a release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: VDX7-${{ env.PACKAGE_LABEL }}-Four-Downloads-${{ env.SOURCE_COMMIT }}-PREPARATION
+          path: release-assets/*
+          if-no-files-found: error

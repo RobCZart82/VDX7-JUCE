@@ -10,7 +10,11 @@ REQUIRED = (
 
 
 def files():
-    return {name: (b"// synthetic source/notice fixture\n", 0o644) for name in REQUIRED}
+    payload = {name: (b"// synthetic source/notice fixture\n", 0o644) for name in REQUIRED}
+    payload["NOTICE.md"] = (
+        b"Current 1.2.0 source packages use `1.2.0-dev` or `1.2.0-rcN`; "
+        b"stable 1.2.0 publication is not yet approved or authorized.\n", 0o644)
+    return payload
 
 
 def entries(payload):
