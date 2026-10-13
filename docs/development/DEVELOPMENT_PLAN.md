@@ -261,7 +261,7 @@ Csak original DX7 Mk I v1.8 támogatott, firmware nem terjeszthető.
 Az e szakasz alatti korábbi státuszok és sorrendek archivált checkpointok,
 nem végrehajtandó feladatlista. Különösen a #188 Draft, a reader/SETTINGS
 hiánya és a régi merge-kapuk már nem aktuálisak. Az egyetlen aktív sorrend
-a fenti „Irányadó lezárási frissítés — 2026-10-13” öt pontja.
+a fenti „Aktív teendők a v1.2.0 publikálásáig” szakasz öt pontja.
 
 Ellenőrzött main: `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187 merge).
 Ehhez a pontos SHA-hoz a main
