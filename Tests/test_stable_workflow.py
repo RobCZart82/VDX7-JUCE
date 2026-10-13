@@ -35,15 +35,19 @@ class StableWorkflowTests(unittest.TestCase):
         self.assertNotIn("1.0.0", self.text)
         self.assertNotIn("1.0.0", candidate)
 
-    def test_active_candidate_and_source_instructions_match_101(self):
+    def test_101_candidate_docs_and_current_notice_identity_stay_distinct(self):
         root = WORKFLOW.parents[2]
         guide = (root / "docs/release/CANDIDATE_README_HU_EN.md").read_text()
         notice = (root / "NOTICE.md").read_text()
         source = (root / "docs/release/SOURCE_PACKAGING_1.0.md").read_text()
-        for text in (guide, notice, source):
+        for text in (guide, source):
             self.assertIn("1.0.1-dev", text)
             self.assertNotIn("1.0.0-dev", text)
             self.assertNotIn("1.0.0-rcN", text)
+        self.assertIn("published 1.0.1 release", notice)
+        self.assertIn("1.2.0-dev", notice)
+        self.assertIn("1.2.0-rcN", notice)
+        self.assertIn("not yet approved or authorized", notice)
         self.assertIn("--package-label 1.0.1-dev", source)
         self.assertEqual(guide.count("1.0.1-rcN"), 2)
 

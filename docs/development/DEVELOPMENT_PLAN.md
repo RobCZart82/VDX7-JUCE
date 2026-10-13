@@ -36,6 +36,23 @@ Ezek a PR-ben végzett docs-only változtatás és a main build automatizált ka
 nem zárnak le végleges csomag- vagy hostelfogadást, és nem adnak publikálási
 engedélyt.
 
+**v1.2.0 csomag-előkészítő PR #192 — 2026-10-13:**
+[#192](https://github.com/RobCZart82/VDX7-JUCE/pull/192) nyitott, a
+`release/v1.2.0-candidate-packages-20261013` ágról a fenti main SHA-ra céloz.
+Az első PR-fej Windows
+[#541](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38361224446), macOS
+[#542](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38361224438) és
+sanitizer
+[#195](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38361224502)
+ellenőrzése PASS. Az automatikus review egy P2 dokumentációs hibát talált:
+az új 1.2.0 forrásarchívum a régi `NOTICE.md` miatt 1.0.1 fejlesztési címkéket
+közölt volna. A NOTICE most az 1.2.0-dev/rcN címkéket és a még nem engedélyezett
+stabil 1.2.0 publikálást írja le, miközben az 1.0.1 publikációs tényeket
+megőrzi; a csomagoló és verifier is elutasítja a régi azonosságú 1.2.0 NOTICE-t.
+Ehhez a PR-hez új commit és friss CI szükséges. Az első fej zöld eredményei nem
+helyettesítik az új fej ellenőrzéseit. A futások nem blokkoló Node 20 deprecation
+figyelmeztetést is jeleztek a checkout@v4 és upload-artifact@v4 actionökre.
+
 **Main-ban elkészült:** validated Clean reader és normal/pending writer;
 legacy Classic formátum és alapértelmezés; közös payload/mode/ROM owner;
 SETTINGS Classic/Clean Apply/Cancel, Native/Correct függetlenség;
@@ -80,14 +97,15 @@ rögzítése, nem bizonyított funkcionális hiba.
 5. Acceptance jegyzék, maradó korlátok és külön publikálási engedély.
 
 **Fejlesztési ág helyi ellenőrzése — 2026-10-13:** a forráscsomag céltesztek
-18/18, az új workflow statikus szerződéstesztjei 4/4, a megőrzött 1.0.1
-stable-workflow tesztek 12/12 PASS; `git diff --check` PASS. A teljes Python
-csomag 100 tesztjéből 97 PASS, 2 SKIP és 1 FAIL: a sandbox `WinError 5` miatt
-nem engedte a hardlink létrehozását a checksum negatív tesztjében. Ez környezeti
-korlátozás, de helyi FAIL-ként marad jelölve. Helyi CMake/fordítás **NOT RUN**
-(CMake nem érhető el); külön YAML parserrel való ellenőrzés **NOT RUN**
-(PyYAML nincs telepítve). A platform build, a workflow végrehajtás és a
-csomag-artifactok PASS-a ezért még csak GitHub CI-ből igazolható.
+19/19, az új workflow statikus szerződéstesztjei 4/4, a megőrzött 1.0.1
+stable-workflow tesztek 12/12 PASS; `git diff --check` PASS. A teljes Python-csomag
+101 tesztjéből 98 PASS, 2 SKIP, 1 ERROR. Az egyetlen ERROR a checksum negatív
+teszt hardlink létrehozásánál kapott sandbox `WinError 5`; ez környezeti
+korlátozás, nem alkalmazáskód-hiba. A 2 SKIP jogosultság-/CMake-függő. Helyi
+CMake/fordítás **NOT RUN** (CMake nem érhető el); külön YAML parserrel való
+ellenőrzés **NOT RUN** (PyYAML nincs telepítve). A platform build, a workflow
+végrehajtás és a csomag-artifactok PASS-a ezért még csak GitHub CI-ből
+igazolható.
 
 A v1.2.0 verziócél rögzített, de nincs kiadás/tag/asset létrehozva, a stable
 csomag elfogadása és publikálási engedélye továbbra sincs megadva.

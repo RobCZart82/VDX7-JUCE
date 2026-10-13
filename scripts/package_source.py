@@ -70,6 +70,16 @@ def validate_source_version(cmake, installer, label):
         raise ValueError(f"Source project and installer versions must both match {expected}")
 
 
+def validate_notice_identity(notice, label):
+    # The 1.2.0 source archive carries its user-facing package identity in the
+    # notice too; a correct ZIP manifest must not disguise stale 1.0.1 guidance.
+    if label.startswith("1.2.0"):
+        required = ("Current 1.2.0 source packages", "`1.2.0-dev`", "`1.2.0-rcN`",
+                    "not yet approved or authorized")
+        if not all(item in notice for item in required):
+            raise ValueError("NOTICE.md does not describe the current 1.2.0 package identity")
+
+
 def strict_json_object(pairs):
     result = {}
     for key, value in pairs:
@@ -253,6 +263,7 @@ def package(repo, juce, core, sha, output, package_label="1.2.0-dev",
     cmake = files["CMakeLists.txt"][0].decode()
     validate_source_version(cmake, files.get("installer/windows/VDX7.iss", (b"", 0))[0].decode(),
                             package_label)
+    validate_notice_identity(files.get("NOTICE.md", (b"", 0))[0].decode(), package_label)
     if JUCE_SHA not in cmake or CORE_SHA not in cmake:
         raise ValueError("Source dependency pins changed; review/update the packager")
     for name, (data, _) in files.items():
@@ -383,6 +394,7 @@ def verify(archive_path):
         if label.startswith("1.2.0"):
             validate_source_version(archive.read("CMakeLists.txt").decode(),
                                     archive.read("installer/windows/VDX7.iss").decode(), label)
+            validate_notice_identity(archive.read("NOTICE.md").decode(), label)
         for entry in entries:
             data = archive.read(entry["path"])
             inspect_payload(entry["path"], data, upstream=entry["path"].startswith("third_party/"))

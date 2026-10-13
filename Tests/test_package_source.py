@@ -79,6 +79,12 @@ class SourcePackageTests(unittest.TestCase):
             '#ifndef AppVersion\n  #define AppVersion "1.2.0"\n#endif\n',
             "1.2.0-rc1")
 
+    def test_120_notice_requires_current_candidate_identity(self):
+        notice = (Path(__file__).parents[1] / "NOTICE.md").read_text(encoding="utf-8")
+        p.validate_notice_identity(notice, "1.2.0-rc1")
+        with self.assertRaisesRegex(ValueError, "does not describe the current 1.2.0"):
+            p.validate_notice_identity("1.0.1 development sources; use 1.0.1-rcN", "1.2.0-rc1")
+
     def test_supported_labels_and_negative_controls(self):
         for version in ("1.0.0", "1.0.1", "1.2.0"):
             for suffix in ("", "-dev", "-rc1", "-rc12"):

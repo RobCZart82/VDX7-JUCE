@@ -1,10 +1,15 @@
 # Licensing and attribution / Licenc és köszönet
 
-VDX7-JUCE 1.0.1 development sources use the free-software combined-work route
-under GNU AGPL version 3, without warranty. The project owner authorised the
-AGPLv3 publication route. Wrapper contributions and original GUI resources
-are offered under AGPL-3.0-only; see LICENSE.txt. Development artifacts are not
-accepted stable releases; this update does not change upstream license terms.
+VDX7-JUCE 1.2.0 development and release-candidate sources use the free-software
+combined-work route under GNU AGPL version 3, without warranty. The project
+owner authorised the AGPLv3 publication route. Wrapper contributions and
+original GUI resources are offered under AGPL-3.0-only; see LICENSE.txt.
+Development artifacts are not accepted stable releases; this update does not
+change upstream license terms.
+
+Current 1.2.0 source packages use the exact `1.2.0-dev` or `1.2.0-rcN` label.
+Stable `1.2.0` publication is not yet approved or authorized; do not describe a
+candidate or preparation archive as a published stable release.
 
 Existing upstream components retain their own notices and licenses:
 
@@ -19,14 +24,15 @@ Existing upstream components retain their own notices and licenses:
 - VST3 SDK and other JUCE dependencies retain the licenses stated in their
   included source files. No commercial JUCE license is claimed.
 
-For each development candidate, prepare matching complete source as
-VDX7-<version-label>-<full-source-SHA>-corresponding-source.zip, with the exact
-1.0.1-dev, 1.0.1-rcN or stable 1.0.1 label used by that build. Its embedded
-SOURCE_MANIFEST.json identifies the exact source and dependency revisions and
-hashes the payload files; SHA256SUMS.txt hashes the ZIP. Publication must not
-proceed without durable public access to matching source. The planned 1.0.1
-uses a separate v1.0.1-source GitHub release linked from the main release notes;
-the four binary user downloads remain separate.
+The published 1.0.1 release used a separate v1.0.1-source GitHub release linked
+from the main release notes; its four binary user downloads remain separate.
+For each current 1.2.0 development candidate, prepare matching complete source
+as `VDX7-<version-label>-<full-source-SHA>-corresponding-source.zip`, using the
+exact `1.2.0-dev` or `1.2.0-rcN` label used by that build. Its embedded
+`SOURCE_MANIFEST.json` identifies the exact source and dependency revisions and
+hashes the payload files; `SHA256SUMS.txt` hashes the ZIP. A future stable
+publication must not proceed without durable public access to matching source
+and separate stable-release approval.
 The source package includes the wrapper, GUI resources, build scripts, exact JUCE sources
 and the portable dx7Lib source subset used by the build. See
 docs/guides/SOURCE_DEPENDENCIES.md for pinned revisions and offline build instructions.
@@ -38,8 +44,12 @@ are included. Yamaha/DX7 names describe compatibility, not endorsement.
 External firmware is supplied separately by the user and is not licensed
 by this project.
 
-Magyar összefoglaló: a kiadás AGPLv3 szerinti szabad szoftver, garancia nélkül.
+Magyar összefoglaló: a jelenlegi 1.2.0 fejlesztési és kiadásjelölt-források
+AGPLv3 szerinti szabad szoftverek, garancia nélkül. A címke `1.2.0-dev` vagy
+`1.2.0-rcN`; a stabil 1.2.0 kiadás még nincs jóváhagyva vagy engedélyezve.
 A felhasznált komponensek eredeti licence és szerzői közlései megmaradnak.
 A DX7-mag önállóan GPLv3-or-later, a JUCE ebben a kiadásban AGPLv3.
-A teljes fordításhoz szükséges forrás külön, a bináris mellett tölthető le.
+A már publikált 1.0.1 külön forrásarchívumot és négy külön bináris letöltést
+használ. Egy jövőbeli stabil kiadáshoz a megfelelő teljes forrásarchívumot is
+nyilvánosan elérhetővé kell tenni.
 Yamaha firmware és gyári ROM-adat nem része a csomagnak.
