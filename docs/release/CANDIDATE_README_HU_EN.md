@@ -1,4 +1,32 @@
-# 1.0.1 development candidate / fejlesztői jelölt
+# Candidate guidance / Jelölt-útmutató
+
+## Current v1.2.0 scope / Aktuális v1.2.0 kör
+
+The current candidate is `1.2.0-rc3`, not an accepted or published stable release.
+Only original Yamaha DX7 Mk I v1.8 firmware is officially supported; SER7/Special
+Edition and other firmware versions are not officially supported. Firmware is
+not supplied. Windows x64 Setup EXE + Manual ZIP and macOS Universal PKG +
+Manual ZIP contain VST3 only, not AU/Standalone. Both Manual ZIPs include the
+matching source archive and its checksum under `Source/`. Windows installer is
+unsigned; macOS PKG is not Developer ID signed/notarized (plugin ad-hoc only).
+See [package evidence](../validation/RC3_PACKAGE_VERIFICATION_20261013.md),
+[download policy](PUBLIC_DOWNLOADS.md) and the [active plan](../development/DEVELOPMENT_PLAN.md).
+Exact RC3 host acceptance remains open; earlier build tests do not close it.
+
+Az aktuális jelölt `1.2.0-rc3`, nem elfogadott vagy publikált stabil kiadás.
+Hivatalosan kizárólag az eredeti Yamaha DX7 Mk I v1.8 firmware támogatott;
+SER7/Special Edition és más firmware-verzió nem támogatott hivatalosan.
+Firmware nincs mellékelve. A Windows x64 EXE + Manual ZIP és macOS Universal
+PKG + Manual ZIP csak VST3-at tartalmaz, AU/Standalone-t nem. Mindkét Manual ZIP
+`Source/` mappájában szerepel az azonos forrásarchívum és ellenőrzőösszege.
+A Windows telepítő aláíratlan; a macOS PKG nem Developer ID-aláírt/notarizált
+(a plugin csak ad-hoc aláírt). A fenti bizonyíték, letöltési szabály és aktív
+terv az irányadó. Az exact RC3 hostelfogadás nyitott; korábbi teszt nem zárja le.
+
+## Historical 1.0.1 preparation / Történeti 1.0.1 előkészítés
+
+The text below is historical, not current firmware policy or release tasks.
+Az alábbi szöveg történeti, nem aktuális firmware-szabály vagy feladatlista.
 
 > **2026-10-05 publication checkpoint:** [1.0.1 is published](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1), with [matching source](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source).
 > Az 1.0.1 megjelent. [Current acceptance, owner-authorized deferrals and publication record](../validation/VALIDATION_20261005_PUBLICATION_101.md) supersede earlier open publication gates below. Earlier candidate/test statements are retained as dated preparation history, not current release status.
@@ -25,7 +53,7 @@ Follow [the English guide](../guides/GUIDE_EN.md) for installation and ROM layou
 Back up projects, the USER library and the existing plugin before choosing to
 install a candidate. Build/package validation itself does not install anything.
 No Yamaha firmware or factory bank is supplied. The local complete test suite
-requires a private combined 48 KB v1.8 fixture; product ROM support is broader.
+requires a private combined 48 KB v1.8 fixture; current official support is v1.8 only.
 There is one persistent 32-slot USER bank, not a named-bank library manager.
 
 Earlier 1.0.0 owner reports do not accept this 1.0.1 candidate.
