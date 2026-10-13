@@ -2,15 +2,93 @@
 
 Frissítve: 2026-10-13. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
-A következő kiadás tervezett verziócélja v1.2.0 a tulajdonosi kiadási kérés
-szerint; a D5 Classic/Clean funkció kötelező része a 2026-10-09-i tulajdonosi
-döntés szerint. Az első `rc1` csomag-előkészítés pontos forrása a
-`dd8c3633724d0d277e2bd9775e41f60790bb22ce` main commit; ez még nem a stabil
-kiadás elfogadott binárisazonosítója, és nem publikálási engedély.
+A következő kiadás tervezett verziócélja v1.2.0; a Classic/Clean funkció
+kötelező része a tulajdonosi döntés szerint.
 
+Legfrissebb ellenőrzött `main`: `df43d0b7da7ec331682691437c661ce7f5f07629` (#195 merge, 2026-10-13 11:06 UTC).
+A következő v1.2.0 csomag-előkészítő futás célja `rc3`, kizárólag ehhez a
+pontos, teljes `main` SHA-hoz kötve. A GitHub Actions utoljára ellenőrzött
+listájában 2026-10-13 11:41 UTC-kor még nem szerepelt `rc3` futás.
+Ez dátumozott állapotkép, nem publikálási engedély; a stable kiadás
+elfogadása és publikálása továbbra is külön döntés.
 ## Aktuális kiadási állapot és sorrend — 2026-10-13
 
-### Irányadó lezárási frissítés — 2026-10-13
+### Irányadó állapot a #195 merge után — 2026-10-13
+
+**Baseline és ellenőrzések.** A #195 beolvadt `df43d0b7da7ec331682691437c661ce7f5f07629` merge SHA-val.
+PR-fej: `83b841515d916059f5bd16b473e5852d9435ae6a`. A javítás a Manual ZIP
+VST3-struktúrájának platformfüggő ellenőrzését és a Windows telepítő smoke
+metadata-/x64-binary ellenőrzését javította. Az RC2 hibája csomag-ellenőrzési
+hiba volt; önmagában nem bizonyít VDX7 audio- vagy firmware-hibát.
+
+PR #195 ellenőrzései **PASS**: [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38386233858),
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38386233986),
+[sanitizer](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38386233927).
+Merge utáni `main` buildjei **PASS**: [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38387898171),
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38387898207).
+A PR-fejen végzett célzott helyi tesztek **14/14 PASS**, `git diff --check`
+**PASS**. A teljes helyi Python tesztcsomag **NOT RUN**: a sandbox temp
+műveletet tiltott (`WinError 5`); a zöld PR CI a platformos build- és
+tesztkapukat igazolja. Ezek az eredmények nem helyettesítik az RC3
+artifactok felülvizsgálatát vagy az új csomaggal végzett host-elfogadást.
+
+**RC2 tanulsága.** A `38379912636` futás a `50513f7ade7552c365a7762ef506ae2d3a219c39`
+mainen **FAIL** lett: macOS csomagolás PASS, Windows verifier FAIL, mert
+macOS-os `Info.plist` jelölőt követelt a Windows VST3-tól; az összesítő
+SKIPPED, teljes négyes artifact nem keletkezett. Ezt a hibát a #195 javította.
+
+**Következő csomagolási futás.** Az ellenőrzött Actions-listában még nincs
+`rc3` futás (2026-10-13 11:41 UTC állapot). A következő művelet a
+`Prepare v1.2.0 release-candidate packages (no publication)` workflow
+kézi indítása a `main` ágon az alábbi bemenetekkel:
+`source_commit = df43d0b7da7ec331682691437c661ce7f5f07629` és `candidate_label = rc3`.
+A workflow ellenőrzi, hogy a forrás-SHA azonos a futás SHA-jával, és csak
+előkészítő artifactokat gyárt; nem készít taget, GitHub Release-t vagy
+publikus assetet.
+
+### Aktív teendők a v1.2.0 publikálásáig
+
+1. **RC3 előállítása:** a fenti pontos main SHA-ról indítsd el a workflow-t;
+   várd meg a Windows x64, macOS Universal és összesítő job sikerét.
+   Bármely FAIL/SKIPPED esetén nincs elfogadható teljes jelölt: javítsd külön
+   ágon, zöld PR-rel integráld, majd új candidate labellel és az új main SHA-val
+   indítsd újra.
+2. **Négy artifact ellenőrzése:** Windows Setup EXE + Manual ZIP, macOS
+   Universal PKG + Manual ZIP; mindkét platform `BUILD-INFO`, SHA-256 jegyzék,
+   verzió, plugin payload és source-provenance egyezzen. A megfelelő, azonos
+   main SHA-hoz tartozó source archive és saját checksumja mindkét Manual ZIP
+   `Source/` könyvtárában legyen; külön ötödik source download nincs.
+   Yamaha ROM/firmware egyik artifactba sem kerülhet.
+3. **Exact build elfogadása:** rögzítsd a Windows/macOS-on kipróbált plugin
+   pontos SHA-256-át, a telepítő/csomag nevét és SHA-256-át, OS/REAPER
+   verziót, architektúrát, teszteseteket és eredményeket. A korábbi
+   tulajdonosi Windows/macOS teszt **OWNER-REPORTED PASS** marad, de amíg
+   nincs bizonyítva, hogy ugyanaz a bináris van az RC3 csomagban, az nem
+   zárja le az RC3 elfogadását. Eltérés esetén a végleges csomaggal kell
+   lefuttatni az érintett hostteszteket, vagy tételesen dokumentálni a
+   tulajdonos által elfogadott halasztást.
+4. **Felhasználói dokumentáció végellenőrzése:** HU/EN kézikönyv és telepítési
+   útmutató feleljen meg a tényleges négy csomagnak; legyen egyértelmű az
+   aláíratlan Windows EXE és a Developer ID aláírás/notarizáció nélküli PKG
+   miatti biztonsági figyelmeztetés/betöltési akadály. Csak az eredeti
+   DX7 Mk I v1.8 firmware támogatott; firmware/ROM nem terjeszthető.
+5. **Kiadási döntés:** zárd le az acceptance jegyzéket, ismert korlátokat,
+   platformeredményeket és minden halasztást. Ezután kérj külön, kifejezett
+   publikálási jóváhagyást; csak azután készülhet stable tag/release és
+   végleges assetfeltöltés. E dokumentumfrissítés és a zöld CI nem ilyen
+   jóváhagyás.
+
+**Classic/Clean állapot:** a funkció fejlesztése és integrációja mainba került;
+nem új implementáció a mostani aktív feladat. A kiadási kapu a pontos RC3
+csomaggal való azonosság és a valós hostelfogadás.
+
+### Korábbi, felülírt checkpointok — történeti bizonyíték
+
+Az alábbi 2026-10-13-i státuszleírások a #195 merge előtti munkaszakaszokat
+őrzik meg. Az ottani `13/13`, „fix készül” és „RC3 majd a merge után”
+állítások történeti pillanatképek; a fenti #195 utáni állapot az irányadó.
+
+### Korábbi irányadó checkpoint — 2026-10-13 (a #195 előtti állapot)
 
 Kiinduló ellenőrzött main: `624f68ca01cfa8c6c63c66c650c11c2505e4c99f`
 (#188 merge).
@@ -111,7 +189,7 @@ buildazonosító, hash, OS/host verzió és tételes tesztlista még nincs rögz
 Nem állítjuk, hogy a felhasználó nem tesztelt; a hiány az evidence/provenance
 rögzítése, nem bizonyított funkcionális hiba.
 
-**Következő aktív sorrend:**
+**Az akkori tervezett sorrend (történeti; felülírva a fenti #195 utáni tervvel):**
 
 1. A Windows/macOS owner acceptance összekötése az exact tesztelt builddel és
    tesztlistával; hiányzó tételek eredménye vagy kifejezett tételes halasztás.
