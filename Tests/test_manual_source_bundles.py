@@ -21,18 +21,24 @@ class ManualSourceBundleTests(unittest.TestCase):
         self.temp.cleanup()
 
     def write_manual_zip(self, filename, source_bytes=SOURCE_BYTES, source_name=SOURCE_NAME,
-                         checksum=None, include_plugin=True):
+                         checksum=None, include_plugin=True, platform="macos",
+                         include_windows_binary=True):
         path = self.root / filename
         digest = checksum or hashlib.sha256(source_bytes).hexdigest()
         with zipfile.ZipFile(path, "w") as archive:
             if include_plugin:
-                archive.writestr("VDX7.vst3/Contents/Info.plist", b"plugin marker")
+                if platform == "windows":
+                    archive.writestr("VDX7.vst3/Contents/Resources/moduleinfo.json", b"{}")
+                    if include_windows_binary:
+                        archive.writestr("VDX7.vst3/Contents/x86_64-win/VDX7.vst3", b"plugin binary")
+                else:
+                    archive.writestr("VDX7.vst3/Contents/Info.plist", b"plugin marker")
             archive.writestr(f"Source/{source_name}", source_bytes)
             archive.writestr("Source/SHA256SUMS.txt", f"{digest}  {source_name}\n")
         return path
 
     def test_matching_source_is_verified_in_both_manual_archives(self):
-        windows = self.write_manual_zip("windows.zip")
+        windows = self.write_manual_zip("windows.zip", platform="windows")
         macos = self.write_manual_zip("macos.zip")
 
         digest = verify_manual_source_bundles([windows, macos], SOURCE_NAME)
@@ -54,6 +60,14 @@ class ManualSourceBundleTests(unittest.TestCase):
 
     def test_rejects_missing_plugin_or_source_bundle(self):
         manual = self.write_manual_zip("missing-plugin.zip", include_plugin=False)
+
+        with self.assertRaisesRegex(ValueError, "VST3 bundle marker"):
+            verify_manual_source_bundles([manual], SOURCE_NAME)
+
+    def test_rejects_windows_bundle_without_platform_binary(self):
+        manual = self.write_manual_zip(
+            "windows-missing-binary.zip", platform="windows", include_windows_binary=False
+        )
 
         with self.assertRaisesRegex(ValueError, "VST3 bundle marker"):
             verify_manual_source_bundles([manual], SOURCE_NAME)

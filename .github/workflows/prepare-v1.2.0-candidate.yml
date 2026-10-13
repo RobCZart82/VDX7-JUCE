@@ -195,8 +195,11 @@ jobs:
           $installDir = Join-Path $env:ProgramFiles "Common Files\VST3\VDX7.vst3"
           $install = Start-Process -FilePath $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait -PassThru
           if ($install.ExitCode -ne 0) { throw "Installer smoke test failed: $($install.ExitCode)" }
-          if (-not (Test-Path (Join-Path $installDir "Contents\Info.plist"))) {
-            throw "Installed VST3 bundle marker not found at $installDir"
+          $installedModuleInfo = Join-Path $installDir "Contents\Resources\moduleinfo.json"
+          $installedVst3Binary = Join-Path $installDir "Contents\x86_64-win\VDX7.vst3"
+          if (-not (Test-Path $installedModuleInfo -PathType Leaf) -or
+              -not (Test-Path $installedVst3Binary -PathType Leaf)) {
+            throw "Installed Windows VST3 metadata or platform binary missing at $installDir"
           }
           $uninstaller = Join-Path $installDir "unins000.exe"
           if (-not (Test-Path $uninstaller)) { throw "Installer uninstall executable not found" }
