@@ -14,6 +14,19 @@ elfogadása és publikálása továbbra is külön döntés.
 
 ## Aktuális kiadási állapot és sorrend — 2026-10-13
 
+### Végleges verziójú csomagok előkészítése — tulajdonosi döntés
+
+A tulajdonos végleges `1.2.0` csomagokat kért, nem az RC3 előzetes publikálását.
+A csomagoló workflow `package_kind=final` módja RC-suffix nélküli verziót
+fordít és négy `VDX7-1.2.0-*` csomagot készít. A forrás továbbra is a futáskor
+aktuális, zöld main teljes SHA-ja; a `candidate_label` mező ehhez a módhoz
+kötelező, de csak legacy bemenet, nem a végleges csomagazonosító része.
+A default `candidate` mód változatlan. Mindkét mód csak előkészítés:
+nincs tag, release vagy publikálás, és a forráscsomag elfogadási jelzője false.
+Az új végleges bináris nem azonos az RC3-mal; checksum/provenance és exact
+hostellenőrzés szükséges. A korábbi RC3 eredmények történeti bizonyítékok,
+nem automatikus elfogadás vagy nem végzett tesztek halasztásának jóváhagyása.
+
 ### RC3 elkészült — irányadó frissítés
 
 Az `1.2.0-rc3` csomagolás **PASS**, pontos forrása

@@ -11,6 +11,14 @@ on:
         description: Release-candidate label (rc1, rc2, ...); this only creates validation artifacts
         required: true
         type: string
+      package_kind:
+        description: Candidate (default) or final-version validation packages; neither publishes
+        required: true
+        default: candidate
+        type: choice
+        options:
+          - candidate
+          - final
 
 # Candidate packaging only. No tags, GitHub Releases, or asset replacement.
 permissions:
@@ -45,12 +53,21 @@ jobs:
         env:
           WORKFLOW_COMMIT: ${{ github.sha }}
           WORKFLOW_REF: ${{ github.ref }}
+          PACKAGE_KIND: ${{ inputs.package_kind || 'candidate' }}
         run: |
           set -euo pipefail
           [[ "$WORKFLOW_REF" == "refs/heads/main" ]]
           [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           [[ "$SOURCE_COMMIT" == "$WORKFLOW_COMMIT" ]]
           [[ "$CANDIDATE_LABEL" =~ ^rc[1-9][0-9]*$ ]]
+          case "$PACKAGE_KIND" in
+            candidate) echo "CONFIGURE_CANDIDATE=$CANDIDATE_LABEL" >> "$GITHUB_ENV" ;;
+            final)
+              echo 'PACKAGE_LABEL=1.2.0' >> "$GITHUB_ENV"
+              echo 'CONFIGURE_CANDIDATE=' >> "$GITHUB_ENV"
+              ;;
+            *) echo 'Unsupported package kind' >&2; exit 1 ;;
+          esac
           test "$(git --no-replace-objects rev-parse HEAD)" = "$SOURCE_COMMIT"
           test -z "$(git --no-replace-objects status --porcelain --untracked-files=no)"
 
@@ -70,6 +87,8 @@ jobs:
           -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
           -DVDX7_RELEASE_BUILD=OFF
           "-DVDX7_RELEASE_CANDIDATE=${CANDIDATE_LABEL}"
+          "-DVDX7_RELEASE_BUILD=${{ inputs.package_kind == 'final' && 'ON' || 'OFF' }}"
+          "-DVDX7_RELEASE_CANDIDATE=${CONFIGURE_CANDIDATE}"
 
       - name: Configure Windows x64 candidate
         if: runner.os == 'Windows'
@@ -80,6 +99,10 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release `
             -DVDX7_RELEASE_BUILD=OFF `
             "-DVDX7_RELEASE_CANDIDATE=$env:CANDIDATE_LABEL"
+          if ('${{ inputs.package_kind }}' -eq 'final') {
+            cmake -S . -B build -DVDX7_RELEASE_BUILD=ON -DVDX7_RELEASE_CANDIDATE=
+            if ($LASTEXITCODE -ne 0) { throw "Final configure failed: $LASTEXITCODE" }
+          }
           if ($LASTEXITCODE -ne 0) { throw "CMake configure failed: $LASTEXITCODE" }
 
       - name: Build VST3 and ROM-free test targets
@@ -246,6 +269,10 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+
+      - name: Resolve final-version assembly label
+        if: inputs.package_kind == 'final'
+        run: echo 'PACKAGE_LABEL=1.2.0' >> "$GITHUB_ENV"
 
       - name: Download both platform preparation artifacts
         uses: actions/download-artifact@v4
