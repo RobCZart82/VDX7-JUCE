@@ -15,6 +15,25 @@ elfogadása és publikálása továbbra is külön döntés.
 
 ## Aktuális kiadási állapot és sorrend — 2026-10-13
 
+### RC3 elkészült — irányadó frissítés
+
+Az `1.2.0-rc3` csomagolás **PASS**, pontos forrása
+`581b1ea50355754f324c8ebf5381eecfb257dc82` (#196 merge).
+[Futás 38436119848](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38436119848):
+Windows x64, macOS Universal és összesítő job PASS. A négy csomag és két
+BUILD-INFO helyi SHA-256 ellenőrzése PASS; a két Manual ZIP azonos,
+ellenőrzött forrásarchívumot tartalmaz. Részletes hash-ek és ellenőrzési kör:
+[RC3 csomagellenőrzés](../validation/RC3_PACKAGE_VERIFICATION_20261013.md).
+
+Az alábbi korábbi RC3-indítási leírás dátumozott történeti eljárás, nem új
+indítási feladat. Az aktív ötlépéses listában az 1. és 2. pont RC3-ra
+teljesült. Hátra van a 3. exact-build Windows/macOS hostelfogadás, a 4.
+HU/EN dokumentáció végellenőrzése és az 5. külön publikálási döntés.
+Az RC3 plugin hash-e eltér a telepített, korábban tesztelt pluginétól;
+a korábbi REAPER tesztek nem minősülnek exact RC3 elfogadásnak.
+Ez a dokumentációs frissítés nem változtatja meg az RC3 rögzített forrását.
+Új csomagbuild esetén új candidate/source azonosító és ellenőrzés szükséges.
+
 ### Irányadó állapot a #195 merge után — 2026-10-13
 
 **Baseline és ellenőrzések.** A #195 beolvadt `df43d0b7da7ec331682691437c661ce7f5f07629` merge SHA-val.
