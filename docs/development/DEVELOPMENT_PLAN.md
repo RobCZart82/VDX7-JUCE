@@ -1594,6 +1594,66 @@ nyitottak; az önálló owner nem kész Clean funkció.
 
 ## Teszt és karakterizálási backlog
 
+### Külső auditötletek mérlegelt átvétele — 2026-10-13
+
+A két tulajdonosi jelentésből átvett ötletek **nem bizonyított hibák**, nem
+új automatikus release-blockerek. Meglévő T2/T5 és kiadási kapuk kiegészítései;
+a már lefedett tesztet nem kell újra megvalósítani. Új reprodukált hiba viszont
+külön javítási PR és regresszió alapja. E bejegyzés docs-only, nincs új mérési
+PASS, sanitizer-konfiguráció vagy runtime-változtatás.
+
+**Kiadás előtti célzott ellenőrzések:**
+
+- A1 / T5: `processBlock()` közvetett hívásláncának RT-auditja: blokkoló
+  várakozás, fájl-I/O, allokáció/deallokáció, korlátlan munka és contention
+  recovery. Meglévő allocation/stressz/try-lock tesztek leltára előbb;
+  hiányzó esethez determinisztikus kontroll. A `try_lock` nem várakozó lock;
+  minden lock lecserélése nem feladat. Rögzítendő SHA, útvonal, esetszám és
+  PASS/FAIL/NOT RUN, a stresszteszt környezetével együtt.
+- A2 / T2: valódi processor restore + host-automatizáció/reentráns publication
+  együtt: paraméterek és captured payload megőrzése, stale callback/kérés,
+  új projekt felülírásának kizárása. Meglévő capture/owner/SETTINGS kontrollok
+  alapján csak lefedettségi réshez új teszt; host callback szám/sorrend csak
+  konkrét szerződés mellett elvárás, nem általános „pontosan egyszer” ígéret.
+- A3 / release gate: exact installer/manual payload és corresponding source
+  SHA/manifest/hash/dependency/notices azonossága. Nem általános jogi minősítés;
+  meglévő csomagverifier és friss jelölt bizonyítéka. A tesztelt plugin és a
+  végleges csomag eltérése külön acceptance döntést igényel.
+
+**Későbbi, külön mérlegelendő karbantartás:**
+
+- A4: tényleges mutex/owner használatból levezetett ownership és lock-order
+  dokumentum. Audio try-lock, engine-owner és lockon kívüli host notification
+  határok; self-locking és already-locked API-k megkülönböztetése. Nem találomra
+  előírt engine→metadata sorrend. Debug tracker csak mérlegelt külön PR-ban,
+  RT-terhelés és új szinkronizáció nélkül.
+- A5: célzott clang-tidy/Clang Static Analyzer/cppcheck vizsgálat saját kódra,
+  támogatott generatorral előállított compilation database és tényleges pinelt
+  forrás alapján. C++20/JUCE makrók és harmadik fél zaj kezelése; találat nem
+  automatikus hiba. Nem vezetünk be általános warning-as-error kaput előzetes
+  zajfelmérés nélkül.
+- A6: TSan kompatibilitási próba külön támogatott környezetben, ROM-free
+  deterministic threaded kontrollokkal; privát firmware kizárólag helyben.
+  A jelenlegi ASan/UBSan workflow nem TSan. A jelentés `SANITIZE=Thread/Address`
+  kapcsolóit nem tekintjük létező projektszerződésnek: instrumentálás és
+  pozitív/negatív detektálási kontroll igazolandó. TSan nem RT-hangminőségteszt.
+- A7: CPU/cache/false-sharing profilozás reprezentatív MIDI és több példány
+  alatt. Padding/align/atomic változtatás csak mért bottleneck és kontroll
+  alapján. Nagy fájlok modulbontása külön későbbi refaktor, nem release előtti
+  pusztán esztétikai átírás; viselkedést megőrző tesztek szükségesek.
+
+**Nem átvett „javítások”:** a dx7Lib `DX7(ToSynth*&, ToGui*&)` konstruktor
+pointerváltozó-referenciákat tárol, üres konstruktorral; a wrapper adaptereit
+utána beállítja. A jelentés nullpointer-másolás állítása nem igazolódott, a
+`dx7_(&appToSynth_, &nullToGui_)` csere nem illik az API-hoz. APVTS
+`replaceState()` nem új parameter-layout létrehozása; nyers paraméterpointerek
+`shared_ptr`-re cseréje nem indokolt bizonyított lifetime hiba nélkül.
+`Init Prese` a DX7 tízkarakteres hangszínnév felismerése, nem javítandó elírás.
+
+Eredményvezetés: A1–A3 az aktuális kiadási evidence-hez kapcsolódik; A4–A7
+csak külön haszon/kockázat döntéssel lesz végrehajtandó munka. Egyik sem
+helyettesíti a felhasználói host-elfogadást vagy a publikálási engedélyt.
+
 Az alábbiak nem bizonyított hibák. Az 1.0.1-nél elfogadott halasztás nem PASS, és nem automatikus felmentés minden jövőbeli jelöltre.
 
 - T1: teljes 44.1/48/96 kHz és 64/128/256/512/1024 buffer mátrix; valós idejű/offline 1x/teljes sebességű render azonos kezdőállapottal, hash/null-difference/első eltérés/peak/RMS/silent-block mérés (régi F7).
