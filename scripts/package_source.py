@@ -24,7 +24,8 @@ REQUIRED_SOURCE_FILES = frozenset((
 ))
 APPROVAL_PATH = "docs/release/RELEASE_APPROVAL.json"
 APPROVED_GIT_REF = "refs/heads/main"
-SUPPORTED_LABEL = r"1\.0\.[01](?:-dev|-rc[1-9][0-9]*)?"
+SUPPORTED_LABEL = r"(?:1\.0\.[01]|1\.2\.0)(?:-dev|-rc[1-9][0-9]*)?"
+LEGACY_ACCEPTED_LABELS = frozenset(("1.0.0", "1.0.1"))
 APPROVED_WORKFLOW_REF = (
     "RobCZart82/VDX7-JUCE/.github/workflows/prepare-stable-package.yml@" + APPROVED_GIT_REF)
 
@@ -50,20 +51,23 @@ def package_identity(label, accepted):
     if type(accepted) is not bool:
         raise ValueError("Release acceptance must be a boolean")
     if not isinstance(label, str) or not re.fullmatch(SUPPORTED_LABEL, label):
-        raise ValueError("Package label must be 1.0.0 or 1.0.1, optionally followed by -dev or -rcN")
+        raise ValueError("Package label must be 1.0.0, 1.0.1 or 1.2.0, optionally followed by -dev or -rcN")
     if accepted and "-" in label:
         raise ValueError("Only a stable source package may be accepted for publication")
+    if accepted and label not in LEGACY_ACCEPTED_LABELS:
+        raise ValueError("Publication acceptance is limited to the committed legacy 1.0.x approval workflow")
 
 
 def validate_source_version(cmake, installer, label):
-    # Keep historical 1.0.0 verification/fixtures compatible. New 1.0.1
-    # creation must not relabel an old product or use an old installer version.
-    if label.split("-", 1)[0] != "1.0.1":
+    # Keep historical 1.0.0 verification/fixtures compatible. Current 1.0.1
+    # and 1.2.0 packages must not relabel another product/installer version.
+    expected = label.split("-", 1)[0]
+    if expected == "1.0.0":
         return
     project = re.search(r"project\(VDX7_JUCE\s+VERSION\s+(\d+\.\d+\.\d+)\s", cmake)
-    app = re.search(r'^#define AppVersion "([^"]+)"$', installer, re.MULTILINE)
-    if project is None or app is None or project[1] != "1.0.1" or app[1] != "1.0.1":
-        raise ValueError("Source project and installer versions must both match 1.0.1")
+    app = re.search(r'^[ \t]*#define AppVersion "([^"]+)"$', installer, re.MULTILINE)
+    if project is None or app is None or project[1] != expected or app[1] != expected:
+        raise ValueError(f"Source project and installer versions must both match {expected}")
 
 
 def strict_json_object(pairs):
@@ -88,7 +92,7 @@ def release_authorization(repo, approval_commit, source_commit, package_label,
     package_identity(package_label, accepted)
     full_commit(repo, approval_commit, "Approval commit")
     full_commit(repo, source_commit, "Source commit")
-    if package_label.startswith("1.0.1"):
+    if package_label.startswith(("1.0.1", "1.2.0")):
         try:
             validate_source_version(
                 git(repo, "show", source_commit + ":CMakeLists.txt").decode(),
@@ -231,7 +235,7 @@ def write_zip(destination, files, manifest):
             archive.writestr(item, data)
 
 
-def package(repo, juce, core, sha, output, package_label="1.0.1-dev",
+def package(repo, juce, core, sha, output, package_label="1.2.0-dev",
             accepted_for_publication=False, packager_commit=None, approval_repo=None,
             approval_commit=None, workflow_ref=None, workflow_git_ref=None):
     package_identity(package_label, accepted_for_publication)
@@ -337,6 +341,7 @@ def verify(archive_path):
                 or (kind in ("development-corresponding-source", "release-candidate-corresponding-source")
                     and accepted is not False)
                 or (accepted is True and not re.fullmatch(r"[0-9a-f]{40}", packager_commit or ""))
+                or (accepted is True and label not in LEGACY_ACCEPTED_LABELS)
                 or (packager_commit is not None and not re.fullmatch(r"[0-9a-f]{40}", packager_commit))
                 or kind is None
                 or manifest.get("kind") != kind
@@ -368,11 +373,16 @@ def verify(archive_path):
         required = set(REQUIRED_SOURCE_FILES)
         # Historical 1.0.0 packages may predate the separate bundled checker.
         # Current packages require both generated files, never only one half.
-        if label.startswith("1.0.1") or VERIFIER in expected or PACKAGE_README in expected:
+        if label.startswith(("1.0.1", "1.2.0")) or VERIFIER in expected or PACKAGE_README in expected:
             required.update((VERIFIER, PACKAGE_README))
+        if label.startswith("1.2.0"):
+            required.add("installer/windows/VDX7.iss")
         missing = required - set(expected)
         if missing:
             raise ValueError("Required source/notice/tooling missing: " + ", ".join(sorted(missing)))
+        if label.startswith("1.2.0"):
+            validate_source_version(archive.read("CMakeLists.txt").decode(),
+                                    archive.read("installer/windows/VDX7.iss").decode(), label)
         for entry in entries:
             data = archive.read(entry["path"])
             inspect_payload(entry["path"], data, upstream=entry["path"].startswith("third_party/"))
@@ -396,8 +406,8 @@ if __name__ == "__main__":
     for option in ("repo", "juce", "core", "output"):
         create.add_argument("--" + option, type=Path, required=True)
     create.add_argument("--commit", required=True)
-    create.add_argument("--package-label", default="1.0.1-dev",
-                        help="1.0.0 or 1.0.1, optionally followed by -dev or -rcN")
+    create.add_argument("--package-label", default="1.2.0-dev",
+                        help="1.0.0, 1.0.1 or 1.2.0, optionally followed by -dev or -rcN")
     create.add_argument("--release-accepted", action="store_true",
                         help="mark a reviewed stable source package accepted for publication")
     create.add_argument("--packager-commit",

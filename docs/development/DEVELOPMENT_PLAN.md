@@ -23,18 +23,18 @@ Final-head futások: [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/r
 Main: [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38307688206),
 [macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38307688230).
 
-**Friss main checkpoint — 2026-10-13:** a #190 audit-backlog dokumentációs PR
-és utána a #189 státuszfrissítő dokumentációs PR beolvadt; a jelenlegi main SHA
-`6280a3ca1ef6ba8e3f193393a12fb3bc3f489651`. A #189 végső PR-fej
-`03c077502e2c558a2c982d091b15493dfa57529f`; Windows
-[#536](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38349856990), macOS
-[#541](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38349856982) és
-sanitizer [#192](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38349857023)
-PASS. A merge utáni main Windows
-[#537](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38354036297) és macOS
-[#542](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38354036221) PASS.
-Ezek a docs-only frissítések nem változtattak runtime-kódon, nem zártak le új
-host- vagy végleges csomagelfogadást, és nem adnak publikálási engedélyt.
+**Friss main checkpoint — 2026-10-13:** a #190 audit-backlog docs PR, a #189
+státuszfrissítés és a #191 release-tervfrissítés beolvadt. A jelenlegi main SHA
+`a7b5a2301bc3a0e668a2e50a21485526a8c6c17b` (#191 merge). A #191 PR végső fején
+Windows [#539](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38356739680),
+macOS [#544](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38356739891) és
+sanitizer [#194](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38356739756)
+PASS; a merge utáni main Windows
+[#540](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38358212520) és macOS
+[#545](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38358212525) is PASS.
+Ezek a PR-ben végzett docs-only változtatás és a main build automatizált kapui;
+nem zárnak le végleges csomag- vagy hostelfogadást, és nem adnak publikálási
+engedélyt.
 
 **Main-ban elkészült:** validated Clean reader és normal/pending writer;
 legacy Classic formátum és alapértelmezés; közös payload/mode/ROM owner;
@@ -62,20 +62,35 @@ rögzítése, nem bizonyított funkcionális hiba.
 2. Integrációs/mérési lefedettség felülvizsgálata: meglévő PASS nem új feladat;
    csak a ténylegesen hiányzó lifecycle, hosszú stressz, spektrum/headroom/CPU/
    latencia, GUI/host/instance mátrix lezárása. Reprodukált hiba külön javítás.
-3. A tervezett v1.2.0 célhoz verzió és befagyasztott candidate SHA; Windows EXE
-   + Manual Install ZIP, macOS PKG + Manual Install ZIP, megfelelő
-   forrás/notices/manifest/hashes. A jelenlegi nem publikáló candidate workflow
-   csak VST3-at és forráscsomagot állít elő, 1.0.1 címkével; a stable előkészítő
-   workflow is 1.0.1-re rögzített. Külön, v1.2.0-s nem publikáló csomagjelölt-
-   út kell, a már kiadott 1.0.1 workflow/approval/asset történetének
-   változatlanul hagyásával. Installer upgrade/uninstall/payload ellenőrzés,
-   HU/EN README/kézikönyv és az unsigned/notarizáció nélküli státusz világos
-   közlése is szükséges.
+3. A tervezett v1.2.0 cél verziója `CMakeLists.txt`-ben és a Windows telepítő
+   alapértelmezésében 1.2.0-ra állt. A külön
+   `.github/workflows/prepare-v1.2.0-candidate.yml` workflow `rcN` jelöltből
+   Windows Setup EXE + Manual ZIP, macOS Universal PKG + Manual ZIP, valamint
+   pontos SHA-hoz kötött forráscsomagot, build-információt és checksumokat
+   készít elő. Csak `main`-ről, azonos, teljes commit SHA-val futtatható;
+   `contents: read`, nem készít taget vagy GitHub Release-t. A 1.0.1-es
+   candidate/stable workflow és jóváhagyási történet külön, változatlan marad.
+   A 1.2.0 stable elfogadás/publikálás nincs engedélyezve ebben az útban.
+   A workflow tényleges platformos futása és telepítő artifactja még **NOT RUN**;
+   ezt PR-CI, majd a mainről indított jelöltfuttatás után kell artifact- és
+   telepítő/payload-vizsgálattal lezárni. HU/EN kézikönyv, üzembe helyezési
+   útmutató és az aláírás/notarizáció nélküli státusz világos közlése is kell.
 4. Exact végleges csomagok és a tesztelt pluginek azonosságának bizonyítása.
    Ha eltérnek, érintett hostteszt újrafuttatás vagy dokumentált döntés.
 5. Acceptance jegyzék, maradó korlátok és külön publikálási engedély.
 
-Nincs új kiadási verzió vagy publikálási engedély ebben a docs-frissítésben.
+**Fejlesztési ág helyi ellenőrzése — 2026-10-13:** a forráscsomag céltesztek
+18/18, az új workflow statikus szerződéstesztjei 4/4, a megőrzött 1.0.1
+stable-workflow tesztek 12/12 PASS; `git diff --check` PASS. A teljes Python
+csomag 100 tesztjéből 97 PASS, 2 SKIP és 1 FAIL: a sandbox `WinError 5` miatt
+nem engedte a hardlink létrehozását a checksum negatív tesztjében. Ez környezeti
+korlátozás, de helyi FAIL-ként marad jelölve. Helyi CMake/fordítás **NOT RUN**
+(CMake nem érhető el); külön YAML parserrel való ellenőrzés **NOT RUN**
+(PyYAML nincs telepítve). A platform build, a workflow végrehajtás és a
+csomag-artifactok PASS-a ezért még csak GitHub CI-ből igazolható.
+
+A v1.2.0 verziócél rögzített, de nincs kiadás/tag/asset létrehozva, a stable
+csomag elfogadása és publikálási engedélye továbbra sincs megadva.
 Az alábbi október 12-i Draft/kapu státuszok történeti checkpointok; a fenti
 október 13-i lezárás az irányadó, nem párhuzamos fejlesztési feladatlista.
 Csak original DX7 Mk I v1.8 támogatott, firmware nem terjeszthető.

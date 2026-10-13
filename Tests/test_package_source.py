@@ -64,15 +64,35 @@ class SourcePackageTests(unittest.TestCase):
                 p.package("repo", "juce", "core", "a" * 40, output)
             self.assertFalse(output.exists())
 
+    def test_120_creation_rejects_version_mismatch_before_output(self):
+        files = {"CMakeLists.txt": (b"project(VDX7_JUCE VERSION 1.2.0 LANGUAGES C CXX)\n", 0o644),
+                 "installer/windows/VDX7.iss": (b'  #define AppVersion "1.0.1"\n', 0o644)}
+        with tempfile.TemporaryDirectory() as folder, patch.object(p, "snapshot", return_value=files):
+            output = Path(folder) / "rejected"
+            with self.assertRaisesRegex(ValueError, "versions must both match 1.2.0"):
+                p.package("repo", "juce", "core", "a" * 40, output, "1.2.0-rc1")
+            self.assertFalse(output.exists())
+
+    def test_120_candidate_metadata_accepts_matching_project_and_indented_installer_version(self):
+        p.validate_source_version(
+            "project(VDX7_JUCE VERSION 1.2.0 LANGUAGES C CXX)\n",
+            '#ifndef AppVersion\n  #define AppVersion "1.2.0"\n#endif\n',
+            "1.2.0-rc1")
+
     def test_supported_labels_and_negative_controls(self):
-        for version in ("1.0.0", "1.0.1"):
+        for version in ("1.0.0", "1.0.1", "1.2.0"):
             for suffix in ("", "-dev", "-rc1", "-rc12"):
                 p.package_identity(version + suffix, False)
-            p.package_identity(version, True)
+            if version in p.LEGACY_ACCEPTED_LABELS:
+                p.package_identity(version, True)
+            else:
+                with self.assertRaisesRegex(ValueError, "limited to the committed legacy"):
+                    p.package_identity(version, True)
             for suffix in ("-dev", "-rc1"):
                 with self.assertRaises(ValueError):
                     p.package_identity(version + suffix, True)
-        for label in ("1.0.2", "1.0.1-rc0", "1.0.1-rc01", "1.0.1\n", "../1.0.1", None):
+        for label in ("1.0.2", "1.2.1", "1.2.0-rc0", "1.2.0-rc01",
+                      "1.0.1-rc0", "1.0.1-rc01", "1.0.1\n", "../1.0.1", None):
             with self.assertRaises(ValueError):
                 p.package_identity(label, False)
 
@@ -116,7 +136,10 @@ class SourcePackageTests(unittest.TestCase):
 
     def fixture(self):
         data = b"example source\n"
-        payload = {**fixture.files(), "Source/example.cpp": (data, 0o644)}
+        payload = {**fixture.files(),
+                   "CMakeLists.txt": (b"project(VDX7_JUCE VERSION 1.2.0 LANGUAGES C CXX)\n", 0o644),
+                   "installer/windows/VDX7.iss": (b'  #define AppVersion "1.2.0"\n', 0o644),
+                   "Source/example.cpp": (data, 0o644)}
         return payload, {
             "schema": 1, "kind": "development-corresponding-source",
             "package_label": "1.0.0-dev", "source_commit": "a" * 40,
@@ -216,6 +239,9 @@ class SourcePackageTests(unittest.TestCase):
             "1.0.1-dev": "development-corresponding-source",
             "1.0.1-rc2": "release-candidate-corresponding-source",
             "1.0.1": "stable-release-preparation-corresponding-source",
+            "1.2.0-dev": "development-corresponding-source",
+            "1.2.0-rc2": "release-candidate-corresponding-source",
+            "1.2.0": "stable-release-preparation-corresponding-source",
         }
         with tempfile.TemporaryDirectory() as folder:
             for index, (label, kind) in enumerate(labels.items()):
@@ -246,6 +272,14 @@ class SourcePackageTests(unittest.TestCase):
             path = Path(folder) / "accepted-rc.zip"
             p.write_zip(path, files, manifest)
             with self.assertRaises(ValueError):
+                p.verify(path)
+
+        manifest["package_label"] = "1.2.0"
+        manifest["kind"] = "stable-release-corresponding-source"
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "unapproved-120.zip"
+            p.write_zip(path, files, manifest)
+            with self.assertRaisesRegex(ValueError, "package identity"):
                 p.verify(path)
 
     def test_snapshot_ignores_dirty_and_untracked_files(self):

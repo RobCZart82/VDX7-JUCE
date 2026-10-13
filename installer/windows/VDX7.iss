@@ -1,5 +1,7 @@
 #define AppName "VDX7 Mk1."
-#define AppVersion "1.0.1"
+#ifndef AppVersion
+  #define AppVersion "1.2.0"
+#endif
 #ifndef PluginBundle
   #error "Pass /DPluginBundle=<absolute path to VDX7.vst3>"
 #endif
