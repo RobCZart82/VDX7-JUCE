@@ -11,6 +11,7 @@ pontos, teljes `main` SHA-hoz kötve. A GitHub Actions utoljára ellenőrzött
 listájában 2026-10-13 11:41 UTC-kor még nem szerepelt `rc3` futás.
 Ez dátumozott állapotkép, nem publikálási engedély; a stable kiadás
 elfogadása és publikálása továbbra is külön döntés.
+
 ## Aktuális kiadási állapot és sorrend — 2026-10-13
 
 ### Irányadó állapot a #195 merge után — 2026-10-13
