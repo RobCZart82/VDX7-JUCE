@@ -48,6 +48,17 @@ class V120CandidateWorkflowTests(unittest.TestCase):
         self.assertIn('"/F$setupBaseName"', self.text)
         self.assertNotIn("/DAppVersion=", self.text)
 
+    def test_windows_installer_smoke_checks_windows_metadata_and_binary(self):
+        self.assertIn(
+            '$installedModuleInfo = Join-Path $installDir "Contents\\Resources\\moduleinfo.json"',
+            self.text,
+        )
+        self.assertIn(
+            '$installedVst3Binary = Join-Path $installDir "Contents\\x86_64-win\\VDX7.vst3"',
+            self.text,
+        )
+        self.assertNotIn('Join-Path $installDir "Contents\\Info.plist"', self.text)
+
     def test_both_platforms_build_verify_and_record_unsigned_scope(self):
         for token in ("macos-14", "windows-2022", "-DCMAKE_OSX_ARCHITECTURES=\"arm64;x86_64\"",
                       "-A x64", 'unittest discover -s Tests -p "test_*.py"',

@@ -1,4 +1,4 @@
-"""Verify that each manual-install ZIP carries the exact matching source ZIP."""
+"""Verify matching source content and platform-specific VST3 markers in Manual ZIPs."""
 import argparse
 import hashlib
 from pathlib import Path
@@ -23,8 +23,21 @@ def verify_manual_source_bundles(manual_archives, source_name):
             if any(name.startswith("/") or ":" in name.split("/")[0]
                    or ".." in name.split("/") for name in names):
                 raise ValueError(f"Unsafe ZIP member path in {manual_path}")
-            if "VDX7.vst3/Contents/Info.plist" not in names:
-                raise ValueError(f"VST3 bundle marker missing from {manual_path}")
+            has_macos_bundle_marker = "VDX7.vst3/Contents/Info.plist" in names
+            has_windows_bundle_markers = (
+                "VDX7.vst3/Contents/Resources/moduleinfo.json" in names
+                and "VDX7.vst3/Contents/x86_64-win/VDX7.vst3" in names
+            )
+            if manual_path.name.endswith("-Windows-x64-Manual.zip"):
+                has_expected_bundle = has_windows_bundle_markers
+            elif manual_path.name.endswith("-macOS-universal-Manual.zip"):
+                has_expected_bundle = has_macos_bundle_marker
+            else:
+                raise ValueError(
+                    f"Manual ZIP filename does not identify a supported platform: {manual_path}"
+                )
+            if not has_expected_bundle:
+                raise ValueError(f"Platform-specific VST3 bundle marker missing from {manual_path}")
 
             source_member = f"Source/{source_name}"
             sums_member = "Source/SHA256SUMS.txt"

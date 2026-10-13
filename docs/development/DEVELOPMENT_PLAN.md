@@ -71,14 +71,26 @@ letöltéses felállás megtartása mellett kérte, hogy a forrás ne legyen kü
 ötödik letöltés. A pontos, SHA-hoz kötött corresponding-source ZIP és a saját
 `SHA256SUMS.txt` fájl mindkét Manual Install ZIP `Source/` mappájába kerüljön;
 az EXE és PKG telepítők maradjanak plugin-only. Az 1.0.1-hez megjelent külön
-forrás-release történeti tény, nem módosul. Ennek megvalósítása a
-`fix/v1.2.0-source-in-manual-zips-20261013` ágon folyamatban van: mindkét
-platform külön előállítja a rögzített dependencykkel a forrásarchívumot, a
-kézi telepítési csomagba ágyazza, majd a verifikátor ellenőrzi a pluginjelölőt,
-a belső forrás-hashot és azt, hogy a két platform ZIP-je azonos forrást hordoz.
-Külön ötödik source asset nem kerül az összesítő artifact gyökerébe. A branch
-ellenőrzése és PR/CI **még folyamatban van**; RC2-t csak a friss, beolvadt main
-pontos SHA-járól szabad indítani.
+forrás-release történeti tény, nem módosul. A megvalósító
+[#194 PR](https://github.com/RobCZart82/VDX7-JUCE/pull/194) beolvadt, final-head
+Windows/macOS/sanitizer CI-je PASS; merge utáni `main` SHA:
+`50513f7ade7552c365a7762ef506ae2d3a219c39`. A #194 azonos, ellenőrzött
+forrásarchívumot ágyaz be mindkét Manual ZIP-be, és nem tesz külön ötödik
+source assetet az artifact gyökerébe.
+
+A teljes `rc2` csomagolási futás
+[#2](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38379912636) ezen a
+pontos main SHA-n **FAIL**: macOS job PASS, a Windows job a közös forráscsomag-
+verifikátorban bukott, mert az kizárólag macOS `Info.plist` jelölőt várt. A
+Windows VST3 tényleges formátuma a CI buildlog szerint
+`Contents/Resources/moduleinfo.json` és
+`Contents/x86_64-win/VDX7.vst3`; ezért a Windows Manual ZIP teljes volt, de a
+hibásan platformfüggetlen verifier elutasította. Az összesítő job SKIPPED,
+teljes négyes RC2 artifact **NOT AVAILABLE**. A hiba javítása a
+`fix/rc2-platform-vst3-markers-20261013` ágon készül; az ellenőrző platformonkénti
+VST3-jelölőt kér, a Windows telepítő smoke pedig metadata és platform-binary
+meglétét vizsgálja. A javítás helyi regressziós tesztjei 13/13 PASS és
+`git diff --check` PASS; PR-CI és friss, összesített RC-futás még szükséges.
 
 **Main-ban elkészült:** validated Clean reader és normal/pending writer;
 legacy Classic formátum és alapértelmezés; közös payload/mode/ROM owner;
@@ -115,10 +127,12 @@ rögzítése, nem bizonyított funkcionális hiba.
    `contents: read`, nem készít taget vagy GitHub Release-t. A 1.0.1-es
    candidate/stable workflow és jóváhagyási történet külön, változatlan marad.
    A 1.2.0 stable elfogadás/publikálás nincs engedélyezve ebben az útban.
-   Az első `rc1` run FAIL: macOS csomagolás PASS, Windows Inno Setup névképzés
-   FAIL, összesítő job SKIPPED; ezért a négyes artifact NOT AVAILABLE. A
-   forrás-embed PR merge-je után újra kell futtatni a teljes csomagolást az új main SHA-n,
-   új `rcN` címkével. Csak sikeres összesítés után lehet a négy csomagot
+   Az `rc1` run #1 FAIL volt az Inno Setup jelöltkimeneti név miatt; ezt a #193
+   javította. Az `rc2` run #2 ezután macOS-on PASS, Windows-on a VST3 platform-
+   marker ellenőrzés hibája miatt FAIL lett; az összesítő SKIPPED, artifact
+   NOT AVAILABLE. A marker/Windows telepítő-smoke javító PR CI-zöld merge-je
+   után `rc3` címkével, az új aktuális main pontos SHA-ján kell újra futtatni a
+   teljes csomagolást. Csak sikeres összesítés után lehet a négy csomagot
    (Windows Setup EXE + Manual ZIP, macOS Universal PKG + Manual ZIP), a két
    Manual ZIP-be ágyazott azonos forrásarchívumot, payloadot, verziót,
    checksumokat és build/provenance adatokat külön
