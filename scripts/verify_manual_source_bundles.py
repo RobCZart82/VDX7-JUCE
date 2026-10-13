@@ -28,8 +28,16 @@ def verify_manual_source_bundles(manual_archives, source_name):
                 "VDX7.vst3/Contents/Resources/moduleinfo.json" in names
                 and "VDX7.vst3/Contents/x86_64-win/VDX7.vst3" in names
             )
-            if not (has_macos_bundle_marker or has_windows_bundle_markers):
-                raise ValueError(f"VST3 bundle marker missing from {manual_path}")
+            if manual_path.name.endswith("-Windows-x64-Manual.zip"):
+                has_expected_bundle = has_windows_bundle_markers
+            elif manual_path.name.endswith("-macOS-universal-Manual.zip"):
+                has_expected_bundle = has_macos_bundle_marker
+            else:
+                raise ValueError(
+                    f"Manual ZIP filename does not identify a supported platform: {manual_path}"
+                )
+            if not has_expected_bundle:
+                raise ValueError(f"Platform-specific VST3 bundle marker missing from {manual_path}")
 
             source_member = f"Source/{source_name}"
             sums_member = "Source/SHA256SUMS.txt"
