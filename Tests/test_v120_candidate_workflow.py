@@ -28,9 +28,20 @@ class V120CandidateWorkflowTests(unittest.TestCase):
                       "VDX7-${PACKAGE_LABEL}-Windows-x64-Manual.zip",
                       "VDX7-${PACKAGE_LABEL}-macOS-universal.pkg",
                       "VDX7-${PACKAGE_LABEL}-macOS-universal-Manual.zip",
-                      "VDX7-${PACKAGE_LABEL}-${SOURCE_COMMIT}-corresponding-source.zip"):
+                      'VDX7-${PACKAGE_LABEL}-${SOURCE_COMMIT}-corresponding-source.zip',
+                      'Source/SHA256SUMS.txt',
+                      'name: Prepare matching source archive for Manual ZIP'):
             self.assertIn(token, self.text)
         self.assertIn("VDX7-${{ env.PACKAGE_LABEL }}-Four-Downloads-${{ env.SOURCE_COMMIT }}-PREPARATION", self.text)
+        self.assertNotIn('"release-assets/VDX7-${PACKAGE_LABEL}-${SOURCE_COMMIT}-corresponding-source.zip"', self.text)
+        self.assertNotIn('release-assets/SOURCE-SHA256SUMS.txt', self.text)
+
+    def test_both_manual_downloads_embed_and_compare_the_same_source(self):
+        self.assertIn("python scripts/verify_manual_source_bundles.py", self.text)
+        self.assertIn('--manual-zip "release-assets/VDX7-${PACKAGE_LABEL}-Windows-x64-Manual.zip"', self.text)
+        self.assertIn('--manual-zip "release-assets/VDX7-${PACKAGE_LABEL}-macOS-universal-Manual.zip"', self.text)
+        self.assertIn('Copy-Item -LiteralPath $sourceArchive.FullName -Destination $manualSource', self.text)
+        self.assertIn('cp "$source_archive" "$RUNNER_TEMP/vdx7-manual/Source/"', self.text)
 
     def test_windows_installer_output_name_uses_iscc_filename_override(self):
         self.assertIn('$setupBaseName = "VDX7-$env:PACKAGE_LABEL-Windows-x64-Setup"', self.text)
