@@ -14,10 +14,13 @@ is the accepted stable version):
 | macOS Universal (arm64 + x86_64) | PKG installer | `VDX7-<version>-macOS-universal.pkg` |
 | macOS Universal (arm64 + x86_64) | Manual Install ZIP | `VDX7-<version>-macOS-universal-Manual.zip` |
 
-All four contain the accepted VST3 build. No AU or Standalone download is added.
-Each Manual ZIP contains the complete plugin bundle plus the matching
-corresponding-source archive and its checksum manifest under `Source/`; it is
-not an outer Actions artifact ZIP. The EXE and PKG installers remain binary-only.
+For the planned v1.2.0 release, all four contain the accepted VST3 build. No AU
+or Standalone download is added. Each v1.2.0 Manual ZIP contains the complete
+plugin bundle plus the matching corresponding-source archive and its checksum
+manifest under `Source/`; it is not an outer Actions artifact ZIP. The EXE and
+PKG installers remain binary-only. This source-in-Manual-ZIP policy does not
+describe the already-published v1.0.1 archives; their source remains in the
+separate historical `v1.0.1-source` release below.
 Unsigned Windows installer and unsigned/not-notarized macOS package warnings
 remain; macOS plugin ad-hoc signing is not Developer ID signing.
 
