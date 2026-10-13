@@ -15,60 +15,60 @@ is the accepted stable version):
 | macOS Universal (arm64 + x86_64) | Manual Install ZIP | `VDX7-<version>-macOS-universal-Manual.zip` |
 
 All four contain the accepted VST3 build. No AU or Standalone download is added.
-Manual ZIPs contain the complete plugin bundle, not an outer Actions artifact
-ZIP. Unsigned Windows installer and unsigned/not-notarized macOS package
-warnings remain; macOS plugin ad-hoc signing is not Developer ID signing.
+Each Manual ZIP contains the complete plugin bundle plus the matching
+corresponding-source archive and its checksum manifest under `Source/`; it is
+not an outer Actions artifact ZIP. The EXE and PKG installers remain binary-only.
+Unsigned Windows installer and unsigned/not-notarized macOS package warnings
+remain; macOS plugin ad-hoc signing is not Developer ID signing.
 
 ## Packaging and publication boundary
 
-The stable workflow still verifies and retains the complete internal
-validation artifact: both installers, both manual ZIPs, corresponding-source
-ZIP, two BUILD-INFO files and SHA256SUMS. It then calls
-`scripts/stage_release_downloads.py` using the guarded approval-tools checkout.
-The collector checks the four expected basenames and SHA-256 values before
-copying into a new `publishable-downloads` directory. Existing output is never
-overwritten. Its separate `Four-Downloads` Actions artifact contains only those
-four files. Neither artifact nor the script publishes a Release.
+The v1.2.0 candidate workflow is preparation-only. It verifies both installers,
+both Manual ZIPs (each with the matching source ZIP and its checksum inside),
+two BUILD-INFO files and SHA256SUMS before uploading a combined validation
+artifact. It does not stage or publish a GitHub Release. The older
+`scripts/stage_release_downloads.py` allowlist remains a safeguard for its
+original workflow, not evidence that v1.2.0 has been staged or accepted.
 
 Any future publication implementation must use exactly this four-file allowlist
 from the reviewed staged payload, never `release-assets/*`, all ZIPs, the outer
 Actions ZIP or the complete validation artifact. Recheck the final four hashes
-and approval before upload. No SHA256SUMS, BUILD-INFO or corresponding-source
-ZIP is added as a fifth manually uploaded user-download asset.
+and approval before upload. No SHA256SUMS, BUILD-INFO or separate
+corresponding-source ZIP is added as a fifth manually uploaded user-download
+asset; the source archive travels inside each Manual ZIP.
 
 Release notes must include the four SHA-256 values, accepted source/tooling
-identities, matching source/dependency access links, install/manual guidance,
-unsigned/not-notarized status and explicit deferred-test disclosures. Corresponding
-source generation and verification are retained, not removed by this policy.
+identities, the nested source archive's SHA-256 and location, dependency
+identities, install/manual guidance, unsigned/not-notarized status and explicit
+deferred-test disclosures. Corresponding source generation and verification
+are retained, not removed by this policy.
 Durable matching-source access must be reviewed before publication; an expiring
 private/Actions artifact alone must not be treated as that access. Final
 candidate acceptance remains separate from the owner's delivery decision.
 
-Owner source-delivery decision, 2026-10-01: use a separate public
-`v1.0.1-source` GitHub release in this repository. It contains the complete
-matching corresponding-source ZIP and its checksum manifest; it is not the
-latest product release. The main `v1.0.1` notes link directly to this durable
-source download and record its source/tooling identities and SHA-256.
-Do not include source in either Manual Install ZIP. The main product release
-keeps exactly four manually uploaded user downloads and remains the latest.
-This selects the delivery mechanism, not the final candidate or approval tuple.
-Publish verified matching source no later than the corresponding binaries;
-an expired Actions URL or GitHub's dependency-free automatic source ZIP is
-not a substitute.
+Historical 1.0.1 source-delivery decision, 2026-10-01: the published
+`v1.0.1-source` GitHub release contains the matching corresponding-source ZIP
+and checksum manifest. This historical 1.0.1 release remains unchanged.
 
-The non-publishing workflow also stages a separate `Source-Downloads`
-artifact with exactly the matching source ZIP and its one-file SHA256SUMS
-manifest. It verifies the complete source archive against guarded source/tool
-identities and acceptance status; accepted mode additionally requires the
-exact approval commit proof. This is the future source-release payload,
-not an extra asset for the four-download main release. Final native workflow
-execution and publication review remain required.
+New owner decision for v1.2.0, 2026-10-13: include the exact matching
+corresponding-source ZIP and its checksum manifest inside `Source/` in both
+Manual Install ZIPs. Keep the EXE/PKG installers binary-only and preserve the
+four public download assets; do not publish a separate fifth source download.
+The internal source archive must still be verified against the exact source
+commit and toolchain identities before publication. This decision does not
+authorize publication or modify any existing release/tag/asset.
+
+The historical 1.0.1 non-publishing workflow staged a separate
+`Source-Downloads` artifact. The v1.2.0 candidate workflow instead places the
+source ZIP and its checksum inside each platform Manual ZIP, then verifies both
+embedded copies match. Final native workflow execution and publication review
+remain required.
 
 GitHub may additionally display its automatically generated **Source code
 (zip/tar.gz)** links. Those are platform-generated source links, not extra
 manually uploaded user-download assets or offline dependency bundles.
 
-## Current scope and acceptance
+## Historical 1.0.1 scope and acceptance
 
 Published v1.0.0 is untouched. The coordinated version update targets
 1.0.1-labelled preparation assets; this is not final binary acceptance.
@@ -81,8 +81,10 @@ and separate publication authorization remain. See the
 [current final test report](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md).
 Use the [single execution plan](../development/DEVELOPMENT_PLAN.md) for remaining work.
 
-Magyarul: a release-re négy felhasználói csomag kerül fel. A forráscsomag,
-buildleírások és hashfájl továbbra is elkészülnek, de külön validációs anyagok.
-A hashértékek és tartós, verzióhoz illeszkedő forráslinkek a release leírásába
-kerülnek. A GitHub automatikus forráslinkjei nem kézzel feltöltött további
-csomagok. Ez nem publikálási engedély és nem módosít meglévő kiadást.
+Magyarul: a v1.2.0 release négy felhasználói csomagból áll. A megfelelő
+forrásarchívum és saját SHA-256 jegyzéke mindkét Manual Install ZIP-en belül, a
+`Source/` mappába kerül; külön ötödik forrásletöltés nem lesz. Az EXE/PKG
+telepítők változatlanul csak a plugint telepítik. Az 1.0.1 külön forrás-release
+történeti tény, nem módosul. A GitHub automatikus forráslinkjei továbbra sem
+helyettesítik a teljes, függőségekkel együtt csomagolt forrást. Ez a döntés nem
+publikálási engedély és nem módosít meglévő kiadást.

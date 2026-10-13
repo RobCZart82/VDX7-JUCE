@@ -88,6 +88,15 @@ jobs:
       - name: Run ROM-free tests
         run: ctest --test-dir build -C Release --output-on-failure --no-tests=error
 
+      - name: Prepare matching source archive for Manual ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/package_source.py create \
+            --repo . --juce build/_deps/juce-src --core build/_deps/retromulator-src \
+            --commit "$SOURCE_COMMIT" --package-label "$PACKAGE_LABEL" \
+            --output candidate-source
+
       - name: Verify macOS Universal binary and prepare PKG plus Manual ZIP
         if: runner.os == 'macOS'
         shell: bash
@@ -99,10 +108,20 @@ jobs:
           codesign --force --deep --sign - "$vst3"
           codesign --verify --deep --strict "$vst3"
 
-          mkdir -p release-assets "$RUNNER_TEMP/vdx7-pkg-root/Library/Audio/Plug-Ins/VST3"
+          mkdir -p release-assets "$RUNNER_TEMP/vdx7-pkg-root/Library/Audio/Plug-Ins/VST3" \
+            "$RUNNER_TEMP/vdx7-manual/Source"
           ditto "$vst3" "$RUNNER_TEMP/vdx7-pkg-root/Library/Audio/Plug-Ins/VST3/VDX7.vst3"
-          ditto -c -k --sequesterRsrc --keepParent "$vst3" \
+          ditto "$vst3" "$RUNNER_TEMP/vdx7-manual/VDX7.vst3"
+          source_archive="$(find candidate-source -maxdepth 1 -type f -name '*-corresponding-source.zip' -print -quit)"
+          test -n "$source_archive"
+          source_archive_name="$(basename "$source_archive")"
+          cp "$source_archive" "$RUNNER_TEMP/vdx7-manual/Source/"
+          cp candidate-source/SHA256SUMS.txt "$RUNNER_TEMP/vdx7-manual/Source/SHA256SUMS.txt"
+          ditto -c -k --sequesterRsrc "$RUNNER_TEMP/vdx7-manual" \
             "release-assets/VDX7-${PACKAGE_LABEL}-macOS-universal-Manual.zip"
+          python scripts/verify_manual_source_bundles.py \
+            --source-name "$source_archive_name" \
+            --manual-zip "release-assets/VDX7-${PACKAGE_LABEL}-macOS-universal-Manual.zip"
           pkgbuild \
             --root "$RUNNER_TEMP/vdx7-pkg-root" \
             --identifier com.robczart82.vdx7.vst3 \
@@ -126,22 +145,13 @@ jobs:
           Installer: unsigned PKG; plugin bundle has an ad-hoc signature only.
           Not Developer ID signed or notarized; macOS may show a security warning.
           Firmware: no Yamaha ROM or firmware included.
+          Matching source archive: included in the Manual ZIP under Source/; its SHA-256 is verified.
           EOF
           python scripts/write_build_provenance.py \
             --build build --source . \
             --juce build/_deps/juce-src --core build/_deps/retromulator-src \
             --platform macOS-universal --output "$RUNNER_TEMP/vdx7-toolchain.txt"
           cat "$RUNNER_TEMP/vdx7-toolchain.txt" >> "release-assets/BUILD-INFO-${{ matrix.platform }}.txt"
-
-      - name: Prepare corresponding source archive
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          python scripts/package_source.py create \
-            --repo . --juce build/_deps/juce-src --core build/_deps/retromulator-src \
-            --commit "$SOURCE_COMMIT" --package-label "$PACKAGE_LABEL" \
-            --output candidate-source
 
       - name: Install Inno Setup and verify its version
         if: runner.os == 'Windows'
@@ -164,7 +174,18 @@ jobs:
           $vst3 = Get-ChildItem -Path build -Recurse -Directory -Filter "VDX7.vst3" | Select-Object -First 1
           if (-not $vst3) { throw "VDX7.vst3 was not found" }
           New-Item -ItemType Directory -Path release-assets | Out-Null
-          Compress-Archive -Path $vst3.FullName -DestinationPath "release-assets\VDX7-$env:PACKAGE_LABEL-Windows-x64-Manual.zip"
+          $manualRoot = Join-Path $env:RUNNER_TEMP "vdx7-manual"
+          $manualSource = Join-Path $manualRoot "Source"
+          New-Item -ItemType Directory -Path $manualSource -Force | Out-Null
+          Copy-Item -LiteralPath $vst3.FullName -Destination (Join-Path $manualRoot "VDX7.vst3") -Recurse
+          $sourceArchive = Get-ChildItem -Path candidate-source -Filter "*-corresponding-source.zip" | Select-Object -First 1
+          if (-not $sourceArchive) { throw "Corresponding source archive was not prepared" }
+          Copy-Item -LiteralPath $sourceArchive.FullName -Destination $manualSource
+          Copy-Item -LiteralPath "candidate-source\SHA256SUMS.txt" -Destination (Join-Path $manualSource "SHA256SUMS.txt")
+          $manualZip = "release-assets\VDX7-$env:PACKAGE_LABEL-Windows-x64-Manual.zip"
+          Compress-Archive -Path (Join-Path $manualRoot "*") -DestinationPath $manualZip
+          python scripts/verify_manual_source_bundles.py --source-name $sourceArchive.Name --manual-zip $manualZip
+          if ($LASTEXITCODE -ne 0) { throw "Windows manual ZIP source verification failed: $LASTEXITCODE" }
           $setupBaseName = "VDX7-$env:PACKAGE_LABEL-Windows-x64-Setup"
           & $env:ISCC "/DPluginBundle=$($vst3.FullName)" "/O$((Get-Location).Path)\release-assets" "/F$setupBaseName" "installer\windows\VDX7.iss"
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
@@ -193,6 +214,7 @@ jobs:
           Included format: VST3 only.
           Installer: unsigned Setup.exe; Windows may show an unknown-publisher warning.
           Firmware: no Yamaha ROM or firmware included.
+          Matching source archive: included in the Manual ZIP under Source/; its SHA-256 is verified.
           Inno Setup: $env:ISCC_VERSION
           "@ | Set-Content -Encoding utf8 "release-assets\BUILD-INFO-Windows-x64.txt"
           $provenance = Join-Path $env:RUNNER_TEMP "vdx7-toolchain.txt"
@@ -202,8 +224,6 @@ jobs:
             --platform Windows-x64 --inno $env:ISCC --inno-version $env:ISCC_VERSION --output $provenance
           if ($LASTEXITCODE -ne 0) { throw "Build provenance capture failed: $LASTEXITCODE" }
           Get-Content -LiteralPath $provenance | Add-Content -Encoding utf8 "release-assets\BUILD-INFO-Windows-x64.txt"
-          Copy-Item "candidate-source\*.zip" release-assets
-          Copy-Item "candidate-source\SHA256SUMS.txt" "release-assets\SOURCE-SHA256SUMS.txt"
 
       - name: Upload platform validation artifact (not a release)
         uses: actions/upload-artifact@v4
@@ -240,21 +260,20 @@ jobs:
             "VDX7-${PACKAGE_LABEL}-Windows-x64-Manual.zip" \
             "VDX7-${PACKAGE_LABEL}-macOS-universal.pkg" \
             "VDX7-${PACKAGE_LABEL}-macOS-universal-Manual.zip" \
-            "VDX7-${PACKAGE_LABEL}-${SOURCE_COMMIT}-corresponding-source.zip" \
-            "SOURCE-SHA256SUMS.txt" \
             "BUILD-INFO-Windows-x64.txt" \
             "BUILD-INFO-macOS-universal.txt"; do
             test -f "release-assets/$name"
           done
-          (cd release-assets && sha256sum -c SOURCE-SHA256SUMS.txt)
+          python scripts/verify_manual_source_bundles.py \
+            --source-name "VDX7-${PACKAGE_LABEL}-${SOURCE_COMMIT}-corresponding-source.zip" \
+            --manual-zip "release-assets/VDX7-${PACKAGE_LABEL}-Windows-x64-Manual.zip" \
+            --manual-zip "release-assets/VDX7-${PACKAGE_LABEL}-macOS-universal-Manual.zip"
           python scripts/write_sha256_manifest.py \
             --output release-assets/SHA256SUMS.txt \
             "release-assets/VDX7-${PACKAGE_LABEL}-Windows-x64-Setup.exe" \
             "release-assets/VDX7-${PACKAGE_LABEL}-Windows-x64-Manual.zip" \
             "release-assets/VDX7-${PACKAGE_LABEL}-macOS-universal.pkg" \
             "release-assets/VDX7-${PACKAGE_LABEL}-macOS-universal-Manual.zip" \
-            "release-assets/VDX7-${PACKAGE_LABEL}-${SOURCE_COMMIT}-corresponding-source.zip" \
-            release-assets/SOURCE-SHA256SUMS.txt \
             release-assets/BUILD-INFO-Windows-x64.txt \
             release-assets/BUILD-INFO-macOS-universal.txt
           (cd release-assets && sha256sum -c SHA256SUMS.txt)

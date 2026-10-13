@@ -60,9 +60,25 @@ első futás **FAIL** lett: a macOS Universal csomag-job
 eredménnyel leállt, mert az Inno Setup a jelölt AppVersion-ből interpolált
 `OutputBaseFileName` értéket érvénytelennek találta. Emiatt az összeállító job
 SKIPPED, nincs teljes négyes csomag-artifact vagy checksum-jegyzék. A futás nem
-kiadási elfogadás. A javítóág az ISCC `/F` kimenetifájlnév-opcióval választja
-szét a termékverziót (`1.2.0`) és a csomag jelölését (`1.2.0-rcN`); ezt friss
-Windows CI-vel és új, pontos main SHA-ról futó jelölttel kell igazolni.
+kiadási elfogadás. A telepítőnév-javítás a #193 PR-rel beolvadt: az ISCC `/F`
+kimenetifájlnév-opciója választja szét a termékverziót (`1.2.0`) és a csomag
+jelölését (`1.2.0-rcN`). #193 final-head Windows/macOS/sanitizer ellenőrzései
+PASS; main merge SHA `2e5f7908cd608036966534c02064acf6c559d5c9`. Sikeres új
+jelöltfutás még nincs.
+
+**Új v1.2.0 forráscsomagolási döntés — 2026-10-13:** a tulajdonos a négy
+letöltéses felállás megtartása mellett kérte, hogy a forrás ne legyen külön
+ötödik letöltés. A pontos, SHA-hoz kötött corresponding-source ZIP és a saját
+`SHA256SUMS.txt` fájl mindkét Manual Install ZIP `Source/` mappájába kerüljön;
+az EXE és PKG telepítők maradjanak plugin-only. Az 1.0.1-hez megjelent külön
+forrás-release történeti tény, nem módosul. Ennek megvalósítása a
+`fix/v1.2.0-source-in-manual-zips-20261013` ágon folyamatban van: mindkét
+platform külön előállítja a rögzített dependencykkel a forrásarchívumot, a
+kézi telepítési csomagba ágyazza, majd a verifikátor ellenőrzi a pluginjelölőt,
+a belső forrás-hashot és azt, hogy a két platform ZIP-je azonos forrást hordoz.
+Külön ötödik source asset nem kerül az összesítő artifact gyökerébe. A branch
+ellenőrzése és PR/CI **még folyamatban van**; RC2-t csak a friss, beolvadt main
+pontos SHA-járól szabad indítani.
 
 **Main-ban elkészült:** validated Clean reader és normal/pending writer;
 legacy Classic formátum és alapértelmezés; közös payload/mode/ROM owner;
@@ -93,18 +109,19 @@ rögzítése, nem bizonyított funkcionális hiba.
 3. A tervezett v1.2.0 cél verziója `CMakeLists.txt`-ben és a Windows telepítő
    alapértelmezésében 1.2.0-ra állt. A külön
    `.github/workflows/prepare-v1.2.0-candidate.yml` workflow `rcN` jelöltből
-   Windows Setup EXE + Manual ZIP, macOS Universal PKG + Manual ZIP, valamint
-   pontos SHA-hoz kötött forráscsomagot, build-információt és checksumokat
-   készít elő. Csak `main`-ről, azonos, teljes commit SHA-val futtatható;
+   Windows Setup EXE + Manual ZIP, macOS Universal PKG + Manual ZIP; a pontos
+   SHA-hoz kötött forráscsomag a két Manual ZIP-be kerül, build-információt és
+   checksumokat készít elő. Csak `main`-ről, azonos, teljes commit SHA-val futtatható;
    `contents: read`, nem készít taget vagy GitHub Release-t. A 1.0.1-es
    candidate/stable workflow és jóváhagyási történet külön, változatlan marad.
    A 1.2.0 stable elfogadás/publikálás nincs engedélyezve ebben az útban.
    Az első `rc1` run FAIL: macOS csomagolás PASS, Windows Inno Setup névképzés
-   FAIL, összesítő job SKIPPED; ezért a négyes artifact NOT AVAILABLE. A javítás
-   után újra kell futtatni a teljes csomagolást az új main SHA-n, új `rcN`
-   címkével. Csak sikeres összesítés után lehet a négy csomagot (Windows Setup
-   EXE + Manual ZIP, macOS Universal PKG + Manual ZIP), a source archive-ot,
-   payloadot, verziót, checksumokat és build/provenance adatokat külön
+   FAIL, összesítő job SKIPPED; ezért a négyes artifact NOT AVAILABLE. A
+   forrás-embed PR merge-je után újra kell futtatni a teljes csomagolást az új main SHA-n,
+   új `rcN` címkével. Csak sikeres összesítés után lehet a négy csomagot
+   (Windows Setup EXE + Manual ZIP, macOS Universal PKG + Manual ZIP), a két
+   Manual ZIP-be ágyazott azonos forrásarchívumot, payloadot, verziót,
+   checksumokat és build/provenance adatokat külön
    ellenőrizni. A workflow előkészítő artifactokat ad, nem taget vagy GitHub
    Release-t. HU/EN kézikönyv, üzembe helyezési útmutató és az
    aláírás/notarizáció nélküli státusz világos közlése is kell.
@@ -112,7 +129,7 @@ rögzítése, nem bizonyított funkcionális hiba.
    Ha eltérnek, érintett hostteszt újrafuttatás vagy dokumentált döntés.
 5. Acceptance jegyzék, maradó korlátok és külön publikálási engedély.
 
-**Fejlesztési ág helyi ellenőrzése — 2026-10-13:** a forráscsomag céltesztek
+**Korábbi RC1 workflow ág helyi ellenőrzése — 2026-10-13 (történeti):** a forráscsomag céltesztek
 19/19, az új workflow statikus szerződéstesztjei 4/4, a megőrzött 1.0.1
 stable-workflow tesztek 12/12 PASS; `git diff --check` PASS. A teljes Python-csomag
 101 tesztjéből 98 PASS, 2 SKIP, 1 ERROR. Az egyetlen ERROR a checksum negatív
@@ -122,6 +139,15 @@ CMake/fordítás **NOT RUN** (CMake nem érhető el); külön YAML parserrel val
 ellenőrzés **NOT RUN** (PyYAML nincs telepítve). A platform build, a workflow
 végrehajtás és a csomag-artifactok PASS-a ezért még csak GitHub CI-ből
 igazolható.
+
+**Forrás a Manual ZIP-ekben ág helyi ellenőrzése — 2026-10-13:** az új
+beágyazott forrás/hashes ellenőrző teszt 5/5 PASS; a candidate-workflow
+szerződésteszt 6/6 PASS; `git diff --check` PASS. A teljes Python leltár 108
+teszt: 105 PASS, 2 SKIP, 1 ERROR. Az egyetlen ERROR a meglévő hardlink-alias
+negatív tesztnél a sandbox `WinError 5` engedélyhibája; ez környezeti korlát,
+nem a forráscsomag-változás hibája. YAML-parse **NOT RUN** (PyYAML nem érhető
+el); helyi CMake/Windows/macOS build és a natív csomagolási workflow **NOT RUN**.
+Ezek végső ellenőrzése a PR GitHub Actions feladata.
 
 A v1.2.0 verziócél rögzített, de nincs kiadás/tag/asset létrehozva, a stable
 csomag elfogadása és publikálási engedélye továbbra sincs megadva.
