@@ -1,6 +1,11 @@
 # REAPER fejlesztési VST3 részteszt / Development VST3 smoke test
 
 2026-10-12. Nem release-jóváhagyás / Not release approval.
+2026-10-13 addendum: the owner reports all tests passed with the latest build
+plugin on both Windows and macOS. OWNER-REPORTED PASS; exact package/build IDs,
+binary hashes, current OS/host versions and per-case results not yet recorded.
+This does not rewrite this dated SHA-bound macOS smoke or its NOT RUN list.
+Those entries describe this report's original run, not a denial of later tests.
 Az egyetlen aktív munkaterv / Sole active work plan:
 [DEVELOPMENT_PLAN.md](../development/DEVELOPMENT_PLAN.md).
 

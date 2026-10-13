@@ -1,12 +1,66 @@
 # VDX7 egységes fejlesztési terv
 
-Frissítve: 2026-10-12. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
+Frissítve: 2026-10-13. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás része a D5 Classic/Clean funkció a 2026-10-09-i tulajdonosi
 döntés szerint. A verziószám és a további funkciók pontos köre még nincs rögzítve.
 Ez a dokumentum nem új kiadás publikálási engedélye.
 
-## Aktuális kiadási állapot és sorrend — 2026-10-12
+## Aktuális kiadási állapot és sorrend — 2026-10-13
+
+### Irányadó lezárási frissítés — 2026-10-13
+
+Ellenőrzött main: `624f68ca01cfa8c6c63c66c650c11c2505e4c99f`.
+[#188](https://github.com/RobCZart82/VDX7-JUCE/pull/188) **beolvadt**, nem Draft.
+Final-head `349111fe38acec0bf82ff400c38bf0bb6b9226c7` Windows/macOS/sanitizer
+PASS; merge utáni main Windows/macOS PASS. Ezek automatizált kapuk,
+nem végleges csomag vagy hallásos/host-elfogadás.
+Final-head futások: [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38306113201),
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38306113045),
+[sanitizer](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38306113318).
+Main: [Windows](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38307688206),
+[macOS](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38307688230).
+
+**Main-ban elkészült:** validated Clean reader és normal/pending writer;
+legacy Classic formátum és alapértelmezés; közös payload/mode/ROM owner;
+SETTINGS Classic/Clean Apply/Cancel, Native/Correct függetlenség;
+stale token/admission védelem és no-ROM első betöltés cold-install.
+Az új SETTINGS-token a teljes owner snapshotot ellenőrzi: pending→ready
+változás is érvényteleníti a régi dialógus választását. A kapcsoló nem új
+hostparaméter; a 148 ID/sorrend változatlan. E részeket nem ütemezzük újra.
+
+**Bizonyíték:** a repository integrációs jelentése final post-fix helyi
+59/59 regressziót, 12 rate/buffer SETTINGS-hangút kombinációt, 94/94 Python
+tesztet és macOS VST3/AU/Standalone buildet dokumentál. Ez megőrzött helyi
+eredmény, nem ebben a dokumentációs körben újrafuttatott teszt.
+2026-10-13 a tulajdonos közli: az összes tesztet elvégezte a legutolsó build
+pluginnal macOS és Windows alatt. **OWNER-REPORTED PASS**; ez új visszajelzés,
+nem az alábbi régi macOS smoke automatikus kiterjesztése. Az exact két csomag/
+buildazonosító, hash, OS/host verzió és tételes tesztlista még nincs rögzítve.
+Nem állítjuk, hogy a felhasználó nem tesztelt; a hiány az evidence/provenance
+rögzítése, nem bizonyított funkcionális hiba.
+
+**Következő aktív sorrend:**
+
+1. A Windows/macOS owner acceptance összekötése az exact tesztelt builddel és
+   tesztlistával; hiányzó tételek eredménye vagy kifejezett tételes halasztás.
+2. Integrációs/mérési lefedettség felülvizsgálata: meglévő PASS nem új feladat;
+   csak a ténylegesen hiányzó lifecycle, hosszú stressz, spektrum/headroom/CPU/
+   latencia, GUI/host/instance mátrix lezárása. Reprodukált hiba külön javítás.
+3. Verzió és befagyasztott candidate SHA; Windows EXE + Manual Install ZIP,
+   macOS PKG + Manual Install ZIP, megfelelő forrás/notices/manifest/hashes.
+   Installer upgrade/uninstall/payload ellenőrzés, HU/EN README/kézikönyv,
+   unsigned/notarizáció nélküli státusz egyértelmű közlése.
+4. Exact végleges csomagok és a tesztelt pluginek azonosságának bizonyítása.
+   Ha eltérnek, érintett hostteszt újrafuttatás vagy dokumentált döntés.
+5. Acceptance jegyzék, maradó korlátok és külön publikálási engedély.
+
+Nincs új kiadási verzió vagy publikálási engedély ebben a docs-frissítésben.
+Az alábbi október 12-i Draft/kapu státuszok történeti checkpointok; a fenti
+október 13-i lezárás az irányadó, nem párhuzamos fejlesztési feladatlista.
+Csak original DX7 Mk I v1.8 támogatott, firmware nem terjeszthető.
+
+### Történeti konszolidációs baseline — 2026-10-12
 
 Ellenőrzött main: `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187 merge).
 Ehhez a pontos SHA-hoz a main
@@ -39,7 +93,7 @@ történeti bizonyítékok/specifikációk: ottani „következő”, „nyitott
 
 ### Hátralévő kiadási munkacsomagok
 
-### D5 Classic/Clean részletes aktuális státusz
+### D5 Classic/Clean történeti részletes checkpoint — 2026-10-12
 
 **2026-10-12 integrációs/review folytatás — HU:** a teljes privát original 1.8
 regressziós kör újrafutott; a nyilvános SETTINGS hangút 3 rate × 4 buffer

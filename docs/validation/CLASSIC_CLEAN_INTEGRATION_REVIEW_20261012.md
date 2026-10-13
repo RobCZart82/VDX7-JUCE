@@ -80,7 +80,16 @@ Mindhárom macOS formátum buildje PASS, telepítés nélkül. Az első, korlát
 GUI-futtatás hibáját nem tüntettük el; a megfelelő hozzáféréssel végzett teljes
 újrafuttatás zöld. Ez nem új Windows-ROM vagy végleges csomag/DAW-elfogadás.
 
-## Remaining publication gates / Publikálás előtt
+## Merge closure addendum — 2026-10-13
+
+PR #188 merged as `624f68ca01cfa8c6c63c66c650c11c2505e4c99f`.
+Final head `349111fe38acec0bf82ff400c38bf0bb6b9226c7` Windows/macOS/sanitizer
+PASS; merged main Windows/macOS PASS. PR/review/merge gates below are now
+closed, not outstanding work. Exact final-package provenance/publication
+remain separate. Owner reports all latest-plugin tests passed on Windows and
+macOS on 2026-10-13; binary/build and itemized acceptance identifiers pending.
+
+## Historical pre-merge publication gates / Korábbi kapuk
 
 Final-head Windows/macOS/sanitizer and completed review, current-main ancestry,
 then SHA-bound serial merge and separate post-merge main checks. Final candidate

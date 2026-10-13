@@ -1,5 +1,15 @@
 # Internal Clean captured writer checkpoint
 
+## Current closure — 2026-10-13
+
+#188 is merged, main `624f68ca01cfa8c6c63c66c650c11c2505e4c99f`.
+Final-head `349111fe38acec0bf82ff400c38bf0bb6b9226c7` platform/sanitizer PASS,
+merged-main Windows/macOS PASS. Draft/reader-closed/CI-pending statements below
+are historical checkpoints, not the current feature state. SETTINGS and
+validated Clean save/recall are implemented on main. Release acceptance is
+separate; the owner reports latest-build Windows/macOS tests passed, but exact
+binary/package and itemized acceptance evidence is not yet recorded.
+
 ## Current status index — 2026-10-12
 
 Latest integrated follow-up: [full regression/review report](CLASSIC_CLEAN_INTEGRATION_REVIEW_20261012.md).
