@@ -62,10 +62,15 @@ rögzítése, nem bizonyított funkcionális hiba.
 2. Integrációs/mérési lefedettség felülvizsgálata: meglévő PASS nem új feladat;
    csak a ténylegesen hiányzó lifecycle, hosszú stressz, spektrum/headroom/CPU/
    latencia, GUI/host/instance mátrix lezárása. Reprodukált hiba külön javítás.
-3. Verzió és befagyasztott candidate SHA; Windows EXE + Manual Install ZIP,
-   macOS PKG + Manual Install ZIP, megfelelő forrás/notices/manifest/hashes.
-   Installer upgrade/uninstall/payload ellenőrzés, HU/EN README/kézikönyv,
-   unsigned/notarizáció nélküli státusz egyértelmű közlése.
+3. A tervezett v1.2.0 célhoz verzió és befagyasztott candidate SHA; Windows EXE
+   + Manual Install ZIP, macOS PKG + Manual Install ZIP, megfelelő
+   forrás/notices/manifest/hashes. A jelenlegi nem publikáló candidate workflow
+   csak VST3-at és forráscsomagot állít elő, 1.0.1 címkével; a stable előkészítő
+   workflow is 1.0.1-re rögzített. Külön, v1.2.0-s nem publikáló csomagjelölt-
+   út kell, a már kiadott 1.0.1 workflow/approval/asset történetének
+   változatlanul hagyásával. Installer upgrade/uninstall/payload ellenőrzés,
+   HU/EN README/kézikönyv és az unsigned/notarizáció nélküli státusz világos
+   közlése is szükséges.
 4. Exact végleges csomagok és a tesztelt pluginek azonosságának bizonyítása.
    Ha eltérnek, érintett hostteszt újrafuttatás vagy dokumentált döntés.
 5. Acceptance jegyzék, maradó korlátok és külön publikálási engedély.
