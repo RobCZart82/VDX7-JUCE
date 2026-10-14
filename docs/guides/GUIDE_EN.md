@@ -172,7 +172,7 @@ The footer CPU percentage is a smoothed audio-callback load estimate, not total 
 
 ## 6. Utility and SysEx
 
-### Development builds after 1.0.1 only
+### Included in published v1.2.0
 
 UTILITY → Init Preset asks for confirmation before replacing only the current
 editable working voice. Cancel leaves it unchanged; if the sound or selection
@@ -184,7 +184,7 @@ Its sound, edits, dirty marker and display provenance are saved with the DAW
 project. This is a VDX7-created editing seed, not a Yamaha INIT dump, and is
 not included in the already published 1.0.1 packages.
 
-Imported-bank library (new development builds, compatible firmware loaded): use UTILITY → Imported Banks →
+Imported-bank library (v1.2.0, compatible firmware loaded): use UTILITY → Imported Banks →
 Open folder to create/reveal the separate library folder, then place your own
 32-voice `.syx` banks there and choose Refresh. Windows uses
 `%APPDATA%\VDX7-JUCE\Imported Banks`; macOS uses
@@ -205,8 +205,8 @@ are preserved. Refresh changes the list, not the current sound. Invalid files
 and scan limits are reported; incomplete scans preserve the previous library.
 If the list changes while you choose, reopen it and choose again. Projects retain
 the selected bank and edited working sound even when the source file disappears.
-These additions are not in the published 1.0.1 packages; real host acceptance
-remains a separate development gate.
+These additions are included in v1.2.0, not historical 1.0.1. Final macOS/Windows
+acceptance is owner-reported; exhaustive independent measurements are not claimed.
 
 UTILITY provides voice renaming (1–10 printable ASCII characters) and operator copy/paste. SysEx export is in SAVE AS. Copy/paste includes all 21 operator fields. Its clipboard is local to the plug-in instance and is not stored in projects.
 
@@ -383,10 +383,10 @@ same-value/ABA races. See [Q2 validation and limits](../validation/VALIDATION_PE
 
 This project uses [GNU AGPLv3](../../LICENSE.txt). The wrapper and original GUI resources are AGPL-3.0-only; the DX7 core retains GPL-3.0-or-later and its original notices. JUCE is used under AGPLv3. See [NOTICE.md](../../NOTICE.md) for the combined-work and third-party notices.
 
-The v1.0.1 stable release is on the [GitHub Releases page](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1).
+The v1.2.0 stable Latest release is on the [GitHub Releases page](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0).
 It includes macOS Universal `.pkg` and manual ZIP, Windows x64 `.exe`
-and manual ZIP. Checksums are in the notes; complete matching source is in the
-[source companion release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source). It is
+and manual ZIP. Checksums are in the notes; complete matching source and its
+checksum are under `Source/` in both Manual ZIPs. It is
 VST3-only; no AU or Standalone package is included. Fixes discovered after
 publication are intended for a later maintenance release and do not alter the
 published v1.0.0 tag or assets. This software comes without warranty. Firmware
@@ -397,6 +397,7 @@ identifies compatibility, not endorsement; no Yamaha logo is included.
 
 Thanks to [VDX7/chiaccona](https://github.com/chiaccona/VDX7), [Retromulator/dx7Lib](https://github.com/reales/retromulator) and [JUCE](https://github.com/juce-framework/JUCE). Only the portable DX7 core is integrated, not the complete Retromulator application.
 
-The published 1.0.1 passed the recorded automated/package checks and scoped owner
-acceptance. [Explicitly deferred manual coverage](../validation/VALIDATION_20261005_PUBLICATION_101.md)
-is not PASS. Future maintenance does not change existing release files.
+Published v1.2.0 has verified final packages and
+[owner-reported final acceptance](../validation/FINAL_120_OWNER_ACCEPTANCE_20261014.md).
+Unreported detailed measurements are not PASS. The 1.0.1 acceptance/deferrals
+remain historical. Future maintenance does not change existing release files.

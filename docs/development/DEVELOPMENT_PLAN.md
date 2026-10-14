@@ -52,8 +52,8 @@ a futás/provenance rekordjában ezt egyértelműen rögzíteni kell.
 [38548177165 futás](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38548177165)
 forrása `7e2271352d0f05fdad39bae26fdec764064fa1e1`; a Windows, macOS és
 összesítő job sikeres. A négy végleges verziójú csomag elkészült.
-A final csomagok helyi tartalom-/hash-ellenőrzése és exact hostelfogadása
-még külön kapu, nem azonos a korábbi RC3 ellenőrzésével.
+A final csomagok helyi tartalom-/hash-ellenőrzése PASS, külön végleges
+tulajdonosi hostelfogadás OWNER-REPORTED PASS; nem az RC3 tesztjéből következtetve.
 
 Tulajdonosi RC3 visszajelzés: Windows 11 Pro 26H2 és Windows 10 Pro 22H2
 gépeken egyaránt jó eredmény; továbbá macOS 26.7.1, Mac mini M1, 16 GB.
