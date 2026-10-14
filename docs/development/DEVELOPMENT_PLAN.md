@@ -397,8 +397,9 @@ nem a forráscsomag-változás hibája. YAML-parse **NOT RUN** (PyYAML nem érhe
 el); helyi CMake/Windows/macOS build és a natív csomagolási workflow **NOT RUN**.
 Ezek végső ellenőrzése a PR GitHub Actions feladata.
 
-A v1.2.0 verziócél rögzített, de nincs kiadás/tag/asset létrehozva, a stable
-csomag elfogadása és publikálási engedélye továbbra sincs megadva.
+**Történeti, 2026-10-13-i állapot:** ekkor a v1.2.0 verziócél rögzített volt,
+de még nem volt kiadás/tag/asset vagy stable elfogadás/publikálási engedély.
+A 2026-10-14-i publikálási checkpoint ezt felülírja; nem aktuális tilalom.
 Az alábbi október 12-i Draft/kapu státuszok történeti checkpointok; a fenti
 október 13-i lezárás az irányadó, nem párhuzamos fejlesztési feladatlista.
 Csak original DX7 Mk I v1.8 támogatott, firmware nem terjeszthető.
