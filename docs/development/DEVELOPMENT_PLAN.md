@@ -1,11 +1,16 @@
 # VDX7 egységes fejlesztési terv
 
-Frissítve: 2026-10-14. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
-Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
-A következő kiadás célja v1.2.0; a Classic/Clean a tulajdonosi döntés szerint
-része a kiadásnak.
+**Publikálás TELJESÜLT — 2026-10-14:** [v1.2.0 stabil Latest](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0).
+A tag és a négy változatlan csomag forrása `7e2271352d0f05fdad39bae26fdec764064fa1e1`;
+38548177165 futás. GitHub Latest, stable státusz és mind a négy asset hash
+ellenőrizve. A végleges tulajdonosi elfogadás és engedély alapján a publikálási
+kör lezárt; az alábbi korábbi nyitott kapuk checkpointok, nem új kiadási feladatok.
 
-Ellenőrzött kiinduló `main` baseline e tervfrissítés előtt:
+Frissítve: 2026-10-14. Ez az irányadó fejlesztési és kiadási állapotnyilvántartás.
+A v1.2.0 megjelent, Classic/Clean funkcióval. Az 1.0.1 és a kiadás előtti
+checkpointok történetiek; lezárt kiadási kapuk nem új nyitott feladatok.
+
+Történeti kiinduló `main` baseline a csomagolási fejlesztés után:
 `0ae865491ccb29fc6a885582f842893efa7e68c5` (#198 merge, 2026-10-14).
 [#198](https://github.com/RobCZart82/VDX7-JUCE/pull/198) beolvadt: a
 `package_kind=final` előkészítő workflow már a `main` része. A merge utáni
@@ -14,15 +19,24 @@ Ellenőrzött kiinduló `main` baseline e tervfrissítés előtt:
 **PASS**. Ez a tervfrissítés előtti baseline; PR-merge után az új main SHA-t
 és annak Actions-eredményét külön kell rögzíteni.
 
-Az `1.2.0-rc3` előkészítő csomagok elkészültek, de nem végleges
-`1.2.0` csomagok és nem jelentenek kiadási/host-elfogadást. A final
-workflow-futtatás, a négy final artifact, azok exact csomag/host-elfogadása
-és a publikálás továbbra is külön kapu. Nincs publikálási engedély; stable
-tag/release csak későbbi, kifejezett jóváhagyás után készülhet.
+Az RC3 előkészítés történeti; a kiadott végleges 1.2.0 négy csomagja a
+38548177165 futásból származik. A csomagellenőrzés, külön final tulajdonosi
+hostelfogadás és kifejezett publikálási engedély után a kiadás megjelent.
+Ez nem állít nem végzett műszeres tesztet vagy általános teszthalasztást.
 
 ## Aktuális kiadási állapot és sorrend — 2026-10-14
 
-### Végleges `1.2.0` csomagok — aktuális kiadási cél
+### Végleges tulajdonosi elfogadás és publikálási döntés
+
+A tulajdonos a végleges 1.2.0 telepítők/binárisok macOS és Windows tesztjét
+és minden pluginfunkció hibátlan működését jelentette: OWNER-REPORTED PASS.
+Kifejezetten jóváhagyta a stabil v1.2.0 Latest publikálást. A részletes
+[elfogadási rekord](../validation/FINAL_120_OWNER_ACCEPTANCE_20261014.md)
+különválasztja a felhasználói eredményt a nem közölt műszeres/per-case tesztektől.
+Ez a legfrissebb döntés felülírja az alábbi korábbi nyitott host- és
+jövőbeli engedélykéréseket; a csomagazonosság és publikálási ellenőrzés megmarad.
+
+### Publikált végleges `1.2.0` csomagok — kiadási bizonyíték
 
 A tulajdonos végleges `1.2.0` csomagokat kért az RC3 előzetes
 publikálása helyett. A #198 workflow `package_kind=final` módja négy
@@ -31,10 +45,21 @@ GitHub Release-t vagy publikációt. A kötelező `candidate_label` final
 módban is érvényes legacy `rcN` bemenet, de nem a final artifact verziócímkéje;
 a futás/provenance rekordjában ezt egyértelműen rögzíteni kell.
 
-**Final workflow dispatch: NOT RUN.** Bár a workflow forrása és regressziós
-kapui a #198-cal mainba kerültek, tényleges `package_kind=final` futás még
-nem történt, ezért final installer/Manual ZIP/PKG, BUILD-INFO és final
-SHA-256 manifest jelenleg nincs.
+**Final workflow dispatch: PASS.** A
+[38548177165 futás](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38548177165)
+forrása `7e2271352d0f05fdad39bae26fdec764064fa1e1`; a Windows, macOS és
+összesítő job sikeres. A négy végleges verziójú csomag elkészült.
+A final csomagok helyi tartalom-/hash-ellenőrzése PASS, külön végleges
+tulajdonosi hostelfogadás OWNER-REPORTED PASS; nem az RC3 tesztjéből következtetve.
+
+Tulajdonosi RC3 visszajelzés: Windows 11 Pro 26H2 és Windows 10 Pro 22H2
+gépeken egyaránt jó eredmény; továbbá macOS 26.7.1, Mac mini M1, 16 GB.
+Host: REAPER 7.82. Telepítés/betöltés/megszólalás OWNER-REPORTED PASS;
+Classic/Clean és próbált beállítások jók, feltűnő CPU-terhelés nem jelentkezett
+(nem számszerű benchmark). Hallásos visszajelzés szerint Clean alatt a gyári
+hangszínek karaktere megmarad, fényesebb/kristályosabb hangzással.
+A két mellékelt RC3 installer hash-e korábban egyezett az ellenőrzött RC3
+csomaggal. A final 1.2.0 tesztelését ebből nem következtetjük ki.
 
 ### RC3 csomagolás — teljesült, de csak történeti bizonyíték
 
@@ -70,16 +95,18 @@ A hash-ek eltérnek; a korábbi REAPER smoke nem bizonyít exact RC3 elfogadást
 
 
 
-### Aktív teendők a végleges v1.2.0 publikálásáig
+### Lezárt v1.2.0 kiadási ellenőrzőlista — történeti
 
-1. **Végleges csomagok előállítása:** e dokumentációs PR beolvasztása után
-   ellenőrizd az aktuális teljes `main` SHA-t, és várd meg annak Windows/macOS
-   Actions buildjeit. A
-   `Prepare v1.2.0 release-candidate packages (no publication)` workflow-t
-   erről a pontos, zöld `main` SHA-ról indítsd `package_kind=final` módban.
-   A `source_commit` egyezzen a workflow SHA-jával; a kötelező
-   `candidate_label` legyen érvényes `rcN`, de ne kezeld a final kimenet
-   verziócímkéjeként. Windows x64, macOS Universal és összesítő job: PASS.
+Az alábbi öt pont a kiadás előtti eljárás megőrzött leírása, nem aktív
+feladatlista. Csomagkészítés és checksum/source ellenőrzés PASS;
+hostelfogadás OWNER-REPORTED PASS, dokumentáció e PR-ben frissítve,
+publikálási engedély megadva és a stabil Latest kiadás megjelent.
+A részletes, nem közölt műszeres mérés továbbra sem állított PASS.
+
+1. **Végleges csomagok előállítása: TELJESÜLT.** Az irányadó csomagok a
+   38548177165 futásból, `7e2271352d0f05fdad39bae26fdec764064fa1e1`
+   forrásból származnak. Dokumentációs merge miatt nem indítunk új buildet:
+   a tulajdonos ezeket a változatlan final binárisokat tesztelte és fogadta el.
 
 2. **Négy final artifact ellenőrzése:** `VDX7-1.2.0-Windows-x64-Setup.exe`,
    `VDX7-1.2.0-Windows-x64-Manual.zip`,
@@ -94,7 +121,8 @@ A hash-ek eltérnek; a korábbi REAPER smoke nem bizonyít exact RC3 elfogadást
    Windows és macOS alatt a legutóbbi fejlesztői plugint PASS-nak jelentette;
    ezek értékes, owner-reported eredmények, de a végleges csomaggal való
    bináris azonosság és a tételes tesztazonosítók még nincsenek rögzítve.
-   A már megadott célkörnyezetek: Windows 11 Pro 26H2, x64, REAPER 7.82 x64;
+   A már megadott célkörnyezetek: Windows 11 Pro 26H2 és Windows 10 Pro 22H2
+   (utóbbi build 19045.7663), x64, REAPER 7.82;
    macOS 26.7.1, Mac mini M1 (2020, 16 GB), REAPER 7.82 Universal.
    Az adott teszteredmény csak hash-egyezés esetén fogadható el az exact final
    build bizonyítékaként; különben a final csomaggal kell célzottan ellenőrizni
@@ -369,8 +397,9 @@ nem a forráscsomag-változás hibája. YAML-parse **NOT RUN** (PyYAML nem érhe
 el); helyi CMake/Windows/macOS build és a natív csomagolási workflow **NOT RUN**.
 Ezek végső ellenőrzése a PR GitHub Actions feladata.
 
-A v1.2.0 verziócél rögzített, de nincs kiadás/tag/asset létrehozva, a stable
-csomag elfogadása és publikálási engedélye továbbra sincs megadva.
+**Történeti, 2026-10-13-i állapot:** ekkor a v1.2.0 verziócél rögzített volt,
+de még nem volt kiadás/tag/asset vagy stable elfogadás/publikálási engedély.
+A 2026-10-14-i publikálási checkpoint ezt felülírja; nem aktuális tilalom.
 Az alábbi október 12-i Draft/kapu státuszok történeti checkpointok; a fenti
 október 13-i lezárás az irányadó, nem párhuzamos fejlesztési feladatlista.
 Csak original DX7 Mk I v1.8 támogatott, firmware nem terjeszthető.
@@ -380,8 +409,8 @@ Csak original DX7 Mk I v1.8 támogatott, firmware nem terjeszthető.
 Az e szakasz alatti korábbi státuszok és sorrendek archivált checkpointok,
 nem végrehajtandó feladatlista. Különösen a #188 Draft-állapot, a reader/
 SETTINGS hiánya és a régi merge-kapuk már nem aktuálisak: a #188 később
-beolvadt. Az egyetlen aktív sorrend a fenti „Aktív teendők a végleges v1.2.0
-publikálásáig” szakasz öt pontja.
+beolvadt. A fenti „Lezárt v1.2.0 kiadási ellenőrzőlista — történeti”
+szakasz is megőrzött eljárás; a publikálási checkpoint az irányadó.
 
 Ellenőrzött main: `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187 merge).
 Ehhez a pontos SHA-hoz a main
@@ -2261,11 +2290,10 @@ Minden kör: friss main → minimális változtatás és regresszió → érinte
 
 [Korábbi összevont terv](../archive/EXECUTION_PLAN_1.0.md), [roadmap](../archive/ROADMAP_1.0.md), [régi kiadási checklist](../archive/RELEASE_CHECKLIST_1.0_RC.md) megőrzött döntés- és bizonyítéktörténet. Az élő feladatokat csak itt frissítjük, egyedi D/T/M azonosítóval. Megvalósításkor ide kerül státusz és PR/tesztlink; a részletes tesztjelentés külön marad. Régi checklist nem írhatja felül ezt a tervet vagy a kiadás tényét.
 
-English summary: this is the sole active post-1.0.1 ledger. The owner explicitly
-requires Classic/Clean in v1.2.0; its production DSP, SETTINGS and project
-save/restore integration merged in PR #188. PR-level regression evidence is
-recorded, while exact final-package provenance, remaining host acceptance,
-final documentation and separate publication approval remain open. Other
-future features and optional maintenance are separate. Historical release
-gates are not current blockers or new PASS claims. No host-test waiver or
-publication authority is inferred.
+English summary: v1.2.0 is published stable Latest (2026-10-14). Classic/Clean
+DSP, SETTINGS and project recall merged in #188. Final packages from run
+38548177165/source 7e2271352d0f05fdad39bae26fdec764064fa1e1 were verified,
+owner-tested on macOS/Windows and explicitly authorized for publication.
+This ledger preserves pre-publication checkpoints as history, not open tasks.
+Owner-reported acceptance is not exhaustive measured coverage or a blanket
+waiver. The docs update is tracked in #200; any future development is separate.

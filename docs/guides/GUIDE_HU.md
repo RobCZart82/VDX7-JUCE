@@ -1,16 +1,17 @@
 # VDX7 Mk1. — Használati útmutató
 
-Csak a fejlesztési ágban (nem a publikált 1.0.1-ben): SETTINGS → Sound mode:
+A publikált v1.2.0-ban (nem a történeti 1.0.1-ben): SETTINGS → Sound mode:
 Classic (alapértelmezett) és Clean. Apply példányonként a DAW-projektbe menti
 a választást, nem SysEx-be; Cancel megőrzi a jelenlegi módot. A MONO
 Native/Correct független ettől. Ha közben projekt vagy mód változik, nyisd újra
-az ablakot. A végleges vizuális/hangzási/host-elfogadás még hátravan.
+az ablakot. A final macOS/Windows tulajdonosi elfogadás PASS; teljes körű
+független vizuális/hangzási/teljesítménymérést nem állítunk.
 
 [Vissza az áttekintéshez](../../README_HU.md) · [English guide](GUIDE_EN.md)
 
-A [publikált 1.0.1 kiadás](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1)
+A [publikált 1.2.0 kiadás](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0)
 Windows x64 EXE és macOS Universal PKG VST3 telepítőket, illetve kézi ZIP-eket tartalmaz.
-A megfelelő forrás a [külön forráskiadásban](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source) érhető el.
+A megfelelő teljes forrás és checksumja mindkét Manual ZIP `Source/` mappájában érhető el.
 Az Actions artifactok külön fejlesztői csomagok. AU és Standalone nincs mellékelve.
 
 ## 1. Platform és csomag
@@ -182,7 +183,7 @@ A footer CPU-százaléka simított audio-callback terhelésbecslés, nem a telje
 
 ## 6. Utility és SysEx
 
-### Csak az 1.0.1 utáni fejlesztési buildekben
+### A publikált v1.2.0 része
 
 Az UTILITY → Init Preset megerősítést kér, és csak az aktuális szerkeszthető
 munkahangszínt cseréli le. A Mégse nem változtatja meg; ha a párbeszédablak
@@ -194,7 +195,7 @@ Az új hangszín exportálásig `Init Preset *` néven látszik; tárolt DX7-nev
 és a kijelzés eredete a DAW-projekttel mentődik. Saját VDX7 kezdőhangszín,
 nem Yamaha INIT dump, és nincs benne a már publikált 1.0.1 csomagokban.
 
-Importált bankkönyvtár (új fejlesztési buildek, kompatibilis ROM betöltése után): UTILITY → Imported Banks →
+Importált bankkönyvtár (v1.2.0, kompatibilis ROM betöltése után): UTILITY → Imported Banks →
 Open folder létrehozza/megnyitja a külön bankmappát. Ide tedd a saját,
 32-hangszínes `.syx` bankokat, majd válaszd a Refresh műveletet. Windows:
 `%APPDATA%\VDX7-JUCE\Imported Banks`; macOS:
@@ -216,7 +217,8 @@ a listát módosítja, nem az aktuális hangot. Hibás fájlok és limitek jelen
 adnak; hiányos scan esetén a korábbi könyvtár megmarad. Közben változó listánál
 nyisd meg újra a választót. A projekt a kiválasztott bankot és a szerkesztett
 hangot eltűnt forrásfájl mellett is őrzi. Ezek nincsenek a publikált 1.0.1-ben;
-a valódi host-elfogadás külön fejlesztési kapu marad.
+az 1.2.0-ban elérhetők. A final macOS/Windows elfogadás tulajdonosi eredmény,
+nem teljes körű független mérés.
 
 A UTILITY menüben hangszínátnevezés (1–10 nyomtatható ASCII karakter) és operátormásolás/-beillesztés található. A SysEx-export a SAVE AS menüben van. A másolás mind a 21 operátormezőt tartalmazza. Vágólapja a pluginpéldányhoz tartozik, a projekt nem tárolja.
 
@@ -400,10 +402,10 @@ azonos értékű/ABA versenyhelyzetekkel is.
 
 Ez a projekt [GNU AGPLv3](../../LICENSE.txt) szerint érhető el. A wrapper és az eredeti GUI-erőforrások AGPL-3.0-only licencűek; a DX7-mag megőrzi GPL-3.0-or-later licencét és eredeti közléseit. A JUCE-ot AGPLv3 alatt használjuk. Az egyesített mű és a komponensek közlései: [NOTICE.md](../../NOTICE.md).
 
-A v1.0.1 stabil kiadás letölthető a [GitHub Releases oldaláról](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1).
+A v1.2.0 stabil Latest kiadás letölthető a [GitHub Releases oldaláról](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0).
 A kiadás macOS Universal `.pkg`-t és kézi ZIP-et, Windows x64 `.exe`-
 telepítőt és kézi ZIP-et tartalmaz. Az ellenőrzőösszegek a leírásban, a teljes
-megfelelő forrás a [külön forráskiadásban](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source) érhető el.
+megfelelő forrás és checksumja mindkét Manual ZIP `Source/` mappájában érhető el.
 Kizárólag VST3-at ad; AU- és Standalone-csomag nincs benne. A kiadás
 után talált hibák javítása egy későbbi karbantartó kiadásba kerülhet; ez nem
 módosítja a publikált v1.0.0 taget vagy fájlokat. A szoftver garancia nélkül
@@ -415,6 +417,7 @@ nincs mellékelve.
 
 Köszönet a [VDX7/chiaccona](https://github.com/chiaccona/VDX7), [Retromulator/dx7Lib](https://github.com/reales/retromulator) és [JUCE](https://github.com/juce-framework/JUCE) fejlesztőinek. Csak a hordozható DX7-mag épül be, nem a teljes Retromulator alkalmazás.
 
-A publikált 1.0.1 dokumentált automatizált/csomagellenőrzései és körülhatárolt
-tulajdonosi tesztjei sikeresek. Az [elfogadott kézi teszthalasztások](../validation/VALIDATION_20261005_PUBLICATION_101.md)
-nem PASS eredmények. A jövőbeli karbantartás nem változtatja meg a kiadott fájlokat.
+A publikált 1.2.0 final csomagjai ellenőrzöttek,
+[végleges tulajdonosi elfogadása](../validation/FINAL_120_OWNER_ACCEPTANCE_20261014.md)
+rögzítve. Nem közölt részletes mérés nem PASS; az 1.0.1 elfogadása/halasztásai
+történetiek. A jövőbeli karbantartás nem változtatja meg a kiadott fájlokat.

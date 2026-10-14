@@ -4,8 +4,10 @@ These reports retain dated evidence for specific commits, packages and test scop
 They are not competing development plans. A historical PASS is not a fresh candidate PASS;
 unexecuted tests remain NOT RUN / DEFERRED. No report was deleted during consolidation.
 
-Start with [published 1.0.1 acceptance](VALIDATION_20261005_PUBLICATION_101.md)
-and [exact final package verification](VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md).
+Start with [final v1.2.0 owner acceptance](FINAL_120_OWNER_ACCEPTANCE_20261014.md).
+The [1.0.1 acceptance](VALIDATION_20261005_PUBLICATION_101.md) and
+[1.0.1 final verification](VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md)
+are historical evidence, not the latest release.
 Future actions belong in the [single active plan](../development/DEVELOPMENT_PLAN.md).
 Filenames retain their existing identifiers for regression lookup.
 
@@ -13,6 +15,8 @@ Magyarul: megőrzött tesztbizonyítékok, nem élő teendőlisták. A dátum, S
 tesztkör korlátozza az állításokat. A teljes név szerinti jegyzék alább található.
 
 ## Reports by filename
+
+- [FINAL_120_OWNER_ACCEPTANCE_20261014.md](FINAL_120_OWNER_ACCEPTANCE_20261014.md)
 
 - [STOPPED_RELEASE_OWNER_20261012.md](STOPPED_RELEASE_OWNER_20261012.md)
 

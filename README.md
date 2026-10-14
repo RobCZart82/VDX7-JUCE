@@ -1,5 +1,9 @@
 # VDX7 Mk1.
 
+Latest stable: [v1.2.0](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0),
+published 2026-10-14. Classic/Clean is included. Four VST3 downloads;
+matching source is inside both Manual ZIPs. Original DX7 Mk I v1.8 only.
+
 **6-Operator FM Synthesizer · Hardware Emulation**
 
 An open-source instrument built around the VDX7 DX7 Mk I hardware-emulation
@@ -8,7 +12,7 @@ Original firmware, a hardware-inspired interface and hands-on voice editing.
 
 [Magyar](README_HU.md)
 
-> **[Stable 1.0.1 downloads](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1)**
+> **[Stable 1.2.0 downloads](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0)**
 > are available. Development builds remain separate and visibly marked.
 > A legally obtained original DX7 Mk I v1.8 user-supplied ROM is required. No Yamaha firmware
 > or factory voice data is included.
@@ -19,11 +23,12 @@ changes. The pending-project protection and source-package verifier corrections
 are included in 1.0.1, not retroactively installed in 1.0.0.
 See the [active corrective plan](docs/development/DEVELOPMENT_PLAN.md).
 
-New development builds add an Imported Banks library: new instances scan its
+Version 1.2.0 includes an Imported Banks library: new instances scan its
 folder once; existing instances use UTILITY → Imported Banks → Refresh. Restored
 project banks take precedence. Startup diagnostics are available in the status
 tooltip and the UTILITY report. See the [user guide](docs/guides/GUIDE_EN.md).
-This feature is not in the already published 1.0.1 packages; host acceptance remains pending.
+This feature is not in historical 1.0.1 packages. Final 1.2.0 has owner-reported
+macOS/Windows acceptance; this is not exhaustive measured host coverage.
 
 ![VDX7 Mk1. EDIT — operator controls, envelopes and algorithm display](docs/screenshots/vdx7-edit.png)
 
@@ -35,11 +40,11 @@ The screenshots retain their development labels; they are not a stable-release c
 
 ## Download
 
-The [1.0.1 release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1) has **four user-download
+The [1.2.0 release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0) has **four user-download
 assets**: Windows x64 EXE installer and Manual Install ZIP, plus macOS Universal
 PKG installer and Manual Install ZIP. Checksums and signing limitations are in
-the release description. [Complete matching source with pinned dependencies](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source)
-is provided separately. See the
+the release description. Complete matching source with pinned dependencies and
+its checksum are inside `Source/` in both Manual ZIPs, not a fifth download. See the
 [four-download policy](docs/release/PUBLIC_DOWNLOADS.md).
 
 Development VST3 builds are available from [GitHub Actions](https://github.com/RobCZart82/VDX7-JUCE/actions).
@@ -75,9 +80,10 @@ the public workflows currently distribute VST3.
 
 A matching VST3 host is required for the plug-in. Build targets are **Windows x64**
 and **macOS Universal**; macOS 11 is the deployment target, not a guarantee that
-every OS/host combination has been tested. The owner reports macOS REAPER and
-Windows 10 x64 REAPER use; this is not the complete final-RC test matrix. Physical
-Intel Mac acceptance and exact-candidate checks remain separate. Standalone runs
+every OS/host combination has been tested. Final v1.2.0 owner-reported PASS covers
+REAPER 7.82 on Windows 11 Pro 26H2, Windows 10 Pro 22H2 and macOS 26.7.1/M1.
+This is not exhaustive measured coverage; physical Intel Mac acceptance is not
+claimed. Standalone runs
 without a DAW when built locally.
 
 **The only officially supported firmware is original Yamaha DX7 Mk I v1.8 (IG11469).** A legally

@@ -3,10 +3,11 @@
 Current automated creation, hash verification and extracted-source check:
 [reproducible source packaging](../release/SOURCE_PACKAGING_1.0.md).
 
-## Current development provenance (2026-10-09)
+## Published v1.2.0 provenance (2026-10-14)
 
-The current development candidate pins JUCE 9.0.3 at the revision below.
-This is not a published release or new host acceptance. The current CMake configure
+Published v1.2.0 pins JUCE 9.0.3 at the revision below; source/tag:
+`7e2271352d0f05fdad39bae26fdec764064fa1e1`. Matching source is inside both
+public Manual ZIPs. The current CMake configure
 emits `VDX7DependencySources.cmake` in the build directory with the resolved
 wrapper/JUCE/core source paths, including FetchContent overrides and vendored
 source selection. The current `scripts/write_build_provenance.py` requires
@@ -26,7 +27,8 @@ provenance CLI uses Git dependency checkouts; offline corresponding-source
 archives still require their separate manifest/file-hash verification.
 [Validation and JUCE update gates](../validation/BUILD_PROVENANCE_SOURCE_BINDING_20261009.md).
 The separate [9.0.3 compatibility experiment](../validation/JUCE_903_COMPATIBILITY_20261009.md)
-records the current candidate, its tests and the still-unrun host gates.
+records a historical candidate and its gates at that time. Current final
+owner acceptance: [final report](../validation/FINAL_120_OWNER_ACCEPTANCE_20261014.md).
 
 ## Current development pins and offline build
 
@@ -57,7 +59,7 @@ cmake --build build-offline --config Release --target VDX7_VST3
 ```
 
 With Ninja instead of Xcode, additionally use -DCMAKE_BUILD_TYPE=Release.
-The existing stable release does not use the new development JUCE pin. No firmware is needed
+Published v1.2.0 uses the above pin; historical v1.0.1 uses its older pin. No firmware is needed
 to compile; running the instrument requires the user's external firmware.
 
 Magyar: a teljes forrás ZIP tartalmazza a rögzített JUCE- és dx7Lib-forrást,

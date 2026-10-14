@@ -2,6 +2,9 @@
 
 ## Start here / Kezdőpontok
 
+- [Current stable v1.2.0 / Aktuális stabil v1.2.0](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0)
+- [Final 1.2.0 owner acceptance / Végleges tulajdonosi elfogadás](validation/FINAL_120_OWNER_ACCEPTANCE_20261014.md)
+
 - [Published 1.0.1 bilingual release notes](release/RELEASE_NOTES_1.0.1_HU_EN.md)
 - [Publication and explicitly deferred coverage](validation/VALIDATION_20261005_PUBLICATION_101.md)
 
@@ -45,7 +48,7 @@ preserved as historical evidence, not fresh acceptance claims.
 - [Archived release plans and preparation records](archive/README.md)
 - [Validation report index](validation/README.md)
 
-- [Current export corrected 1.0.1 final test packages](validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md)
+- [Historical export corrected 1.0.1 final test packages](validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md)
 - [Export corrected 1.0.1 package preparation checkpoint](validation/VALIDATION_20261005_EXPORT_FIX_PACKAGE_PREP_101.md)
 - [SysEx export acknowledgement and bank library regression](validation/VALIDATION_20261005_SYSEX_EXPORT_ACKNOWLEDGEMENT.md)
 - [Archived DX7 bank acceptance and data preservation](validation/VALIDATION_20261004_LEGACY_BANK_COMPATIBILITY.md)

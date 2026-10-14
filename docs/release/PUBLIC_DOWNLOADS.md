@@ -1,5 +1,11 @@
 # Four public user downloads / Négy felhasználói letöltés
 
+Current / Aktuális: [v1.2.0 stable Latest](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0),
+published / megjelent 2026-10-14. Four listed VST3 formats are now public;
+matching source is in both Manual ZIPs. The older 1.0.1 checkpoints below
+are historical. A négy VST3 csomag elérhető; a forrás mindkét Manual ZIP-ben,
+az alábbi 1.0.1 checkpointok történetiek.
+
 > **2026-10-05 publication checkpoint:** [1.0.1 is published](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1), with [matching source](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source).
 > Az 1.0.1 megjelent. [Current acceptance, owner-authorized deferrals and publication record](../validation/VALIDATION_20261005_PUBLICATION_101.md) supersede earlier open publication gates below. Earlier candidate/test statements are retained as dated preparation history, not current release status.
 
@@ -14,7 +20,7 @@ is the accepted stable version):
 | macOS Universal (arm64 + x86_64) | PKG installer | `VDX7-<version>-macOS-universal.pkg` |
 | macOS Universal (arm64 + x86_64) | Manual Install ZIP | `VDX7-<version>-macOS-universal-Manual.zip` |
 
-For the planned v1.2.0 release, all four contain the accepted VST3 build. No AU
+For the published v1.2.0 release, all four contain the accepted VST3 build. No AU
 or Standalone download is added. Each v1.2.0 Manual ZIP contains the complete
 plugin bundle plus the matching corresponding-source archive and its checksum
 manifest under `Source/`; it is not an outer Actions artifact ZIP. The EXE and
@@ -24,14 +30,20 @@ separate historical `v1.0.1-source` release below.
 Unsigned Windows installer and unsigned/not-notarized macOS package warnings
 remain; macOS plugin ad-hoc signing is not Developer ID signing.
 
-## Packaging and publication boundary
+## Packaging and publication boundary — standing safeguards
+
+For v1.2.0 these checks and owner authorization were completed, and the four
+unchanged final artifacts are public. The preparation workflow itself remains
+non-publishing; publication was a separate authorized operation. Requirements
+below apply to future publication operations, not outstanding v1.2.0 tasks.
 
 The v1.2.0 candidate workflow is preparation-only. It verifies both installers,
 both Manual ZIPs (each with the matching source ZIP and its checksum inside),
 two BUILD-INFO files and SHA256SUMS before uploading a combined validation
 artifact. It does not stage or publish a GitHub Release. The older
 `scripts/stage_release_downloads.py` allowlist remains a safeguard for its
-original workflow, not evidence that v1.2.0 has been staged or accepted.
+original workflow; actual v1.2.0 acceptance is recorded in
+[the final owner record](../validation/FINAL_120_OWNER_ACCEPTANCE_20261014.md).
 
 Any future publication implementation must use exactly this four-file allowlist
 from the reviewed staged payload, never `release-assets/*`, all ZIPs, the outer
@@ -46,26 +58,28 @@ identities, install/manual guidance, unsigned/not-notarized status and explicit
 deferred-test disclosures. Corresponding source generation and verification
 are retained, not removed by this policy.
 Durable matching-source access must be reviewed before publication; an expiring
-private/Actions artifact alone must not be treated as that access. Final
-candidate acceptance remains separate from the owner's delivery decision.
+private/Actions artifact alone must not be treated as that access. For published
+v1.2.0, matching source is durably delivered in both public Manual ZIPs and
+final owner acceptance was obtained separately from the delivery decision.
 
 Historical 1.0.1 source-delivery decision, 2026-10-01: the published
 `v1.0.1-source` GitHub release contains the matching corresponding-source ZIP
 and checksum manifest. This historical 1.0.1 release remains unchanged.
 
-New owner decision for v1.2.0, 2026-10-13: include the exact matching
+Historical delivery decision for v1.2.0, 2026-10-13: include the exact matching
 corresponding-source ZIP and its checksum manifest inside `Source/` in both
 Manual Install ZIPs. Keep the EXE/PKG installers binary-only and preserve the
 four public download assets; do not publish a separate fifth source download.
 The internal source archive must still be verified against the exact source
-commit and toolchain identities before publication. This decision does not
-authorize publication or modify any existing release/tag/asset.
+commit and toolchain identities before publication. That delivery decision
+alone was not authorization; separate explicit authorization was subsequently
+given for the published v1.2.0. Older releases/tags/assets remain unchanged.
 
 The historical 1.0.1 non-publishing workflow staged a separate
 `Source-Downloads` artifact. The v1.2.0 candidate workflow instead places the
 source ZIP and its checksum inside each platform Manual ZIP, then verifies both
-embedded copies match. Final native workflow execution and publication review
-remain required.
+embedded copies match. For v1.2.0 the final native workflow, verification,
+owner acceptance and authorized publication are complete.
 
 GitHub may additionally display its automatically generated **Source code
 (zip/tar.gz)** links. Those are platform-generated source links, not extra
@@ -86,8 +100,9 @@ Use the [single execution plan](../development/DEVELOPMENT_PLAN.md) for remainin
 
 Magyarul: a v1.2.0 release négy felhasználói csomagból áll. A megfelelő
 forrásarchívum és saját SHA-256 jegyzéke mindkét Manual Install ZIP-en belül, a
-`Source/` mappába kerül; külön ötödik forrásletöltés nem lesz. Az EXE/PKG
+`Source/` mappájában elérhető; külön ötödik forrásletöltés nincs. Az EXE/PKG
 telepítők változatlanul csak a plugint telepítik. Az 1.0.1 külön forrás-release
 történeti tény, nem módosul. A GitHub automatikus forráslinkjei továbbra sem
-helyettesítik a teljes, függőségekkel együtt csomagolt forrást. Ez a döntés nem
-publikálási engedély és nem módosít meglévő kiadást.
+helyettesítik a teljes, függőségekkel együtt csomagolt forrást. A történeti
+csomagtartalmi döntést külön publikálási engedély követte; az 1.2.0 megjelent,
+a korábbi kiadások változatlanok.
