@@ -1,39 +1,159 @@
 # VDX7 egységes fejlesztési terv
 
-Frissítve: 2026-10-13. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
+Frissítve: 2026-10-14. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
-A következő kiadás tervezett verziócélja v1.2.0; a Classic/Clean funkció
-kötelező része a tulajdonosi döntés szerint.
+A következő kiadás célja v1.2.0; a Classic/Clean a tulajdonosi döntés szerint
+része a kiadásnak.
 
-Ellenőrzött történeti baseline: `df43d0b7da7ec331682691437c661ce7f5f07629` (#195 merge, 2026-10-13 11:06 UTC).
-Az `1.2.0-rc3` már elkészült a #196 merge pontos forrásából; a következő
-feladat az alábbi RC3 állapotban rögzített hostelfogadás és dokumentációs kapu,
-nem újabb RC3 indítása. A fenti történeti baseline nem indítási paraméter.
-Ez nem publikálási engedély; a stable kiadás
-elfogadása és publikálása továbbra is külön döntés.
-
+Ellenőrzött `main` baseline: `621098d6400b3876d4f3ebc549aa0ce3eaf73f57` (#197 merge).
+Az `1.2.0-rc3` előkészítő csomagok elkészültek, de nem ezek a végleges
+1.2.0 csomagok, és nem jelentenek kiadási/host-elfogadást. A cél most a
+négy `1.2.0` végleges verziójú előkészítő csomag és azok pontos elfogadása.
+Ennek workflow-módosítása a #198 PR-ben van; `package_kind=final` futtatás
+**NOT RUN**, végleges csomagok még nincsenek előállítva. Nincs publikálási
+engedély; stable tag/release csak külön jóváhagyás után készülhet.
 ## Aktuális kiadási állapot és sorrend — 2026-10-13
 
-### RC3 elkészült — irányadó frissítés
+### Végleges `1.2.0` csomagok — aktuális kiadási cél
 
-Az `1.2.0-rc3` csomagolás **PASS**, pontos forrása
+
+
+A tulajdonos `1.2.0` végleges verziójú csomagokat kért, nem az RC3
+
+előzetes publikálását. A #198 PR a csomagoló workflow-hoz
+
+`package_kind=final` módot ad: a kimenet négy `VDX7-1.2.0-*` artifact, de
+
+ezek csak validációs/előkészítő artifactok; nem tag, GitHub Release vagy
+
+publikálás. A `candidate_label` mező final módban is kötelező legacy
+
+RC-formátumú bemenet, de nem része a final package labelnek; ezt a futás
+
+rekordjában külön jelölni kell.
+
+
+
+**Final workflow futtatása: NOT RUN.** A #198 PR CI-je workflow-forrást és
+
+regressziós kaput ellenőrzi, de `package_kind=final`-lal tényleges
+
+workflow_dispatch még nem történt, ezért final installer/Manual ZIP/PKG,
+
+BUILD-INFO és SHA-256 manifest nincs.
+
+
+
+### RC3 csomagolás — teljesült, de csak történeti bizonyíték
+
+
+
+Az `1.2.0-rc3` előkészítő csomagolása **PASS**, forrása
+
 `581b1ea50355754f324c8ebf5381eecfb257dc82` (#196 merge).
+
 [Futás 38436119848](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38436119848):
-Windows x64, macOS Universal és összesítő job PASS. A négy csomag és két
-BUILD-INFO helyi SHA-256 ellenőrzése PASS; a két Manual ZIP azonos,
-ellenőrzött forrásarchívumot tartalmaz. Részletes hash-ek és ellenőrzési kör:
+
+Windows x64, macOS Universal és összesítő job PASS. A négy artifact és két
+
+BUILD-INFO hash-ellenőrzése PASS; mindkét Manual ZIP azonos, checksum-ellenőrzött
+
+forráscsomagot tartalmaz. Részletes adat:
+
 [RC3 csomagellenőrzés](../validation/RC3_PACKAGE_VERIFICATION_20261013.md).
 
-Az alábbi korábbi RC3-indítási leírás dátumozott történeti eljárás, nem új
-indítási feladat. Az aktív ötlépéses listában az 1. és 2. pont RC3-ra
-teljesült. Hátra van a 3. exact-build Windows/macOS hostelfogadás, a 4.
-HU/EN dokumentáció végellenőrzése és az 5. külön publikálási döntés.
-Az RC3 plugin hash-e eltér a telepített, korábban tesztelt pluginétól;
-a korábbi REAPER tesztek nem minősülnek exact RC3 elfogadásnak.
-Ez a dokumentációs frissítés nem változtatja meg az RC3 rögzített forrását.
-Új csomagbuild esetén új candidate/source azonosító és ellenőrzés szükséges.
+Az RC3 csomagok nem helyettesítik a `package_kind=final`-lal készülő
 
-### Irányadó állapot a #195 merge után — 2026-10-13
+`1.2.0` csomagok ellenőrzését.
+
+
+
+Az RC3 plugin SHA-256-a `02be446a62eb7ef50b9296a45d68d749a5c92a37da6edc20fdde7db17659ffce`;
+
+a korábban telepített pluginé `c40cb0d9731b36cb691811977bdb73acd5b108fb18da188a257d90d66cce69d3`.
+
+A hash-ek eltérnek; a korábbi REAPER smoke nem bizonyít exact RC3 elfogadást,
+
+és semmiképp sem fogadja el az ettől is eltérő végleges 1.2.0 binárist.
+
+
+
+### Aktív teendők a végleges v1.2.0 publikálásáig
+
+
+
+1. **A #198 lezárása:** a végleges csomag legyen az aktív elfogadási cél;
+
+   a review P2 feloldása, a friss PR-CI zöld eredménye és a review rendezése
+
+   után a PR biztonságosan beolvasztható. A #198 merge-je önmagában nem
+
+   futtatja le a final csomagolást.
+
+2. **Végleges csomagok előállítása:** merge után ellenőrizd a friss `main`
+
+   teljes SHA-ját és annak Windows/macOS buildjeit. A
+
+   `Prepare v1.2.0 release-candidate packages (no publication)` workflow-t
+
+   csak erről a pontos `main` SHA-ról indítsd `package_kind=final` módban;
+
+   `source_commit` egyezzen a workflow SHA-jával. A kötelező `candidate_label`
+
+   legyen érvényes `rcN` érték, de ne kezeljük a `1.2.0` final kimenet
+
+   verziócímkéjeként. Windows x64, macOS Universal és összesítő job legyen PASS.
+
+3. **Négy final artifact ellenőrzése:** `VDX7-1.2.0-Windows-x64-Setup.exe`,
+
+   `VDX7-1.2.0-Windows-x64-Manual.zip`, `VDX7-1.2.0-macOS-universal.pkg` és
+
+   `VDX7-1.2.0-macOS-universal-Manual.zip`; ellenőrizd payloadot, verziót,
+
+   BUILD-INFO/provenance adatot, SHA-256 manifestet és a két Manual ZIP-be
+
+   ágyazott, azonos forrásarchívumot/checksumot. ROM/firmware ne legyen bennük.
+
+4. **Exact final build hostelfogadása:** mindkét platformon rögzítsd a
+
+   végleges csomag és a benne levő plugin hashét, OS/REAPER-verziót,
+
+   architektúrát, teszteseteket, PASS/FAIL/NOT RUN eredményt és korlátokat.
+
+   A korábbi owner-reported teszt csak akkor fogadható el ehhez, ha a hash
+
+   bizonyítja, hogy pontosan a végleges csomagban levő binárist tesztelte;
+
+   egyébként az érintett hosttesztet a végleges csomagból kell elvégezni.
+
+5. **Felhasználói dokumentáció:** a HU/EN telepítési és felhasználói útmutató
+
+   feleljen meg a final csomagok neveinek/tartalmának; jelezze az aláíratlan
+
+   Windows EXE és a Developer ID aláírás/notarizáció nélküli macOS PKG
+
+   várható figyelmeztetéseit. Hivatalosan csak az eredeti DX7 Mk I v1.8
+
+   firmware támogatott; ROM/firmware nincs mellékelve.
+
+6. **Külön release-döntés:** acceptance jegyzék, korlátok és esetleges
+
+   halasztások lezárása után kérj kifejezett publikálási jóváhagyást. Csak
+
+   azután készülhet stable tag/release és assetfeltöltés; a zöld CI és a
+
+   final előkészítő artifact nem publikálási engedély.
+
+
+
+**Classic/Clean állapot:** az implementáció és integráció mainba került;
+
+ehhez nem új kódfejlesztés, hanem a final binárissal végzett, exact host- és
+
+kiadási elfogadás a hátralévő kapu.
+
+### #195 utáni, RC3 előtti checkpoint — történeti
+
 
 **Baseline és ellenőrzések.** A #195 beolvadt `df43d0b7da7ec331682691437c661ce7f5f07629` merge SHA-val.
 PR-fej: `83b841515d916059f5bd16b473e5852d9435ae6a`. A javítás a Manual ZIP
@@ -72,7 +192,7 @@ A workflow ellenőrzi, hogy a forrás-SHA azonos a futás SHA-jával, és csak
 előkészítő artifactokat gyárt; nem készít taget, GitHub Release-t vagy
 publikus assetet.
 
-### Aktív teendők a v1.2.0 publikálásáig
+### A #195 checkpoint akkori teendői — történeti, felülírva
 
 1. **RC3 előállítása:** a fenti eljárással frissen ellenőrzött, merge utáni
    main SHA-ról indítsd el a workflow-t;
@@ -105,7 +225,7 @@ publikus assetet.
    végleges assetfeltöltés. E dokumentumfrissítés és a zöld CI nem ilyen
    jóváhagyás.
 
-**Classic/Clean állapot:** a funkció fejlesztése és integrációja mainba került;
+**Classic/Clean állapot a #195 checkpoint idején:** a funkció fejlesztése és integrációja mainba került;
 nem új implementáció a mostani aktív feladat. A kiadási kapu a pontos RC3
 csomaggal való azonosság és a valós hostelfogadás.
 
