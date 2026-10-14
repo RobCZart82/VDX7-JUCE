@@ -1,5 +1,11 @@
 # VDX7 egységes fejlesztési terv
 
+**Publikálás TELJESÜLT — 2026-10-14:** [v1.2.0 stabil Latest](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0).
+A tag és a négy változatlan csomag forrása `7e2271352d0f05fdad39bae26fdec764064fa1e1`;
+38548177165 futás. GitHub Latest, stable státusz és mind a négy asset hash
+ellenőrizve. A végleges tulajdonosi elfogadás és engedély alapján a publikálási
+kör lezárt; az alábbi korábbi nyitott kapuk checkpointok, nem új kiadási feladatok.
+
 Frissítve: 2026-10-14. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
 Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás célja v1.2.0; a Classic/Clean a tulajdonosi döntés szerint
@@ -22,6 +28,16 @@ kifejezetten engedélyezte a publikálást. Ez nem bizonyít nem végzett final
 hosttesztet, és nem jelent automatikus teszthalasztási jóváhagyást.
 
 ## Aktuális kiadási állapot és sorrend — 2026-10-14
+
+### Végleges tulajdonosi elfogadás és publikálási döntés
+
+A tulajdonos a végleges 1.2.0 telepítők/binárisok macOS és Windows tesztjét
+és minden pluginfunkció hibátlan működését jelentette: OWNER-REPORTED PASS.
+Kifejezetten jóváhagyta a stabil v1.2.0 Latest publikálást. A részletes
+[elfogadási rekord](../validation/FINAL_120_OWNER_ACCEPTANCE_20261014.md)
+különválasztja a felhasználói eredményt a nem közölt műszeres/per-case tesztektől.
+Ez a legfrissebb döntés felülírja az alábbi korábbi nyitott host- és
+jövőbeli engedélykéréseket; a csomagazonosság és publikálási ellenőrzés megmarad.
 
 ### Végleges `1.2.0` csomagok — aktuális kiadási cél
 
@@ -84,14 +100,10 @@ A hash-ek eltérnek; a korábbi REAPER smoke nem bizonyít exact RC3 elfogadást
 
 ### Aktív teendők a végleges v1.2.0 publikálásáig
 
-1. **Végleges csomagok előállítása:** e dokumentációs PR beolvasztása után
-   ellenőrizd az aktuális teljes `main` SHA-t, és várd meg annak Windows/macOS
-   Actions buildjeit. A
-   `Prepare v1.2.0 release-candidate packages (no publication)` workflow-t
-   erről a pontos, zöld `main` SHA-ról indítsd `package_kind=final` módban.
-   A `source_commit` egyezzen a workflow SHA-jával; a kötelező
-   `candidate_label` legyen érvényes `rcN`, de ne kezeld a final kimenet
-   verziócímkéjeként. Windows x64, macOS Universal és összesítő job: PASS.
+1. **Végleges csomagok előállítása: TELJESÜLT.** Az irányadó csomagok a
+   38548177165 futásból, `7e2271352d0f05fdad39bae26fdec764064fa1e1`
+   forrásból származnak. Dokumentációs merge miatt nem indítunk új buildet:
+   a tulajdonos ezeket a változatlan final binárisokat tesztelte és fogadta el.
 
 2. **Négy final artifact ellenőrzése:** `VDX7-1.2.0-Windows-x64-Setup.exe`,
    `VDX7-1.2.0-Windows-x64-Manual.zip`,

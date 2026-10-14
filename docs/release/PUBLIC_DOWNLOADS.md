@@ -1,5 +1,11 @@
 # Four public user downloads / Négy felhasználói letöltés
 
+Current / Aktuális: [v1.2.0 stable Latest](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0),
+published / megjelent 2026-10-14. Four listed VST3 formats are now public;
+matching source is in both Manual ZIPs. The older 1.0.1 checkpoints below
+are historical. A négy VST3 csomag elérhető; a forrás mindkét Manual ZIP-ben,
+az alábbi 1.0.1 checkpointok történetiek.
+
 > **2026-10-05 publication checkpoint:** [1.0.1 is published](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1), with [matching source](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source).
 > Az 1.0.1 megjelent. [Current acceptance, owner-authorized deferrals and publication record](../validation/VALIDATION_20261005_PUBLICATION_101.md) supersede earlier open publication gates below. Earlier candidate/test statements are retained as dated preparation history, not current release status.
 

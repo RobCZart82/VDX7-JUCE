@@ -1,6 +1,6 @@
 # VDX7 Mk1. — Használati útmutató
 
-Csak a fejlesztési ágban (nem a publikált 1.0.1-ben): SETTINGS → Sound mode:
+A publikált v1.2.0-ban (nem a történeti 1.0.1-ben): SETTINGS → Sound mode:
 Classic (alapértelmezett) és Clean. Apply példányonként a DAW-projektbe menti
 a választást, nem SysEx-be; Cancel megőrzi a jelenlegi módot. A MONO
 Native/Correct független ettől. Ha közben projekt vagy mód változik, nyisd újra

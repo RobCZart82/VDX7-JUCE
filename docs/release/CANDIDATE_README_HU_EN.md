@@ -1,5 +1,11 @@
 # Candidate guidance / Jelölt-útmutató
 
+Publication checkpoint / Publikálási checkpoint: [v1.2.0](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0)
+is published stable Latest, 2026-10-14. Final owner acceptance and authorization
+supersede the earlier preparation-only and pending-host statements below.
+A v1.2.0 stabil Latest megjelent; a végleges tulajdonosi elfogadás felülírja
+az alábbi korábbi előkészítési és nyitott host-státuszokat.
+
 ## Current v1.2.0 scope / Aktuális v1.2.0 kör
 
 Final-version `1.2.0` preparation packages now exist (run 38548177165, source

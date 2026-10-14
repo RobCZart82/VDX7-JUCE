@@ -1,5 +1,9 @@
 # VDX7 Mk1.
 
+Legújabb stabil: [v1.2.0](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0),
+megjelent 2026-10-14. Classic/Clean funkcióval, négy VST3 letöltéssel;
+a megfelelő forrás mindkét Manual ZIP-ben. Original DX7 Mk I v1.8 támogatás.
+
 **Hatoperátoros FM szintetizátor · Hardveremuláció**
 
 Nyílt forrású hangszer a VDX7 DX7 Mk I hardveremulációs magjára,

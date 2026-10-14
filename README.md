@@ -1,5 +1,9 @@
 # VDX7 Mk1.
 
+Latest stable: [v1.2.0](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0),
+published 2026-10-14. Classic/Clean is included. Four VST3 downloads;
+matching source is inside both Manual ZIPs. Original DX7 Mk I v1.8 only.
+
 **6-Operator FM Synthesizer · Hardware Emulation**
 
 An open-source instrument built around the VDX7 DX7 Mk I hardware-emulation
