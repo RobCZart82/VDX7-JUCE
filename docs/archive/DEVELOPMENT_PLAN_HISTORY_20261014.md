@@ -1858,7 +1858,7 @@ Kísérleti hossz és gain-politika nem végleges hangzási szerződés.
 #### D5 állapot- és kérésátadási szerződés — 2026-10-08
 
 Baseline: `0a8b1bdaa5e99652b4aa2a1958dca04e9ba7f152`; ág:
-`test/classic-clean-state-contract`. [Részletes műszaki szerződés](CLASSIC_CLEAN_STATE_CONTRACT.md)
+`test/classic-clean-state-contract`. [Részletes műszaki szerződés](../development/CLASSIC_CLEAN_STATE_CONTRACT.md)
 és [soros tesztmodell validációja](../validation/CLASSIC_CLEAN_STATE_CONTRACT_20261008.md).
 Pull request: [#164](https://github.com/RobCZart82/VDX7-JUCE/pull/164), beolvasztva
 2026-10-08: `328d93992a764dbd1ac89a50feb3ad4e1e2692b3`.
