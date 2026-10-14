@@ -61,10 +61,14 @@ jobs:
           [[ "$SOURCE_COMMIT" == "$WORKFLOW_COMMIT" ]]
           [[ "$CANDIDATE_LABEL" =~ ^rc[1-9][0-9]*$ ]]
           case "$PACKAGE_KIND" in
-            candidate) echo "CONFIGURE_CANDIDATE=$CANDIDATE_LABEL" >> "$GITHUB_ENV" ;;
+            candidate)
+              echo "CONFIGURE_CANDIDATE=$CANDIDATE_LABEL" >> "$GITHUB_ENV"
+              echo 'CONFIGURE_RELEASE=OFF' >> "$GITHUB_ENV"
+              ;;
             final)
               echo 'PACKAGE_LABEL=1.2.0' >> "$GITHUB_ENV"
               echo 'CONFIGURE_CANDIDATE=' >> "$GITHUB_ENV"
+              echo 'CONFIGURE_RELEASE=ON' >> "$GITHUB_ENV"
               ;;
             *) echo 'Unsupported package kind' >&2; exit 1 ;;
           esac
@@ -85,25 +89,19 @@ jobs:
           "-DCMAKE_PROJECT_VDX7_JUCE_INCLUDE=${GITHUB_WORKSPACE}/cmake/VDX7DependencySources.cmake"
           -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
           -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
-          -DVDX7_RELEASE_BUILD=OFF
-          "-DVDX7_RELEASE_CANDIDATE=${CANDIDATE_LABEL}"
-          "-DVDX7_RELEASE_BUILD=${{ inputs.package_kind == 'final' && 'ON' || 'OFF' }}"
+          "-DVDX7_RELEASE_BUILD=${CONFIGURE_RELEASE}"
           "-DVDX7_RELEASE_CANDIDATE=${CONFIGURE_CANDIDATE}"
 
       - name: Configure Windows x64 candidate
         if: runner.os == 'Windows'
-        shell: pwsh
+        shell: bash
         run: |
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
-            "-DCMAKE_PROJECT_VDX7_JUCE_INCLUDE=$env:GITHUB_WORKSPACE\cmake\VDX7DependencySources.cmake" `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DVDX7_RELEASE_BUILD=OFF `
-            "-DVDX7_RELEASE_CANDIDATE=$env:CANDIDATE_LABEL"
-          if ('${{ inputs.package_kind }}' -eq 'final') {
-            cmake -S . -B build -DVDX7_RELEASE_BUILD=ON -DVDX7_RELEASE_CANDIDATE=
-            if ($LASTEXITCODE -ne 0) { throw "Final configure failed: $LASTEXITCODE" }
-          }
-          if ($LASTEXITCODE -ne 0) { throw "CMake configure failed: $LASTEXITCODE" }
+          set -euo pipefail
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 \
+            "-DCMAKE_PROJECT_VDX7_JUCE_INCLUDE=${GITHUB_WORKSPACE}/cmake/VDX7DependencySources.cmake" \
+            -DCMAKE_BUILD_TYPE=Release \
+            "-DVDX7_RELEASE_BUILD=${CONFIGURE_RELEASE}" \
+            "-DVDX7_RELEASE_CANDIDATE=${CONFIGURE_CANDIDATE}"
 
       - name: Build VST3 and ROM-free test targets
         run: cmake --build build --config Release --parallel 4 --target VDX7_VST3 vdx7_ci_checks

@@ -8,8 +8,8 @@ class FinalPreparationTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         text = (root / '.github/workflows/prepare-v1.2.0-candidate.yml').read_text()
         for token in ('default: candidate', '- final', "PACKAGE_LABEL=1.2.0",
-                      '-DVDX7_RELEASE_BUILD=ON -DVDX7_RELEASE_CANDIDATE=',
-                      "inputs.package_kind == 'final' && 'ON' || 'OFF'",
+                      "echo 'CONFIGURE_RELEASE=ON'", "echo 'CONFIGURE_RELEASE=OFF'",
+                      '-DVDX7_RELEASE_BUILD=${CONFIGURE_RELEASE}',
                       'Resolve final-version assembly label', 'contents: read',
                       'not accepted or approved for publication.'):
             self.assertIn(token, text)
