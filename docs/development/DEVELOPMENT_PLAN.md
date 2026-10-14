@@ -5,44 +5,36 @@ Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
 A következő kiadás célja v1.2.0; a Classic/Clean a tulajdonosi döntés szerint
 része a kiadásnak.
 
-Ellenőrzött `main` baseline: `621098d6400b3876d4f3ebc549aa0ce3eaf73f57` (#197 merge).
-Az `1.2.0-rc3` előkészítő csomagok elkészültek, de nem ezek a végleges
-1.2.0 csomagok, és nem jelentenek kiadási/host-elfogadást. A cél most a
-négy `1.2.0` végleges verziójú előkészítő csomag és azok pontos elfogadása.
-Ennek workflow-módosítása a #198 PR-ben van; `package_kind=final` futtatás
-**NOT RUN**, végleges csomagok még nincsenek előállítva. Nincs publikálási
-engedély; stable tag/release csak külön jóváhagyás után készülhet.
-## Aktuális kiadási állapot és sorrend — 2026-10-13
+Ellenőrzött kiinduló `main` baseline e tervfrissítés előtt:
+`0ae865491ccb29fc6a885582f842893efa7e68c5` (#198 merge, 2026-10-14).
+[#198](https://github.com/RobCZart82/VDX7-JUCE/pull/198) beolvadt: a
+`package_kind=final` előkészítő workflow már a `main` része. A merge utáni
+`main` Windows [buildje](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38518859744)
+és macOS [buildje](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38518859749)
+**PASS**. Ez a tervfrissítés előtti baseline; PR-merge után az új main SHA-t
+és annak Actions-eredményét külön kell rögzíteni.
+
+Az `1.2.0-rc3` előkészítő csomagok elkészültek, de nem végleges
+`1.2.0` csomagok és nem jelentenek kiadási/host-elfogadást. A final
+workflow-futtatás, a négy final artifact, azok exact csomag/host-elfogadása
+és a publikálás továbbra is külön kapu. Nincs publikálási engedély; stable
+tag/release csak későbbi, kifejezett jóváhagyás után készülhet.
+
+## Aktuális kiadási állapot és sorrend — 2026-10-14
 
 ### Végleges `1.2.0` csomagok — aktuális kiadási cél
 
+A tulajdonos végleges `1.2.0` csomagokat kért az RC3 előzetes
+publikálása helyett. A #198 workflow `package_kind=final` módja négy
+`VDX7-1.2.0-*` előkészítő artifactot állít elő; ez nem készít taget,
+GitHub Release-t vagy publikációt. A kötelező `candidate_label` final
+módban is érvényes legacy `rcN` bemenet, de nem a final artifact verziócímkéje;
+a futás/provenance rekordjában ezt egyértelműen rögzíteni kell.
 
-
-A tulajdonos `1.2.0` végleges verziójú csomagokat kért, nem az RC3
-
-előzetes publikálását. A #198 PR a csomagoló workflow-hoz
-
-`package_kind=final` módot ad: a kimenet négy `VDX7-1.2.0-*` artifact, de
-
-ezek csak validációs/előkészítő artifactok; nem tag, GitHub Release vagy
-
-publikálás. A `candidate_label` mező final módban is kötelező legacy
-
-RC-formátumú bemenet, de nem része a final package labelnek; ezt a futás
-
-rekordjában külön jelölni kell.
-
-
-
-**Final workflow futtatása: NOT RUN.** A #198 PR CI-je workflow-forrást és
-
-regressziós kaput ellenőrzi, de `package_kind=final`-lal tényleges
-
-workflow_dispatch még nem történt, ezért final installer/Manual ZIP/PKG,
-
-BUILD-INFO és SHA-256 manifest nincs.
-
-
+**Final workflow dispatch: NOT RUN.** Bár a workflow forrása és regressziós
+kapui a #198-cal mainba kerültek, tényleges `package_kind=final` futás még
+nem történt, ezért final installer/Manual ZIP/PKG, BUILD-INFO és final
+SHA-256 manifest jelenleg nincs.
 
 ### RC3 csomagolás — teljesült, de csak történeti bizonyíték
 
@@ -80,77 +72,66 @@ A hash-ek eltérnek; a korábbi REAPER smoke nem bizonyít exact RC3 elfogadást
 
 ### Aktív teendők a végleges v1.2.0 publikálásáig
 
-
-
-1. **A #198 lezárása:** a végleges csomag legyen az aktív elfogadási cél;
-
-   a review P2 feloldása, a friss PR-CI zöld eredménye és a review rendezése
-
-   után a PR biztonságosan beolvasztható. A #198 merge-je önmagában nem
-
-   futtatja le a final csomagolást.
-
-2. **Végleges csomagok előállítása:** merge után ellenőrizd a friss `main`
-
-   teljes SHA-ját és annak Windows/macOS buildjeit. A
-
+1. **Végleges csomagok előállítása:** e dokumentációs PR beolvasztása után
+   ellenőrizd az aktuális teljes `main` SHA-t, és várd meg annak Windows/macOS
+   Actions buildjeit. A
    `Prepare v1.2.0 release-candidate packages (no publication)` workflow-t
+   erről a pontos, zöld `main` SHA-ról indítsd `package_kind=final` módban.
+   A `source_commit` egyezzen a workflow SHA-jával; a kötelező
+   `candidate_label` legyen érvényes `rcN`, de ne kezeld a final kimenet
+   verziócímkéjeként. Windows x64, macOS Universal és összesítő job: PASS.
 
-   csak erről a pontos `main` SHA-ról indítsd `package_kind=final` módban;
+2. **Négy final artifact ellenőrzése:** `VDX7-1.2.0-Windows-x64-Setup.exe`,
+   `VDX7-1.2.0-Windows-x64-Manual.zip`,
+   `VDX7-1.2.0-macOS-universal.pkg` és
+   `VDX7-1.2.0-macOS-universal-Manual.zip`. Ellenőrizd mindegyik verzióját,
+   payloadját, BUILD-INFO/provenance adatát és SHA-256-át; a két Manual ZIP
+   ugyanazt a SHA-hoz kötött forrásarchívumot és ellenőrzőösszeget tartalmazza.
+   Yamaha ROM/firmware egyik csomagba sem kerülhet.
 
-   `source_commit` egyezzen a workflow SHA-jával. A kötelező `candidate_label`
+3. **Exact final package hostelfogadása:** a végleges csomagból tesztelt plugin
+   hashét kell összevetni az elfogadott builddel. A tulajdonos korábban
+   Windows és macOS alatt a legutóbbi fejlesztői plugint PASS-nak jelentette;
+   ezek értékes, owner-reported eredmények, de a végleges csomaggal való
+   bináris azonosság és a tételes tesztazonosítók még nincsenek rögzítve.
+   A már megadott célkörnyezetek: Windows 11 Pro 26H2, x64, REAPER 7.82 x64;
+   macOS 26.7.1, Mac mini M1 (2020, 16 GB), REAPER 7.82 Universal.
+   Az adott teszteredmény csak hash-egyezés esetén fogadható el az exact final
+   build bizonyítékaként; különben a final csomaggal kell célzottan ellenőrizni
+   a telepítést/betöltést, hangot és MIDI-t, SETTINGS Classic/Clean váltást,
+   projekt save/reopen-t, példányizolációt, valamint a még hiányzó rate/buffer,
+   offline-render és host eseteket. Minden sorhoz PASS/FAIL/NOT RUN, buildhash,
+   OS/host és rövid megjegyzés kell; a nem futott vagy nem releváns sort
+   indokoltan lehet halasztani.
 
-   legyen érvényes `rcN` érték, de ne kezeljük a `1.2.0` final kimenet
+4. **HU/EN felhasználói dokumentáció véglegesítése:** a README, kézikönyvek
+   és telepítési útmutatók feleljenek meg az ellenőrzött final csomagneveknek
+   és tényleges tartalomnak. Maradjon világos, hogy a két Manual ZIP tartalmazza
+   a forrást, az EXE/PKG plugin-only; csak az eredeti DX7 Mk I v1.8 firmware
+   hivatalosan támogatott, firmware nincs mellékelve. Ismertessék az aláíratlan
+   Windows EXE, illetve Developer ID aláírás/notarizáció nélküli macOS PKG
+   várható figyelmeztetéseit. Csak az artifactok vizsgálata után igazítsd a
+   csomagtartalomra vonatkozó állításokat.
 
-   verziócímkéjeként. Windows x64, macOS Universal és összesítő job legyen PASS.
+5. **Acceptance jegyzék és külön publikálási döntés:** rögzítsd a baseline/final
+   SHA-t, a négy artifact nevét és hashét, provenance-t, hosttesztek pontos
+   eredményeit, korlátait és minden indokolt halasztást. A final csomagfutás
+   vagy a zöld CI önmagában nem publikálás. Stable tag, GitHub Release és
+   assetfeltöltés csak az összes elfogadási kapu áttekintése és külön,
+   kifejezett tulajdonosi publikálási jóváhagyás után; korábbi release/tag/
+   asset nem írható felül.
 
-3. **Négy final artifact ellenőrzése:** `VDX7-1.2.0-Windows-x64-Setup.exe`,
-
-   `VDX7-1.2.0-Windows-x64-Manual.zip`, `VDX7-1.2.0-macOS-universal.pkg` és
-
-   `VDX7-1.2.0-macOS-universal-Manual.zip`; ellenőrizd payloadot, verziót,
-
-   BUILD-INFO/provenance adatot, SHA-256 manifestet és a két Manual ZIP-be
-
-   ágyazott, azonos forrásarchívumot/checksumot. ROM/firmware ne legyen bennük.
-
-4. **Exact final build hostelfogadása:** mindkét platformon rögzítsd a
-
-   végleges csomag és a benne levő plugin hashét, OS/REAPER-verziót,
-
-   architektúrát, teszteseteket, PASS/FAIL/NOT RUN eredményt és korlátokat.
-
-   A korábbi owner-reported teszt csak akkor fogadható el ehhez, ha a hash
-
-   bizonyítja, hogy pontosan a végleges csomagban levő binárist tesztelte;
-
-   egyébként az érintett hosttesztet a végleges csomagból kell elvégezni.
-
-5. **Felhasználói dokumentáció:** a HU/EN telepítési és felhasználói útmutató
-
-   feleljen meg a final csomagok neveinek/tartalmának; jelezze az aláíratlan
-
-   Windows EXE és a Developer ID aláírás/notarizáció nélküli macOS PKG
-
-   várható figyelmeztetéseit. Hivatalosan csak az eredeti DX7 Mk I v1.8
-
-   firmware támogatott; ROM/firmware nincs mellékelve.
-
-6. **Külön release-döntés:** acceptance jegyzék, korlátok és esetleges
-
-   halasztások lezárása után kérj kifejezett publikálási jóváhagyást. Csak
-
-   azután készülhet stable tag/release és assetfeltöltés; a zöld CI és a
-
-   final előkészítő artifact nem publikálási engedély.
-
-
-
-**Classic/Clean állapot:** az implementáció és integráció mainba került;
-
-ehhez nem új kódfejlesztés, hanem a final binárissal végzett, exact host- és
-
-kiadási elfogadás a hátralévő kapu.
+**Classic/Clean állapot:** a feature implementációja, SETTINGS és projekt
+save/restore integrációja a [#188](https://github.com/RobCZart82/VDX7-JUCE/pull/188)
+merge-jével mainba került (`624f68ca01cfa8c6c63c66c650c11c2505e4c99f`).
+A [review/validációs jelentés](../validation/CLASSIC_CLEAN_INTEGRATION_REVIEW_20261012.md)
+a javított végső regressziót 59/59 PASS-ra, a public SETTINGS audioút 12
+(rate × buffer) kombinációját PASS-ra, a Python csomagteszteket 94/94 PASS-ra,
+valamint a macOS VST3/AU/Standalone buildet PASS-ra rögzíti. Ezek már létező
+PR/review bizonyítékok, nem most újrafuttatott eredmények és nem final
+release-package elfogadás. Újra megvalósítandó kód helyett nyitott marad a
+pontos final package-hez kötött host/kiadási elfogadás, a teljes tesztmátrix
+eredményeinek dokumentálása és az esetleges halasztások indoklása.
 
 ### #195 utáni, RC3 előtti checkpoint — történeti
 
@@ -397,9 +378,10 @@ Csak original DX7 Mk I v1.8 támogatott, firmware nem terjeszthető.
 ## Történeti konszolidáció és korábbi munkaterv — 2026-10-12
 
 Az e szakasz alatti korábbi státuszok és sorrendek archivált checkpointok,
-nem végrehajtandó feladatlista. Különösen a #188 Draft, a reader/SETTINGS
-hiánya és a régi merge-kapuk már nem aktuálisak. Az egyetlen aktív sorrend
-a fenti „Aktív teendők a v1.2.0 publikálásáig” szakasz öt pontja.
+nem végrehajtandó feladatlista. Különösen a #188 Draft-állapot, a reader/
+SETTINGS hiánya és a régi merge-kapuk már nem aktuálisak: a #188 később
+beolvadt. Az egyetlen aktív sorrend a fenti „Aktív teendők a végleges v1.2.0
+publikálásáig” szakasz öt pontja.
 
 Ellenőrzött main: `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187 merge).
 Ehhez a pontos SHA-hoz a main
@@ -588,8 +570,10 @@ no-ROM edits, reset/release/prepare/reload és Native/Correct policy, stale és
 reentráns restore/host publication, több példány és kapcsolódó privát
 regressziók. A mostani három-rate pozitív recall nem zárja le ezt a teljes listát.
 Ezután SETTINGS, műszeres/hallásos és új csomag/host kapuk következnek.
-Public reader tehát a #188 Draftban már nem zárt; main és korábbi checkpointok
-reader-closed mondatai más commitokra vonatkoznak, nem új aktuális állítások.
+Ezek az október 12-i bejegyzések a #188 még Draft állapotában készültek.
+A PR később `624f68ca01cfa8c6c63c66c650c11c2505e4c99f` merge SHA-val mainba
+került; az itt következő ellenőrzőlista történeti maradéklista, nem a mai
+implementációs státusz. Az aktuális release-kapuk a dokumentum elején vannak.
 
 1. **D5 integráció:** fennmaradó lifecycle/mono/pending és reentráns restore/
    publikáció kontrollok; teljes Clean capture/writer/reader/admission az owner
@@ -1687,11 +1671,14 @@ Elfogadás: több bank, elutasított fájlok, gyári/USER adatmegőrzés, hossz�
 
 ### D5 SETTINGS Classic / Clean hangzási mód
 
-Állapot: TERVEZETT, tulajdonos által jóváhagyott irány és dokumentálási kérés
-2026-10-06. A kapcsoló helye a **SETTINGS menü**, nem a főpanel vagy UTILITY.
-Ez a bejegyzés nem implementáció, mérési PASS vagy új kiadási engedély.
-A 2026-10-09-i döntés alapján a következő release kötelező része; a fenti
-release-scope kapuk irányadók. A végleges műszaki megoldás még megvalósítandó.
+Állapot: a funkció implementációja, SETTINGS és projektmentés/visszaállítás
+integrációja a #188 merge-jével mainba került. Ez a 2026-10-06-i jóváhagyott
+termékirány és az eredeti részletes elfogadási specifikáció megőrzött terve;
+nem a jelenlegi „még nincs implementálva” státusz. A Classic/Clean kiadási
+elfogadás aktuális állapotát és a #188 bizonyítékait a dokumentum eleje,
+valamint a [#188 validációs jelentés](../validation/CLASSIC_CLEAN_INTEGRATION_REVIEW_20261012.md)
+rögzíti. Az alábbi követelmények továbbra is a funkció/kiadás elfogadási
+kritériumai, nem új implementációs állítások.
 
 #### Felhasználói működés és elnevezés
 
@@ -2274,7 +2261,10 @@ Minden kör: friss main → minimális változtatás és regresszió → érinte
 [Korábbi összevont terv](../archive/EXECUTION_PLAN_1.0.md), [roadmap](../archive/ROADMAP_1.0.md), [régi kiadási checklist](../archive/RELEASE_CHECKLIST_1.0_RC.md) megőrzött döntés- és bizonyítéktörténet. Az élő feladatokat csak itt frissítjük, egyedi D/T/M azonosítóval. Megvalósításkor ide kerül státusz és PR/tesztlink; a részletes tesztjelentés külön marad. Régi checklist nem írhatja felül ezt a tervet vagy a kiadás tényét.
 
 English summary: this is the sole active post-1.0.1 ledger. The owner explicitly
-requires Classic/Clean in the next release (2026-10-09); production DSP/state/UI
-integration and its acceptance remain open. Other future features and optional
-maintenance are separate. Old release gates are history, not new blockers or
-PASS claims. No new version, host-test waiver or publication authority is inferred.
+requires Classic/Clean in v1.2.0; its production DSP, SETTINGS and project
+save/restore integration merged in PR #188. PR-level regression evidence is
+recorded, while exact final-package provenance, remaining host acceptance,
+final documentation and separate publication approval remain open. Other
+future features and optional maintenance are separate. Historical release
+gates are not current blockers or new PASS claims. No host-test waiver or
+publication authority is inferred.
