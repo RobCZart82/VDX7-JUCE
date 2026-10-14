@@ -6,6 +6,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CurrentDocumentationTests(unittest.TestCase):
+    def test_plan_introduction_does_not_reopen_published_release(self):
+        text = (ROOT / 'docs/development/DEVELOPMENT_PLAN.md').read_text(encoding='utf-8')
+        intro = text.split('## Aktuális kiadási állapot', 1)[0]
+        self.assertIn('Publikálás TELJESÜLT', intro)
+        self.assertNotIn('A következő kiadás célja v1.2.0', intro)
+        self.assertNotIn('publikálás továbbra is külön kapu', intro)
+
     def test_bilingual_downloads_target_current_release(self):
         for name in ('README.md', 'README_HU.md', 'docs/guides/GUIDE_EN.md',
                      'docs/guides/GUIDE_HU.md'):

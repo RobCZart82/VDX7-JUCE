@@ -6,12 +6,11 @@ A tag és a négy változatlan csomag forrása `7e2271352d0f05fdad39bae26fdec764
 ellenőrizve. A végleges tulajdonosi elfogadás és engedély alapján a publikálási
 kör lezárt; az alábbi korábbi nyitott kapuk checkpointok, nem új kiadási feladatok.
 
-Frissítve: 2026-10-14. Ez az egyetlen irányadó lista az 1.0.1 utáni munkákhoz.
-Az 1.0.1 már megjelent; a régi kiadási kapuk nem új nyitott feladatok.
-A következő kiadás célja v1.2.0; a Classic/Clean a tulajdonosi döntés szerint
-része a kiadásnak.
+Frissítve: 2026-10-14. Ez az irányadó fejlesztési és kiadási állapotnyilvántartás.
+A v1.2.0 megjelent, Classic/Clean funkcióval. Az 1.0.1 és a kiadás előtti
+checkpointok történetiek; lezárt kiadási kapuk nem új nyitott feladatok.
 
-Ellenőrzött kiinduló `main` baseline e tervfrissítés előtt:
+Történeti kiinduló `main` baseline a csomagolási fejlesztés után:
 `0ae865491ccb29fc6a885582f842893efa7e68c5` (#198 merge, 2026-10-14).
 [#198](https://github.com/RobCZart82/VDX7-JUCE/pull/198) beolvadt: a
 `package_kind=final` előkészítő workflow már a `main` része. A merge utáni
@@ -20,12 +19,10 @@ Ellenőrzött kiinduló `main` baseline e tervfrissítés előtt:
 **PASS**. Ez a tervfrissítés előtti baseline; PR-merge után az új main SHA-t
 és annak Actions-eredményét külön kell rögzíteni.
 
-Az `1.2.0-rc3` előkészítő csomagok elkészültek, de nem végleges
-`1.2.0` csomagok és nem jelentenek kiadási/host-elfogadást. A final
-workflow-futtatás, a négy final artifact, azok exact csomag/host-elfogadása
-és a publikálás továbbra is külön kapu. A tulajdonos 2026-10-14-én ismét
-kifejezetten engedélyezte a publikálást. Ez nem bizonyít nem végzett final
-hosttesztet, és nem jelent automatikus teszthalasztási jóváhagyást.
+Az RC3 előkészítés történeti; a kiadott végleges 1.2.0 négy csomagja a
+38548177165 futásból származik. A csomagellenőrzés, külön final tulajdonosi
+hostelfogadás és kifejezett publikálási engedély után a kiadás megjelent.
+Ez nem állít nem végzett műszeres tesztet vagy általános teszthalasztást.
 
 ## Aktuális kiadási állapot és sorrend — 2026-10-14
 
@@ -39,7 +36,7 @@ különválasztja a felhasználói eredményt a nem közölt műszeres/per-case 
 Ez a legfrissebb döntés felülírja az alábbi korábbi nyitott host- és
 jövőbeli engedélykéréseket; a csomagazonosság és publikálási ellenőrzés megmarad.
 
-### Végleges `1.2.0` csomagok — aktuális kiadási cél
+### Publikált végleges `1.2.0` csomagok — kiadási bizonyíték
 
 A tulajdonos végleges `1.2.0` csomagokat kért az RC3 előzetes
 publikálása helyett. A #198 workflow `package_kind=final` módja négy
