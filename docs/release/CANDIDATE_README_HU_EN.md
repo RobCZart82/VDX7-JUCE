@@ -2,7 +2,11 @@
 
 ## Current v1.2.0 scope / Aktuális v1.2.0 kör
 
-The current candidate is `1.2.0-rc3`, not an accepted or published stable release.
+Final-version `1.2.0` preparation packages now exist (run 38548177165, source
+`7e2271352d0f05fdad39bae26fdec764064fa1e1`). They are not yet a published
+stable release. RC3 is the earlier owner-tested candidate; its results do not
+automatically accept the distinct final binaries. Publication permission has
+been given; final artifact and host acceptance remain separate gates.
 Only original Yamaha DX7 Mk I v1.8 firmware is officially supported; SER7/Special
 Edition and other firmware versions are not officially supported. Firmware is
 not supplied. Windows x64 Setup EXE + Manual ZIP and macOS Universal PKG +
@@ -13,7 +17,11 @@ See [package evidence](../validation/RC3_PACKAGE_VERIFICATION_20261013.md),
 [download policy](PUBLIC_DOWNLOADS.md) and the [active plan](../development/DEVELOPMENT_PLAN.md).
 Exact RC3 host acceptance remains open; earlier build tests do not close it.
 
-Az aktuális jelölt `1.2.0-rc3`, nem elfogadott vagy publikált stabil kiadás.
+Elkészültek a végleges verziójú `1.2.0` előkészítő csomagok (38548177165,
+forrás: `7e2271352d0f05fdad39bae26fdec764064fa1e1`), de még nem publikált
+stabil kiadás. Az RC3 a korábbi, tulajdonos által tesztelt jelölt; eredménye
+nem fogadja el automatikusan a final binárist. A publikálási engedély megvan;
+a final artifact- és hostelfogadás külön kapu.
 Hivatalosan kizárólag az eredeti Yamaha DX7 Mk I v1.8 firmware támogatott;
 SER7/Special Edition és más firmware-verzió nem támogatott hivatalosan.
 Firmware nincs mellékelve. A Windows x64 EXE + Manual ZIP és macOS Universal

@@ -17,8 +17,9 @@ Ellenőrzött kiinduló `main` baseline e tervfrissítés előtt:
 Az `1.2.0-rc3` előkészítő csomagok elkészültek, de nem végleges
 `1.2.0` csomagok és nem jelentenek kiadási/host-elfogadást. A final
 workflow-futtatás, a négy final artifact, azok exact csomag/host-elfogadása
-és a publikálás továbbra is külön kapu. Nincs publikálási engedély; stable
-tag/release csak későbbi, kifejezett jóváhagyás után készülhet.
+és a publikálás továbbra is külön kapu. A tulajdonos 2026-10-14-én ismét
+kifejezetten engedélyezte a publikálást. Ez nem bizonyít nem végzett final
+hosttesztet, és nem jelent automatikus teszthalasztási jóváhagyást.
 
 ## Aktuális kiadási állapot és sorrend — 2026-10-14
 
@@ -31,10 +32,21 @@ GitHub Release-t vagy publikációt. A kötelező `candidate_label` final
 módban is érvényes legacy `rcN` bemenet, de nem a final artifact verziócímkéje;
 a futás/provenance rekordjában ezt egyértelműen rögzíteni kell.
 
-**Final workflow dispatch: NOT RUN.** Bár a workflow forrása és regressziós
-kapui a #198-cal mainba kerültek, tényleges `package_kind=final` futás még
-nem történt, ezért final installer/Manual ZIP/PKG, BUILD-INFO és final
-SHA-256 manifest jelenleg nincs.
+**Final workflow dispatch: PASS.** A
+[38548177165 futás](https://github.com/RobCZart82/VDX7-JUCE/actions/runs/38548177165)
+forrása `7e2271352d0f05fdad39bae26fdec764064fa1e1`; a Windows, macOS és
+összesítő job sikeres. A négy végleges verziójú csomag elkészült.
+A final csomagok helyi tartalom-/hash-ellenőrzése és exact hostelfogadása
+még külön kapu, nem azonos a korábbi RC3 ellenőrzésével.
+
+Tulajdonosi RC3 visszajelzés: Windows 11 Pro 26H2 és Windows 10 Pro 22H2
+gépeken egyaránt jó eredmény; továbbá macOS 26.7.1, Mac mini M1, 16 GB.
+Host: REAPER 7.82. Telepítés/betöltés/megszólalás OWNER-REPORTED PASS;
+Classic/Clean és próbált beállítások jók, feltűnő CPU-terhelés nem jelentkezett
+(nem számszerű benchmark). Hallásos visszajelzés szerint Clean alatt a gyári
+hangszínek karaktere megmarad, fényesebb/kristályosabb hangzással.
+A két mellékelt RC3 installer hash-e korábban egyezett az ellenőrzött RC3
+csomaggal. A final 1.2.0 tesztelését ebből nem következtetjük ki.
 
 ### RC3 csomagolás — teljesült, de csak történeti bizonyíték
 
@@ -94,7 +106,8 @@ A hash-ek eltérnek; a korábbi REAPER smoke nem bizonyít exact RC3 elfogadást
    Windows és macOS alatt a legutóbbi fejlesztői plugint PASS-nak jelentette;
    ezek értékes, owner-reported eredmények, de a végleges csomaggal való
    bináris azonosság és a tételes tesztazonosítók még nincsenek rögzítve.
-   A már megadott célkörnyezetek: Windows 11 Pro 26H2, x64, REAPER 7.82 x64;
+   A már megadott célkörnyezetek: Windows 11 Pro 26H2 és Windows 10 Pro 22H2
+   (utóbbi build 19045.7663), x64, REAPER 7.82;
    macOS 26.7.1, Mac mini M1 (2020, 16 GB), REAPER 7.82 Universal.
    Az adott teszteredmény csak hash-egyezés esetén fogadható el az exact final
    build bizonyítékaként; különben a final csomaggal kell célzottan ellenőrizni
