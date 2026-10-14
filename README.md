@@ -12,7 +12,7 @@ Original firmware, a hardware-inspired interface and hands-on voice editing.
 
 [Magyar](README_HU.md)
 
-> **[Stable 1.0.1 downloads](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1)**
+> **[Stable 1.2.0 downloads](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0)**
 > are available. Development builds remain separate and visibly marked.
 > A legally obtained original DX7 Mk I v1.8 user-supplied ROM is required. No Yamaha firmware
 > or factory voice data is included.
@@ -23,11 +23,12 @@ changes. The pending-project protection and source-package verifier corrections
 are included in 1.0.1, not retroactively installed in 1.0.0.
 See the [active corrective plan](docs/development/DEVELOPMENT_PLAN.md).
 
-New development builds add an Imported Banks library: new instances scan its
+Version 1.2.0 includes an Imported Banks library: new instances scan its
 folder once; existing instances use UTILITY → Imported Banks → Refresh. Restored
 project banks take precedence. Startup diagnostics are available in the status
 tooltip and the UTILITY report. See the [user guide](docs/guides/GUIDE_EN.md).
-This feature is not in the already published 1.0.1 packages; host acceptance remains pending.
+This feature is not in historical 1.0.1 packages. Final 1.2.0 has owner-reported
+macOS/Windows acceptance; this is not exhaustive measured host coverage.
 
 ![VDX7 Mk1. EDIT — operator controls, envelopes and algorithm display](docs/screenshots/vdx7-edit.png)
 
@@ -39,11 +40,11 @@ The screenshots retain their development labels; they are not a stable-release c
 
 ## Download
 
-The [1.0.1 release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1) has **four user-download
+The [1.2.0 release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0) has **four user-download
 assets**: Windows x64 EXE installer and Manual Install ZIP, plus macOS Universal
 PKG installer and Manual Install ZIP. Checksums and signing limitations are in
-the release description. [Complete matching source with pinned dependencies](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source)
-is provided separately. See the
+the release description. Complete matching source with pinned dependencies and
+its checksum are inside `Source/` in both Manual ZIPs, not a fifth download. See the
 [four-download policy](docs/release/PUBLIC_DOWNLOADS.md).
 
 Development VST3 builds are available from [GitHub Actions](https://github.com/RobCZart82/VDX7-JUCE/actions).

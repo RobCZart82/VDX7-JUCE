@@ -12,7 +12,7 @@ Eredeti firmware, hardveres ihletésű felület és közvetlen hangszínszerkesz
 
 [English](README.md)
 
-> **[A stabil 1.0.1 letölthető](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1).**
+> **[A stabil 1.2.0 letölthető](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0).**
 > A fejlesztői csomagok különállók, megkülönböztető jelölésük megmarad.
 > Saját, jogszerűen használható eredeti DX7 Mk I v1.8 ROM szükséges.
 > Yamaha firmware és gyári hangadat nincs mellékelve.
@@ -23,12 +23,13 @@ válts bankot/programot/performance-beállítást. A projektvédelmi és forrás
 ellenőrzési javítás az 1.0.1-ben elérhető, az 1.0.0 telepített
 példányait nem frissíti automatikusan. [Aktív terv](docs/development/DEVELOPMENT_PLAN.md).
 
-Új fejlesztési buildekben importált bankkönyvtár is van: az új példány egyszer
+Az 1.2.0-ban importált bankkönyvtár is van: az új példány egyszer
 beolvassa a mappát, a nyitott példány UTILITY → Imported Banks → Refresh művelettel
 frissíthető. A visszatöltött projekt bankjai elsőbbséget kapnak. Induláskori jelentés
 az állapotszöveg tooltipjében és a UTILITY jelentésében olvasható.
 [Kézikönyv](docs/guides/GUIDE_HU.md). Ez nincs a publikált 1.0.1 csomagokban;
-a valódi host-elfogadás még hátravan.
+az 1.2.0 végleges változatára macOS/Windows tulajdonosi elfogadás történt,
+nem teljes körű műszeres hostmérés.
 
 ![VDX7 Mk1. EDIT — operátorok, burkológörbék és algoritmusábra](docs/screenshots/vdx7-edit.png)
 
@@ -41,11 +42,12 @@ ez nem a stabil kiadás minősítése.*
 
 ## Letöltés
 
-Az [1.0.1 kiadás](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1) **négy felhasználói letöltést**
+Az [1.2.0 kiadás](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0) **négy felhasználói letöltést**
 tartalmaz: Windows x64 EXE telepítőt és Manual Install ZIP-et, valamint
 macOS Universal PKG telepítőt és Manual Install ZIP-et. Az ellenőrzőösszegek és
-aláírási korlátok a release leírásában olvashatók. A [teljes megfelelő forrás rögzített függőségekkel](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source)
-külön kiadásban érhető el; a validációs bizonyíték külön marad.
+aláírási korlátok a release leírásában olvashatók. A teljes megfelelő forrás
+rögzített függőségekkel és checksumjával mindkét Manual ZIP `Source/`
+mappájában érhető el, nem külön ötödik letöltésként.
 Lásd a [négy letöltés szabályát](docs/release/PUBLIC_DOWNLOADS.md).
 
 Fejlesztői VST3-változatok a [GitHub Actions](https://github.com/RobCZart82/VDX7-JUCE/actions)

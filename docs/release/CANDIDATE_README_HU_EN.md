@@ -8,26 +8,25 @@ az alábbi korábbi előkészítési és nyitott host-státuszokat.
 
 ## Current v1.2.0 scope / Aktuális v1.2.0 kör
 
-Final-version `1.2.0` preparation packages now exist (run 38548177165, source
-`7e2271352d0f05fdad39bae26fdec764064fa1e1`). They are not yet a published
-stable release. RC3 is the earlier owner-tested candidate; its results do not
-automatically accept the distinct final binaries. Publication permission has
-been given; final artifact and host acceptance remain separate gates.
+Stable Latest `1.2.0` is published from run 38548177165, source
+`7e2271352d0f05fdad39bae26fdec764064fa1e1`. Final package hashes/source were
+verified; the owner separately tested and accepted the final installers and
+binaries on macOS/Windows and approved publication. RC3 is historical.
 Only original Yamaha DX7 Mk I v1.8 firmware is officially supported; SER7/Special
 Edition and other firmware versions are not officially supported. Firmware is
 not supplied. Windows x64 Setup EXE + Manual ZIP and macOS Universal PKG +
 Manual ZIP contain VST3 only, not AU/Standalone. Both Manual ZIPs include the
 matching source archive and its checksum under `Source/`. Windows installer is
 unsigned; macOS PKG is not Developer ID signed/notarized (plugin ad-hoc only).
-See [package evidence](../validation/RC3_PACKAGE_VERIFICATION_20261013.md),
+See [final owner acceptance](../validation/FINAL_120_OWNER_ACCEPTANCE_20261014.md),
 [download policy](PUBLIC_DOWNLOADS.md) and the [active plan](../development/DEVELOPMENT_PLAN.md).
-Exact RC3 host acceptance remains open; earlier build tests do not close it.
+Unreported exhaustive measurements are not claimed as PASS.
 
-Elkészültek a végleges verziójú `1.2.0` előkészítő csomagok (38548177165,
-forrás: `7e2271352d0f05fdad39bae26fdec764064fa1e1`), de még nem publikált
-stabil kiadás. Az RC3 a korábbi, tulajdonos által tesztelt jelölt; eredménye
-nem fogadja el automatikusan a final binárist. A publikálási engedély megvan;
-a final artifact- és hostelfogadás külön kapu.
+Megjelent a stabil Latest `1.2.0` a 38548177165 futás változatlan csomagjaival,
+forrás: `7e2271352d0f05fdad39bae26fdec764064fa1e1`. A final checksum/source
+ellenőrzés megtörtént; a tulajdonos külön tesztelte és elfogadta a végleges
+telepítőket/binárisokat macOS/Windows alatt, és engedélyezte a publikálást.
+Az RC3 történeti jelölt.
 Hivatalosan kizárólag az eredeti Yamaha DX7 Mk I v1.8 firmware támogatott;
 SER7/Special Edition és más firmware-verzió nem támogatott hivatalosan.
 Firmware nincs mellékelve. A Windows x64 EXE + Manual ZIP és macOS Universal
@@ -35,7 +34,7 @@ PKG + Manual ZIP csak VST3-at tartalmaz, AU/Standalone-t nem. Mindkét Manual ZI
 `Source/` mappájában szerepel az azonos forrásarchívum és ellenőrzőösszege.
 A Windows telepítő aláíratlan; a macOS PKG nem Developer ID-aláírt/notarizált
 (a plugin csak ad-hoc aláírt). A fenti bizonyíték, letöltési szabály és aktív
-terv az irányadó. Az exact RC3 hostelfogadás nyitott; korábbi teszt nem zárja le.
+terv az irányadó. Nem közölt teljes körű műszeres mérést nem állítunk PASS-nak.
 
 ## Historical 1.0.1 preparation / Történeti 1.0.1 előkészítés
 

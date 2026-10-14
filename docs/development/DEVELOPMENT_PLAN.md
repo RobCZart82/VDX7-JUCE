@@ -98,7 +98,13 @@ A hash-ek eltérnek; a korábbi REAPER smoke nem bizonyít exact RC3 elfogadást
 
 
 
-### Aktív teendők a végleges v1.2.0 publikálásáig
+### Lezárt v1.2.0 kiadási ellenőrzőlista — történeti
+
+Az alábbi öt pont a kiadás előtti eljárás megőrzött leírása, nem aktív
+feladatlista. Csomagkészítés és checksum/source ellenőrzés PASS;
+hostelfogadás OWNER-REPORTED PASS, dokumentáció e PR-ben frissítve,
+publikálási engedély megadva és a stabil Latest kiadás megjelent.
+A részletes, nem közölt műszeres mérés továbbra sem állított PASS.
 
 1. **Végleges csomagok előállítása: TELJESÜLT.** Az irányadó csomagok a
    38548177165 futásból, `7e2271352d0f05fdad39bae26fdec764064fa1e1`
@@ -405,8 +411,8 @@ Csak original DX7 Mk I v1.8 támogatott, firmware nem terjeszthető.
 Az e szakasz alatti korábbi státuszok és sorrendek archivált checkpointok,
 nem végrehajtandó feladatlista. Különösen a #188 Draft-állapot, a reader/
 SETTINGS hiánya és a régi merge-kapuk már nem aktuálisak: a #188 később
-beolvadt. Az egyetlen aktív sorrend a fenti „Aktív teendők a végleges v1.2.0
-publikálásáig” szakasz öt pontja.
+beolvadt. A fenti „Lezárt v1.2.0 kiadási ellenőrzőlista — történeti”
+szakasz is megőrzött eljárás; a publikálási checkpoint az irányadó.
 
 Ellenőrzött main: `2d6c837247cfb013ee8ce83b58154bf3ff52c304` (#187 merge).
 Ehhez a pontos SHA-hoz a main
