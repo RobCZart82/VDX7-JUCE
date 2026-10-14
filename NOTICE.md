@@ -1,15 +1,16 @@
 # Licensing and attribution / Licenc és köszönet
 
-VDX7-JUCE 1.2.0 development and release-candidate sources use the free-software
+VDX7-JUCE 1.2.0 stable, development and release-candidate sources use the free-software
 combined-work route under GNU AGPL version 3, without warranty. The project
 owner authorised the AGPLv3 publication route. Wrapper contributions and
 original GUI resources are offered under AGPL-3.0-only; see LICENSE.txt.
 Development artifacts are not accepted stable releases; this update does not
 change upstream license terms.
 
-Current 1.2.0 source packages use the exact `1.2.0-dev` or `1.2.0-rcN` label.
-Stable `1.2.0` publication is not yet approved or authorized; do not describe a
-candidate or preparation archive as a published stable release.
+Current 1.2.0 source packages use their exact build label: stable `1.2.0`,
+development `1.2.0-dev` or candidate `1.2.0-rcN`. Stable v1.2.0 publication
+was explicitly authorized and completed. This does not authorize unrelated
+development/candidate artifacts or make them accepted stable releases.
 
 Existing upstream components retain their own notices and licenses:
 

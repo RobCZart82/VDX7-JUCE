@@ -80,9 +80,10 @@ the public workflows currently distribute VST3.
 
 A matching VST3 host is required for the plug-in. Build targets are **Windows x64**
 and **macOS Universal**; macOS 11 is the deployment target, not a guarantee that
-every OS/host combination has been tested. The owner reports macOS REAPER and
-Windows 10 x64 REAPER use; this is not the complete final-RC test matrix. Physical
-Intel Mac acceptance and exact-candidate checks remain separate. Standalone runs
+every OS/host combination has been tested. Final v1.2.0 owner-reported PASS covers
+REAPER 7.82 on Windows 11 Pro 26H2, Windows 10 Pro 22H2 and macOS 26.7.1/M1.
+This is not exhaustive measured coverage; physical Intel Mac acceptance is not
+claimed. Standalone runs
 without a DAW when built locally.
 
 **The only officially supported firmware is original Yamaha DX7 Mk I v1.8 (IG11469).** A legally

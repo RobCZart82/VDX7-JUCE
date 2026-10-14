@@ -90,9 +90,9 @@ adatait is tárolja, a helyi bankfájloktól függetlenül; a firmware továbbra
 ## Rendszerigény
 
 A pluginhoz megfelelő VST3-host szükséges. Fordítási célok: **Windows x64**
-és **macOS Universal**. A tulajdonos macOS REAPER- és Windows 10 x64 REAPER-
-használatról számolt be; ezek nem azonosak a végleges RC teljes tesztmátrixával.
-A fizikai Intel Mac elfogadása és a pontos RC-n végzett tesztek külön ellenőrzendők.
+és **macOS Universal**. A végleges v1.2.0 tulajdonosi PASS REAPER 7.82 alatt
+Windows 11 Pro 26H2, Windows 10 Pro 22H2 és macOS 26.7.1/M1 környezetre vonatkozik.
+Ez nem teljes körű műszeres mérés; fizikai Intel Mac elfogadást nem állítunk.
 A helyben fordított Standalone DAW nélkül fut.
 
 A macOS 11 fordítási cél, nem minden rendszer/host kombináció tesztelésének ígérete.

@@ -20,5 +20,6 @@ class CurrentDocumentationTests(unittest.TestCase):
             text = (ROOT / name).read_text(encoding='utf-8')
             self.assertIn('7e2271352d0f05fdad39bae26fdec764064fa1e1', text)
             self.assertNotIn('stabil 1.2.0 kiadás még nincs jóváhagyva', text)
+            self.assertNotIn('Stable `1.2.0` publication is not yet approved', text)
         self.assertIn('FINAL_120_OWNER_ACCEPTANCE_20261014.md',
                       (ROOT / 'docs/README.md').read_text(encoding='utf-8'))
