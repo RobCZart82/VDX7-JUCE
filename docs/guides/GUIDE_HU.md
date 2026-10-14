@@ -4,13 +4,14 @@ A publikált v1.2.0-ban (nem a történeti 1.0.1-ben): SETTINGS → Sound mode:
 Classic (alapértelmezett) és Clean. Apply példányonként a DAW-projektbe menti
 a választást, nem SysEx-be; Cancel megőrzi a jelenlegi módot. A MONO
 Native/Correct független ettől. Ha közben projekt vagy mód változik, nyisd újra
-az ablakot. A végleges vizuális/hangzási/host-elfogadás még hátravan.
+az ablakot. A final macOS/Windows tulajdonosi elfogadás PASS; teljes körű
+független vizuális/hangzási/teljesítménymérést nem állítunk.
 
 [Vissza az áttekintéshez](../../README_HU.md) · [English guide](GUIDE_EN.md)
 
-A [publikált 1.0.1 kiadás](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1)
+A [publikált 1.2.0 kiadás](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0)
 Windows x64 EXE és macOS Universal PKG VST3 telepítőket, illetve kézi ZIP-eket tartalmaz.
-A megfelelő forrás a [külön forráskiadásban](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source) érhető el.
+A megfelelő teljes forrás és checksumja mindkét Manual ZIP `Source/` mappájában érhető el.
 Az Actions artifactok külön fejlesztői csomagok. AU és Standalone nincs mellékelve.
 
 ## 1. Platform és csomag

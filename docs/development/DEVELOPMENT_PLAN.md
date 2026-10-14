@@ -2292,11 +2292,10 @@ Minden kör: friss main → minimális változtatás és regresszió → érinte
 
 [Korábbi összevont terv](../archive/EXECUTION_PLAN_1.0.md), [roadmap](../archive/ROADMAP_1.0.md), [régi kiadási checklist](../archive/RELEASE_CHECKLIST_1.0_RC.md) megőrzött döntés- és bizonyítéktörténet. Az élő feladatokat csak itt frissítjük, egyedi D/T/M azonosítóval. Megvalósításkor ide kerül státusz és PR/tesztlink; a részletes tesztjelentés külön marad. Régi checklist nem írhatja felül ezt a tervet vagy a kiadás tényét.
 
-English summary: this is the sole active post-1.0.1 ledger. The owner explicitly
-requires Classic/Clean in v1.2.0; its production DSP, SETTINGS and project
-save/restore integration merged in PR #188. PR-level regression evidence is
-recorded, while exact final-package provenance, remaining host acceptance,
-final documentation and separate publication approval remain open. Other
-future features and optional maintenance are separate. Historical release
-gates are not current blockers or new PASS claims. No host-test waiver or
-publication authority is inferred.
+English summary: v1.2.0 is published stable Latest (2026-10-14). Classic/Clean
+DSP, SETTINGS and project recall merged in #188. Final packages from run
+38548177165/source 7e2271352d0f05fdad39bae26fdec764064fa1e1 were verified,
+owner-tested on macOS/Windows and explicitly authorized for publication.
+This ledger preserves pre-publication checkpoints as history, not open tasks.
+Owner-reported acceptance is not exhaustive measured coverage or a blanket
+waiver. The docs update is tracked in #200; any future development is separate.

@@ -4,13 +4,14 @@ Published v1.2.0 (not historical 1.0.1): SETTINGS → Sound mode offers
 Classic (default) and Clean. Apply saves the choice per plugin instance in the
 DAW project, not SysEx; Cancel preserves the current choice. MONO Native/Correct
 is independent. If a project or mode changes while SETTINGS is open, reopen
-the dialog. Final visual/audio/host acceptance is still pending.
+the dialog. Final macOS/Windows acceptance is owner-reported PASS; exhaustive
+independent visual/audio/performance measurements are not claimed.
 
 [Back to overview](../../README.md) · [Magyar útmutató](GUIDE_HU.md)
 
-The [published 1.0.1 release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1)
+The [published 1.2.0 release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.2.0)
 provides Windows x64 EXE and macOS Universal PKG installers, with Manual Install ZIP alternatives.
-Matching source is available in the [source companion release](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source).
+Matching complete source and its checksum are included under `Source/` in both Manual ZIPs.
 Actions artifacts remain separate development builds. AU and Standalone are not shipped.
 
 ## 1. Platform and package
