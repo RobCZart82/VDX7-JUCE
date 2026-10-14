@@ -496,7 +496,7 @@ rate/buffer mátrix, további GUI-skálák, független példánymódok és recal
 automation/channel/MONO/ROM-recovery regressziók, freeze/unfreeze, tartós
 terhelés és kontrollált hangzási mérések; tételes PASS vagy indokolt halasztás.
 
-**A Draftban megvalósított viselkedés:** a mentett mód a payload ugyanazon
+**A #188-ban megvalósult viselkedés:** a mentett mód a payload ugyanazon
 engine-lock alatti pillanatképéből származik, nem későbbi owner-readből.
 Clean sémapár a normal save-ben is megjelenik; Classic továbbra is legacy.
 Érvényes Clean binary restore ugyanazt a validált pending/ROM completion
@@ -575,17 +575,18 @@ A PR később `624f68ca01cfa8c6c63c66c650c11c2505e4c99f` merge SHA-val mainba
 került; az itt következő ellenőrzőlista történeti maradéklista, nem a mai
 implementációs státusz. Az aktuális release-kapuk a dokumentum elején vannak.
 
-1. **D5 integráció:** fennmaradó lifecycle/mono/pending és reentráns restore/
-   publikáció kontrollok; teljes Clean capture/writer/reader/admission az owner
-   és aktuális ROM-generáció mellett. Hibás séma továbbra is mutáció nélkül
-   elutasítandó. Legacy projekt Classic. A public Clean restore #188 Draftban
-   bekötött, de a teljes recall/lifecycle és final-head elfogadás még nyitott.
+1. **D5 integráció (a merge előtti checklist):** az akkori hátralévő lifecycle/
+   mono/pending és reentráns restore/publikáció kontrollok, illetve a teljes
+   Clean capture/writer/reader/admission vizsgálata volt a cél. A public Clean
+   restore #188 Draftban már be volt kötve; ez a checklist még a merge előtti
+   teljes recall/lifecycle és final-head kapukat rögzíti. A PR később beolvadt;
+   az aktuális feladatokat a dokumentum eleje sorolja.
 2. **D5 hangút elfogadás:** privát original v1.8, mindkét irányú váltás,
    sustain/tail/gyors request, példányizoláció, Classic null-kontroll,
    spektrum/peak/RMS/headroom/CPU/latencia. Meglévő részteszteket felhasználjuk,
    de nem jelöljük teljes hangszín- vagy hallásos elfogadásnak.
-3. **SETTINGS elfogadás:** a választó #188 Draftban megvalósított, nem újra
-   implementálandó. Classic default, példányonként projektmentés, stale Apply,
+3. **SETTINGS elfogadás (a merge előtti checklist):** a választó #188-ban
+   már megvalósult, nem újra implementálandó; a PR később mainba olvadt. Classic default, példányonként projektmentés, stale Apply,
    invalid választások és detached capture kontrollok megvannak. A javított
    elrendezés 100%-on és Clean/tuning save-reopen macOS REAPER részteszt PASS;
    további skálák és végleges jelölt teljes host-state elfogadása nyitott.
