@@ -6,6 +6,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CurrentDocumentationTests(unittest.TestCase):
+    def test_archived_contract_context_links_both_directions(self):
+        history = ROOT / 'docs/archive/DEVELOPMENT_PLAN_HISTORY_20261014.md'
+        self.assertTrue(history.is_file())
+        self.assertIn('../development/CLASSIC_CLEAN_STATE_CONTRACT.md',
+                      history.read_text(encoding='utf-8'))
+        contract = (ROOT / 'docs/development/CLASSIC_CLEAN_STATE_CONTRACT.md').read_text(encoding='utf-8')
+        self.assertIn('../archive/DEVELOPMENT_PLAN_HISTORY_20261014.md', contract)
+
     def test_plan_introduction_does_not_reopen_published_release(self):
         text = (ROOT / 'docs/development/DEVELOPMENT_PLAN.md').read_text(encoding='utf-8')
         intro = text.split('## Aktuális kiadási állapot', 1)[0]
