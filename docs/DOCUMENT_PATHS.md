@@ -5,6 +5,11 @@ Use the current links below to resolve an older root-level reference.
 
 ## Post release consolidation 2026-10-05
 
+2026-10-14: the long body formerly at `docs/development/DEVELOPMENT_PLAN.md`
+is preserved in [DEVELOPMENT_PLAN_HISTORY_20261014.md](archive/DEVELOPMENT_PLAN_HISTORY_20261014.md).
+The original path remains the short active plan; historical heading/ID lookups
+belong in the archive. Existing file links still reach the active plan.
+
 Active work: [DEVELOPMENT_PLAN.md](development/DEVELOPMENT_PLAN.md).
 Five preparation bodies moved from `docs/release/` to `docs/archive/`;
 their former paths retain redirects:

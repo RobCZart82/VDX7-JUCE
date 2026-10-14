@@ -1,5 +1,8 @@
 # Historical documents / Archívum
 
+- [Full development ledger through v1.2.0](DEVELOPMENT_PLAN_HISTORY_20261014.md),
+  archived 2026-10-14; canonical active plan remains in `docs/development/`.
+
 These documents are preserved, not active release instructions. Their original
 dates, claims and checkboxes describe earlier project states. Use the
 [current plan](../development/DEVELOPMENT_PLAN.md) for today's priorities.
