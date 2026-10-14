@@ -24,6 +24,12 @@ Existing upstream components retain their own notices and licenses:
 - VST3 SDK and other JUCE dependencies retain the licenses stated in their
   included source files. No commercial JUCE license is claimed.
 
+Published stable v1.2.0 includes matching complete source and checksum under
+`Source/` in both public Manual ZIPs. Source/tag:
+`7e2271352d0f05fdad39bae26fdec764064fa1e1`; publication 2026-10-14.
+Development/RC builds are not yet approved or authorized for stable publication
+merely by being built.
+
 The published 1.0.1 release used a separate v1.0.1-source GitHub release linked
 from the main release notes; its four binary user downloads remain separate.
 For each current 1.2.0 development candidate, prepare matching complete source
@@ -46,7 +52,9 @@ by this project.
 
 Magyar összefoglaló: a jelenlegi 1.2.0 fejlesztési és kiadásjelölt-források
 AGPLv3 szerinti szabad szoftverek, garancia nélkül. A címke `1.2.0-dev` vagy
-`1.2.0-rcN`; a stabil 1.2.0 kiadás még nincs jóváhagyva vagy engedélyezve.
+`1.2.0-rcN`; ezek nem automatikusan elfogadott stabil kiadások. A stabil 1.2.0
+megjelent tulajdonosi elfogadással és engedéllyel 2026-10-14-én; teljes
+megfelelő forrása és checksumja mindkét Manual ZIP `Source/` mappájában elérhető.
 A felhasznált komponensek eredeti licence és szerzői közlései megmaradnak.
 A DX7-mag önállóan GPLv3-or-later, a JUCE ebben a kiadásban AGPLv3.
 A már publikált 1.0.1 külön forrásarchívumot és négy külön bináris letöltést
