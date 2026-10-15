@@ -2,8 +2,9 @@
 
 Specifikációs checkpoint: 2026-10-08, main
 `0a8b1bdaa5e99652b4aa2a1958dca04e9ba7f152` (#163 után).
-Ág: `test/classic-clean-state-contract`. Irányadó feladatlista:
-[D5 az egységes tervben](DEVELOPMENT_PLAN.md).
+Ág: `test/classic-clean-state-contract`. Történeti D5 kontextus:
+[D5 a megőrzött fejlesztési naplóban](../archive/DEVELOPMENT_PLAN_HISTORY_20261014.md).
+Mai feladatok: [aktuális terv](DEVELOPMENT_PLAN.md).
 
 Kiadási scope döntés, 2026-10-09: a tulajdonos a következő release-t a teljes
 Classic/Clean funkcióval együtt kéri. Az irányadó terv új release-scope kapui
