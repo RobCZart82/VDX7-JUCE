@@ -1,6 +1,6 @@
 # VDX7 egységes fejlesztési terv / Current development plan
 
-Frissítve / Updated: 2026-10-14. Egyetlen irányadó aktív terv / Sole active plan.
+Frissítve / Updated: 2026-11-08. Egyetlen irányadó aktív terv / Sole active plan.
 
 **Publikálás TELJESÜLT:** a v1.2.0 megjelent; részletek alább.
 
@@ -27,9 +27,12 @@ Unreported exhaustive measurements are not claimed PASS.
 2. **Csomagolási fail-fast javítás mainben (#201).** Single configure and
    executable failure regression integrated, not a new package-production run.
    A kiadott binárisokat nem módosítja.
-3. **Tervrendezés: review/CI még szükséges.** This consolidation preserves
-   history; its own final-head review/CI must pass before merge. E rendezés
-   még nem beolvasztott változás, saját review/CI után zárható le.
+3. **Tervrendezés mainben (#202).** Compact active plan and preserved historical
+   ledger integrated in #202. A rövid aktív terv és teljes történeti napló
+   beolvadt; nem függőben lévő rendezési feladat.
+4. **Configure argument regression / Argumentum-regresszió:** current follow-up
+   adds successful final/candidate argument checks alongside fail-fast coverage.
+   E karbantartási kör saját review/CI ellenőrzése még szükséges; nem új release.
 
 No new feature/version target is assigned. Historical open ideas remain
 preserved, not automatically completed or restarted; compare them with current
