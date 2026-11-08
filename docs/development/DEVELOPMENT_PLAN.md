@@ -33,6 +33,10 @@ Unreported exhaustive measurements are not claimed PASS.
 4. **Configure argument regression / Argumentum-regresszió:** current follow-up
    adds successful final/candidate argument checks alongside fail-fast coverage.
    E karbantartási kör saját review/CI ellenőrzése még szükséges; nem új release.
+5. **CI runner migration / Futtatókörnyezet:** GitHub retired macos-14 on
+   2026-11-02; workflows now select macos-15. Universal arm64/x86_64 and
+   macOS 11 deployment target remain unchanged. Az új runner saját CI/review
+   ellenőrzése szükséges; korábbi csomag/toolchain bizonyíték nem íródik át.
 
 No new feature/version target is assigned. Historical open ideas remain
 preserved, not automatically completed or restarted; compare them with current

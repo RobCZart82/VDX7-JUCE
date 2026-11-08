@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   address-undefined:
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 35
     env:
       # LeakSanitizer is not supported here; this gate covers ASan and UBSan.
