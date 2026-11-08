@@ -30,13 +30,14 @@ Unreported exhaustive measurements are not claimed PASS.
 3. **Tervrendezés mainben (#202).** Compact active plan and preserved historical
    ledger integrated in #202. A rövid aktív terv és teljes történeti napló
    beolvadt; nem függőben lévő rendezési feladat.
-4. **Configure argument regression / Argumentum-regresszió:** current follow-up
-   adds successful final/candidate argument checks alongside fail-fast coverage.
-   E karbantartási kör saját review/CI ellenőrzése még szükséges; nem új release.
-5. **CI runner migration / Futtatókörnyezet:** GitHub retired macos-14 on
-   2026-11-02; workflows now select macos-15. Universal arm64/x86_64 and
-   macOS 11 deployment target remain unchanged. Az új runner saját CI/review
-   ellenőrzése szükséges; korábbi csomag/toolchain bizonyíték nem íródik át.
+4. **CI/configure regression maintenance mainben (#203).** Added successful
+   final/candidate configure-argument coverage and migrated five workflows from
+   the retired macos-14 runner to macos-15. Local suite 118/118 PASS; review
+   completed with no findings; PR Windows, macOS and sanitizer checks PASS.
+   Post-merge main Windows and macOS builds also PASS at
+   `dab5dc76e6077b4eb6ed91d765ccab6085177dbe`.
+   Universal arm64/x86_64 and the macOS 11 deployment target remain unchanged.
+   Ez CI/teszt-karbantartás; nem új csomagolás vagy release.
 
 No new feature/version target is assigned. Historical open ideas remain
 preserved, not automatically completed or restarted; compare them with current
