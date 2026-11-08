@@ -39,3 +39,17 @@ class ConfigureFailureTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 37,
                                  f'bash={bash}\nstdout={result.stdout}\nstderr={result.stderr}')
                 self.assertEqual(result.stdout.strip(), 'invoked')
+                # Also verify the successful path: empty final candidate must
+                # remain an explicit argument, and paths with spaces stay whole.
+                success = subprocess.run(
+                    [bash, '--noprofile', '--norc', '-c', assignments +
+                     '\ncmake() { printf "%s\\n" "$@"; };\n' + body],
+                    capture_output=True, text=True)
+                self.assertEqual(success.returncode, 0, success.stderr)
+                args = success.stdout.splitlines()
+                self.assertIn(f'-DVDX7_RELEASE_BUILD={release}', args)
+                self.assertIn(f'-DVDX7_RELEASE_CANDIDATE={candidate}', args)
+                self.assertEqual(sum(a.startswith('-DVDX7_RELEASE_BUILD=') for a in args), 1)
+                self.assertEqual(sum(a.startswith('-DVDX7_RELEASE_CANDIDATE=') for a in args), 1)
+                self.assertIn('-DCMAKE_PROJECT_VDX7_JUCE_INCLUDE=/tmp/workspace with spaces/'
+                              'cmake/VDX7DependencySources.cmake', args)

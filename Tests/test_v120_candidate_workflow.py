@@ -60,7 +60,7 @@ class V120CandidateWorkflowTests(unittest.TestCase):
         self.assertNotIn('Join-Path $installDir "Contents\\Info.plist"', self.text)
 
     def test_both_platforms_build_verify_and_record_unsigned_scope(self):
-        for token in ("macos-14", "windows-2022", "-DCMAKE_OSX_ARCHITECTURES=\"arm64;x86_64\"",
+        for token in ("macos-15", "windows-2022", "-DCMAKE_OSX_ARCHITECTURES=\"arm64;x86_64\"",
                       "-A x64", 'unittest discover -s Tests -p "test_*.py"',
                       "VDX7_VST3 vdx7_ci_checks", "ctest --test-dir build -C Release",
                       "codesign --verify --deep --strict", "pkgutil --payload-files",
