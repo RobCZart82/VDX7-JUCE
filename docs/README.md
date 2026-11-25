@@ -15,7 +15,7 @@
 - [Single active development plan / Egységes aktív fejlesztési terv](development/DEVELOPMENT_PLAN.md)
 - [1.0 build identity and package boundaries](release/IDENTITY_AND_PACKAGE_1.0.md)
 - [Reproducible source packaging](release/SOURCE_PACKAGING_1.0.md)
-- [Reviewed release approval and provenance](release/RELEASE_APPROVAL.md)
+- [Historical v1.0.1 release approval and provenance](release/RELEASE_APPROVAL.md)
 - [Observed installer build toolchain](release/BUILD_TOOLCHAIN_PROVENANCE.md)
 - [Four public user downloads](release/PUBLIC_DOWNLOADS.md)
 - [Candidate instructions / jelölt útmutató](release/CANDIDATE_README_HU_EN.md)

@@ -28,12 +28,12 @@ mentését/újranyitását a védelem megőrzi. A ROM-helyreállítási figyelme
 elsőbbséget kap az általános export-emlékeztetővel szemben.
 Ez a javítás a már kiadott 1.0.0 binárisokban még nincs benne.
 
-A CI **macOS Universal (arm64 + x86_64) VST3** és **Windows x64 VST3** célokat
-fordít. A kiadásra tervezett formátum a VST3; az AU és Standalone fordítási cél,
-nem ígért letöltési csomag. A tulajdonos macOS REAPER- és Windows 10 x64 REAPER-
-használatról számolt be, de ezek nem igazolják a végleges RC minden platform-,
-mintavételi- és bufferkombinációját. A fizikai Intel Mac elfogadása továbbra
-sincs dokumentálva.
+A publikált v1.2.0 csomagok Windows x64 és macOS Universal (arm64 + x86_64)
+VST3 plugint tartalmaznak. A tulajdonos a végleges csomagokat REAPER 7.82-ben
+sikeresen tesztelte Windows 11 Pro 26H2, Windows 10 Pro 22H2 és macOS 26.7.1
+alatt, utóbbit M1-es Macen. Részletes mintavételi, pufferméret- és
+renderelési mérésekről nem számolt be. Fizikai Intel Macen végzett teszt nincs
+dokumentálva. Lásd a [végleges elfogadási feljegyzést](../validation/FINAL_120_OWNER_ACCEPTANCE_20261014.md).
 
 **Aláírás:** a Windows VST3 nincs kiadói tanúsítvánnyal aláírva. A macOS
 Universal VST3 technikai ad-hoc aláírást kap, de nincs Developer ID-aláírás és

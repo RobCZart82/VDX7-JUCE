@@ -1,4 +1,4 @@
-# Document path migration — 2026-09-26, updated 2026-09-28
+# Document path migration
 
 All listed documents were moved, not discarded. Git history retains the old paths.
 Use the current links below to resolve an older root-level reference.

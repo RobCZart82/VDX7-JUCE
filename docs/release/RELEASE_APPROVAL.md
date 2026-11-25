@@ -1,4 +1,7 @@
-# Reviewed release approval and provenance
+# Historical v1.0.1 release approval and provenance
+
+This record describes the v1.0.1 approval process. For the published v1.2.0,
+see the [final owner acceptance](../validation/FINAL_120_OWNER_ACCEPTANCE_20261014.md).
 
 > **2026-10-05 publication checkpoint:** [1.0.1 is published](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1), with [matching source](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source).
 > Az 1.0.1 megjelent. [Current acceptance, owner-authorized deferrals and publication record](../validation/VALIDATION_20261005_PUBLICATION_101.md) supersede earlier open publication gates below. Earlier candidate/test statements are retained as dated preparation history, not current release status.

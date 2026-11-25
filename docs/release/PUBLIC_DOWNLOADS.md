@@ -9,8 +9,8 @@ az alábbi 1.0.1 checkpointok történetiek.
 > **2026-10-05 publication checkpoint:** [1.0.1 is published](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1), with [matching source](https://github.com/RobCZart82/VDX7-JUCE/releases/tag/v1.0.1-source).
 > Az 1.0.1 megjelent. [Current acceptance, owner-authorized deferrals and publication record](../validation/VALIDATION_20261005_PUBLICATION_101.md) supersede earlier open publication gates below. Earlier candidate/test statements are retained as dated preparation history, not current release status.
 
-Owner decision, 2026-10-01: future releases starting with the planned 1.0.1
-have exactly these four manually uploaded user-download assets (`<version>`
+The four-download policy was adopted on 2026-10-01 and first applied to v1.0.1.
+Stable releases under this policy have exactly these four manually uploaded assets (`<version>`
 is the accepted stable version):
 
 | Platform | Download | Name |
@@ -95,7 +95,7 @@ packaging approval for export-fixed A=B
 `edcb7471bf2ee08d3f8430e317cb9d17274f7576`; #120/#126 are historical pairs.
 Null or mismatched approval still fails closed. Read-only workflow permissions
 and separate publication authorization remain. See the
-[current final test report](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md).
+[historical v1.0.1 final test report](../validation/VALIDATION_20261005_FINAL_EXPORT_FIX_PACKAGE_101.md).
 Use the [single execution plan](../development/DEVELOPMENT_PLAN.md) for remaining work.
 
 Magyarul: a v1.2.0 release négy felhasználói csomagból áll. A megfelelő
