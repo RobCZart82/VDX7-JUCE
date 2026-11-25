@@ -27,11 +27,12 @@ Host voice/operator parameter edits and project save/reopen remain preserved.
 The recovery warning takes priority over the ordinary dirty-bank export advice.
 This correction is not present in the already published 1.0.0 binaries.
 
-CI builds **macOS Universal (arm64 + x86_64) VST3** and **Windows x64 VST3**
-targets. VST3 is the planned distribution format; AU and Standalone are build
-targets, not promised downloads. The owner reports macOS REAPER and Windows 10
-x64 REAPER use, but this does not verify every platform/sample-rate/buffer
-combination on the final RC. Physical Intel Mac acceptance is not documented.
+The published v1.2.0 packages contain VST3 for Windows x64 and macOS Universal
+(arm64 + x86_64). The owner reported successful testing of the final packages
+in REAPER 7.82 on Windows 11 Pro 26H2, Windows 10 Pro 22H2 and macOS 26.7.1
+on an M1 Mac. Detailed sample-rate, buffer-size and render measurements were
+not reported. Testing on a physical Intel Mac is not documented.
+See the [final acceptance record](../validation/FINAL_120_OWNER_ACCEPTANCE_20261014.md).
 
 **Signing:** the Windows VST3 has no publisher signature. The macOS Universal
 VST3 receives a technical ad-hoc signature, but is not Developer ID signed or
